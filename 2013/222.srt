@@ -1,0 +1,5264 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:09.976 A:middle
+[ Silence ]
+
+00:00:10.476 --> 00:00:12.556 A:middle
+&gt;&gt; Good afternoon, and welcome.
+
+00:00:13.626 --> 00:00:14.136 A:middle
+Thank you.
+
+00:00:14.456 --> 00:00:15.696 A:middle
+How's everybody doing?
+
+00:00:16.566 --> 00:00:19.356 A:middle
+It's been a fun week,
+excellent, good.
+
+00:00:19.666 --> 00:00:20.776 A:middle
+I'm Gordie Freedman.
+
+00:00:20.946 --> 00:00:25.746 A:middle
+I work on UIKit, and
+today we're going to talk
+
+00:00:25.746 --> 00:00:28.516 A:middle
+about State restoration on iOS.
+
+00:00:29.486 --> 00:00:31.306 A:middle
+So has this happened to you?
+
+00:00:31.736 --> 00:00:35.536 A:middle
+You're using an application,
+you go to do something else,
+
+00:00:35.966 --> 00:00:39.536 A:middle
+and when you go back, the
+application's lost your place.
+
+00:00:40.476 --> 00:00:44.056 A:middle
+Maybe you were typing something,
+maybe you were reading something
+
+00:00:44.056 --> 00:00:47.356 A:middle
+and scrolled somewhere, but
+the application went back
+
+00:00:47.356 --> 00:00:48.046 A:middle
+to the beginning.
+
+00:00:48.576 --> 00:00:51.086 A:middle
+In fact, maybe you don't really
+remember what you were doing.
+
+00:00:51.276 --> 00:00:53.696 A:middle
+You were hoping the
+application would remember.
+
+00:00:54.296 --> 00:00:57.616 A:middle
+And as developers, we
+don't want this to happen
+
+00:00:57.616 --> 00:00:59.236 A:middle
+to the users of our apps.
+
+00:00:59.746 --> 00:01:01.016 A:middle
+It can be very frustrating.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.746 --> 00:01:01.016 A:middle
+It can be very frustrating.
+
+00:01:01.626 --> 00:01:05.566 A:middle
+But the good news is we've
+got some really nice APIs
+
+00:01:05.726 --> 00:01:08.886 A:middle
+that make it very easy to
+provide a seamless experience
+
+00:01:09.116 --> 00:01:10.576 A:middle
+when applications start back up.
+
+00:01:11.096 --> 00:01:15.036 A:middle
+I'm going to talk about
+four things today.
+
+00:01:16.036 --> 00:01:19.916 A:middle
+First I'm going to go over a
+small recap of the feature.
+
+00:01:20.466 --> 00:01:22.056 A:middle
+It's not a full review.
+
+00:01:22.466 --> 00:01:26.626 A:middle
+We did a session last year in
+2012, and if you want to fill
+
+00:01:26.626 --> 00:01:29.436 A:middle
+in some of the gaps,
+you can go watch that.
+
+00:01:29.436 --> 00:01:31.566 A:middle
+We also have some
+documentation online,
+
+00:01:31.936 --> 00:01:33.076 A:middle
+and you can check that out.
+
+00:01:33.566 --> 00:01:36.446 A:middle
+But I think even if you're not
+that familiar, you'll be able
+
+00:01:36.446 --> 00:01:38.036 A:middle
+to follow along just fine.
+
+00:01:39.056 --> 00:01:43.206 A:middle
+I'm going to focus a lot
+on what's new in iOS 7.
+
+00:01:43.396 --> 00:01:46.076 A:middle
+We'll see what we've
+added and how that plays.
+
+00:01:46.616 --> 00:01:51.106 A:middle
+We're going to talk a
+little bit about security
+
+00:01:51.326 --> 00:01:54.246 A:middle
+and background operation --
+couple of interesting topics
+
+00:01:54.246 --> 00:01:55.506 A:middle
+that I think we might want
+
+00:01:55.506 --> 00:01:57.106 A:middle
+to spend a little
+time thinking about.
+
+00:01:57.756 --> 00:02:01.276 A:middle
+And then finally, I'm going
+to go over some of the tools
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:57.756 --> 00:02:01.276 A:middle
+And then finally, I'm going
+to go over some of the tools
+
+00:02:01.276 --> 00:02:06.216 A:middle
+that we have that can help you
+to be able to both validate
+
+00:02:06.216 --> 00:02:08.735 A:middle
+that you're doing -- or your
+app is doing what you expect,
+
+00:02:09.485 --> 00:02:10.966 A:middle
+and help diagnose problems.
+
+00:02:11.526 --> 00:02:15.426 A:middle
+So when we talk about
+state restoration,
+
+00:02:15.906 --> 00:02:16.996 A:middle
+it's a simple idea --
+
+00:02:17.776 --> 00:02:21.696 A:middle
+one application to just go
+back exactly where it was
+
+00:02:21.966 --> 00:02:24.286 A:middle
+so the user's experience
+is not interrupted,
+
+00:02:24.856 --> 00:02:26.926 A:middle
+as if the application
+had just been
+
+00:02:26.926 --> 00:02:28.356 A:middle
+in the background all the time.
+
+00:02:28.946 --> 00:02:33.086 A:middle
+And if the application exits and
+restarts, the user won't know.
+
+00:02:33.756 --> 00:02:37.346 A:middle
+And it really is predicated
+on how the user views this,
+
+00:02:37.346 --> 00:02:39.726 A:middle
+and we want to think a lot
+about what the user's doing.
+
+00:02:40.776 --> 00:02:42.456 A:middle
+You want to look at
+the different parts
+
+00:02:42.456 --> 00:02:46.356 A:middle
+of your application and
+examine what you need to save
+
+00:02:46.356 --> 00:02:47.596 A:middle
+and what you need to restore.
+
+00:02:47.906 --> 00:02:50.476 A:middle
+And that's great, but
+start at the top down.
+
+00:02:50.806 --> 00:02:54.196 A:middle
+Think about it as if you're
+using the application and think,
+
+00:02:54.196 --> 00:02:57.186 A:middle
+"If I was using this and it
+went away, where do I want it
+
+00:02:57.186 --> 00:02:59.406 A:middle
+to come back," and
+then from there,
+
+00:02:59.546 --> 00:03:01.756 A:middle
+let that inform what
+you save and restore.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:59.546 --> 00:03:01.756 A:middle
+let that inform what
+you save and restore.
+
+00:03:02.306 --> 00:03:06.706 A:middle
+I'm going to give a
+short demo just to kind
+
+00:03:06.706 --> 00:03:08.096 A:middle
+of highlight what
+I'm talking about.
+
+00:03:08.206 --> 00:03:13.456 A:middle
+So I've got a very
+simple application,
+
+00:03:13.656 --> 00:03:15.676 A:middle
+got a collection
+view, you can see,
+
+00:03:15.826 --> 00:03:17.916 A:middle
+do the nice collection
+view layout stuff.
+
+00:03:17.916 --> 00:03:20.496 A:middle
+And I'm going to
+scroll around and look
+
+00:03:20.496 --> 00:03:22.796 A:middle
+for an image that I want to see.
+
+00:03:23.636 --> 00:03:26.086 A:middle
+So these are all thumbnails
+with little titles --
+
+00:03:26.276 --> 00:03:27.356 A:middle
+pretty standard stuff.
+
+00:03:27.496 --> 00:03:29.436 A:middle
+I'm going to select one --
+
+00:03:29.536 --> 00:03:31.276 A:middle
+you can see that I've got
+the selection there --
+
+00:03:31.276 --> 00:03:32.376 A:middle
+let it roll in.
+
+00:03:33.376 --> 00:03:36.336 A:middle
+Let's make it a little
+bigger so it's easier to see.
+
+00:03:37.096 --> 00:03:41.716 A:middle
+Maybe I'll even get rid of these
+bars here and make it like that.
+
+00:03:42.376 --> 00:03:44.986 A:middle
+So as a user you might
+find an interesting picture
+
+00:03:45.086 --> 00:03:47.066 A:middle
+and then you want to
+go show it to somebody,
+
+00:03:47.546 --> 00:03:50.556 A:middle
+or the phone rings,
+or something happens.
+
+00:03:50.756 --> 00:03:53.186 A:middle
+The application goes
+into the background.
+
+00:03:53.696 --> 00:03:58.316 A:middle
+And the application can exit
+if left alone for awhile
+
+00:03:58.316 --> 00:04:01.216 A:middle
+for various reasons, so I'm
+going to force that here.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:58.316 --> 00:04:01.216 A:middle
+for various reasons, so I'm
+going to force that here.
+
+00:04:02.116 --> 00:04:04.056 A:middle
+Now, I just want to
+point out one thing.
+
+00:04:05.066 --> 00:04:08.906 A:middle
+Ordinarily when a user goes into
+the switcher and flips an app
+
+00:04:08.906 --> 00:04:11.356 A:middle
+up like I just did,
+it'll get rid
+
+00:04:11.356 --> 00:04:13.296 A:middle
+of all the state
+restoration information.
+
+00:04:14.076 --> 00:04:16.976 A:middle
+We do that on purpose
+to kind of save a user
+
+00:04:16.976 --> 00:04:18.486 A:middle
+if every time they run the app,
+
+00:04:18.486 --> 00:04:21.146 A:middle
+it starts up in a bad
+state and they're stuck.
+
+00:04:21.736 --> 00:04:23.796 A:middle
+First thing a frustrated
+user might do is go
+
+00:04:23.796 --> 00:04:25.166 A:middle
+in and flick that up.
+
+00:04:25.496 --> 00:04:26.416 A:middle
+We'll get rid of the state,
+
+00:04:26.416 --> 00:04:28.296 A:middle
+give them a clean
+start if that happens.
+
+00:04:28.416 --> 00:04:31.036 A:middle
+Hopefully it won't,
+but it's an out.
+
+00:04:31.806 --> 00:04:35.776 A:middle
+But for developers, sometimes
+you don't want that to happen.
+
+00:04:35.776 --> 00:04:37.706 A:middle
+If you're trying to chase
+a bug, you're trying
+
+00:04:37.706 --> 00:04:40.026 A:middle
+to diagnose something
+or just simply testing,
+
+00:04:40.026 --> 00:04:43.046 A:middle
+it's very convenient to go in,
+kill the app and restart it.
+
+00:04:43.406 --> 00:04:44.596 A:middle
+You don't want to lose the info.
+
+00:04:44.906 --> 00:04:47.416 A:middle
+And I'll talk about that a
+little more later, but I'm using
+
+00:04:47.416 --> 00:04:50.426 A:middle
+that trick here just to make
+the demo a little easier.
+
+00:04:51.086 --> 00:04:54.276 A:middle
+So the app's not running
+now, and if the user walked
+
+00:04:54.276 --> 00:04:55.466 A:middle
+up to their friend
+and said, "Hey,
+
+00:04:55.466 --> 00:04:58.386 A:middle
+look at this cool picture,"
+well, let's see what happens
+
+00:04:58.386 --> 00:04:59.776 A:middle
+if we start it back up.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:00.916 --> 00:05:02.736 A:middle
+And it goes right
+back to where it was.
+
+00:05:03.926 --> 00:05:06.856 A:middle
+It remembered that we weren't
+showing any of the bars,
+
+00:05:06.956 --> 00:05:10.176 A:middle
+remembered the size of the
+image, and even some things
+
+00:05:10.176 --> 00:05:11.306 A:middle
+that are behind the scenes.
+
+00:05:11.346 --> 00:05:14.106 A:middle
+Let's go here, I'm just
+going to peel it back
+
+00:05:14.106 --> 00:05:16.946 A:middle
+with our cool new
+gesture, and you can see
+
+00:05:16.946 --> 00:05:18.726 A:middle
+that it remembered
+the scrollPosition
+
+00:05:19.606 --> 00:05:20.786 A:middle
+and the selected cell.
+
+00:05:20.786 --> 00:05:24.156 A:middle
+So that's a pretty
+unexciting demo,
+
+00:05:24.196 --> 00:05:25.756 A:middle
+but it was supposed
+to be actually.
+
+00:05:26.166 --> 00:05:30.656 A:middle
+The idea is it's predictable,
+the users get what they want,
+
+00:05:30.886 --> 00:05:32.606 A:middle
+and it's nice and
+easy for everybody.
+
+00:05:33.246 --> 00:05:37.146 A:middle
+So let's look at what we did
+in order to accomplish that.
+
+00:05:38.176 --> 00:05:41.536 A:middle
+So first, what was
+actually restored?
+
+00:05:41.776 --> 00:05:44.876 A:middle
+We saw it from the user's
+perspective, but as a developer,
+
+00:05:44.876 --> 00:05:46.776 A:middle
+what were the constituent
+pieces?
+
+00:05:47.296 --> 00:05:50.306 A:middle
+We had a navigation controller.
+
+00:05:50.606 --> 00:05:54.266 A:middle
+It remembered what
+was pushed on it.
+
+00:05:54.536 --> 00:05:56.876 A:middle
+We also remembered
+the scrollPosition
+
+00:05:56.936 --> 00:06:00.156 A:middle
+in our collection view
+and the selected cell.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:56.936 --> 00:06:00.156 A:middle
+in our collection view
+and the selected cell.
+
+00:06:00.796 --> 00:06:05.006 A:middle
+And finally, we remembered
+what image we were showing,
+
+00:06:06.206 --> 00:06:09.726 A:middle
+the transformation we
+applied to resize it.
+
+00:06:10.926 --> 00:06:15.456 A:middle
+So you'll find that when you
+write state restoration code,
+
+00:06:15.616 --> 00:06:19.446 A:middle
+a lot of what you do is map what
+your application has already
+
+00:06:19.446 --> 00:06:22.326 A:middle
+done into what you need
+to save and restore.
+
+00:06:23.186 --> 00:06:25.376 A:middle
+Typically, you'll find
+that there's a lot
+
+00:06:25.376 --> 00:06:26.746 A:middle
+of really strong parallels
+
+00:06:26.746 --> 00:06:29.236 A:middle
+between code you've
+already written, ad in fact,
+
+00:06:29.616 --> 00:06:31.566 A:middle
+you'll be able to
+leverage and reuse most
+
+00:06:31.566 --> 00:06:32.486 A:middle
+of the code you've written.
+
+00:06:33.126 --> 00:06:36.786 A:middle
+So here, let's see what happens
+before we even saved state
+
+00:06:37.086 --> 00:06:39.836 A:middle
+when the user selected
+that cell and we pushed
+
+00:06:39.836 --> 00:06:41.186 A:middle
+on that image view controller.
+
+00:06:41.776 --> 00:06:44.526 A:middle
+If we didn't take any action
+
+00:06:44.526 --> 00:06:46.286 A:middle
+and we just loaded
+the view controller,
+
+00:06:46.716 --> 00:06:48.306 A:middle
+we wouldn't have an
+image or a title.
+
+00:06:49.456 --> 00:06:53.126 A:middle
+We want to put something there,
+and we also want to remember
+
+00:06:53.126 --> 00:06:55.276 A:middle
+that we're going to change
+that title up top, too.
+
+00:06:56.546 --> 00:06:57.346 A:middle
+So what do we do?
+
+00:06:58.426 --> 00:07:02.096 A:middle
+Well, we have a method called
+prepare for segway that you use
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:58.426 --> 00:07:02.096 A:middle
+Well, we have a method called
+prepare for segway that you use
+
+00:07:02.096 --> 00:07:03.336 A:middle
+when you have storyboards.
+
+00:07:03.956 --> 00:07:05.746 A:middle
+So that's what I have
+in the example here.
+
+00:07:06.486 --> 00:07:08.026 A:middle
+And then prepare for segway,
+
+00:07:08.556 --> 00:07:10.706 A:middle
+I hand the view controller
+that's coming in,
+
+00:07:10.706 --> 00:07:13.686 A:middle
+our image view controller,
+enough information
+
+00:07:13.686 --> 00:07:16.296 A:middle
+so that it can get the
+image and set that title.
+
+00:07:16.836 --> 00:07:20.056 A:middle
+So now when I did that
+segway, we actually have
+
+00:07:20.056 --> 00:07:22.886 A:middle
+that information right there.
+
+00:07:23.486 --> 00:07:26.966 A:middle
+So similarly, when I save and
+restoreState, I'm going to want
+
+00:07:26.966 --> 00:07:28.366 A:middle
+to be able to maintain that.
+
+00:07:29.026 --> 00:07:31.106 A:middle
+So what do we do?
+
+00:07:31.406 --> 00:07:33.286 A:middle
+Well, let's look at
+how we saved state.
+
+00:07:33.956 --> 00:07:36.266 A:middle
+When the application
+goes in the background,
+
+00:07:36.666 --> 00:07:39.686 A:middle
+we're going to go all the view
+controllers with identifiers,
+
+00:07:39.736 --> 00:07:42.276 A:middle
+all the view controllers that
+need to save their state,
+
+00:07:42.466 --> 00:07:43.616 A:middle
+and give them a chance.
+
+00:07:44.186 --> 00:07:48.546 A:middle
+So we're going to call them
+method encodeRestorableState
+
+00:07:48.546 --> 00:07:49.116 A:middle
+with coder.
+
+00:07:49.116 --> 00:07:51.266 A:middle
+We're going to hand
+a key to archiver
+
+00:07:51.266 --> 00:07:53.246 A:middle
+where it can stash any
+information it wants
+
+00:07:53.246 --> 00:07:54.116 A:middle
+to restore later.
+
+00:07:54.566 --> 00:07:56.406 A:middle
+So what do we need to save here?
+
+00:07:58.236 --> 00:08:01.876 A:middle
+Well, we've got the
+image, also that title.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:58.236 --> 00:08:01.876 A:middle
+Well, we've got the
+image, also that title.
+
+00:08:01.956 --> 00:08:05.566 A:middle
+But we don't want to write
+out the bits of the image
+
+00:08:05.566 --> 00:08:08.336 A:middle
+and actually save
+an extra image file.
+
+00:08:08.376 --> 00:08:12.176 A:middle
+And in fact, if you think about
+it, you probably have one place
+
+00:08:12.176 --> 00:08:15.646 A:middle
+that informs you of both the
+image itself and that title.
+
+00:08:16.406 --> 00:08:21.486 A:middle
+So let's just save an identifier
+that we can use later to look
+
+00:08:21.486 --> 00:08:22.726 A:middle
+up this information again.
+
+00:08:23.246 --> 00:08:27.026 A:middle
+And that as simple as
+just encoding something
+
+00:08:27.156 --> 00:08:29.686 A:middle
+into that archiver that's
+passed into the method.
+
+00:08:29.686 --> 00:08:33.686 A:middle
+And you can see here my image ID
+is a string, so I'm just going
+
+00:08:33.686 --> 00:08:35.926 A:middle
+to encode an object,
+give it a key
+
+00:08:35.926 --> 00:08:37.366 A:middle
+so I can look it back up later.
+
+00:08:38.496 --> 00:08:39.296 A:middle
+Anything else?
+
+00:08:40.376 --> 00:08:41.956 A:middle
+Well, we also remember whether
+
+00:08:41.956 --> 00:08:45.196 A:middle
+or not the user was showing the
+bars on the top and the bottom.
+
+00:08:45.576 --> 00:08:47.116 A:middle
+So how do we save that?
+
+00:08:47.996 --> 00:08:48.836 A:middle
+Just as simple.
+
+00:08:49.136 --> 00:08:50.676 A:middle
+Just going to encode
+a Boolean here,
+
+00:08:51.656 --> 00:08:53.046 A:middle
+and that's all we have to do.
+
+00:08:54.696 --> 00:08:57.476 A:middle
+So you'll notice, I'm not
+showing a lot of code right now,
+
+00:08:57.586 --> 00:08:59.786 A:middle
+and there's a couple
+reasons for that.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:00.036 --> 00:09:03.966 A:middle
+One is, what's important is to
+try to get the concepts across,
+
+00:09:03.966 --> 00:09:06.746 A:middle
+so you can see what it is that
+we're actually trying to do.
+
+00:09:07.266 --> 00:09:10.026 A:middle
+If I show you the code, it's
+easy to kind of get lost
+
+00:09:10.026 --> 00:09:12.406 A:middle
+in the forest just
+looking at it.
+
+00:09:12.716 --> 00:09:15.416 A:middle
+Now, we have released the code,
+so you'll be able to check
+
+00:09:15.416 --> 00:09:17.796 A:middle
+out this whole example and
+see everything I'm talking
+
+00:09:17.796 --> 00:09:22.126 A:middle
+about here in more detail, but
+you can do it on your own time.
+
+00:09:22.906 --> 00:09:27.276 A:middle
+So how did we know to
+call encodeRestorableState
+
+00:09:27.276 --> 00:09:29.096 A:middle
+for that view controller object?
+
+00:09:29.976 --> 00:09:31.436 A:middle
+Well, here's all
+the view controllers
+
+00:09:31.436 --> 00:09:33.206 A:middle
+in my application so far.
+
+00:09:33.386 --> 00:09:36.206 A:middle
+We've got the navigation
+controller, that collection view
+
+00:09:36.206 --> 00:09:38.216 A:middle
+with all the little
+images, the thumbnails.
+
+00:09:38.216 --> 00:09:41.156 A:middle
+What we just looked at was
+the image view controller,
+
+00:09:41.266 --> 00:09:43.546 A:middle
+and of course there's some
+views that go along with those.
+
+00:09:44.976 --> 00:09:47.416 A:middle
+What you do is you give them
+restoration identifiers.
+
+00:09:47.696 --> 00:09:52.156 A:middle
+That tells us that you want us
+to keep track of those objects
+
+00:09:52.576 --> 00:09:54.826 A:middle
+when we save state and
+when we restore it.
+
+00:09:55.306 --> 00:09:58.736 A:middle
+And we will also call the
+encodeRestorableState method
+
+00:09:58.886 --> 00:10:01.876 A:middle
+on all of them so that
+we save everything.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:58.886 --> 00:10:01.876 A:middle
+on all of them so that
+we save everything.
+
+00:10:02.436 --> 00:10:07.256 A:middle
+Okay. So how about
+when we restoreState?
+
+00:10:08.246 --> 00:10:11.486 A:middle
+So at this point, the
+application is starting back up.
+
+00:10:12.746 --> 00:10:14.806 A:middle
+Do you need to do
+anything different
+
+00:10:14.996 --> 00:10:18.386 A:middle
+when an application starts up
+when you're restoring state
+
+00:10:18.386 --> 00:10:20.976 A:middle
+versus the very first time
+the application launches?
+
+00:10:22.236 --> 00:10:25.056 A:middle
+Well, when an application
+launches, we tell the delegate
+
+00:10:25.806 --> 00:10:30.386 A:middle
+that we're starting up, and here
+we just simply call or recall,
+
+00:10:30.796 --> 00:10:34.396 A:middle
+the method application Will
+finishLaunching with options.
+
+00:10:34.896 --> 00:10:37.006 A:middle
+And you don't have to do
+anything different here
+
+00:10:37.376 --> 00:10:40.966 A:middle
+in the state restoration
+case; just proceed as normal.
+
+00:10:41.626 --> 00:10:46.126 A:middle
+Set up your base interface, will
+either load your base interface
+
+00:10:46.126 --> 00:10:47.756 A:middle
+from a storyboard or a nib,
+
+00:10:47.996 --> 00:10:50.056 A:middle
+or you can execute
+whatever code you have,
+
+00:10:50.056 --> 00:10:53.686 A:middle
+get your window visible,
+and you're good to go,
+
+00:10:53.686 --> 00:10:55.126 A:middle
+and that's our starting point.
+
+00:10:55.686 --> 00:10:58.436 A:middle
+Then we're going to
+go and we're going
+
+00:10:58.436 --> 00:11:01.626 A:middle
+to call the restorationMethods
+for the objects
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:58.436 --> 00:11:01.626 A:middle
+to call the restorationMethods
+for the objects
+
+00:11:01.626 --> 00:11:02.576 A:middle
+that are participating.
+
+00:11:02.896 --> 00:11:05.366 A:middle
+So in this case, let's look
+at the image controller.
+
+00:11:06.866 --> 00:11:10.116 A:middle
+So here, you can see we're
+starting off without our image.
+
+00:11:10.246 --> 00:11:11.986 A:middle
+How do we get it back?
+
+00:11:12.716 --> 00:11:16.696 A:middle
+We have a complimentary method,
+decodeRestorableStateWithCoder.
+
+00:11:17.106 --> 00:11:19.416 A:middle
+It's kind of the analog to
+the one I just showed you,
+
+00:11:19.446 --> 00:11:22.166 A:middle
+where you saved your
+state, fairly logical.
+
+00:11:22.166 --> 00:11:25.726 A:middle
+So what we're going to
+do is we're going to pull
+
+00:11:25.726 --> 00:11:28.946 A:middle
+in that image identifier,
+which informs us both
+
+00:11:28.946 --> 00:11:30.596 A:middle
+of the image and the title.
+
+00:11:31.116 --> 00:11:32.486 A:middle
+You can see that I got that.
+
+00:11:33.096 --> 00:11:34.006 A:middle
+Anything else?
+
+00:11:34.156 --> 00:11:36.536 A:middle
+Well, how did we get it?
+
+00:11:37.716 --> 00:11:40.816 A:middle
+Similar to the way we encoded
+it, we just simply decode it.
+
+00:11:41.046 --> 00:11:42.886 A:middle
+And when you write this
+code and you look at it,
+
+00:11:43.116 --> 00:11:45.106 A:middle
+the code itself is very simple.
+
+00:11:46.326 --> 00:11:48.256 A:middle
+What's interesting
+is when you think
+
+00:11:48.256 --> 00:11:51.136 A:middle
+about how your application is
+structured and see what it is
+
+00:11:51.136 --> 00:11:52.696 A:middle
+that you need to
+save and restore.
+
+00:11:52.806 --> 00:11:54.546 A:middle
+The code is very boilerplate.
+
+00:11:56.516 --> 00:11:59.816 A:middle
+We also kept track of whether or
+not we were showing those bars.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:00.466 --> 00:12:03.976 A:middle
+Again, we just simply
+decoded Boolean and set it up.
+
+00:12:04.436 --> 00:12:06.646 A:middle
+Now, I'm not showing you
+the code that actually goes
+
+00:12:06.646 --> 00:12:08.766 A:middle
+and draws the image
+and sets the title.
+
+00:12:09.766 --> 00:12:10.846 A:middle
+In your application,
+
+00:12:10.896 --> 00:12:13.046 A:middle
+you've already written
+the code that does that.
+
+00:12:13.306 --> 00:12:15.716 A:middle
+When you first presented
+that image view controller
+
+00:12:15.716 --> 00:12:19.686 A:middle
+or used the segway transition,
+you obviously have some code
+
+00:12:19.856 --> 00:12:21.406 A:middle
+that goes and loads
+in the image.
+
+00:12:21.666 --> 00:12:23.036 A:middle
+And with state restoration,
+
+00:12:23.486 --> 00:12:25.276 A:middle
+you'll always be
+able to reuse that.
+
+00:12:25.276 --> 00:12:28.376 A:middle
+So here, all we're trying to do
+is get the information we need
+
+00:12:28.376 --> 00:12:29.556 A:middle
+and then pass it around.
+
+00:12:29.746 --> 00:12:32.546 A:middle
+And I'll show you that in
+a little more detail later.
+
+00:12:32.546 --> 00:12:36.926 A:middle
+So do we have to
+do anything else?
+
+00:12:36.926 --> 00:12:37.686 A:middle
+I mean, we had a lot
+
+00:12:37.686 --> 00:12:39.136 A:middle
+of different things
+getting restored,
+
+00:12:39.136 --> 00:12:40.786 A:middle
+and I just showed you
+a little bit of code.
+
+00:12:42.256 --> 00:12:44.666 A:middle
+Remember, the navigation
+controller remembered to stack.
+
+00:12:44.666 --> 00:12:47.436 A:middle
+It remembered that we had
+this view controller presented
+
+00:12:47.436 --> 00:12:50.526 A:middle
+on top -- I'm sorry -- pushed
+on top of that collection view.
+
+00:12:51.816 --> 00:12:59.696 A:middle
+We also had scroll position
+and our selected self.
+
+00:12:59.876 --> 00:13:03.376 A:middle
+And we also had that image
+sized up as it should have been.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:59.876 --> 00:13:03.376 A:middle
+And we also had that image
+sized up as it should have been.
+
+00:13:03.816 --> 00:13:06.316 A:middle
+Did you have to write any
+code to do any of that?
+
+00:13:06.686 --> 00:13:08.626 A:middle
+Well, it turns out you
+didn't have to do anything.
+
+00:13:08.946 --> 00:13:10.566 A:middle
+You get all of that for free.
+
+00:13:11.436 --> 00:13:12.556 A:middle
+And how does that happen?
+
+00:13:13.496 --> 00:13:16.186 A:middle
+Well, I mentioned
+before that when you set
+
+00:13:16.186 --> 00:13:20.436 A:middle
+up all the restoration
+identifiers, it both informs us
+
+00:13:20.436 --> 00:13:23.796 A:middle
+of what needs to be saved but
+also allows us to call methods
+
+00:13:23.796 --> 00:13:25.076 A:middle
+to save and restore state.
+
+00:13:25.656 --> 00:13:28.856 A:middle
+And we have a whole bunch
+of base implementations
+
+00:13:29.786 --> 00:13:32.416 A:middle
+that save all the stuff for
+you which is very convenient,
+
+00:13:32.696 --> 00:13:34.316 A:middle
+saving you the tedium of having
+
+00:13:34.316 --> 00:13:36.176 A:middle
+to write these very
+common things.
+
+00:13:36.246 --> 00:13:38.886 A:middle
+So we keep track of a
+lot of default behaviors,
+
+00:13:39.246 --> 00:13:41.566 A:middle
+a lot of information
+automatically for you.
+
+00:13:41.956 --> 00:13:44.606 A:middle
+So you get a lot of leverage,
+you get a lot of bang
+
+00:13:44.606 --> 00:13:47.466 A:middle
+for your buck for
+setting this up.
+
+00:13:50.656 --> 00:13:53.766 A:middle
+So let's talk about
+what's new in iOS 7.
+
+00:13:55.196 --> 00:13:57.106 A:middle
+We had some great
+successes this year.
+
+00:13:57.496 --> 00:13:59.066 A:middle
+We've seen people
+implementing this
+
+00:13:59.066 --> 00:14:01.856 A:middle
+and some really nice apps
+incorporating state restoration.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:59.066 --> 00:14:01.856 A:middle
+and some really nice apps
+incorporating state restoration.
+
+00:14:02.576 --> 00:14:06.816 A:middle
+And we felt that we had a nice
+starting point for all this,
+
+00:14:07.296 --> 00:14:08.866 A:middle
+but that there were
+some additional things
+
+00:14:08.866 --> 00:14:12.096 A:middle
+that we could do that would
+make it even easier to use,
+
+00:14:12.506 --> 00:14:16.076 A:middle
+and also we wanted to continue
+to grow as we add new facilities
+
+00:14:16.256 --> 00:14:19.776 A:middle
+to iOS and as apps continue
+to get more sophisticated.
+
+00:14:20.656 --> 00:14:24.696 A:middle
+So let's look at what we've got.
+
+00:14:25.276 --> 00:14:29.046 A:middle
+We found that with view
+controllers and views,
+
+00:14:29.406 --> 00:14:33.116 A:middle
+you sometimes wanted to also
+have objects participate
+
+00:14:33.116 --> 00:14:35.226 A:middle
+in state restoration
+like a data source
+
+00:14:35.526 --> 00:14:37.966 A:middle
+or some other nonview
+controller object
+
+00:14:38.616 --> 00:14:40.336 A:middle
+in the same way the
+view controllers
+
+00:14:40.336 --> 00:14:41.526 A:middle
+and views participate.
+
+00:14:42.046 --> 00:14:46.906 A:middle
+So we added the ability for any
+object to be able to get added
+
+00:14:46.906 --> 00:14:51.626 A:middle
+to the state restoration graph
+and save and restore its state.
+
+00:14:52.326 --> 00:14:56.196 A:middle
+Also, we've made it
+easier for you to figure
+
+00:14:56.196 --> 00:14:58.026 A:middle
+out when you can apply state.
+
+00:14:58.616 --> 00:15:01.266 A:middle
+Something that's a
+little tricky sometimes is
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:58.616 --> 00:15:01.266 A:middle
+Something that's a
+little tricky sometimes is
+
+00:15:01.266 --> 00:15:05.096 A:middle
+when your application restores
+all of its state but isn't sure
+
+00:15:05.096 --> 00:15:08.216 A:middle
+of the order that different
+things will get resorted in.
+
+00:15:08.336 --> 00:15:11.056 A:middle
+So after you've pulled the
+view controller state back,
+
+00:15:11.466 --> 00:15:13.926 A:middle
+is it safe to go
+and draw everything
+
+00:15:13.926 --> 00:15:15.916 A:middle
+on the screen, or
+apply everything?
+
+00:15:16.226 --> 00:15:18.366 A:middle
+Well, it might depend
+on other objects
+
+00:15:18.366 --> 00:15:20.766 A:middle
+that are also participating,
+and we don't want you
+
+00:15:20.766 --> 00:15:21.976 A:middle
+to have to worry about that.
+
+00:15:22.296 --> 00:15:24.926 A:middle
+So I'll show how we've
+made that easier to handle.
+
+00:15:25.466 --> 00:15:29.836 A:middle
+We've done a lot of work
+with Snapshot handling.
+
+00:15:30.916 --> 00:15:33.676 A:middle
+Previously when an
+application restored state,
+
+00:15:33.676 --> 00:15:35.146 A:middle
+we would show the default PNG,
+
+00:15:35.146 --> 00:15:38.266 A:middle
+and when the application
+started up, we would just jump
+
+00:15:38.636 --> 00:15:39.766 A:middle
+to wherever its state was.
+
+00:15:40.216 --> 00:15:42.486 A:middle
+Now to provide a more
+seamless experience,
+
+00:15:42.746 --> 00:15:44.966 A:middle
+we'll use a Snapshot
+very aggressively,
+
+00:15:45.146 --> 00:15:46.606 A:middle
+and I'll go through
+how you do that
+
+00:15:46.606 --> 00:15:49.186 A:middle
+and how you still have
+some control over that.
+
+00:15:50.056 --> 00:15:52.936 A:middle
+There's also some small
+enhancements I'll discuss.
+
+00:15:53.766 --> 00:15:55.366 A:middle
+We just keep adding new things.
+
+00:15:55.696 --> 00:15:58.686 A:middle
+Last year in 2012 when
+I talked about this,
+
+00:15:58.686 --> 00:16:02.126 A:middle
+I mentioned you can implement
+some state restoration
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:58.686 --> 00:16:02.126 A:middle
+I mentioned you can implement
+some state restoration
+
+00:16:02.126 --> 00:16:04.716 A:middle
+for your app and then
+enhance it or extend it
+
+00:16:04.716 --> 00:16:05.946 A:middle
+as you add new features.
+
+00:16:06.276 --> 00:16:09.286 A:middle
+And we're taking our own advice
+and doing the same thing,
+
+00:16:09.556 --> 00:16:13.376 A:middle
+so we started with the most
+critical things, the basics,
+
+00:16:13.566 --> 00:16:16.376 A:middle
+and then we started to add
+more things for this year.
+
+00:16:18.106 --> 00:16:19.496 A:middle
+So that's what's new.
+
+00:16:20.326 --> 00:16:22.436 A:middle
+Okay, first is generalized
+objects.
+
+00:16:23.076 --> 00:16:26.616 A:middle
+So the idea here is to be
+able to take objects that are
+
+00:16:26.616 --> 00:16:29.696 A:middle
+in view controllers and
+views and also use them
+
+00:16:29.696 --> 00:16:32.316 A:middle
+in the same way in state
+restoration as you've been able
+
+00:16:32.316 --> 00:16:34.586 A:middle
+to with our existing API.
+
+00:16:35.696 --> 00:16:38.436 A:middle
+So here's two of our
+view controllers.
+
+00:16:38.526 --> 00:16:41.876 A:middle
+We have both the collection
+view and then we also have
+
+00:16:41.876 --> 00:16:42.696 A:middle
+that image controller.
+
+00:16:42.996 --> 00:16:46.216 A:middle
+And a very common thing
+in an application is
+
+00:16:46.216 --> 00:16:48.686 A:middle
+to have a data source object.
+
+00:16:49.676 --> 00:16:52.846 A:middle
+And with that data source,
+you'll be referring to it
+
+00:16:53.116 --> 00:16:54.846 A:middle
+for multiple objects
+in the system.
+
+00:16:55.526 --> 00:16:58.186 A:middle
+So here I'm using the
+data source to inform you
+
+00:16:58.186 --> 00:17:01.466 A:middle
+of what images I have, how
+many, what their titles are,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:58.186 --> 00:17:01.466 A:middle
+of what images I have, how
+many, what their titles are,
+
+00:17:01.646 --> 00:17:03.606 A:middle
+and to get the image
+bits themselves --
+
+00:17:03.606 --> 00:17:06.366 A:middle
+kind of wraps over where
+all those images are hiding
+
+00:17:06.366 --> 00:17:07.856 A:middle
+in the file system
+so I don't have
+
+00:17:07.925 --> 00:17:09.826 A:middle
+to replicate that
+code everywhere.
+
+00:17:10.376 --> 00:17:13.626 A:middle
+So I'm going to want
+to be able to save
+
+00:17:13.626 --> 00:17:15.935 A:middle
+and restore a reference
+to that directly.
+
+00:17:16.006 --> 00:17:18.896 A:middle
+I don't want to actually
+encode the object completely
+
+00:17:18.896 --> 00:17:22.316 A:middle
+and make copies of it; I
+just want to refer to it.
+
+00:17:22.316 --> 00:17:24.396 A:middle
+And the data source doesn't
+actually need to save
+
+00:17:24.396 --> 00:17:27.685 A:middle
+and restore any state of its
+own, but I will want to be able
+
+00:17:27.685 --> 00:17:30.476 A:middle
+to refer to it when I'm saving
+state for other objects.
+
+00:17:30.866 --> 00:17:34.006 A:middle
+And something that's
+kind of similar is
+
+00:17:34.006 --> 00:17:36.306 A:middle
+when you have a shared
+object amongst the many view
+
+00:17:36.306 --> 00:17:38.016 A:middle
+controllers that
+might be dynamic.
+
+00:17:38.726 --> 00:17:41.856 A:middle
+So I'm going to extend the
+demo that I showed you before,
+
+00:17:41.926 --> 00:17:43.976 A:middle
+and we're going add an
+Inspector so we can set
+
+00:17:43.976 --> 00:17:46.626 A:middle
+up some effects,
+some image effects.
+
+00:17:47.416 --> 00:17:50.426 A:middle
+And here you can see that
+that Inspector and the image
+
+00:17:50.426 --> 00:17:52.026 A:middle
+which is now kind of
+a different color,
+
+00:17:52.026 --> 00:17:54.016 A:middle
+are sharing a filter object.
+
+00:17:54.676 --> 00:17:57.446 A:middle
+And this Filter object does
+have some state, so it will want
+
+00:17:57.446 --> 00:18:00.806 A:middle
+to save and restore state,
+and I'll also want to be able
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:57.446 --> 00:18:00.806 A:middle
+to save and restore state,
+and I'll also want to be able
+
+00:18:00.806 --> 00:18:02.286 A:middle
+to maintain those references.
+
+00:18:02.846 --> 00:18:07.856 A:middle
+So let's look at how our
+example application has changed.
+
+00:18:09.356 --> 00:18:13.426 A:middle
+So I've got a data source object
+here which I just described,
+
+00:18:13.516 --> 00:18:17.896 A:middle
+and it's being referred to by
+both of the view controllers.
+
+00:18:18.446 --> 00:18:22.016 A:middle
+Now, I'm going to
+extend the application
+
+00:18:22.016 --> 00:18:24.786 A:middle
+and add an Inspector, so I'm
+going to present something
+
+00:18:25.266 --> 00:18:27.546 A:middle
+and it's going to
+use a filter object.
+
+00:18:28.196 --> 00:18:30.706 A:middle
+In fact, I might have more
+than one filter object,
+
+00:18:31.836 --> 00:18:34.406 A:middle
+and they'll be referred
+to for multiple places.
+
+00:18:35.216 --> 00:18:39.056 A:middle
+So what I want to focus
+on here is the data source
+
+00:18:39.056 --> 00:18:39.976 A:middle
+and these filters.
+
+00:18:40.026 --> 00:18:41.466 A:middle
+These are these objects
+I'm referring
+
+00:18:41.466 --> 00:18:44.056 A:middle
+to as generalized
+objects, and we're going
+
+00:18:44.056 --> 00:18:46.516 A:middle
+to see how they can play
+along with everything else.
+
+00:18:48.096 --> 00:18:52.426 A:middle
+The first thing you need to do
+if you want to use these objects
+
+00:18:52.426 --> 00:18:54.326 A:middle
+in state restoration
+is register them.
+
+00:18:54.976 --> 00:18:57.876 A:middle
+We've added a new
+method, on UI application.
+
+00:18:58.476 --> 00:19:02.926 A:middle
+It's called RegisterObject
+for state restoration.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:58.476 --> 00:19:02.926 A:middle
+It's called RegisterObject
+for state restoration.
+
+00:19:04.686 --> 00:19:06.936 A:middle
+I'm glad we have code
+Complete, because that's long.
+
+00:19:08.356 --> 00:19:10.696 A:middle
+This is very similar to setting
+
+00:19:10.696 --> 00:19:13.096 A:middle
+up a restoration identifier
+on a view controller.
+
+00:19:14.116 --> 00:19:16.416 A:middle
+You pass in the object
+and you can see
+
+00:19:16.416 --> 00:19:19.106 A:middle
+that it actually implements
+a new protocol, and we'll get
+
+00:19:19.106 --> 00:19:22.606 A:middle
+to that in a minute,
+then you also pass us a
+
+00:19:22.606 --> 00:19:24.196 A:middle
+stringRestoration identifier.
+
+00:19:24.916 --> 00:19:28.096 A:middle
+Now, for view controllers and
+views we made this a property,
+
+00:19:28.826 --> 00:19:31.926 A:middle
+but I didn't want to
+force developers to have
+
+00:19:32.026 --> 00:19:35.656 A:middle
+to subclass a base class
+that we would contrive just
+
+00:19:35.656 --> 00:19:37.216 A:middle
+so that they could
+register an object.
+
+00:19:38.136 --> 00:19:39.736 A:middle
+We need to hook in,
+we need to know
+
+00:19:39.736 --> 00:19:41.016 A:middle
+when the object's registered.
+
+00:19:41.276 --> 00:19:43.646 A:middle
+I didn't want you to have to
+subclass something and make sure
+
+00:19:43.646 --> 00:19:46.796 A:middle
+to call Super, so we felt
+this was a nice clear way
+
+00:19:47.076 --> 00:19:48.996 A:middle
+to identify what's
+participating.
+
+00:19:49.086 --> 00:19:51.046 A:middle
+You just call this
+method with your object
+
+00:19:51.046 --> 00:19:53.546 A:middle
+and the identifier you
+want, you're good to go.
+
+00:19:54.466 --> 00:19:57.856 A:middle
+So let's look at that
+protocol that I mentioned.
+
+00:19:57.856 --> 00:19:59.756 A:middle
+It's called UI state restoring.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:00.376 --> 00:20:05.226 A:middle
+It has the methods to save and
+restore state for that object.
+
+00:20:05.866 --> 00:20:07.356 A:middle
+These are actually optional.
+
+00:20:07.356 --> 00:20:09.716 A:middle
+There's some cases where you
+won't actually need to save
+
+00:20:09.716 --> 00:20:12.176 A:middle
+and restore anything; you
+just want to add the object
+
+00:20:12.586 --> 00:20:19.026 A:middle
+to the graph of objects
+we're keeping track of.
+
+00:20:19.476 --> 00:20:21.976 A:middle
+We also have a property
+that you can use
+
+00:20:22.246 --> 00:20:24.286 A:middle
+to scope the object's
+identifier.
+
+00:20:25.166 --> 00:20:27.876 A:middle
+Sometimes you might want
+to use the same object
+
+00:20:27.876 --> 00:20:30.696 A:middle
+or the same class of object
+in more than one place,
+
+00:20:30.876 --> 00:20:33.896 A:middle
+and you'll have creation
+code or something that sets
+
+00:20:33.896 --> 00:20:37.846 A:middle
+up the identifier, and it would
+be contrived to have to give it,
+
+00:20:37.846 --> 00:20:39.946 A:middle
+the restoration identifier
+some weird name just
+
+00:20:39.976 --> 00:20:40.996 A:middle
+because of where you put it.
+
+00:20:41.326 --> 00:20:44.286 A:middle
+As an example, let's
+say on an iPad,
+
+00:20:44.286 --> 00:20:45.606 A:middle
+you have an image editing app
+
+00:20:45.756 --> 00:20:47.616 A:middle
+where you can apply
+two different effects.
+
+00:20:47.616 --> 00:20:52.116 A:middle
+So on the left here, you
+can have one set of effects
+
+00:20:52.256 --> 00:20:53.326 A:middle
+that you're showing
+on the image,
+
+00:20:53.506 --> 00:20:55.676 A:middle
+and you might have a
+different set on the right side
+
+00:20:55.676 --> 00:20:58.586 A:middle
+so the user can kind of
+compare and contrast approaches.
+
+00:20:59.316 --> 00:21:01.906 A:middle
+And you might be using
+the same effect objects,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:59.316 --> 00:21:01.906 A:middle
+And you might be using
+the same effect objects,
+
+00:21:01.906 --> 00:21:04.446 A:middle
+or the same filter
+objects, and you just want
+
+00:21:04.446 --> 00:21:05.606 A:middle
+to give them the same name.
+
+00:21:06.026 --> 00:21:08.376 A:middle
+You can scope them by
+setting their parent.
+
+00:21:08.906 --> 00:21:11.006 A:middle
+Often you'll set that
+to a view controller.
+
+00:21:11.476 --> 00:21:13.706 A:middle
+You might set it to
+another restorable object.
+
+00:21:14.836 --> 00:21:16.616 A:middle
+This is what we implicitly do
+
+00:21:16.766 --> 00:21:18.336 A:middle
+for the view controller
+hierarchy.
+
+00:21:18.586 --> 00:21:21.416 A:middle
+We actually keep track of
+the parent of an object based
+
+00:21:21.416 --> 00:21:24.056 A:middle
+on whether it was
+presented, or if it's pushed
+
+00:21:24.056 --> 00:21:26.896 A:middle
+on a navigation stack or in
+another collection controller
+
+00:21:26.896 --> 00:21:30.236 A:middle
+like a tab view, and here
+we make it very explicit
+
+00:21:30.236 --> 00:21:32.156 A:middle
+for you to do.
+
+00:21:32.776 --> 00:21:37.326 A:middle
+Also, in some cases, the objects
+may or may not exist depending
+
+00:21:37.326 --> 00:21:38.806 A:middle
+on what the user has done.
+
+00:21:38.886 --> 00:21:41.146 A:middle
+So I showed you this
+beginning of the demo
+
+00:21:41.146 --> 00:21:43.646 A:middle
+and I didn't create any
+filters, so there aren't any
+
+00:21:43.646 --> 00:21:44.936 A:middle
+in my examples so far.
+
+00:21:45.926 --> 00:21:48.556 A:middle
+Now, if my application
+starts back up, I don't want
+
+00:21:48.556 --> 00:21:51.046 A:middle
+to create every possible
+object I might have
+
+00:21:51.086 --> 00:21:53.026 A:middle
+on the off chance I
+might be restoring them.
+
+00:21:53.026 --> 00:21:56.656 A:middle
+It'd be a lot nicer if somebody
+kept track of that for me
+
+00:21:56.926 --> 00:22:00.276 A:middle
+and told the application, "hey,
+create this because it existed
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:56.926 --> 00:22:00.276 A:middle
+and told the application, "hey,
+create this because it existed
+
+00:22:00.276 --> 00:22:01.526 A:middle
+when you saved state".
+
+00:22:01.986 --> 00:22:04.996 A:middle
+So by specifying a restoration
+class, you're telling us
+
+00:22:05.056 --> 00:22:08.576 A:middle
+who we can ask to recreate
+this object as needed.
+
+00:22:09.076 --> 00:22:13.296 A:middle
+And in the example
+I'm showing you,
+
+00:22:13.426 --> 00:22:14.976 A:middle
+all these different pieces here,
+
+00:22:15.646 --> 00:22:18.786 A:middle
+these filters are
+actually created on demand,
+
+00:22:18.926 --> 00:22:23.886 A:middle
+and we'll see how
+we can do that.
+
+00:22:24.736 --> 00:22:26.676 A:middle
+This protocol that you use
+
+00:22:27.026 --> 00:22:28.816 A:middle
+to create the object
+is very simple.
+
+00:22:29.216 --> 00:22:31.686 A:middle
+So we've specified
+a restoration Class.
+
+00:22:32.026 --> 00:22:34.326 A:middle
+When we're restoring state
+and we need the object,
+
+00:22:34.756 --> 00:22:36.086 A:middle
+we call a class method,
+
+00:22:37.226 --> 00:22:39.346 A:middle
+objectWithRestorationIdentifier
+path,
+
+00:22:39.346 --> 00:22:41.986 A:middle
+and it gets passed
+in two things.
+
+00:22:42.686 --> 00:22:45.646 A:middle
+We give it an array of
+identifier components.
+
+00:22:45.856 --> 00:22:48.656 A:middle
+The last component in that
+array is the identifier,
+
+00:22:48.656 --> 00:22:51.396 A:middle
+and often that's all
+you'll need to look at.
+
+00:22:51.716 --> 00:22:55.286 A:middle
+However, that array contains
+the identifiers for all
+
+00:22:55.286 --> 00:22:56.966 A:middle
+of the restoration parents.
+
+00:22:57.126 --> 00:22:59.906 A:middle
+That way if you've scoped it
+and you want to be informed
+
+00:22:59.906 --> 00:23:02.606 A:middle
+about which one of these
+objects we're asking for,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:59.906 --> 00:23:02.606 A:middle
+about which one of these
+objects we're asking for,
+
+00:23:02.956 --> 00:23:04.276 A:middle
+you have that information.
+
+00:23:06.576 --> 00:23:09.556 A:middle
+We also pass in the
+coder that was used
+
+00:23:09.866 --> 00:23:11.536 A:middle
+when you initially
+saved the object.
+
+00:23:11.856 --> 00:23:13.566 A:middle
+So why do we do that?
+
+00:23:13.566 --> 00:23:15.196 A:middle
+Why not just let you
+create an object.
+
+00:23:15.866 --> 00:23:17.076 A:middle
+Well, you're probably
+going to go
+
+00:23:17.076 --> 00:23:18.696 A:middle
+through some initialization
+code,
+
+00:23:18.936 --> 00:23:22.306 A:middle
+you may need some resources, and
+it might be convenient to look
+
+00:23:22.306 --> 00:23:24.096 A:middle
+at a little bit of
+the information
+
+00:23:24.096 --> 00:23:27.656 A:middle
+that was saved to
+help inform that.
+
+00:23:27.656 --> 00:23:30.926 A:middle
+Also, let's say that you
+have a dynamic database,
+
+00:23:30.926 --> 00:23:34.466 A:middle
+and we're restoring an object
+that no longer corresponds
+
+00:23:34.466 --> 00:23:35.836 A:middle
+to anything in the database.
+
+00:23:35.836 --> 00:23:38.636 A:middle
+You might have synchronized
+the database or changed things
+
+00:23:38.636 --> 00:23:40.496 A:middle
+so that that object
+doesn't exist.
+
+00:23:41.046 --> 00:23:44.156 A:middle
+You can look in the coder
+to find out if indeed
+
+00:23:44.156 --> 00:23:47.206 A:middle
+that object is still around
+or not, and if it isn't,
+
+00:23:47.206 --> 00:23:49.046 A:middle
+you can just return
+nill from this method.
+
+00:23:49.336 --> 00:23:52.236 A:middle
+We'll be fine; we'll just
+stop paying attention to it,
+
+00:23:52.236 --> 00:23:55.186 A:middle
+we won't try to restore
+its state.
+
+00:23:55.666 --> 00:23:58.126 A:middle
+You return one of these
+state restoring objects,
+
+00:23:58.526 --> 00:24:01.036 A:middle
+and you'll all done.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:58.526 --> 00:24:01.036 A:middle
+and you'll all done.
+
+00:24:01.856 --> 00:24:04.656 A:middle
+So now let's look at when
+we launched the app before.
+
+00:24:04.656 --> 00:24:07.246 A:middle
+I mentioned when
+you call application
+
+00:24:07.246 --> 00:24:10.626 A:middle
+willFinishLaunchingwithOptions,
+or rather, when we call it,
+
+00:24:10.876 --> 00:24:13.686 A:middle
+you don't have to do anything
+different than you already did
+
+00:24:13.686 --> 00:24:14.936 A:middle
+when the app started up.
+
+00:24:15.246 --> 00:24:18.726 A:middle
+But remember, in that method,
+you're setting up the basis
+
+00:24:18.756 --> 00:24:22.126 A:middle
+for your application, and if
+we have a data source object
+
+00:24:22.126 --> 00:24:24.756 A:middle
+that we want to refer to,
+you're probably going to have
+
+00:24:24.816 --> 00:24:28.206 A:middle
+to do something to connect that
+up when you do your launch code.
+
+00:24:28.596 --> 00:24:31.676 A:middle
+And here I'm adding
+one line to register it
+
+00:24:31.676 --> 00:24:32.796 A:middle
+for state restoration.
+
+00:24:32.936 --> 00:24:36.286 A:middle
+Just as I showed you before,
+we've given it an identifier,
+
+00:24:36.596 --> 00:24:40.246 A:middle
+we've set up our object, and now
+we know about it, we can find it
+
+00:24:40.246 --> 00:24:43.166 A:middle
+if you refer to it while you're
+restoring state, and when you go
+
+00:24:43.166 --> 00:24:45.876 A:middle
+to save state, we'll
+keep track of it for you.
+
+00:24:46.416 --> 00:24:50.366 A:middle
+So let's go back to
+that segway code.
+
+00:24:51.026 --> 00:24:54.036 A:middle
+So before we even save state,
+remember that we want it
+
+00:24:54.036 --> 00:24:56.066 A:middle
+to switch to this
+image controller.
+
+00:24:57.336 --> 00:24:59.236 A:middle
+We're going to also hand
+that image controller
+
+00:24:59.236 --> 00:25:02.476 A:middle
+to the data source as well;
+that way, it knows who to ask
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:59.236 --> 00:25:02.476 A:middle
+to the data source as well;
+that way, it knows who to ask
+
+00:25:02.676 --> 00:25:06.766 A:middle
+to get the actual image
+file and to get the title.
+
+00:25:07.376 --> 00:25:08.176 A:middle
+So here we go.
+
+00:25:08.826 --> 00:25:10.996 A:middle
+Now, we've got all the
+information we need
+
+00:25:10.996 --> 00:25:13.796 A:middle
+and we've got a nice shared
+object that we're using
+
+00:25:14.196 --> 00:25:15.476 A:middle
+to keep track of everything.
+
+00:25:16.176 --> 00:25:19.046 A:middle
+So what do we do
+when we save state?
+
+00:25:19.856 --> 00:25:23.156 A:middle
+Well, again, we want to
+keep track of that image
+
+00:25:23.156 --> 00:25:25.976 A:middle
+and the title, so we're going
+to write out an identifier
+
+00:25:25.976 --> 00:25:27.436 A:middle
+for those, but we're
+going to write
+
+00:25:27.436 --> 00:25:29.866 A:middle
+out an additional
+thing, and what's that?
+
+00:25:30.166 --> 00:25:32.876 A:middle
+Well, we want to keep
+track of the data source,
+
+00:25:33.136 --> 00:25:37.196 A:middle
+so that when we restoreState, we
+can get a pointer back to that
+
+00:25:37.196 --> 00:25:39.836 A:middle
+without having to do
+an EndRun with globals
+
+00:25:39.836 --> 00:25:42.036 A:middle
+or doing something
+contrived to try to find it.
+
+00:25:42.306 --> 00:25:43.516 A:middle
+We can just refer to it.
+
+00:25:43.516 --> 00:25:45.686 A:middle
+How do we do it?
+
+00:25:45.946 --> 00:25:48.856 A:middle
+Same way we save anything,
+we'll just encode the object.
+
+00:25:50.016 --> 00:25:51.936 A:middle
+Now, we're not going
+to make a copy of this,
+
+00:25:52.086 --> 00:25:54.756 A:middle
+because it's been registered for
+state restoration and we know
+
+00:25:54.756 --> 00:25:57.456 A:middle
+about it and we know that
+it's a state restoring object,
+
+00:25:57.906 --> 00:25:59.906 A:middle
+so we'll just save a reference.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:00.096 --> 00:26:02.646 A:middle
+That way you don't end up with
+a bunch of disjoined copies,
+
+00:26:02.646 --> 00:26:07.616 A:middle
+strewn about your application
+that aren't the right thing.
+
+00:26:08.316 --> 00:26:09.286 A:middle
+How do we restore it?
+
+00:26:09.946 --> 00:26:12.276 A:middle
+Well, you can probably guess
+what's going to happen here.
+
+00:26:12.756 --> 00:26:14.726 A:middle
+We're going to pull that
+data source back in.
+
+00:26:14.726 --> 00:26:17.946 A:middle
+That's going to inform
+us of what image we want.
+
+00:26:18.106 --> 00:26:20.616 A:middle
+Remember, we saved and
+restored the image identifier.
+
+00:26:21.266 --> 00:26:23.756 A:middle
+And now we're pointing back
+at that data source object
+
+00:26:23.756 --> 00:26:26.676 A:middle
+so we can use it and
+everything's wired up just
+
+00:26:26.676 --> 00:26:29.156 A:middle
+as it was when the
+application was last running.
+
+00:26:29.466 --> 00:26:33.316 A:middle
+So it makes it really simple
+to maintain object graphs.
+
+00:26:33.846 --> 00:26:39.046 A:middle
+And again, we just use that
+coder, simple little line
+
+00:26:39.046 --> 00:26:41.606 A:middle
+of code there, decode it,
+and you're good to go.
+
+00:26:43.566 --> 00:26:46.966 A:middle
+Okay, I'm going to show another
+demo that adds on the first
+
+00:26:46.966 --> 00:26:48.556 A:middle
+so let's take a quick look.
+
+00:26:49.716 --> 00:26:53.616 A:middle
+Okay, so here we are,
+back where we were before.
+
+00:26:53.956 --> 00:26:57.466 A:middle
+Let's go back to this image,
+make it a little bigger.
+
+00:26:58.056 --> 00:27:01.966 A:middle
+So let's say that we want to
+put a cool sepia effect on it.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:58.056 --> 00:27:01.966 A:middle
+So let's say that we want to
+put a cool sepia effect on it.
+
+00:27:02.516 --> 00:27:05.936 A:middle
+So here's that Inspector --
+you might recognize it from one
+
+00:27:05.936 --> 00:27:07.226 A:middle
+of my screenshots earlier --
+
+00:27:07.726 --> 00:27:09.906 A:middle
+and I'm going to dial in
+a whole bunch of sepia
+
+00:27:09.966 --> 00:27:11.986 A:middle
+because I don't think you
+can ever have too much.
+
+00:27:13.016 --> 00:27:14.016 A:middle
+See what it looks like.
+
+00:27:15.566 --> 00:27:17.406 A:middle
+I'm a big fan of
+sepia, actually.
+
+00:27:17.996 --> 00:27:28.066 A:middle
+I think it can use
+even a little more.
+
+00:27:28.366 --> 00:27:29.576 A:middle
+Yeah, I like that,
+nice and gold.
+
+00:27:29.576 --> 00:27:33.226 A:middle
+And maybe I can soften
+it up with some blur --
+
+00:27:33.686 --> 00:27:34.776 A:middle
+that's my other filter.
+
+00:27:36.966 --> 00:27:39.006 A:middle
+Not so much.
+
+00:27:39.006 --> 00:27:43.156 A:middle
+I don't really like that, so
+I'm just going to turn it off,
+
+00:27:43.156 --> 00:27:44.816 A:middle
+but I'm going to keep
+it in my back pocket.
+
+00:27:44.816 --> 00:27:46.326 A:middle
+Maybe I can tweak
+it a little more,
+
+00:27:46.526 --> 00:27:47.816 A:middle
+make it kind of nice again.
+
+00:27:48.736 --> 00:27:51.386 A:middle
+All right so let's put the
+application in the background,
+
+00:27:51.696 --> 00:27:55.006 A:middle
+want to go off and do something
+else, there's something exciting
+
+00:27:55.006 --> 00:27:57.596 A:middle
+on the Internet, don't
+want to miss that.
+
+00:27:57.946 --> 00:28:02.896 A:middle
+And then I usually
+spend probably too long
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:57.946 --> 00:28:02.896 A:middle
+And then I usually
+spend probably too long
+
+00:28:02.896 --> 00:28:05.836 A:middle
+on the Internet, so the
+application is exited now,
+
+00:28:06.436 --> 00:28:07.886 A:middle
+so we're going to
+start it back up.
+
+00:28:07.886 --> 00:28:09.756 A:middle
+And let's hope that
+it comes back.
+
+00:28:10.356 --> 00:28:12.966 A:middle
+Again, my goal here
+is unexcitement.
+
+00:28:13.486 --> 00:28:15.856 A:middle
+So there it is.
+
+00:28:16.256 --> 00:28:20.126 A:middle
+Now, it remembered that we were
+showing this filter inspector.
+
+00:28:20.126 --> 00:28:23.816 A:middle
+It also remembered that it
+was disabled and that I had
+
+00:28:23.816 --> 00:28:27.756 A:middle
+that radius set kind of
+low, and it even remembered
+
+00:28:27.756 --> 00:28:30.006 A:middle
+that we'd already applied
+a filter to that image.
+
+00:28:30.486 --> 00:28:33.366 A:middle
+Now, in an image editing
+app, you'd probably play
+
+00:28:33.366 --> 00:28:35.596 A:middle
+around with filters and
+eventually you'd commit them
+
+00:28:35.596 --> 00:28:37.886 A:middle
+and then it would save that
+information in the database,
+
+00:28:38.246 --> 00:28:40.946 A:middle
+but here I'm kind of in
+an editing or playful mode
+
+00:28:40.946 --> 00:28:42.886 A:middle
+where I haven't really
+committed anything;
+
+00:28:42.886 --> 00:28:45.246 A:middle
+I haven't modified this
+image in the database,
+
+00:28:45.496 --> 00:28:48.646 A:middle
+so I want state restoration to
+keep track of what I was doing.
+
+00:28:48.646 --> 00:28:53.646 A:middle
+So it got everything else,
+too, just like it did before.
+
+00:28:53.646 --> 00:28:57.776 A:middle
+If we go back there we can see
+it's got our collection view
+
+00:28:57.776 --> 00:29:01.226 A:middle
+and all that good stuff --
+okay, so we got everything back,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:57.776 --> 00:29:01.226 A:middle
+and all that good stuff --
+okay, so we got everything back,
+
+00:29:01.226 --> 00:29:03.246 A:middle
+no gasping, no flashing.
+
+00:29:04.296 --> 00:29:06.606 A:middle
+Great. All right, what happened?
+
+00:29:06.686 --> 00:29:08.116 A:middle
+What did we actually do?
+
+00:29:09.466 --> 00:29:11.146 A:middle
+Well, just like before,
+
+00:29:11.396 --> 00:29:13.516 A:middle
+we brought back the image
+and the image title.
+
+00:29:14.776 --> 00:29:17.026 A:middle
+but now we added
+this new inspector.
+
+00:29:17.026 --> 00:29:20.946 A:middle
+And it was presented, it was
+a presented view controller,
+
+00:29:21.336 --> 00:29:23.656 A:middle
+and that just kind of came
+back in the right place.
+
+00:29:23.886 --> 00:29:24.836 A:middle
+Everything was good.
+
+00:29:25.876 --> 00:29:29.836 A:middle
+And we also had two filters
+and these were those new types
+
+00:29:29.836 --> 00:29:33.146 A:middle
+of objects that also get to
+play with state restoration,
+
+00:29:33.886 --> 00:29:35.636 A:middle
+and they had a little
+bit of state,
+
+00:29:35.636 --> 00:29:37.536 A:middle
+which they saved and restored.
+
+00:29:38.776 --> 00:29:41.916 A:middle
+And then finally, we
+actually were able to apply
+
+00:29:42.196 --> 00:29:45.016 A:middle
+that to the image, and I did
+that kind of behind the scenes.
+
+00:29:45.426 --> 00:29:48.636 A:middle
+And this is interesting, because
+when you do state restoration
+
+00:29:48.636 --> 00:29:50.846 A:middle
+you don't want to just have
+one of those Hollywood houses
+
+00:29:50.846 --> 00:29:52.286 A:middle
+where it looks like a house
+
+00:29:52.286 --> 00:29:54.856 A:middle
+but if you ever walked inside
+there's nothing behind it.
+
+00:29:55.386 --> 00:29:58.346 A:middle
+You actually want to restore
+the entire structure of the app
+
+00:29:58.586 --> 00:30:01.356 A:middle
+so that it presents
+kind of a continuous
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:58.586 --> 00:30:01.356 A:middle
+so that it presents
+kind of a continuous
+
+00:30:01.356 --> 00:30:03.806 A:middle
+and seamless experience
+when the user navigates back
+
+00:30:04.016 --> 00:30:07.136 A:middle
+to where they were, that they
+don't get anything unexpected.
+
+00:30:08.596 --> 00:30:12.386 A:middle
+Now, when we initially
+presented that inspector --
+
+00:30:12.526 --> 00:30:17.086 A:middle
+again, I'm using storyboards and
+I did a segway -- what did I do?
+
+00:30:17.346 --> 00:30:22.346 A:middle
+I created that filter object
+and then when I present it,
+
+00:30:22.786 --> 00:30:24.716 A:middle
+it had that filter to refer to.
+
+00:30:25.446 --> 00:30:27.036 A:middle
+That way I could
+share the filter
+
+00:30:27.416 --> 00:30:30.736 A:middle
+between both this
+inspector and my image.
+
+00:30:31.026 --> 00:30:34.126 A:middle
+You may have multiple objects
+that are all sharing some state.
+
+00:30:34.456 --> 00:30:37.906 A:middle
+I don't want to get two separate
+filters eventually when I want
+
+00:30:37.906 --> 00:30:41.586 A:middle
+to restore state, because as
+I change the settings here,
+
+00:30:41.876 --> 00:30:43.016 A:middle
+I want it to be operating
+
+00:30:43.016 --> 00:30:45.466 A:middle
+on the same filter that's
+being used by the image.
+
+00:30:46.666 --> 00:30:48.576 A:middle
+By the way, again, this
+is what's happening
+
+00:30:48.576 --> 00:30:51.076 A:middle
+in the application before
+I've even saved state.
+
+00:30:51.386 --> 00:30:54.356 A:middle
+This is the, how did I
+get to where I am piece.
+
+00:30:54.716 --> 00:30:58.366 A:middle
+Now we want to save that off
+so we can restore ourselves.
+
+00:30:58.786 --> 00:31:00.046 A:middle
+So what do we do?
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:58.786 --> 00:31:00.046 A:middle
+So what do we do?
+
+00:31:00.396 --> 00:31:00.906 A:middle
+Again,
+
+00:31:01.226 --> 00:31:03.526 A:middle
+we use encodeRestorableState
+with Coder.
+
+00:31:03.526 --> 00:31:06.566 A:middle
+We're going to want to
+save, whether or not
+
+00:31:06.566 --> 00:31:11.486 A:middle
+that filter's enabled, and
+also what we've got it set to.
+
+00:31:11.826 --> 00:31:13.316 A:middle
+But here's the interesting
+thing.
+
+00:31:13.646 --> 00:31:15.876 A:middle
+Remember that I've got
+this filter object.
+
+00:31:16.846 --> 00:31:18.686 A:middle
+Why don't we use
+that to inform us
+
+00:31:18.686 --> 00:31:21.566 A:middle
+when we restore our state
+rather than save it separately
+
+00:31:21.566 --> 00:31:24.146 A:middle
+in the inspector, so
+all the inspector has
+
+00:31:24.206 --> 00:31:27.256 A:middle
+to save here is a reference
+to this filter object.
+
+00:31:27.956 --> 00:31:30.356 A:middle
+And this filter object
+itself will implement,
+
+00:31:30.356 --> 00:31:34.776 A:middle
+encode and decode, so
+it will save its state.
+
+00:31:35.256 --> 00:31:39.636 A:middle
+And we had one other object that
+also referred to the filter,
+
+00:31:40.166 --> 00:31:41.876 A:middle
+and that was the
+image view controller.
+
+00:31:42.466 --> 00:31:44.956 A:middle
+It'll also save a
+reference to the filter,
+
+00:31:45.316 --> 00:31:48.116 A:middle
+but they're both pointing
+at the same object.
+
+00:31:48.616 --> 00:31:50.026 A:middle
+So let's look at restoration.
+
+00:31:51.806 --> 00:31:53.416 A:middle
+Yes, the filter object
+is shared.
+
+00:31:54.376 --> 00:31:58.896 A:middle
+So let's go through it in
+a little bit more detail.
+
+00:31:59.566 --> 00:32:01.426 A:middle
+So when we wanted to save state,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:59.566 --> 00:32:01.426 A:middle
+So when we wanted to save state,
+
+00:32:01.646 --> 00:32:05.476 A:middle
+we needed to register the filter
+objects with state restoration.
+
+00:32:05.476 --> 00:32:07.576 A:middle
+I've drawn them in a big
+bright blue on the side
+
+00:32:07.576 --> 00:32:08.546 A:middle
+so you can't miss them.
+
+00:32:09.406 --> 00:32:11.406 A:middle
+We need to save references
+to them.
+
+00:32:12.476 --> 00:32:15.486 A:middle
+We want to save the information
+that those filters have,
+
+00:32:16.756 --> 00:32:19.336 A:middle
+so what we need to do is
+we need to register them.
+
+00:32:19.766 --> 00:32:22.356 A:middle
+Very simple, similar to what
+we did with the data source.
+
+00:32:22.856 --> 00:32:26.936 A:middle
+We're going to save a reference
+from our image view controller
+
+00:32:26.936 --> 00:32:31.206 A:middle
+to those filters and also
+from the sepia inspector.
+
+00:32:32.126 --> 00:32:35.976 A:middle
+And then the filters themselves
+will save their own info.
+
+00:32:37.246 --> 00:32:40.726 A:middle
+That's just whether they're
+enabled, what the intensity is.
+
+00:32:41.386 --> 00:32:44.446 A:middle
+Now, we're going to do
+everything kind of in reverse
+
+00:32:44.446 --> 00:32:46.446 A:middle
+when we restore, so
+it's very symmetrical.
+
+00:32:46.806 --> 00:32:48.566 A:middle
+But there's one other
+thing we need to do
+
+00:32:48.566 --> 00:32:50.126 A:middle
+when we're restoring state.
+
+00:32:51.526 --> 00:32:54.136 A:middle
+Remember that these filters
+may not have existed;
+
+00:32:54.266 --> 00:32:56.636 A:middle
+if I hadn't used them,
+they wouldn't be there,
+
+00:32:56.636 --> 00:32:57.586 A:middle
+so I wouldn't need them.
+
+00:32:58.206 --> 00:33:00.406 A:middle
+So we're going to consult
+the restoration class
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:58.206 --> 00:33:00.406 A:middle
+So we're going to consult
+the restoration class
+
+00:33:00.406 --> 00:33:02.386 A:middle
+to restore them only
+in the cases
+
+00:33:02.386 --> 00:33:05.156 A:middle
+where the user was actually
+using them, when they existed
+
+00:33:05.156 --> 00:33:06.386 A:middle
+at the time we saved state.
+
+00:33:06.716 --> 00:33:08.066 A:middle
+So that's what we'll do here.
+
+00:33:08.976 --> 00:33:10.256 A:middle
+So we'll recreate them,
+
+00:33:11.196 --> 00:33:14.566 A:middle
+we'll then restore
+references, here's our filters.
+
+00:33:15.006 --> 00:33:16.956 A:middle
+So we've just created
+them again.
+
+00:33:18.216 --> 00:33:21.746 A:middle
+The state restoration runtime
+will ask the restoration class
+
+00:33:21.746 --> 00:33:24.416 A:middle
+to create them by calling
+objectWithRestoration
+
+00:33:24.416 --> 00:33:25.136 A:middle
+identifier path.
+
+00:33:25.586 --> 00:33:27.816 A:middle
+Now, you'll notice they
+don't have any state yet,
+
+00:33:27.816 --> 00:33:29.306 A:middle
+so what's going to happen next?
+
+00:33:29.786 --> 00:33:32.526 A:middle
+Well, we're going to restore
+our references to them,
+
+00:33:32.866 --> 00:33:34.406 A:middle
+but they still don't
+have any state.
+
+00:33:34.406 --> 00:33:37.506 A:middle
+We're just going to wire them
+up to our view controllers,
+
+00:33:37.636 --> 00:33:39.826 A:middle
+so we can see there I
+haven't actually applied
+
+00:33:39.826 --> 00:33:40.656 A:middle
+that filter yet.
+
+00:33:42.016 --> 00:33:45.206 A:middle
+So we'll let the filter
+object restore its own state
+
+00:33:45.206 --> 00:33:46.146 A:middle
+recalling decode.
+
+00:33:46.816 --> 00:33:48.256 A:middle
+So now it's restored its state.
+
+00:33:48.256 --> 00:33:50.146 A:middle
+I don't want you
+to have to worry
+
+00:33:50.146 --> 00:33:52.566 A:middle
+about what order this all
+happens in, so I'm going to talk
+
+00:33:52.566 --> 00:33:55.806 A:middle
+about how we can leverage this
+later and make it real simple
+
+00:33:55.806 --> 00:33:58.496 A:middle
+to apply it so that
+you then eventually get
+
+00:33:58.496 --> 00:34:00.676 A:middle
+that nice sepia look
+on your picture,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:58.496 --> 00:34:00.676 A:middle
+that nice sepia look
+on your picture,
+
+00:34:01.416 --> 00:34:05.316 A:middle
+and we're back to where we were.
+
+00:34:05.966 --> 00:34:07.756 A:middle
+So let's talk about
+how we apply the state.
+
+00:34:08.085 --> 00:34:11.056 A:middle
+The first thing we do as we're
+restoring is get back our image.
+
+00:34:11.056 --> 00:34:13.755 A:middle
+But we can't go and
+apply that filter yet.
+
+00:34:13.926 --> 00:34:15.886 A:middle
+The filter might not
+even exist at this point.
+
+00:34:15.886 --> 00:34:19.485 A:middle
+We're just in the decode method
+for this view controller object.
+
+00:34:20.326 --> 00:34:22.626 A:middle
+And at some point we are
+going to go grab that filter.
+
+00:34:22.626 --> 00:34:24.886 A:middle
+It'll get created, it
+will restore it state.
+
+00:34:25.176 --> 00:34:26.366 A:middle
+Now we're good to go.
+
+00:34:26.505 --> 00:34:28.206 A:middle
+Now we can apply that filter.
+
+00:34:28.636 --> 00:34:30.456 A:middle
+But when? How do we know?
+
+00:34:31.576 --> 00:34:33.505 A:middle
+So we've added a new method.
+
+00:34:35.255 --> 00:34:37.966 A:middle
+This method's for view
+controllers as well as any
+
+00:34:37.966 --> 00:34:39.565 A:middle
+of the state restoring objects,
+
+00:34:39.636 --> 00:34:42.946 A:middle
+and it decouples decoding
+your state from trying
+
+00:34:42.946 --> 00:34:45.466 A:middle
+to apply what might be
+more of a global state
+
+00:34:45.466 --> 00:34:46.726 A:middle
+across the whole application.
+
+00:34:46.726 --> 00:34:49.286 A:middle
+It's just a simple
+little method,
+
+00:34:49.286 --> 00:34:51.716 A:middle
+application finished
+restoring state.
+
+00:34:52.016 --> 00:34:53.626 A:middle
+It's kind of like awakeFromNib.
+
+00:34:53.916 --> 00:34:56.795 A:middle
+It's telling you, everything
+is restored at state;
+
+00:34:56.795 --> 00:34:58.936 A:middle
+everything is created
+that we know about;
+
+00:34:58.936 --> 00:35:00.246 A:middle
+it's safe to go in the water.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:58.936 --> 00:35:00.246 A:middle
+it's safe to go in the water.
+
+00:35:00.556 --> 00:35:02.226 A:middle
+Go on, apply your filter.
+
+00:35:02.806 --> 00:35:07.936 A:middle
+So if we didn't have this, you'd
+probably have code like this.
+
+00:35:07.936 --> 00:35:10.046 A:middle
+Now, I mentioned I wasn't
+going to show you much code;
+
+00:35:10.046 --> 00:35:11.736 A:middle
+this is actually the
+only code slide --
+
+00:35:12.176 --> 00:35:14.866 A:middle
+so mainly because I
+like this cool effect.
+
+00:35:15.646 --> 00:35:18.716 A:middle
+So the idea here is I don't
+want to update the image
+
+00:35:18.716 --> 00:35:20.026 A:middle
+when I'm decoding my state
+
+00:35:20.026 --> 00:35:23.126 A:middle
+because everything else might
+not exist yet, so I'm just going
+
+00:35:23.126 --> 00:35:25.196 A:middle
+to decode my state
+and not do that thing.
+
+00:35:25.746 --> 00:35:29.266 A:middle
+And then when application
+FinishedResotringState is
+
+00:35:29.266 --> 00:35:31.326 A:middle
+called, I'll call updateImage.
+
+00:35:32.246 --> 00:35:34.706 A:middle
+And if you're wondering,
+what's this updateImage,
+
+00:35:35.566 --> 00:35:37.356 A:middle
+imagine I don't have
+any stateRestoration.
+
+00:35:38.076 --> 00:35:39.746 A:middle
+I have a segway to
+a view controller,
+
+00:35:39.746 --> 00:35:41.526 A:middle
+I tell it what image
+I want it to show,
+
+00:35:41.646 --> 00:35:43.766 A:middle
+there might be some
+filters that are set up.
+
+00:35:43.766 --> 00:35:46.086 A:middle
+So I'm going to write some
+code that goes and fetches
+
+00:35:46.086 --> 00:35:48.996 A:middle
+that imageAppliestoFilter,
+sets the title, do all of that.
+
+00:35:49.346 --> 00:35:51.356 A:middle
+That's updateImage,
+and if you look
+
+00:35:51.356 --> 00:35:54.276 A:middle
+at the sample code you'll see
+that I'm able to just reuse
+
+00:35:54.276 --> 00:35:58.126 A:middle
+that method when the application
+restores its state here,
+
+00:35:58.126 --> 00:36:01.376 A:middle
+so I don't have to go and write
+a whole big bifurcated strategy
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:58.126 --> 00:36:01.376 A:middle
+so I don't have to go and write
+a whole big bifurcated strategy
+
+00:36:01.846 --> 00:36:04.776 A:middle
+for restoring the image and
+setting it up in this case
+
+00:36:04.776 --> 00:36:10.126 A:middle
+versus that case; got one
+cute little piece of code.
+
+00:36:10.326 --> 00:36:13.656 A:middle
+So there is one area where
+we got a number of questions
+
+00:36:13.656 --> 00:36:15.276 A:middle
+and they were kind
+of the same question.
+
+00:36:16.356 --> 00:36:18.886 A:middle
+When do I have to
+create my objects,
+
+00:36:19.136 --> 00:36:21.476 A:middle
+and when will you
+automatically find the ones I've
+
+00:36:21.516 --> 00:36:22.476 A:middle
+already created?
+
+00:36:22.886 --> 00:36:24.386 A:middle
+You have a lot of
+view controllers.
+
+00:36:24.596 --> 00:36:26.896 A:middle
+You have some of these new
+state resorting objects.
+
+00:36:27.286 --> 00:36:30.966 A:middle
+And some of them exist when
+the application starts up;
+
+00:36:31.336 --> 00:36:33.176 A:middle
+others come into
+being dynamically.
+
+00:36:33.666 --> 00:36:35.626 A:middle
+So let's look at that
+in a little more detail.
+
+00:36:36.216 --> 00:36:39.356 A:middle
+So if you think of the set of
+application objects you have,
+
+00:36:40.006 --> 00:36:42.356 A:middle
+I like to refer to
+everything that exists
+
+00:36:42.356 --> 00:36:45.546 A:middle
+when the application is
+already started as base objects.
+
+00:36:45.966 --> 00:36:49.476 A:middle
+These are loaded from a
+storyboard or from various nibs.
+
+00:36:50.076 --> 00:36:51.366 A:middle
+They're created by your code
+
+00:36:51.366 --> 00:36:53.766 A:middle
+in application
+WillFinishLaunchingwithOptions.
+
+00:36:54.166 --> 00:36:55.926 A:middle
+Before we do state restoration,
+
+00:36:56.176 --> 00:36:58.416 A:middle
+they're already in
+play, they exist.
+
+00:36:58.776 --> 00:37:02.116 A:middle
+So if they're going to be using
+state restoration and we need
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:58.776 --> 00:37:02.116 A:middle
+So if they're going to be using
+state restoration and we need
+
+00:37:02.116 --> 00:37:04.776 A:middle
+to find them, you don't
+have to do anything.
+
+00:37:05.226 --> 00:37:07.256 A:middle
+We'll just be able to
+find them and look them
+
+00:37:07.256 --> 00:37:09.326 A:middle
+up because we've got some
+magical little tables
+
+00:37:09.326 --> 00:37:10.796 A:middle
+where we keep track
+of everything.
+
+00:37:11.566 --> 00:37:14.396 A:middle
+What about all the
+dynamic objects?
+
+00:37:14.556 --> 00:37:16.576 A:middle
+These are presented controllers,
+
+00:37:16.816 --> 00:37:19.626 A:middle
+view controllers you might have
+pushed on a navigation stack,
+
+00:37:20.216 --> 00:37:21.706 A:middle
+some of these restorable objects
+
+00:37:21.706 --> 00:37:26.056 A:middle
+like those filters --
+how do you get them?
+
+00:37:26.286 --> 00:37:29.066 A:middle
+Well, if it's a view controller
+and it's in a storyboard,
+
+00:37:29.656 --> 00:37:31.826 A:middle
+you actually can get
+it completely for free.
+
+00:37:32.086 --> 00:37:33.096 A:middle
+We'll just find it.
+
+00:37:33.336 --> 00:37:35.896 A:middle
+That's because we know what
+storyboard it came from,
+
+00:37:35.896 --> 00:37:38.016 A:middle
+we know what its
+storyboard identifier was,
+
+00:37:38.326 --> 00:37:39.516 A:middle
+so we can keep track of it.
+
+00:37:40.106 --> 00:37:42.326 A:middle
+So you'll notice
+when I presented some
+
+00:37:42.326 --> 00:37:45.156 A:middle
+of those view controllers there,
+I didn't show any code to have
+
+00:37:45.226 --> 00:37:48.206 A:middle
+to recreate them and represent
+them; we were able to go
+
+00:37:48.206 --> 00:37:50.646 A:middle
+and hoist them out of
+storyboards ourselves.
+
+00:37:51.536 --> 00:37:54.476 A:middle
+However, if it's
+not in a storyboard,
+
+00:37:54.996 --> 00:37:56.906 A:middle
+or if you want a
+little bit more control,
+
+00:37:56.906 --> 00:37:58.736 A:middle
+you have to write a
+little bit of code,
+
+00:37:58.866 --> 00:38:00.946 A:middle
+and that's where the
+restoration class comes in.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:58.866 --> 00:38:00.946 A:middle
+and that's where the
+restoration class comes in.
+
+00:38:02.276 --> 00:38:05.166 A:middle
+So you can use a restoration
+class for view controllers
+
+00:38:05.166 --> 00:38:08.686 A:middle
+in the same way I showed you for
+these new generalized objects.
+
+00:38:09.266 --> 00:38:12.696 A:middle
+And also for view
+controllers, as a fallback,
+
+00:38:13.086 --> 00:38:14.786 A:middle
+we'll ask the application
+delegate
+
+00:38:14.786 --> 00:38:16.806 A:middle
+for them if all else fails.
+
+00:38:17.426 --> 00:38:19.756 A:middle
+Now, if you implement
+a restoration class,
+
+00:38:20.146 --> 00:38:21.686 A:middle
+that trumps everything.
+
+00:38:22.526 --> 00:38:23.766 A:middle
+That gives you control.
+
+00:38:24.136 --> 00:38:26.766 A:middle
+Let's say -- going back
+to my earlier example --
+
+00:38:27.686 --> 00:38:30.316 A:middle
+maybe you have a dynamic
+database with images.
+
+00:38:30.316 --> 00:38:33.386 A:middle
+These can synchronize and
+images come, images go.
+
+00:38:33.796 --> 00:38:37.486 A:middle
+So if the image that was being
+shown when you saved state isn't
+
+00:38:37.486 --> 00:38:40.276 A:middle
+in the database when you
+restore it, you may not want
+
+00:38:40.276 --> 00:38:41.926 A:middle
+to bring back that
+view controller
+
+00:38:41.926 --> 00:38:44.476 A:middle
+and show us something
+ugly like imageNotFound.
+
+00:38:45.536 --> 00:38:47.116 A:middle
+You want to just
+avoid it altogether.
+
+00:38:47.116 --> 00:38:49.796 A:middle
+And it's always fine to
+return nill when we ask
+
+00:38:49.796 --> 00:38:50.726 A:middle
+for a view controller.
+
+00:38:50.726 --> 00:38:51.826 A:middle
+We'll do the right thing.
+
+00:38:51.906 --> 00:38:54.296 A:middle
+If it was presented, we
+just won't present it;
+
+00:38:54.296 --> 00:38:56.716 A:middle
+if it was pushed on
+the navigation stack,
+
+00:38:57.626 --> 00:39:00.106 A:middle
+we'll go one back and
+so on until we get
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:57.626 --> 00:39:00.106 A:middle
+we'll go one back and
+so on until we get
+
+00:39:00.106 --> 00:39:02.136 A:middle
+to a view controller
+that still exists.
+
+00:39:02.956 --> 00:39:05.896 A:middle
+So we give you that control
+to make sure that we don't go
+
+00:39:06.046 --> 00:39:08.376 A:middle
+and force you into
+some boundary situation
+
+00:39:08.376 --> 00:39:11.636 A:middle
+where you don't have all the
+assets you need that make sense.
+
+00:39:14.436 --> 00:39:18.056 A:middle
+So here's the base objects in
+the example app I showed you:
+
+00:39:18.546 --> 00:39:21.666 A:middle
+the data source, that
+navigation controller,
+
+00:39:22.356 --> 00:39:23.266 A:middle
+and the collection view.
+
+00:39:23.546 --> 00:39:25.306 A:middle
+They were all in
+my main storyboard;
+
+00:39:25.436 --> 00:39:27.106 A:middle
+they just got created
+by the time I got
+
+00:39:27.106 --> 00:39:29.606 A:middle
+into application
+WillFinishLaunchingwithOptions.
+
+00:39:29.916 --> 00:39:35.086 A:middle
+And I put that Inspector in a
+storyboard, so then I was able
+
+00:39:35.086 --> 00:39:36.476 A:middle
+to just completely
+forget about it.
+
+00:39:36.476 --> 00:39:37.956 A:middle
+I didn't have to recreate it;
+
+00:39:37.956 --> 00:39:40.396 A:middle
+it just magically came
+back, it was presented.
+
+00:39:41.246 --> 00:39:43.456 A:middle
+Now, if I want a
+little more control,
+
+00:39:43.956 --> 00:39:46.796 A:middle
+I can take that image
+controller, and even if it's
+
+00:39:46.796 --> 00:39:49.576 A:middle
+in a storyboard I can still
+give it a restoration class,
+
+00:39:49.806 --> 00:39:52.976 A:middle
+or if I was creating it out
+of whole cloth, myself encode,
+
+00:39:53.126 --> 00:39:54.736 A:middle
+I'd give it a restoration class.
+
+00:39:55.166 --> 00:39:58.856 A:middle
+And the filters, as we saw,
+had a restoration class
+
+00:39:59.106 --> 00:40:00.806 A:middle
+which recreated them on demand.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:39:59.106 --> 00:40:00.806 A:middle
+which recreated them on demand.
+
+00:40:01.066 --> 00:40:03.236 A:middle
+So when you think
+about your objects
+
+00:40:03.236 --> 00:40:05.596 A:middle
+and which ones need
+a restoration class,
+
+00:40:05.686 --> 00:40:07.496 A:middle
+which ones you'll
+have to recreate
+
+00:40:07.496 --> 00:40:08.496 A:middle
+when we're restoring state,
+
+00:40:08.836 --> 00:40:11.426 A:middle
+break them up in your
+mind, what's a base object.
+
+00:40:12.466 --> 00:40:13.636 A:middle
+Then you don't have
+to do anything,
+
+00:40:14.026 --> 00:40:15.656 A:middle
+and of the dynamic objects,
+
+00:40:15.926 --> 00:40:18.086 A:middle
+which ones do I actually
+need control of
+
+00:40:18.086 --> 00:40:19.666 A:middle
+or what am I going
+to have to create?
+
+00:40:20.186 --> 00:40:21.156 A:middle
+Makes it a lot simpler.
+
+00:40:21.636 --> 00:40:27.216 A:middle
+I mentioned we did a lot
+with Snapshot handling.
+
+00:40:27.866 --> 00:40:31.136 A:middle
+So in iOS 6, we wouldn't
+use the Snapshot at all.
+
+00:40:31.136 --> 00:40:32.946 A:middle
+And that was kind of jarring,
+
+00:40:32.946 --> 00:40:35.706 A:middle
+because the application would
+come up with the default PNG,
+
+00:40:36.066 --> 00:40:39.506 A:middle
+restore its state and then kind
+of slap you when it went back
+
+00:40:39.506 --> 00:40:40.896 A:middle
+to where it actually was.
+
+00:40:41.056 --> 00:40:43.636 A:middle
+So we're trying to be
+much more aggressive now.
+
+00:40:43.686 --> 00:40:47.106 A:middle
+And we'll show the
+Snapshot wherever we can.
+
+00:40:48.106 --> 00:40:49.666 A:middle
+So when we launch
+an application,
+
+00:40:49.926 --> 00:40:51.596 A:middle
+if the Snapshot's available
+
+00:40:51.596 --> 00:40:54.426 A:middle
+and if we can use
+it, we'll show that.
+
+00:40:54.426 --> 00:40:56.356 A:middle
+It looks much more seamless.
+
+00:40:56.896 --> 00:40:59.806 A:middle
+However, there might be cases
+where you want to use it,
+
+00:40:59.806 --> 00:41:01.426 A:middle
+so we give you some control.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:59.806 --> 00:41:01.426 A:middle
+so we give you some control.
+
+00:41:01.426 --> 00:41:02.656 A:middle
+We've added a new API.
+
+00:41:03.386 --> 00:41:06.246 A:middle
+This is on UI application
+and you can tell it
+
+00:41:06.246 --> 00:41:09.166 A:middle
+to ignore Snapshot
+on the next launch.
+
+00:41:09.736 --> 00:41:12.366 A:middle
+You'll do this while
+we're saving your state.
+
+00:41:12.836 --> 00:41:15.846 A:middle
+So if we're saving state in
+one of your view controllers,
+
+00:41:16.086 --> 00:41:19.316 A:middle
+notices, this is kind of tricky.
+
+00:41:19.796 --> 00:41:21.166 A:middle
+I might not come back exactly
+
+00:41:21.166 --> 00:41:24.126 A:middle
+to the same place,
+ignore the Snapshot.
+
+00:41:24.746 --> 00:41:26.116 A:middle
+Then we'll use the default PNG.
+
+00:41:26.756 --> 00:41:29.796 A:middle
+That means only one of two
+things will ever happen.
+
+00:41:30.576 --> 00:41:33.896 A:middle
+We'll show the same Snapshot
+that we're going to launch to,
+
+00:41:34.216 --> 00:41:37.146 A:middle
+or we'll show the default
+PNG, which is predictable
+
+00:41:37.146 --> 00:41:40.206 A:middle
+and at least it's somewhat
+familiar, second best choice.
+
+00:41:40.826 --> 00:41:43.936 A:middle
+So why would you want us to
+ignore the Snapshot, though?
+
+00:41:44.566 --> 00:41:45.716 A:middle
+Well, here's some examples.
+
+00:41:46.506 --> 00:41:49.206 A:middle
+Maybe your application is
+showing a network error.
+
+00:41:50.076 --> 00:41:52.186 A:middle
+Can't get on network;
+please try again later.
+
+00:41:52.186 --> 00:41:55.306 A:middle
+Click the application in
+the background, it exits,
+
+00:41:55.556 --> 00:41:58.886 A:middle
+user goes to maybe a better
+coffee shop with free Wi-Fi,
+
+00:41:59.576 --> 00:42:01.136 A:middle
+they start the app up again.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:59.576 --> 00:42:01.136 A:middle
+they start the app up again.
+
+00:42:01.136 --> 00:42:04.736 A:middle
+And it would be kind of
+silly for this network thing
+
+00:42:04.736 --> 00:42:06.376 A:middle
+to be showing, seeing
+
+00:42:06.376 --> 00:42:08.916 A:middle
+that there's an error
+freaking the poor user out,
+
+00:42:08.916 --> 00:42:11.046 A:middle
+and then have it
+just dismiss itself
+
+00:42:11.046 --> 00:42:12.546 A:middle
+or disappear when
+the app started.
+
+00:42:14.336 --> 00:42:17.616 A:middle
+You also might have things
+like a table view of data
+
+00:42:17.616 --> 00:42:18.826 A:middle
+that changes frequently.
+
+00:42:19.566 --> 00:42:22.176 A:middle
+Maybe you have the top
+10 awesome kitten videos
+
+00:42:22.176 --> 00:42:25.556 A:middle
+of the day, something
+like that, and they tend
+
+00:42:25.556 --> 00:42:28.076 A:middle
+to change pretty quickly, I
+can tell you from experience.
+
+00:42:28.396 --> 00:42:35.016 A:middle
+So the application when it
+starts up, you might not want
+
+00:42:35.016 --> 00:42:37.956 A:middle
+to show a list of things
+that you're actually not --
+
+00:42:37.956 --> 00:42:41.606 A:middle
+eventually going to land on,
+and the user's stabbing away
+
+00:42:41.606 --> 00:42:44.216 A:middle
+at this video and it doesn't
+show up, so it might be better
+
+00:42:44.566 --> 00:42:45.776 A:middle
+to avoid that altogether.
+
+00:42:47.406 --> 00:42:49.306 A:middle
+There's also some implicit cases
+
+00:42:49.306 --> 00:42:53.046 A:middle
+where we'll actually detect
+Snapshot wouldn't be the best
+
+00:42:53.046 --> 00:42:55.356 A:middle
+choice, so there's
+a couple there.
+
+00:42:55.616 --> 00:42:58.466 A:middle
+One is, if the top most view
+controller doesn't have a
+
+00:42:58.466 --> 00:43:01.496 A:middle
+restoration identifier,
+we're going to assume, okay,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:42:58.466 --> 00:43:01.496 A:middle
+restoration identifier,
+we're going to assume, okay,
+
+00:43:01.496 --> 00:43:02.636 A:middle
+you're app's pretty awesome
+
+00:43:02.636 --> 00:43:04.296 A:middle
+and it restores state,
+which is great.
+
+00:43:04.456 --> 00:43:06.256 A:middle
+Thank you, but we can
+tell that you're not going
+
+00:43:06.256 --> 00:43:07.206 A:middle
+to restore to this one.
+
+00:43:07.616 --> 00:43:09.846 A:middle
+There might be some
+boundary area of the app
+
+00:43:09.896 --> 00:43:12.556 A:middle
+that users rarely go
+to, setting something
+
+00:43:12.556 --> 00:43:14.276 A:middle
+up that they would
+typically only do once.
+
+00:43:14.676 --> 00:43:17.566 A:middle
+That might not be a battle worth
+fighting for the first release,
+
+00:43:17.606 --> 00:43:20.846 A:middle
+so you may not save the state of
+that particular view controller
+
+00:43:20.846 --> 00:43:23.426 A:middle
+and you may be focusing
+on more important things,
+
+00:43:23.906 --> 00:43:25.926 A:middle
+such as articles they're
+reading and things like that.
+
+00:43:26.416 --> 00:43:29.536 A:middle
+So in that case, if we
+detect there's no restoration
+
+00:43:29.536 --> 00:43:31.946 A:middle
+identifier, we won't show
+the Snapshot; we don't want
+
+00:43:31.946 --> 00:43:34.936 A:middle
+to give the user false hope
+when it's starting back up.
+
+00:43:35.886 --> 00:43:39.516 A:middle
+Also, there may be some
+things that we don't restore,
+
+00:43:40.136 --> 00:43:41.776 A:middle
+and I'll show you
+an example of that.
+
+00:43:42.216 --> 00:43:44.136 A:middle
+So there's a whole
+bunch of areas
+
+00:43:44.136 --> 00:43:47.386 A:middle
+where it's either inefficient
+to try to restore everything
+
+00:43:47.386 --> 00:43:49.086 A:middle
+or it's just complicated enough
+
+00:43:49.386 --> 00:43:50.696 A:middle
+that we haven't gotten
+to it yet.
+
+00:43:50.696 --> 00:43:52.796 A:middle
+Similar to the advice
+I gave last year
+
+00:43:52.796 --> 00:43:54.676 A:middle
+where you take an
+approach where you start
+
+00:43:54.676 --> 00:43:57.226 A:middle
+with the most important
+things and then add to it,
+
+00:43:57.686 --> 00:43:59.066 A:middle
+we're in the same boat.
+
+00:43:59.066 --> 00:44:01.006 A:middle
+So we don't want
+to show a Snapshot
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:43:59.066 --> 00:44:01.006 A:middle
+So we don't want
+to show a Snapshot
+
+00:44:01.006 --> 00:44:01.946 A:middle
+if we know we're not going
+
+00:44:01.946 --> 00:44:04.026 A:middle
+to come exactly back
+to the same place.
+
+00:44:04.816 --> 00:44:08.596 A:middle
+So I'm going to do another demo,
+but this one's kind of quick,
+
+00:44:08.696 --> 00:44:12.706 A:middle
+so I'm actually going
+to use a movie.
+
+00:44:13.106 --> 00:44:15.796 A:middle
+So here's our application,
+we're looking at the image,
+
+00:44:16.146 --> 00:44:18.406 A:middle
+and let's say that I go
+to the activity sheet.
+
+00:44:19.676 --> 00:44:24.186 A:middle
+Okay, so we actually don't share
+the activity view controller
+
+00:44:24.186 --> 00:44:27.126 A:middle
+state, and there's a couple
+of reasons why we don't.
+
+00:44:27.876 --> 00:44:30.916 A:middle
+Mostly, it's because the
+application is handing us a
+
+00:44:30.916 --> 00:44:31.946 A:middle
+whole bunch of data.
+
+00:44:31.946 --> 00:44:34.656 A:middle
+It could have handed us a
+video to mail to somebody
+
+00:44:34.656 --> 00:44:38.666 A:middle
+to really annoy them, it could
+have handed us a lot of content,
+
+00:44:39.166 --> 00:44:42.326 A:middle
+and it can often be a
+[inaudible] content or something
+
+00:44:42.326 --> 00:44:45.376 A:middle
+that may not exist when the
+application starts back up.
+
+00:44:45.616 --> 00:44:48.026 A:middle
+So it would be both
+be very costly for us
+
+00:44:48.076 --> 00:44:52.906 A:middle
+to save all this data
+and it might also bite us
+
+00:44:52.906 --> 00:44:55.026 A:middle
+when we start the app back
+up but we can't find it.
+
+00:44:55.396 --> 00:44:57.366 A:middle
+And it could be confusing
+for the user
+
+00:44:57.726 --> 00:44:59.626 A:middle
+if they start the
+application back up
+
+00:44:59.626 --> 00:45:01.666 A:middle
+and they just see this
+activity view controller
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:44:59.626 --> 00:45:01.666 A:middle
+and they just see this
+activity view controller
+
+00:45:01.666 --> 00:45:04.176 A:middle
+and they're not really sure what
+it was they were trying to share
+
+00:45:04.176 --> 00:45:05.366 A:middle
+or what they were trying to do.
+
+00:45:05.536 --> 00:45:06.906 A:middle
+And you can see the
+image peaking
+
+00:45:06.906 --> 00:45:07.906 A:middle
+through a little bit here,
+
+00:45:07.906 --> 00:45:09.856 A:middle
+but in other cases you
+might not see that.
+
+00:45:10.656 --> 00:45:15.086 A:middle
+So what do we do if we put the
+application in the background
+
+00:45:15.086 --> 00:45:17.346 A:middle
+and it exits and we
+start it back up?
+
+00:45:18.406 --> 00:45:21.586 A:middle
+So let's take a look.
+
+00:45:22.146 --> 00:45:25.326 A:middle
+So I did something
+kind of subtle here.
+
+00:45:25.536 --> 00:45:27.876 A:middle
+It might not have jumped out
+at you, so I'm going to replay
+
+00:45:27.876 --> 00:45:29.486 A:middle
+that kind of in slow motion.
+
+00:45:29.946 --> 00:45:33.706 A:middle
+So let's see the
+application start back up,
+
+00:45:34.426 --> 00:45:35.976 A:middle
+now watch the transition.
+
+00:45:36.516 --> 00:45:38.086 A:middle
+See how it kind of faded in?
+
+00:45:38.646 --> 00:45:42.426 A:middle
+It's very subtle, but let's
+look at it if it doesn't do it.
+
+00:45:43.416 --> 00:45:45.136 A:middle
+Starts up, boom.
+
+00:45:45.796 --> 00:45:48.326 A:middle
+Kind of jarring,
+kind of disjoint.
+
+00:45:48.566 --> 00:45:49.336 A:middle
+See it again.
+
+00:45:49.926 --> 00:45:54.156 A:middle
+So that's kind of unpleasant
+as a user, and let's look
+
+00:45:54.156 --> 00:45:56.126 A:middle
+at what we do regular speed.
+
+00:45:56.766 --> 00:46:00.346 A:middle
+Nice. It just kind
+of fades right there.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:45:56.766 --> 00:46:00.346 A:middle
+Nice. It just kind
+of fades right there.
+
+00:46:00.646 --> 00:46:03.656 A:middle
+So at least we're not
+slapping the user's attention
+
+00:46:03.656 --> 00:46:04.366 A:middle
+around with this.
+
+00:46:05.106 --> 00:46:07.726 A:middle
+So that shows a few
+different things.
+
+00:46:08.176 --> 00:46:10.706 A:middle
+Already in the previous
+demos that I did,
+
+00:46:10.946 --> 00:46:14.066 A:middle
+you saw us using the Snapshot,
+so that covers the first part.
+
+00:46:14.116 --> 00:46:16.676 A:middle
+Now when the application
+starts up in restoreState,
+
+00:46:16.826 --> 00:46:18.596 A:middle
+it really does look seamless.
+
+00:46:18.996 --> 00:46:20.416 A:middle
+You might have even
+thought I'm cheating
+
+00:46:20.416 --> 00:46:23.146 A:middle
+and I didn't really kill the
+application but I promise I did.
+
+00:46:23.776 --> 00:46:24.936 A:middle
+And in this example,
+
+00:46:25.146 --> 00:46:28.086 A:middle
+we're showing how you
+both have control,
+
+00:46:28.086 --> 00:46:30.796 A:middle
+how we'll sometimes
+implicitly notice
+
+00:46:30.796 --> 00:46:33.616 A:middle
+that we shouldn't use the
+Snapshot, and how we'll do kind
+
+00:46:33.616 --> 00:46:36.706 A:middle
+of a nice transition
+in these cases to sort
+
+00:46:36.706 --> 00:46:38.726 A:middle
+of ease the user back in.
+
+00:46:39.296 --> 00:46:42.796 A:middle
+So we've added a
+few enhancements.
+
+00:46:42.796 --> 00:46:45.046 A:middle
+I'm just going to go over
+them kind of briefly now.
+
+00:46:46.436 --> 00:46:49.526 A:middle
+We've got some keys that are
+available in every coder.
+
+00:46:50.346 --> 00:46:52.466 A:middle
+So in the initial
+implementation when we came
+
+00:46:52.466 --> 00:46:55.266 A:middle
+out with this last year,
+an application could look
+
+00:46:55.266 --> 00:46:59.976 A:middle
+at the bundled version that
+was used when it saved state.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:47:00.536 --> 00:47:03.216 A:middle
+So it could tell,
+this old version
+
+00:47:03.216 --> 00:47:06.046 A:middle
+of the app saveState
+I've changed drastically
+
+00:47:06.046 --> 00:47:08.056 A:middle
+so as I restore the
+state I might have
+
+00:47:08.086 --> 00:47:11.206 A:middle
+to do some transformations,
+or maybe I don't actually want
+
+00:47:11.206 --> 00:47:13.666 A:middle
+to restore state from this
+very, very old version
+
+00:47:13.666 --> 00:47:15.536 A:middle
+of the app, it's just too much.
+
+00:47:16.306 --> 00:47:18.326 A:middle
+And that information
+was available
+
+00:47:18.326 --> 00:47:19.626 A:middle
+in every one of the coders.
+
+00:47:20.166 --> 00:47:22.546 A:middle
+Most of your app might be
+fine with this old state
+
+00:47:22.546 --> 00:47:24.956 A:middle
+but there might be one view
+controller that's changed more
+
+00:47:24.956 --> 00:47:26.476 A:middle
+radically, so it
+would look at this
+
+00:47:26.476 --> 00:47:28.036 A:middle
+and say, "hey, wait a minute.
+
+00:47:28.226 --> 00:47:31.396 A:middle
+Let me see who saved this state,
+our old version of the app."
+
+00:47:32.416 --> 00:47:36.226 A:middle
+We've added a few new keys that
+accomplish very similar things.
+
+00:47:36.396 --> 00:47:38.466 A:middle
+The first one is to tell
+you the system version.
+
+00:47:39.626 --> 00:47:43.086 A:middle
+You may have noticed iOS 7
+changed a little bit from iOS 6,
+
+00:47:43.576 --> 00:47:45.656 A:middle
+so your app might
+need to adjust metrics
+
+00:47:45.656 --> 00:47:47.926 A:middle
+or do something different
+when it's restoring state,
+
+00:47:47.926 --> 00:47:51.146 A:middle
+so you can tell what version
+it ran on when it saved state.
+
+00:47:51.876 --> 00:47:55.066 A:middle
+Also, we put the time stamp
+from when we saved state.
+
+00:47:55.376 --> 00:47:58.206 A:middle
+This was a very common
+request, as it's so useful.
+
+00:47:59.006 --> 00:48:02.846 A:middle
+In some cases, after an app's
+been inactive for awhile,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:47:59.006 --> 00:48:02.846 A:middle
+In some cases, after an app's
+been inactive for awhile,
+
+00:48:02.846 --> 00:48:03.876 A:middle
+you might actually want
+
+00:48:03.876 --> 00:48:05.826 A:middle
+to restore something a
+little bit different.
+
+00:48:05.826 --> 00:48:07.676 A:middle
+You might want to go
+back up to the beginning.
+
+00:48:08.536 --> 00:48:11.626 A:middle
+Because it might be confusing
+to the user if they dig way,
+
+00:48:11.626 --> 00:48:14.146 A:middle
+way down in the app
+and then a month later,
+
+00:48:14.146 --> 00:48:16.496 A:middle
+when they run it again,
+it goes to something
+
+00:48:16.496 --> 00:48:18.266 A:middle
+that doesn't even make
+any sense anymore,
+
+00:48:18.266 --> 00:48:19.756 A:middle
+something that's
+no longer relevant.
+
+00:48:20.296 --> 00:48:23.066 A:middle
+So you'll want to take
+maybe a little bit of notice
+
+00:48:23.066 --> 00:48:25.456 A:middle
+of what time or the date
+that this was saved.
+
+00:48:26.056 --> 00:48:31.266 A:middle
+It made it easier to
+handle static table views
+
+00:48:31.266 --> 00:48:32.776 A:middle
+where their content
+doesn't change.
+
+00:48:34.036 --> 00:48:36.876 A:middle
+Now, because a table view
+can have dynamic content,
+
+00:48:37.406 --> 00:48:41.436 A:middle
+in the first release of
+this, when we saved state
+
+00:48:41.436 --> 00:48:45.446 A:middle
+and we wanted to keep track of
+selected cells and the top cell
+
+00:48:45.446 --> 00:48:46.416 A:middle
+that you were scrolled to,
+
+00:48:46.806 --> 00:48:49.666 A:middle
+we would actually ask the data
+source for the table view,
+
+00:48:50.786 --> 00:48:55.176 A:middle
+what is an identifier for this
+cell that makes sense to you?
+
+00:48:55.586 --> 00:48:58.696 A:middle
+The reason we did that
+was because the cell
+
+00:48:58.736 --> 00:49:02.806 A:middle
+at index 3 today may not be
+the cell at index 3 tomorrow.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:48:58.736 --> 00:49:02.806 A:middle
+at index 3 today may not be
+the cell at index 3 tomorrow.
+
+00:49:02.806 --> 00:49:06.286 A:middle
+It may not even be the cell at
+index 3 in 5 minutes or an hour.
+
+00:49:06.906 --> 00:49:09.546 A:middle
+So we don't want to just
+select something based
+
+00:49:09.546 --> 00:49:12.226 A:middle
+on its index path if
+that data could change.
+
+00:49:12.606 --> 00:49:15.936 A:middle
+So we would ask the data source,
+who knows all about the data,
+
+00:49:16.516 --> 00:49:19.116 A:middle
+to give us some identifier,
+which we would save instead
+
+00:49:19.116 --> 00:49:20.716 A:middle
+of just the index path.
+
+00:49:21.486 --> 00:49:25.826 A:middle
+And when we restored state,
+we would then do the converse
+
+00:49:25.826 --> 00:49:28.866 A:middle
+and say, "here's an identifier;
+where's the index path now?"
+
+00:49:29.486 --> 00:49:31.976 A:middle
+And that works out great,
+especially if you have something
+
+00:49:31.976 --> 00:49:36.046 A:middle
+like music or photos or a set
+of articles that could be moving
+
+00:49:36.046 --> 00:49:38.286 A:middle
+around and getting
+sorted and changed
+
+00:49:38.286 --> 00:49:40.096 A:middle
+with things getting
+deleted and added.
+
+00:49:40.816 --> 00:49:43.426 A:middle
+However, it's also pretty
+common to use table view
+
+00:49:43.646 --> 00:49:45.066 A:middle
+for a static set of things,
+
+00:49:45.066 --> 00:49:46.836 A:middle
+maybe some switches
+that you have.
+
+00:49:47.266 --> 00:49:49.216 A:middle
+Maybe that inspector
+I have there might end
+
+00:49:49.216 --> 00:49:50.546 A:middle
+up with a fancy table view
+
+00:49:50.546 --> 00:49:51.966 A:middle
+with a whole bunch
+of different items.
+
+00:49:52.236 --> 00:49:54.196 A:middle
+And it's kind of a
+lot of work to have
+
+00:49:54.196 --> 00:49:57.406 A:middle
+to convert these index
+paths into some identifier
+
+00:49:57.406 --> 00:49:59.436 A:middle
+that you contrive
+and convert it back
+
+00:49:59.436 --> 00:50:00.576 A:middle
+when they're never
+going to move.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:49:59.436 --> 00:50:00.576 A:middle
+when they're never
+going to move.
+
+00:50:01.326 --> 00:50:04.916 A:middle
+So now, if your data source
+doesn't implement the protocol
+
+00:50:04.916 --> 00:50:08.486 A:middle
+we detect to ask this
+question, we'll just go
+
+00:50:08.486 --> 00:50:10.216 A:middle
+and save the index
+path directly,
+
+00:50:10.326 --> 00:50:11.536 A:middle
+and it can be really useful.
+
+00:50:12.646 --> 00:50:17.686 A:middle
+And speaking of selected and
+scrolled, we now added support
+
+00:50:17.686 --> 00:50:18.886 A:middle
+to UI collection view.
+
+00:50:19.176 --> 00:50:22.196 A:middle
+We'll remember all the selected
+cells in a collection view
+
+00:50:22.276 --> 00:50:23.926 A:middle
+and also of the scroll position.
+
+00:50:24.316 --> 00:50:26.056 A:middle
+And you actually saw
+that in the demo,
+
+00:50:26.386 --> 00:50:27.816 A:middle
+so we do that all for free.
+
+00:50:28.616 --> 00:50:33.286 A:middle
+And then finally, one thing that
+can be extremely frustrating
+
+00:50:33.286 --> 00:50:36.066 A:middle
+to a user is when
+they're composing mail.
+
+00:50:36.066 --> 00:50:38.716 A:middle
+Let's say that you find
+a really awesome image
+
+00:50:38.976 --> 00:50:41.266 A:middle
+or an interesting article
+and you want to share it,
+
+00:50:41.476 --> 00:50:44.126 A:middle
+so you bring up the activity
+sheet as I showed before,
+
+00:50:44.446 --> 00:50:46.576 A:middle
+and continue all
+the way to mail.
+
+00:50:46.806 --> 00:50:47.676 A:middle
+So now you're not
+
+00:50:47.676 --> 00:50:49.646 A:middle
+in the activity view
+controller anymore.
+
+00:50:49.896 --> 00:50:52.146 A:middle
+That's gone, you're now actually
+
+00:50:52.146 --> 00:50:54.216 A:middle
+in a mail composition
+controller.
+
+00:50:54.696 --> 00:50:56.546 A:middle
+And you type this
+elaborate message,
+
+00:50:57.006 --> 00:50:59.836 A:middle
+put the app in the background
+for whatever reason, it exits,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:51:00.366 --> 00:51:02.506 A:middle
+start it back up -- oh, no.
+
+00:51:02.906 --> 00:51:05.786 A:middle
+Gone. So we thought that
+was a really important thing
+
+00:51:05.786 --> 00:51:09.316 A:middle
+to keep track of for users as
+mail can be fairly lengthy.
+
+00:51:09.446 --> 00:51:12.726 A:middle
+So if you have an
+activity view controller
+
+00:51:12.726 --> 00:51:16.426 A:middle
+and you give it a restoration
+identifier, we'll keep track
+
+00:51:16.426 --> 00:51:18.686 A:middle
+of mail drafts and
+we'll save them
+
+00:51:18.686 --> 00:51:21.226 A:middle
+and we'll bring the user
+right back and restore them.
+
+00:51:21.746 --> 00:51:25.056 A:middle
+And over time we plan to
+add more to this as well
+
+00:51:25.056 --> 00:51:27.956 A:middle
+so that we'll start saving more
+and more specific activities,
+
+00:51:28.116 --> 00:51:30.276 A:middle
+but we thought mail was
+the best place to start.
+
+00:51:36.376 --> 00:51:40.286 A:middle
+So I just want to take a moment
+to talk about security and how
+
+00:51:40.286 --> 00:51:41.956 A:middle
+that relates to state
+restoration.
+
+00:51:43.726 --> 00:51:47.816 A:middle
+We actually use data protection
+on the archive itself.
+
+00:51:48.676 --> 00:51:52.926 A:middle
+So the state restoration archive
+that's saved is not accessible
+
+00:51:52.926 --> 00:51:54.136 A:middle
+when the device is locked.
+
+00:51:55.376 --> 00:51:58.476 A:middle
+It's an encrypted file, and
+if the device is locked,
+
+00:51:58.476 --> 00:52:01.026 A:middle
+even if somebody stole your
+phone, managed to break
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:51:58.476 --> 00:52:01.026 A:middle
+even if somebody stole your
+phone, managed to break
+
+00:52:01.026 --> 00:52:02.996 A:middle
+into the file system
+and pulled that off,
+
+00:52:03.246 --> 00:52:06.476 A:middle
+they wouldn't be
+able to look at it.
+
+00:52:06.476 --> 00:52:07.806 A:middle
+So why do we do that?
+
+00:52:08.256 --> 00:52:11.176 A:middle
+Why is it important
+to protect this file?
+
+00:52:11.486 --> 00:52:12.716 A:middle
+Well, there's a few reasons.
+
+00:52:13.136 --> 00:52:16.906 A:middle
+One is it's really easy to
+leak sensitive information
+
+00:52:16.906 --> 00:52:17.526 A:middle
+by mistake.
+
+00:52:18.746 --> 00:52:20.846 A:middle
+You might keep track
+of the scroll position,
+
+00:52:21.766 --> 00:52:23.176 A:middle
+which could inform somebody
+
+00:52:23.176 --> 00:52:25.156 A:middle
+who really knows what
+the app's all about,
+
+00:52:25.586 --> 00:52:28.586 A:middle
+how many entries you have
+and how you've been using it.
+
+00:52:29.086 --> 00:52:31.536 A:middle
+There might be identifiers
+that you use for some
+
+00:52:31.536 --> 00:52:33.656 A:middle
+of your view controllers
+or some of these objects
+
+00:52:33.976 --> 00:52:36.216 A:middle
+that actually give away a
+little bit of information
+
+00:52:36.216 --> 00:52:38.066 A:middle
+about what a user is
+doing with the app,
+
+00:52:38.276 --> 00:52:41.136 A:middle
+and for some business apps
+or sensitive personal apps,
+
+00:52:41.486 --> 00:52:43.516 A:middle
+you might not want
+anybody to know about this.
+
+00:52:43.846 --> 00:52:45.786 A:middle
+You might be adding
+a new contact
+
+00:52:45.786 --> 00:52:48.326 A:middle
+and it's not saved
+completely, but you're adding
+
+00:52:48.326 --> 00:52:50.056 A:middle
+in someone's personal
+information;
+
+00:52:50.296 --> 00:52:52.046 A:middle
+you want that to
+be kept private.
+
+00:52:52.916 --> 00:52:57.576 A:middle
+Also, your application already
+may be keeping things private.
+
+00:52:57.576 --> 00:53:01.746 A:middle
+You may already be using data
+protection for the application,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:52:57.576 --> 00:53:01.746 A:middle
+You may already be using data
+protection for the application,
+
+00:53:02.156 --> 00:53:04.686 A:middle
+and we don't want to be the
+weak link in that chain,
+
+00:53:05.026 --> 00:53:08.616 A:middle
+so we felt that it was
+very important to make sure
+
+00:53:08.616 --> 00:53:11.986 A:middle
+that the state restoration
+archive was protected
+
+00:53:11.986 --> 00:53:13.796 A:middle
+and that you didn't
+have to worry about it.
+
+00:53:14.006 --> 00:53:17.186 A:middle
+So the action on your part,
+you don't have to do anything.
+
+00:53:17.316 --> 00:53:20.146 A:middle
+You can put whatever you
+want in there and not worry
+
+00:53:20.146 --> 00:53:22.866 A:middle
+about anything leaking out
+because we're protecting it.
+
+00:53:24.076 --> 00:53:26.466 A:middle
+I'm going to come back to
+that in a minute and see how
+
+00:53:26.466 --> 00:53:28.136 A:middle
+that relates to this topic.
+
+00:53:29.276 --> 00:53:32.036 A:middle
+So we added something
+really neat on iOS 7
+
+00:53:32.296 --> 00:53:35.096 A:middle
+that allows applications
+to run in the background,
+
+00:53:36.206 --> 00:53:39.706 A:middle
+and they can go and fetch assets
+or do calculations or get ready
+
+00:53:39.706 --> 00:53:40.756 A:middle
+for when the user's going
+
+00:53:40.756 --> 00:53:43.136 A:middle
+to use the application,
+which is pretty cool.
+
+00:53:43.606 --> 00:53:46.396 A:middle
+So if we're doing some
+background operation
+
+00:53:47.786 --> 00:53:50.796 A:middle
+and the application
+does state restoration,
+
+00:53:51.016 --> 00:53:51.916 A:middle
+we want to make sure
+
+00:53:51.916 --> 00:53:53.916 A:middle
+that everything comes
+back predictably.
+
+00:53:54.296 --> 00:53:55.176 A:middle
+So what do we do?
+
+00:53:55.666 --> 00:53:58.056 A:middle
+So this is my application,
+and let's say
+
+00:53:58.056 --> 00:54:00.996 A:middle
+that your application just gets
+started up in the background
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:53:58.056 --> 00:54:00.996 A:middle
+that your application just gets
+started up in the background
+
+00:54:00.996 --> 00:54:03.686 A:middle
+and here's my little magic wand.
+
+00:54:04.316 --> 00:54:07.546 A:middle
+So your application just
+ran unbeknownst to the user,
+
+00:54:07.756 --> 00:54:10.716 A:middle
+did its thing, and since
+it participates the state
+
+00:54:10.716 --> 00:54:14.566 A:middle
+restoration and since the device
+unlocked, when it starts up,
+
+00:54:14.566 --> 00:54:17.366 A:middle
+we go through the standard
+state restoration flow just
+
+00:54:17.366 --> 00:54:18.356 A:middle
+like we normally would.
+
+00:54:18.686 --> 00:54:21.966 A:middle
+That's because the user might
+take their unlocked device
+
+00:54:21.966 --> 00:54:24.696 A:middle
+and switch over to your
+application, and we'd want it
+
+00:54:24.696 --> 00:54:27.996 A:middle
+to a restored state and be back
+where the user expects it to.
+
+00:54:28.656 --> 00:54:32.716 A:middle
+But what do we do if
+the device is locked?
+
+00:54:33.906 --> 00:54:36.846 A:middle
+Well, we can't access that
+state restoration archive,
+
+00:54:37.566 --> 00:54:40.546 A:middle
+so in this case we
+take a simpler path.
+
+00:54:41.096 --> 00:54:44.526 A:middle
+We let the application get its
+work done, fetch its assets,
+
+00:54:44.826 --> 00:54:48.486 A:middle
+do whatever it needs to do in
+the background, but we don't try
+
+00:54:48.486 --> 00:54:51.186 A:middle
+to restore state, we won't
+be able to access the file
+
+00:54:51.186 --> 00:54:53.756 A:middle
+and it will fail,
+and very importantly,
+
+00:54:54.246 --> 00:54:57.916 A:middle
+when the application finishes
+running in the background,
+
+00:54:58.106 --> 00:54:59.576 A:middle
+we won't clobber the state
+
+00:54:59.616 --> 00:55:02.526 A:middle
+by saving whatever
+its current state is.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:54:59.616 --> 00:55:02.526 A:middle
+by saving whatever
+its current state is.
+
+00:55:02.736 --> 00:55:06.216 A:middle
+If the application is running
+while the device is unlocked,
+
+00:55:06.216 --> 00:55:07.366 A:middle
+if it runs in the background,
+
+00:55:07.636 --> 00:55:10.606 A:middle
+when it completes its
+background task and notifies us,
+
+00:55:10.866 --> 00:55:12.226 A:middle
+we'll save state again.
+
+00:55:12.226 --> 00:55:14.826 A:middle
+The application may have
+changed its appearance,
+
+00:55:14.826 --> 00:55:17.886 A:middle
+it may have changed some of
+the behavior when it did this
+
+00:55:17.886 --> 00:55:20.746 A:middle
+in the background, but
+if the device is locked
+
+00:55:20.746 --> 00:55:23.836 A:middle
+and it couldn't restore state in
+the first place, we're not going
+
+00:55:23.836 --> 00:55:26.506 A:middle
+to have it save state; in fact,
+the app's just going to exit
+
+00:55:26.506 --> 00:55:27.926 A:middle
+after it's all done
+with its work,
+
+00:55:28.226 --> 00:55:31.896 A:middle
+so that it's just getting work
+done, loading those assets,
+
+00:55:32.266 --> 00:55:34.956 A:middle
+but not perturbing the user,
+and when they start it back
+
+00:55:34.956 --> 00:55:37.906 A:middle
+up it'll go back to where
+it was last time the device
+
+00:55:38.216 --> 00:55:41.256 A:middle
+was unlocked.
+
+00:55:42.066 --> 00:55:45.656 A:middle
+One other thing about this,
+now that it's more likely
+
+00:55:45.656 --> 00:55:48.966 A:middle
+or that there's more potential
+for our application to run
+
+00:55:49.226 --> 00:55:52.936 A:middle
+in the background, if you're
+restoring state, keep in mind
+
+00:55:52.936 --> 00:55:54.266 A:middle
+when you start up,
+
+00:55:54.266 --> 00:55:56.556 A:middle
+the application's
+data may be different
+
+00:55:57.336 --> 00:55:59.086 A:middle
+and that you might want
+to take that into account.
+
+00:55:59.176 --> 00:56:02.066 A:middle
+And state restoration
+is built around the idea
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:55:59.176 --> 00:56:02.066 A:middle
+And state restoration
+is built around the idea
+
+00:56:02.066 --> 00:56:05.426 A:middle
+that you should be able to save
+state and then restore it even
+
+00:56:05.426 --> 00:56:06.936 A:middle
+if all your data has changed.
+
+00:56:06.936 --> 00:56:09.496 A:middle
+Many of the things I was
+describing before are
+
+00:56:09.496 --> 00:56:10.686 A:middle
+about that very thing.
+
+00:56:11.126 --> 00:56:16.536 A:middle
+But just be sensitive
+and keep it in mind.
+
+00:56:17.546 --> 00:56:20.606 A:middle
+So now you've gone and
+implemented state restoration,
+
+00:56:20.986 --> 00:56:21.776 A:middle
+but you want to be sure
+
+00:56:21.776 --> 00:56:23.586 A:middle
+that your application's
+doing the right thing.
+
+00:56:24.146 --> 00:56:26.086 A:middle
+So do we have any tools
+that can help you?
+
+00:56:26.946 --> 00:56:30.536 A:middle
+Well, one of the problems
+with developing this
+
+00:56:30.536 --> 00:56:34.736 A:middle
+that you might run into, the
+archive itself is fairly opaque.
+
+00:56:34.736 --> 00:56:36.006 A:middle
+It's not a text file.
+
+00:56:36.006 --> 00:56:37.586 A:middle
+You can't just go and look at.
+
+00:56:37.906 --> 00:56:39.556 A:middle
+So how do you tell
+what's in there?
+
+00:56:39.986 --> 00:56:43.506 A:middle
+How can you ensure that you've
+actually saved what you intended
+
+00:56:43.506 --> 00:56:46.266 A:middle
+to save and make sure
+that we've kept track
+
+00:56:46.266 --> 00:56:48.036 A:middle
+of everything that you expect?
+
+00:56:48.766 --> 00:56:52.016 A:middle
+Well, we have a new tool that
+we're going to make available
+
+00:56:52.486 --> 00:56:53.996 A:middle
+from our developer support.
+
+00:56:54.396 --> 00:56:57.396 A:middle
+You can run this tool and
+it'll output everything that's
+
+00:56:57.396 --> 00:56:58.106 A:middle
+in the archive.
+
+00:56:58.216 --> 00:57:00.456 A:middle
+I'm just going to show
+you a little bit of that.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:56:58.216 --> 00:57:00.456 A:middle
+I'm just going to show
+you a little bit of that.
+
+00:57:01.156 --> 00:57:04.466 A:middle
+Kind of looks like one of those
+1960s movies about computers
+
+00:57:04.526 --> 00:57:07.876 A:middle
+so very textual but
+very informative.
+
+00:57:08.406 --> 00:57:10.916 A:middle
+So you're going to see a whole
+bunch of stuff like this,
+
+00:57:10.916 --> 00:57:12.556 A:middle
+and this is just kind
+of the top of it.
+
+00:57:13.666 --> 00:57:16.986 A:middle
+So this first tells you what
+objects have restoration
+
+00:57:16.986 --> 00:57:20.196 A:middle
+classes, and that's real useful
+because a common problem is
+
+00:57:20.196 --> 00:57:23.556 A:middle
+when you forget to set a
+restoration class or you set one
+
+00:57:23.556 --> 00:57:25.376 A:middle
+by mistake on something
+that doesn't need it
+
+00:57:25.376 --> 00:57:26.136 A:middle
+and you're wondering,
+
+00:57:26.506 --> 00:57:28.376 A:middle
+either you're not
+getting any objects back
+
+00:57:28.376 --> 00:57:30.316 A:middle
+or you're getting two
+for the price of one.
+
+00:57:30.736 --> 00:57:34.066 A:middle
+So right here you can look and
+see everything that we expect
+
+00:57:34.066 --> 00:57:35.626 A:middle
+to use a restoration class.
+
+00:57:36.916 --> 00:57:39.886 A:middle
+Also, we just have a set
+of top level information.
+
+00:57:39.886 --> 00:57:42.456 A:middle
+So I mentioned we keep
+track of the bundle version.
+
+00:57:43.016 --> 00:57:46.236 A:middle
+We also have these new keys,
+when did you save your state.
+
+00:57:46.566 --> 00:57:48.826 A:middle
+What was the system
+version that was used
+
+00:57:48.826 --> 00:57:49.796 A:middle
+when we saved the state?
+
+00:57:50.776 --> 00:57:54.256 A:middle
+And then for all of the
+objects that are participating,
+
+00:57:54.636 --> 00:57:56.576 A:middle
+we save a bunch of
+information about those.
+
+00:57:56.916 --> 00:57:58.556 A:middle
+So here's our image
+view controller.
+
+00:57:59.196 --> 00:58:01.926 A:middle
+So you can see on the top
+there highlighted in yellow,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:57:59.196 --> 00:58:01.926 A:middle
+So you can see on the top
+there highlighted in yellow,
+
+00:58:02.306 --> 00:58:05.336 A:middle
+we tell you the type of object
+it is, so you can kind of scan
+
+00:58:05.336 --> 00:58:07.316 A:middle
+down -- very quickly
+looking for view controller,
+
+00:58:07.316 --> 00:58:10.136 A:middle
+view controller -- and it also
+tells you the class of it,
+
+00:58:10.416 --> 00:58:12.006 A:middle
+so you can look at
+it and go, "hm,
+
+00:58:12.006 --> 00:58:13.526 A:middle
+that's not the class I expected.
+
+00:58:13.526 --> 00:58:14.476 A:middle
+How did that happen?"
+
+00:58:14.536 --> 00:58:17.056 A:middle
+And you can also look
+at what it saved.
+
+00:58:17.056 --> 00:58:20.166 A:middle
+And this stuff is very,
+very straightforward, right?
+
+00:58:20.596 --> 00:58:22.346 A:middle
+We referred to our data source.
+
+00:58:22.656 --> 00:58:25.576 A:middle
+Notice it says, "object
+identifier proxy."
+
+00:58:25.776 --> 00:58:28.046 A:middle
+That means this is a reference
+
+00:58:28.046 --> 00:58:30.126 A:middle
+to an object that's
+also participating
+
+00:58:30.126 --> 00:58:32.686 A:middle
+in state restoration and
+not an actual object.
+
+00:58:33.446 --> 00:58:36.856 A:middle
+Here, I actually put my
+filters into a dictionary,
+
+00:58:37.006 --> 00:58:40.016 A:middle
+so this is just a textual
+representation of a dictionary.
+
+00:58:40.366 --> 00:58:42.536 A:middle
+So the dictionary
+itself was encoded
+
+00:58:43.476 --> 00:58:46.106 A:middle
+and the keys were encoded,
+but you'll notice again,
+
+00:58:46.216 --> 00:58:48.696 A:middle
+we're using proxies
+for the actual objects,
+
+00:58:48.876 --> 00:58:50.496 A:middle
+the filter objects
+in the dictionary.
+
+00:58:51.006 --> 00:58:54.816 A:middle
+And here's the identifier
+for the image as well.
+
+00:58:55.326 --> 00:58:58.316 A:middle
+So sometimes when you're
+trying to diagnose issues,
+
+00:58:58.546 --> 00:59:00.296 A:middle
+you can learn quite a lot simply
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:58:58.546 --> 00:59:00.296 A:middle
+you can learn quite a lot simply
+
+00:59:00.296 --> 00:59:02.456 A:middle
+by taking a look
+at your archive.
+
+00:59:02.786 --> 00:59:06.156 A:middle
+And I think it's very useful
+as you're building new code
+
+00:59:06.156 --> 00:59:09.096 A:middle
+and you're testing things,
+to just take the time to go
+
+00:59:09.096 --> 00:59:12.886 A:middle
+through here and make sure
+everything you expect is in it.
+
+00:59:14.596 --> 00:59:16.716 A:middle
+Now, I mentioned that
+we can pull things
+
+00:59:16.716 --> 00:59:18.466 A:middle
+out of the storyboard
+automatically.
+
+00:59:18.886 --> 00:59:21.686 A:middle
+So here I'm just showing that
+we keep track of the name
+
+00:59:21.686 --> 00:59:25.426 A:middle
+of the storyboard and also what
+the storyboard identifier was.
+
+00:59:25.816 --> 00:59:27.776 A:middle
+And that might be
+useful to you as well,
+
+00:59:27.776 --> 00:59:29.866 A:middle
+even if you're not
+depending on this behavior,
+
+00:59:30.266 --> 00:59:32.586 A:middle
+just so that it helps
+you to triangulate
+
+00:59:32.586 --> 00:59:34.816 A:middle
+on what this object actually is.
+
+00:59:34.926 --> 00:59:37.116 A:middle
+You're not going to have a
+picture of the view controller
+
+00:59:37.116 --> 00:59:39.386 A:middle
+on the right as I'm showing
+here; you're just going
+
+00:59:39.386 --> 00:59:41.446 A:middle
+to be looking at text
+and you might think,
+
+00:59:41.446 --> 00:59:42.886 A:middle
+what is this thing
+I'm looking at?
+
+00:59:43.066 --> 00:59:44.766 A:middle
+Oh, came out of the storyboard.
+
+00:59:45.266 --> 00:59:45.726 A:middle
+There we go.
+
+00:59:46.496 --> 00:59:49.426 A:middle
+Okay. How about these
+generalized objects?
+
+00:59:49.786 --> 00:59:51.296 A:middle
+Again, we do the same thing.
+
+00:59:51.296 --> 00:59:54.426 A:middle
+We're showing that it's
+just a general object,
+
+00:59:54.426 --> 00:59:56.956 A:middle
+it says restorable object
+-- that's my terminology.
+
+00:59:57.556 --> 01:00:01.036 A:middle
+We show the class of it, and
+it saved a couple things,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:59:57.556 --> 01:00:01.036 A:middle
+We show the class of it, and
+it saved a couple things,
+
+01:00:01.156 --> 01:00:02.796 A:middle
+so we just keep track
+of all of that.
+
+01:00:03.186 --> 01:00:06.436 A:middle
+So pretty dry, but I think
+it's very interesting
+
+01:00:06.596 --> 01:00:07.646 A:middle
+when you see all of this.
+
+01:00:08.336 --> 01:00:09.996 A:middle
+Okay, I'm kind of
+running out of time,
+
+01:00:09.996 --> 01:00:11.496 A:middle
+but I have a couple more things.
+
+01:00:11.876 --> 01:00:14.706 A:middle
+We've added a profile
+you can install
+
+01:00:14.706 --> 01:00:17.036 A:middle
+and we'll log a little
+bit of extra information.
+
+01:00:17.406 --> 01:00:19.636 A:middle
+You can also set a
+default for the simulator.
+
+01:00:19.826 --> 01:00:23.576 A:middle
+So you get kind of a play
+by play in Xcode's console
+
+01:00:23.576 --> 01:00:25.916 A:middle
+as your app is saving
+state and restoring it,
+
+01:00:25.916 --> 01:00:28.266 A:middle
+and it could be pretty
+useful to look at that, too.
+
+01:00:28.886 --> 01:00:32.686 A:middle
+And we have a profile that
+you can install that puts you
+
+01:00:32.686 --> 01:00:34.046 A:middle
+in what I call developer mode.
+
+01:00:34.396 --> 01:00:36.156 A:middle
+That's what I was
+using in my demo
+
+01:00:36.156 --> 01:00:38.126 A:middle
+so that I could kill
+the application
+
+01:00:38.386 --> 01:00:40.156 A:middle
+without losing state
+restoration.
+
+01:00:40.546 --> 01:00:42.716 A:middle
+And it's really useful
+when you're chasing a bug
+
+01:00:42.716 --> 01:00:45.426 A:middle
+or you just want to check things
+and you want to be able to go
+
+01:00:45.426 --> 01:00:51.226 A:middle
+on the switcher and kill it but
+not actually lose the archive.
+
+01:00:51.786 --> 01:00:53.646 A:middle
+So we did a recap.
+
+01:00:53.646 --> 01:00:55.976 A:middle
+I'm hoping that if you
+haven't used state restoration,
+
+01:00:56.256 --> 01:00:59.056 A:middle
+this shows you just how easy
+it can be to incorporate it
+
+01:00:59.116 --> 01:01:02.536 A:middle
+in your app, and you'll go back
+and you'll want to take a look
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+01:00:59.116 --> 01:01:02.536 A:middle
+in your app, and you'll go back
+and you'll want to take a look
+
+01:01:02.536 --> 01:01:03.906 A:middle
+at this and see what you can do.
+
+01:01:04.486 --> 01:01:06.296 A:middle
+And for those of you who
+have already been using it
+
+01:01:06.296 --> 01:01:09.976 A:middle
+and new people as well, I hope
+that the new features show you
+
+01:01:09.976 --> 01:01:11.816 A:middle
+that you can also extend things
+
+01:01:11.816 --> 01:01:13.826 A:middle
+and it makes it even
+easier to use.
+
+01:01:14.036 --> 01:01:16.126 A:middle
+Talked a little bit
+about security
+
+01:01:16.476 --> 01:01:18.046 A:middle
+and background operation.
+
+01:01:19.196 --> 01:01:22.676 A:middle
+We covered the tools that
+we have, and that's it.
+
+01:01:23.406 --> 01:01:26.056 A:middle
+Jake Behrens is our
+Frameworks Evangelist.
+
+01:01:26.426 --> 01:01:27.636 A:middle
+He'd love to hear from you.
+
+01:01:28.036 --> 01:01:30.246 A:middle
+We've got some great
+documentation online.
+
+01:01:30.246 --> 01:01:33.696 A:middle
+Of course, the forms are always
+available, so talk to him
+
+01:01:33.696 --> 01:01:35.826 A:middle
+if you have a chance,
+and that's it.
+
+01:01:35.826 --> 01:01:36.806 A:middle
+Thank you very much.
+
+01:01:37.516 --> 01:01:44.100 A:middle
+[ Applause ]
+

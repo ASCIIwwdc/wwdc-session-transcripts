@@ -1,0 +1,4394 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:09.956 --> 00:00:13.336 A:middle
+&gt;&gt; Hello, welcome to
+Optimizing Drawing and Scrolling
+
+00:00:13.336 --> 00:00:15.906 A:middle
+on Mac OS X [applause].
+
+00:00:16.006 --> 00:00:18.946 A:middle
+My name is Corbin Dunn and I'm
+an AppKit Software Engineer.
+
+00:00:18.946 --> 00:00:21.116 A:middle
+I'm going to be giving this talk
+with my colleague, Raleigh Ledet
+
+00:00:21.116 --> 00:00:23.266 A:middle
+and let's just jump
+right into it.
+
+00:00:23.316 --> 00:00:25.456 A:middle
+So what we're going to
+be talking about today,
+
+00:00:25.526 --> 00:00:27.286 A:middle
+we have four major subjects.
+
+00:00:27.946 --> 00:00:30.256 A:middle
+We're going to be talking about
+Optimizing AppKit Drawing,
+
+00:00:31.326 --> 00:00:34.016 A:middle
+Layer-Backed View Drawing
+and utilizing Core Animation
+
+00:00:34.016 --> 00:00:35.516 A:middle
+in your views and
+how to make it fast.
+
+00:00:36.536 --> 00:00:39.316 A:middle
+Raleigh is going to come on
+stage during the second half
+
+00:00:39.456 --> 00:00:41.876 A:middle
+and talk about Responsive
+Scrolling and what you can do
+
+00:00:41.876 --> 00:00:44.896 A:middle
+to opt into that and make
+it fast on Mavericks.
+
+00:00:44.896 --> 00:00:46.806 A:middle
+And then finally,
+Raleigh is going to talk
+
+00:00:46.806 --> 00:00:48.566 A:middle
+about Magnification
+in NSScrollView.
+
+00:00:48.566 --> 00:00:52.926 A:middle
+So let's talk about
+Optimizing AppKit Drawing
+
+00:00:53.186 --> 00:00:55.536 A:middle
+and the best practices that
+you can do in your application.
+
+00:00:58.936 --> 00:01:02.086 A:middle
+So you're probably already
+doing this inside your drawRect.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:58.936 --> 00:01:02.086 A:middle
+So you're probably already
+doing this inside your drawRect.
+
+00:01:02.176 --> 00:01:04.766 A:middle
+Inside of your drawRect
+implementation, you're looking
+
+00:01:04.766 --> 00:01:07.116 A:middle
+at the dirtyRect
+and just filling
+
+00:01:07.116 --> 00:01:10.386 A:middle
+and pointing your model objects
+inside the area that's actually
+
+00:01:10.386 --> 00:01:11.856 A:middle
+dirty that you really
+need to draw.
+
+00:01:13.856 --> 00:01:17.136 A:middle
+The interesting thing about this
+is you're probably already doing
+
+00:01:17.636 --> 00:01:19.126 A:middle
+setNeedsDisplayInRect on just
+
+00:01:19.126 --> 00:01:20.856 A:middle
+that small little rect
+that's really dirty
+
+00:01:20.856 --> 00:01:21.886 A:middle
+that you need to redraw.
+
+00:01:22.596 --> 00:01:25.016 A:middle
+You're hopefully not doing
+setNeedsDisplay:YES an entire
+
+00:01:25.016 --> 00:01:26.346 A:middle
+view and then validating
+everything
+
+00:01:26.446 --> 00:01:27.826 A:middle
+which is not good
+for performance.
+
+00:01:28.026 --> 00:01:31.306 A:middle
+Of course, if you
+have a big red view,
+
+00:01:31.556 --> 00:01:34.176 A:middle
+you do a setNeedsDisplayInRect
+on this little orange rect,
+
+00:01:34.936 --> 00:01:36.466 A:middle
+you do another
+setNeedsDisplayInRect
+
+00:01:36.466 --> 00:01:38.016 A:middle
+on another rect and
+the same run will pass.
+
+00:01:39.406 --> 00:01:41.156 A:middle
+What's going to happen is
+your dirtyRect is going
+
+00:01:41.156 --> 00:01:43.536 A:middle
+to be the union of
+those two Rects.
+
+00:01:44.636 --> 00:01:46.396 A:middle
+So what you can do
+as a developer
+
+00:01:46.856 --> 00:01:49.416 A:middle
+to do better drawing is
+inside of your drawRect,
+
+00:01:49.866 --> 00:01:53.526 A:middle
+utilize getRectsBeingDrawn:count
+which is some older API
+
+00:01:53.526 --> 00:01:54.566 A:middle
+that we've had for a while.
+
+00:01:55.676 --> 00:01:58.566 A:middle
+You can enumerate all the
+dirtyRects and then just fill
+
+00:01:58.566 --> 00:02:00.476 A:middle
+in those Rects that are
+actually really dirty.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:58.566 --> 00:02:00.476 A:middle
+in those Rects that are
+actually really dirty.
+
+00:02:01.126 --> 00:02:04.316 A:middle
+Or, what you can also do here is
+just pull in your model objects
+
+00:02:04.346 --> 00:02:07.296 A:middle
+that exist inside those
+dirtyRects instead of pulling
+
+00:02:07.296 --> 00:02:09.265 A:middle
+in everything inside
+of your view bounds
+
+00:02:09.606 --> 00:02:11.336 A:middle
+or the visibleRect
+or the dirtyRect.
+
+00:02:11.336 --> 00:02:12.966 A:middle
+This is much more performant.
+
+00:02:13.346 --> 00:02:18.246 A:middle
+Another thing you can do is
+you can use needsToDrawRect
+
+00:02:18.856 --> 00:02:21.186 A:middle
+which is some API where
+you can say, "Hey,
+
+00:02:21.186 --> 00:02:24.366 A:middle
+I already have this rect, I need
+to draw it or fill in my model.
+
+00:02:24.366 --> 00:02:25.796 A:middle
+Do I really need to draw it?"
+
+00:02:25.976 --> 00:02:28.886 A:middle
+If you do, call needsToDrawRect,
+it'll say yes or no
+
+00:02:28.916 --> 00:02:31.636 A:middle
+and then you can actually do
+your logic based on that answer.
+
+00:02:32.186 --> 00:02:36.556 A:middle
+What types of things
+should you be doing inside
+
+00:02:36.556 --> 00:02:39.616 A:middle
+of your drawRect, we should
+only be doing drawing inside
+
+00:02:39.616 --> 00:02:40.316 A:middle
+of your drawRect.
+
+00:02:40.896 --> 00:02:43.376 A:middle
+You don't want to be doing
+network calls, you don't want
+
+00:02:43.376 --> 00:02:46.386 A:middle
+to be doing image allocation or
+loading, you probably don't want
+
+00:02:46.386 --> 00:02:48.746 A:middle
+to be doing file access,
+you definitely don't want
+
+00:02:48.746 --> 00:02:52.236 A:middle
+to be doing layout or adding and
+removing subviews which are kind
+
+00:02:52.236 --> 00:02:53.106 A:middle
+of be a recursive loop.
+
+00:02:53.106 --> 00:02:55.116 A:middle
+If you add a view inside
+drawing, it's going to need
+
+00:02:55.116 --> 00:02:58.696 A:middle
+to draw again and
+that's not good.
+
+00:02:58.916 --> 00:03:01.376 A:middle
+Now, other things that you can
+do that are performant, well,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:58.916 --> 00:03:01.376 A:middle
+Now, other things that you can
+do that are performant, well,
+
+00:03:01.636 --> 00:03:03.926 A:middle
+hiding a view may
+be actually better
+
+00:03:03.926 --> 00:03:06.246 A:middle
+and faster than adding the view.
+
+00:03:07.276 --> 00:03:11.206 A:middle
+So, you can utilize setHidden
+to make the views be hidden.
+
+00:03:11.206 --> 00:03:13.926 A:middle
+An exception to this, which I'll
+discuss a little bit later is
+
+00:03:13.926 --> 00:03:15.406 A:middle
+if you're using layer-backed
+views
+
+00:03:16.246 --> 00:03:18.656 A:middle
+and I'll discuss the
+details on why in a bit.
+
+00:03:18.656 --> 00:03:22.776 A:middle
+So let's talk a little
+bit more about images
+
+00:03:23.246 --> 00:03:26.706 A:middle
+and utilizing loading of
+images and what you should do.
+
+00:03:27.456 --> 00:03:30.706 A:middle
+It's really good to cache images
+so if you're using -imageNamed
+
+00:03:30.706 --> 00:03:34.336 A:middle
+to load an image, you probably
+want to retain it into an ivar.
+
+00:03:35.066 --> 00:03:38.066 A:middle
+It's quite possible that AppKit
+may not retain that image
+
+00:03:38.066 --> 00:03:41.206 A:middle
+and it may be cached, the cache
+may go away so if you want
+
+00:03:41.206 --> 00:03:43.096 A:middle
+to draw it again and
+again, retain it.
+
+00:03:43.096 --> 00:03:48.716 A:middle
+Now, if you have a big
+image that you want to load,
+
+00:03:49.316 --> 00:03:51.976 A:middle
+it's probably a good idea to
+not load it inside drawRect
+
+00:03:51.976 --> 00:03:54.426 A:middle
+and to asynchronously load
+it in the background thread.
+
+00:03:55.066 --> 00:03:56.996 A:middle
+So you can use an
+NSOperationQueue,
+
+00:03:57.366 --> 00:04:00.566 A:middle
+add an operation with block to
+do some work on the background.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:57.366 --> 00:04:00.566 A:middle
+add an operation with block to
+do some work on the background.
+
+00:04:01.106 --> 00:04:02.646 A:middle
+You can actually do
+your heavy lifting
+
+00:04:02.826 --> 00:04:05.426 A:middle
+such as initWithContentsOfURL
+to allocate your image.
+
+00:04:06.596 --> 00:04:08.856 A:middle
+You can then kind of
+pre-cache and warm the image
+
+00:04:09.056 --> 00:04:11.736 A:middle
+by calling
+CGImageForProposedRect context:
+
+00:04:11.736 --> 00:04:14.656 A:middle
+hints and pass in the actual
+size which you're going
+
+00:04:14.656 --> 00:04:17.935 A:middle
+to be drawing and this will kind
+of warm the image up to get be--
+
+00:04:17.935 --> 00:04:19.346 A:middle
+to get to be ready
+to be drawing.
+
+00:04:20.956 --> 00:04:24.066 A:middle
+Then once it's warmed
+up, you can kick it back
+
+00:04:24.066 --> 00:04:26.996 A:middle
+over to the main queue
+and add another operation
+
+00:04:26.996 --> 00:04:29.566 A:middle
+that actually updates your
+image property of your view
+
+00:04:29.566 --> 00:04:32.976 A:middle
+and actually marks the
+area need to be redrawn
+
+00:04:33.666 --> 00:04:35.666 A:middle
+which will then be
+happening on the main thread.
+
+00:04:36.216 --> 00:04:41.906 A:middle
+As I mentioned before, you
+only want to do drawing
+
+00:04:41.906 --> 00:04:44.776 A:middle
+and don't do any layout in
+the background and inside
+
+00:04:44.776 --> 00:04:48.006 A:middle
+of drawRect so where
+should you do layout?
+
+00:04:48.006 --> 00:04:50.396 A:middle
+You should probably do
+layout in the layout method
+
+00:04:50.866 --> 00:04:54.586 A:middle
+or utilize viewWillDraw,
+that's the location to add
+
+00:04:54.706 --> 00:04:58.266 A:middle
+and remove subviews, mark areas
+as being dirty and whatnot.
+
+00:04:59.216 --> 00:05:01.026 A:middle
+Definitely, do not
+do inside drawRect
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:59.216 --> 00:05:01.026 A:middle
+Definitely, do not
+do inside drawRect
+
+00:05:01.446 --> 00:05:02.696 A:middle
+because it's bad
+for performance.
+
+00:05:03.396 --> 00:05:08.406 A:middle
+Of course, if your view
+is opaque, and you want
+
+00:05:08.406 --> 00:05:10.636 A:middle
+to override isOpaque on
+[inaudible] view and say yes.
+
+00:05:11.606 --> 00:05:13.456 A:middle
+If your view isn't, then
+you have to so say, no.
+
+00:05:13.656 --> 00:05:15.806 A:middle
+But if it opaque,
+then you tell AppKit,
+
+00:05:16.016 --> 00:05:17.936 A:middle
+that we can do more
+performing operations
+
+00:05:18.496 --> 00:05:19.666 A:middle
+by knowing this information.
+
+00:05:20.156 --> 00:05:23.396 A:middle
+Another thing that you can do
+
+00:05:23.396 --> 00:05:27.446 A:middle
+to make faster drawing is
+override wantsDefaultClipping.
+
+00:05:28.276 --> 00:05:31.086 A:middle
+By default, wantsDefaultClipping
+says yes,
+
+00:05:31.646 --> 00:05:33.316 A:middle
+meaning your view
+is going to clip
+
+00:05:33.316 --> 00:05:35.406 A:middle
+to whatever bounce it
+is actually drawing to.
+
+00:05:36.526 --> 00:05:38.136 A:middle
+Now, if you can strain
+all your drawing
+
+00:05:38.136 --> 00:05:39.396 A:middle
+to get Rects being drawn,
+
+00:05:40.026 --> 00:05:42.306 A:middle
+you can override
+-wantsDefaultClipping and say no
+
+00:05:42.306 --> 00:05:44.106 A:middle
+and we won't do that
+clipping for you
+
+00:05:44.616 --> 00:05:45.946 A:middle
+and it might be faster
+for drawing.
+
+00:05:46.486 --> 00:05:50.206 A:middle
+There are some methods
+in the AppKit
+
+00:05:50.846 --> 00:05:52.066 A:middle
+which are a little
+bit heavyweight
+
+00:05:52.066 --> 00:05:54.366 A:middle
+and called frequently
+and it's very good
+
+00:05:54.366 --> 00:05:56.526 A:middle
+to avoid overriding these
+methods if possible.
+
+00:05:57.366 --> 00:05:59.316 A:middle
+The class methods are
+the GState methods.
+
+00:05:59.756 --> 00:06:03.966 A:middle
+So if you're overriding or
+calling GState, allocateGState,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:59.756 --> 00:06:03.966 A:middle
+So if you're overriding or
+calling GState, allocateGState,
+
+00:06:03.966 --> 00:06:08.606 A:middle
+releaseGState and in particular,
+setupGState and renewGState,
+
+00:06:09.286 --> 00:06:11.606 A:middle
+we'd frequently see people
+overriding these methods,
+
+00:06:11.846 --> 00:06:14.676 A:middle
+in particular, renewGstate
+to do things to know
+
+00:06:14.676 --> 00:06:16.696 A:middle
+when their view's
+global position
+
+00:06:16.696 --> 00:06:17.916 A:middle
+within the window changes.
+
+00:06:18.396 --> 00:06:20.816 A:middle
+So for example, the views
+frame hasn't really changed
+
+00:06:21.146 --> 00:06:24.056 A:middle
+but its position inside the
+window globally does change
+
+00:06:24.406 --> 00:06:25.926 A:middle
+and some people are
+using this as a hook
+
+00:06:25.926 --> 00:06:26.776 A:middle
+to know when that happens.
+
+00:06:27.946 --> 00:06:31.456 A:middle
+Instead, it is much better
+to use notifications to find
+
+00:06:31.456 --> 00:06:33.006 A:middle
+out when your views
+position changes.
+
+00:06:33.746 --> 00:06:36.136 A:middle
+Use the
+NSViewFrameDidChangeNotification
+
+00:06:36.816 --> 00:06:39.656 A:middle
+or the NSViewBalanceDidChange
+Notification.
+
+00:06:40.836 --> 00:06:42.456 A:middle
+Raleigh is going to come
+up in a little bit and talk
+
+00:06:42.456 --> 00:06:45.486 A:middle
+about this a little bit more
+with the context of ScrollView.
+
+00:06:46.066 --> 00:06:52.376 A:middle
+So, that was discussing
+typical AppKit drawing and how
+
+00:06:52.376 --> 00:06:54.506 A:middle
+to do some performant things
+for a traditional drawing.
+
+00:06:55.076 --> 00:06:57.356 A:middle
+Let's talk about layer-backed
+view drawing and some
+
+00:06:57.356 --> 00:07:02.686 A:middle
+of the best practices for Core
+Animation and what you can do.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:57.356 --> 00:07:02.686 A:middle
+of the best practices for Core
+Animation and what you can do.
+
+00:07:03.036 --> 00:07:06.476 A:middle
+So last year, we gave a
+talk on layer-backed views
+
+00:07:06.646 --> 00:07:09.516 A:middle
+which I highly recommend going,
+digging up, and watching.
+
+00:07:09.646 --> 00:07:12.346 A:middle
+It discusses a lot of
+things that are great
+
+00:07:12.346 --> 00:07:14.416 A:middle
+to get performant animations
+using Core Animation.
+
+00:07:14.416 --> 00:07:18.866 A:middle
+I'm going to cover a couple of
+the properties here very quickly
+
+00:07:18.996 --> 00:07:20.536 A:middle
+to just reiterate how
+important they are
+
+00:07:20.536 --> 00:07:22.686 A:middle
+to get good fast animations.
+
+00:07:22.686 --> 00:07:25.506 A:middle
+I'm going to talk about the
+layerContentsRedrawPolicy
+
+00:07:26.146 --> 00:07:28.566 A:middle
+and also updateLayer
+and wantsUpdateLayer.
+
+00:07:31.536 --> 00:07:34.436 A:middle
+So in Lion, we introduced
+some new API called
+
+00:07:34.436 --> 00:07:36.236 A:middle
+the layerContentsRedrawPolicy.
+
+00:07:36.656 --> 00:07:38.346 A:middle
+It has a whole set
+of different values.
+
+00:07:39.346 --> 00:07:41.556 A:middle
+The one that's the
+most important is
+
+00:07:41.556 --> 00:07:44.866 A:middle
+that NSViewLayerContentsRedraw
+OnSetNeedsDisplay.
+
+00:07:47.456 --> 00:07:51.896 A:middle
+So when you set this property on
+your view, what it means is you
+
+00:07:51.896 --> 00:07:53.966 A:middle
+as a developer using
+a layer-backed view,
+
+00:07:54.666 --> 00:07:58.246 A:middle
+whenever your content changes on
+the view or your frame changes,
+
+00:07:58.656 --> 00:08:01.326 A:middle
+you are responsible for
+calling setNeedsDisplay.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:58.656 --> 00:08:01.326 A:middle
+you are responsible for
+calling setNeedsDisplay.
+
+00:08:02.066 --> 00:08:05.836 A:middle
+We do not automatically call
+a setNeedsDisplay on the view
+
+00:08:05.836 --> 00:08:06.966 A:middle
+when the frame changes.
+
+00:08:08.446 --> 00:08:10.536 A:middle
+And what this does
+is it allows us
+
+00:08:10.576 --> 00:08:12.666 A:middle
+to utilize Core Animation
+animations
+
+00:08:13.046 --> 00:08:15.056 A:middle
+to smoothly animate your view.
+
+00:08:15.496 --> 00:08:17.516 A:middle
+So prefer to use this
+property if you can.
+
+00:08:18.346 --> 00:08:21.006 A:middle
+The frame change default
+is the default value
+
+00:08:21.566 --> 00:08:25.686 A:middle
+and so we require you to set the
+OnSetNeedsDisplay version of it
+
+00:08:25.736 --> 00:08:28.856 A:middle
+to opt in and please do so
+
+00:08:29.346 --> 00:08:32.706 A:middle
+and should get some fast
+animations doing this.
+
+00:08:33.936 --> 00:08:37.336 A:middle
+So how do we do drawing when
+we have a layer-backed view?
+
+00:08:38.426 --> 00:08:41.166 A:middle
+But since we added
+updateLayer in Mac OS 10.8,
+
+00:08:41.166 --> 00:08:43.686 A:middle
+here is the typical flow
+path that we do for drawing.
+
+00:08:43.686 --> 00:08:47.536 A:middle
+You have a Core Animation
+layer and it needs to draw
+
+00:08:47.586 --> 00:08:48.836 A:middle
+so it was dirty in some way.
+
+00:08:49.816 --> 00:08:52.986 A:middle
+The next thing that happens
+is it ask NSView, hey,
+
+00:08:52.986 --> 00:08:56.106 A:middle
+do you want to use updateLayer
+and depending on what the answer
+
+00:08:56.106 --> 00:08:59.226 A:middle
+to wantsUpdateLayer is, we
+do two different code pass.
+
+00:08:59.756 --> 00:09:02.756 A:middle
+So let's say you say no to
+wantsUpdateLayer, which is more
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:59.756 --> 00:09:02.756 A:middle
+So let's say you say no to
+wantsUpdateLayer, which is more
+
+00:09:02.756 --> 00:09:05.216 A:middle
+of a traditional drawing
+in drawRect-based copath.
+
+00:09:06.276 --> 00:09:10.786 A:middle
+What happens is Core Animation
+creates a CGContextRef the size
+
+00:09:10.786 --> 00:09:11.516 A:middle
+of our view.
+
+00:09:12.176 --> 00:09:14.796 A:middle
+That can be thought of as
+an image the entire size
+
+00:09:14.796 --> 00:09:17.696 A:middle
+of your view then
+uses a delegate method
+
+00:09:17.926 --> 00:09:20.376 A:middle
+drawLayer:inContext
+in order for AppKit
+
+00:09:20.376 --> 00:09:22.566 A:middle
+to call your drawRect
+implementation.
+
+00:09:23.086 --> 00:09:25.956 A:middle
+Then whatever you draw and setup
+your views bounds is captured
+
+00:09:25.956 --> 00:09:30.076 A:middle
+into a layered contents
+as an image.
+
+00:09:30.236 --> 00:09:32.806 A:middle
+Now, you may want to
+use wantsUpdateLayer
+
+00:09:32.876 --> 00:09:34.496 A:middle
+and I'll describe
+why in just a moment.
+
+00:09:34.866 --> 00:09:38.726 A:middle
+The way that works is we use a
+different delegate method called
+
+00:09:38.726 --> 00:09:44.276 A:middle
+displayLayer and then we call
+instead of AppKit updateLayer
+
+00:09:44.546 --> 00:09:46.156 A:middle
+which is a method
+that you can override,
+
+00:09:46.656 --> 00:09:48.346 A:middle
+you can set whatever
+properties you want
+
+00:09:48.346 --> 00:09:51.186 A:middle
+in the layer including
+the layer contents
+
+00:09:51.546 --> 00:09:53.586 A:middle
+to provide your representation
+of the view.
+
+00:09:53.586 --> 00:09:56.996 A:middle
+So let's take a look
+at doing that.
+
+00:09:57.456 --> 00:09:59.616 A:middle
+So here is an example
+using wantsUpdateLayer.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:00.046 --> 00:10:02.126 A:middle
+You override wantsUpdateLayer,
+you say yes.
+
+00:10:02.916 --> 00:10:04.476 A:middle
+Now, instead of getting
+a drawRect,
+
+00:10:04.816 --> 00:10:07.986 A:middle
+you get an update layer call
+and you can set layer properties
+
+00:10:07.986 --> 00:10:09.826 A:middle
+to represent how your view
+should be represented.
+
+00:10:10.346 --> 00:10:13.016 A:middle
+So for here, we don't have
+to create the backing store,
+
+00:10:13.016 --> 00:10:14.666 A:middle
+we don't have to create
+that image that back
+
+00:10:14.706 --> 00:10:17.366 A:middle
+to review instead, you
+can just set properties
+
+00:10:17.366 --> 00:10:19.736 A:middle
+such as the background
+color, the border color,
+
+00:10:19.736 --> 00:10:22.446 A:middle
+the border width and you can
+represent your user interface
+
+00:10:22.446 --> 00:10:24.576 A:middle
+this way without
+having to use memory
+
+00:10:24.916 --> 00:10:26.066 A:middle
+for the actual backing store.
+
+00:10:26.826 --> 00:10:29.526 A:middle
+This is a very efficient
+way to update layers
+
+00:10:29.756 --> 00:10:31.066 A:middle
+without using a lot of memory.
+
+00:10:33.656 --> 00:10:35.806 A:middle
+Speaking of properties
+that people can set
+
+00:10:36.246 --> 00:10:38.416 A:middle
+on Core Animation
+layers, you probably want
+
+00:10:38.416 --> 00:10:40.196 A:middle
+to avoid properties
+that are expensive
+
+00:10:40.196 --> 00:10:43.426 A:middle
+so if you're using the
+cornerRadius property, the mask,
+
+00:10:44.226 --> 00:10:46.026 A:middle
+filters, backgroundFilters,
+
+00:10:46.356 --> 00:10:48.056 A:middle
+those are all expensive
+properties
+
+00:10:48.186 --> 00:10:50.426 A:middle
+which might make your layer
+rendering a little slow.
+
+00:10:50.956 --> 00:10:53.746 A:middle
+So if possible, try to
+do your UI in another way
+
+00:10:53.746 --> 00:10:55.646 A:middle
+that can avoid these
+properties in order
+
+00:10:55.646 --> 00:10:56.706 A:middle
+to get better performance.
+
+00:10:57.216 --> 00:11:02.596 A:middle
+As I mentioned before,
+if your view is opaque
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:57.216 --> 00:11:02.596 A:middle
+As I mentioned before,
+if your view is opaque
+
+00:11:02.596 --> 00:11:04.456 A:middle
+and you're saying
+yes from isOpaque,
+
+00:11:04.726 --> 00:11:07.266 A:middle
+that value is directly
+assigned to a layer.
+
+00:11:07.806 --> 00:11:11.236 A:middle
+And so, opaque layers are much
+faster to composite together
+
+00:11:11.566 --> 00:11:14.666 A:middle
+so prefer to say yes
+from isOpaque and realize
+
+00:11:14.666 --> 00:11:16.456 A:middle
+that property is
+transferred over to the layer.
+
+00:11:18.756 --> 00:11:22.866 A:middle
+Now, let's say that you are
+drawing a big view inside
+
+00:11:22.866 --> 00:11:25.936 A:middle
+of your drawRect
+of document view.
+
+00:11:25.936 --> 00:11:29.056 A:middle
+So you're drawing this big
+electric bug picture here.
+
+00:11:30.976 --> 00:11:32.806 A:middle
+What you're probably doing
+is you're pipe clipping
+
+00:11:32.806 --> 00:11:35.156 A:middle
+so you have just a tiny little
+area that you want the user
+
+00:11:35.156 --> 00:11:38.186 A:middle
+to see so you have it
+inside of this NSClipView.
+
+00:11:39.566 --> 00:11:42.486 A:middle
+The ClipView in itself is
+inside of the NSScrollView
+
+00:11:42.486 --> 00:11:44.376 A:middle
+so you can scroll around
+to whatever portion
+
+00:11:44.376 --> 00:11:48.046 A:middle
+of that view you want to see.
+
+00:11:48.046 --> 00:11:51.156 A:middle
+So how do we do this when
+you're using layer-backed views
+
+00:11:51.156 --> 00:11:51.616 A:middle
+in AppKit?
+
+00:11:52.386 --> 00:11:55.806 A:middle
+We have a special layer called
+the Tile Layer that we use
+
+00:11:55.806 --> 00:11:59.706 A:middle
+in AppKit to take your big view
+and just chop it up into lots
+
+00:11:59.706 --> 00:12:01.016 A:middle
+of little individual tiles.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:59.706 --> 00:12:01.016 A:middle
+of little individual tiles.
+
+00:12:01.686 --> 00:12:05.476 A:middle
+Now, your view still has
+just the visible area
+
+00:12:05.736 --> 00:12:08.466 A:middle
+because a clip use clipping
+to what you just see.
+
+00:12:08.906 --> 00:12:12.266 A:middle
+So what we can do is we can
+make intelligent decisions here
+
+00:12:12.266 --> 00:12:15.216 A:middle
+where only the tiles
+that intersect
+
+00:12:15.286 --> 00:12:17.146 A:middle
+in that visible area are things
+
+00:12:17.146 --> 00:12:18.806 A:middle
+that are going to
+actually be drawn.
+
+00:12:20.206 --> 00:12:22.146 A:middle
+Everything outside of it
+doesn't have to be drawn.
+
+00:12:22.226 --> 00:12:24.996 A:middle
+Add a little asterisk next to
+this because Raleigh is going
+
+00:12:24.996 --> 00:12:27.186 A:middle
+to cover some details where we
+might do something differently.
+
+00:12:29.156 --> 00:12:31.056 A:middle
+So why is this important
+to know?
+
+00:12:31.536 --> 00:12:35.556 A:middle
+Well, all those tiles
+inside of your visible area,
+
+00:12:35.556 --> 00:12:38.686 A:middle
+each one is going to get its
+individual drawRect in order
+
+00:12:38.686 --> 00:12:39.796 A:middle
+to fill in its contents.
+
+00:12:40.636 --> 00:12:42.956 A:middle
+So if you're doing the things
+that I recommended at the start,
+
+00:12:43.376 --> 00:12:45.406 A:middle
+we're properly watching
+for the dirtyRect
+
+00:12:45.406 --> 00:12:48.526 A:middle
+and getRectsbeingdrawn, you'll
+only fill in your model area
+
+00:12:48.526 --> 00:12:50.916 A:middle
+and only draw in the areas
+which you are drawing
+
+00:12:51.586 --> 00:12:54.536 A:middle
+to an actual individual tile so
+it's very important that you do
+
+00:12:54.536 --> 00:12:56.816 A:middle
+that and it's important
+to be aware off
+
+00:12:56.816 --> 00:12:59.096 A:middle
+that we might be calling
+this more than once
+
+00:12:59.326 --> 00:13:00.706 A:middle
+for one particular visible area.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:59.326 --> 00:13:00.706 A:middle
+for one particular visible area.
+
+00:13:01.406 --> 00:13:05.886 A:middle
+Of course, we're actually
+much more intelligent
+
+00:13:05.886 --> 00:13:07.306 A:middle
+than the picture I
+was showing before.
+
+00:13:07.576 --> 00:13:10.176 A:middle
+If your view is very
+skinny and tall,
+
+00:13:10.176 --> 00:13:13.216 A:middle
+our tiles might be really
+wide and not very tall
+
+00:13:13.556 --> 00:13:16.966 A:middle
+and so we're creating pow
+sizes that dynamically change
+
+00:13:17.406 --> 00:13:18.706 A:middle
+to be the most efficient
+
+00:13:18.706 --> 00:13:20.746 A:middle
+for your application
+and your view size.
+
+00:13:21.236 --> 00:13:22.716 A:middle
+It's important to realize this
+
+00:13:22.716 --> 00:13:24.316 A:middle
+because our actual
+implementation
+
+00:13:24.316 --> 00:13:26.686 A:middle
+and how we do the tiling
+may change over time
+
+00:13:26.736 --> 00:13:27.826 A:middle
+to make it more efficient.
+
+00:13:28.326 --> 00:13:33.786 A:middle
+So another thing you can do
+to get performant drawing
+
+00:13:33.786 --> 00:13:37.076 A:middle
+in a Core Animation
+layer-backed view is to try
+
+00:13:37.076 --> 00:13:38.356 A:middle
+and reduce your layer count.
+
+00:13:38.356 --> 00:13:41.146 A:middle
+So let's take it a
+typical layer-backed view
+
+00:13:41.146 --> 00:13:42.376 A:middle
+and see how the hierarchy works.
+
+00:13:42.376 --> 00:13:45.136 A:middle
+So you have your
+top most view here
+
+00:13:45.406 --> 00:13:46.816 A:middle
+and you do setWantsLayer, yes.
+
+00:13:47.816 --> 00:13:50.896 A:middle
+Implicitly, all your
+subviews are going
+
+00:13:50.896 --> 00:13:52.206 A:middle
+to get their own backing layers
+
+00:13:52.206 --> 00:13:54.046 A:middle
+so your big parent
+one has a layer,
+
+00:13:54.516 --> 00:13:56.526 A:middle
+all the subviews each have
+their own backing layer.
+
+00:13:57.046 --> 00:14:00.526 A:middle
+What could be the
+problem with this?
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:57.046 --> 00:14:00.526 A:middle
+What could be the
+problem with this?
+
+00:14:01.026 --> 00:14:04.086 A:middle
+Well, as I mentioned before,
+if you're using drawRect,
+
+00:14:04.396 --> 00:14:07.996 A:middle
+each of those views might have
+their own backing store, again,
+
+00:14:07.996 --> 00:14:10.646 A:middle
+their own little image contents
+and they might be compositing
+
+00:14:10.646 --> 00:14:13.066 A:middle
+on top of each other which
+might be a waste of memory.
+
+00:14:14.526 --> 00:14:16.486 A:middle
+You also might have a
+high composition cost
+
+00:14:16.486 --> 00:14:18.216 A:middle
+where if you're not
+animating that view around,
+
+00:14:18.276 --> 00:14:21.256 A:middle
+why have a bunch of layers there
+when they're not really needed.
+
+00:14:22.756 --> 00:14:24.246 A:middle
+And unlike just regular AppKit,
+
+00:14:25.206 --> 00:14:28.446 A:middle
+hidden layers actually might
+have a composition cost wherein
+
+00:14:28.446 --> 00:14:31.086 A:middle
+if they're in the layer tree,
+this have to be processed.
+
+00:14:31.666 --> 00:14:34.746 A:middle
+So if you a layer-backed view,
+it's probably more performant
+
+00:14:34.746 --> 00:14:37.276 A:middle
+to actually remove the
+view from the hierarchy
+
+00:14:37.526 --> 00:14:38.686 A:middle
+as opposed to hiding it.
+
+00:14:38.686 --> 00:14:41.946 A:middle
+And what I mean here having a
+couple you are hiding is fine,
+
+00:14:42.246 --> 00:14:44.496 A:middle
+but if you're actually
+hiding hundreds of views,
+
+00:14:44.496 --> 00:14:46.606 A:middle
+that's probably not a good
+idea and you probably want
+
+00:14:46.606 --> 00:14:48.296 A:middle
+to remove them from
+the hierarchy instead.
+
+00:14:51.056 --> 00:14:54.116 A:middle
+So, another way to reduce
+your subview count--
+
+00:14:54.176 --> 00:14:56.116 A:middle
+or sorry, your sublayer count is
+
+00:14:56.116 --> 00:15:01.266 A:middle
+to use some new Mac OS 10.9 API
+called CanDrawSubviewsIntoLayer
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:56.116 --> 00:15:01.266 A:middle
+to use some new Mac OS 10.9 API
+called CanDrawSubviewsIntoLayer
+
+00:15:01.266 --> 00:15:03.926 A:middle
+and the setter,
+setCanDrawSubviewsIntoLayer.
+
+00:15:04.486 --> 00:15:06.876 A:middle
+Let's take a look
+at how this works
+
+00:15:07.186 --> 00:15:08.846 A:middle
+and why you would
+want to use it.
+
+00:15:09.806 --> 00:15:13.166 A:middle
+So in the same example here,
+you have setWantsLayer:YES
+
+00:15:13.606 --> 00:15:14.696 A:middle
+on your top most view.
+
+00:15:14.786 --> 00:15:15.776 A:middle
+In addition,
+
+00:15:15.776 --> 00:15:17.686 A:middle
+you do
+setCanDrawSubviewsIntoLayer:
+
+00:15:17.686 --> 00:15:17.866 A:middle
+YES.
+
+00:15:17.946 --> 00:15:20.526 A:middle
+And what's going
+to happen is just
+
+00:15:20.526 --> 00:15:23.626 A:middle
+that top most subview is
+going to get the actual layer.
+
+00:15:24.616 --> 00:15:28.046 A:middle
+All those other subviews will
+no longer have their individual
+
+00:15:28.046 --> 00:15:30.896 A:middle
+layers instead, they're
+all drawn
+
+00:15:31.106 --> 00:15:32.806 A:middle
+with their drawRect
+implementation
+
+00:15:32.806 --> 00:15:33.976 A:middle
+into the parent layer.
+
+00:15:35.466 --> 00:15:37.946 A:middle
+The interesting thing here is
+even though the parent layer--
+
+00:15:37.946 --> 00:15:42.116 A:middle
+parent view has a layer, if it
+says yes to wantsUpdateLayer,
+
+00:15:42.276 --> 00:15:46.016 A:middle
+it's not going to get an
+update layer call, that view
+
+00:15:46.016 --> 00:15:48.996 A:middle
+and its layer and all the
+children must utilize drawRect
+
+00:15:48.996 --> 00:15:49.816 A:middle
+to do their drawing.
+
+00:15:50.436 --> 00:15:55.196 A:middle
+But this is a great way to
+reduce your layer count.
+
+00:15:55.456 --> 00:15:59.376 A:middle
+So, one interesting thing here
+is that what if you did want
+
+00:15:59.376 --> 00:16:02.566 A:middle
+to view a subview that has
+its own layer because you want
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:59.376 --> 00:16:02.566 A:middle
+to view a subview that has
+its own layer because you want
+
+00:16:02.566 --> 00:16:03.876 A:middle
+to animate that button around,
+
+00:16:04.496 --> 00:16:07.976 A:middle
+you can opt in one individual
+subview really easily
+
+00:16:08.216 --> 00:16:11.616 A:middle
+by just doing setWantsLayer:YES,
+and that view
+
+00:16:11.856 --> 00:16:12.996 A:middle
+which normally would
+have been drawn
+
+00:16:12.996 --> 00:16:14.826 A:middle
+to parent layer will
+now get its own layer
+
+00:16:14.906 --> 00:16:16.616 A:middle
+and you can animate
+it around smoothly.
+
+00:16:16.616 --> 00:16:21.066 A:middle
+So why would you want
+to reduce these layers?
+
+00:16:21.406 --> 00:16:22.496 A:middle
+Let's get a direct example
+
+00:16:22.526 --> 00:16:24.766 A:middle
+where it might be more
+applicable for what you can do.
+
+00:16:25.396 --> 00:16:29.046 A:middle
+So here's a view base table view
+and you want to reduce a lot
+
+00:16:29.046 --> 00:16:30.566 A:middle
+of these subviews
+into a single layer.
+
+00:16:31.276 --> 00:16:32.456 A:middle
+You might have made your layer--
+
+00:16:32.616 --> 00:16:34.826 A:middle
+or you might have made your
+ScrollView layer-backed
+
+00:16:34.826 --> 00:16:37.576 A:middle
+so that you can actually
+get fast mode--
+
+00:16:37.856 --> 00:16:41.826 A:middle
+fast smooth scrolling and also,
+you can do cool row animations.
+
+00:16:42.446 --> 00:16:44.086 A:middle
+But the row animations
+themselves are just
+
+00:16:44.086 --> 00:16:45.286 A:middle
+on the individual row views.
+
+00:16:45.716 --> 00:16:48.346 A:middle
+And so what you can do is you
+can collapse these row views,
+
+00:16:48.866 --> 00:16:52.096 A:middle
+the subviews layers
+into one single layer.
+
+00:16:53.336 --> 00:16:54.836 A:middle
+So what you can do for each
+
+00:16:54.836 --> 00:16:58.986 A:middle
+of those table row views do
+setCanDrawSubviewsintheLayer:
+
+00:16:58.986 --> 00:17:02.546 A:middle
+YES for each of them and all
+those individual subviews,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:58.986 --> 00:17:02.546 A:middle
+YES for each of them and all
+those individual subviews,
+
+00:17:02.546 --> 00:17:05.516 A:middle
+the image, the text and
+whatnot will be drawn instead
+
+00:17:05.516 --> 00:17:10.516 A:middle
+of having individual layers into
+just one layer of the row view.
+
+00:17:10.746 --> 00:17:13.246 A:middle
+One interesting caveat
+to note here is
+
+00:17:13.246 --> 00:17:16.596 A:middle
+that for text fonts moving
+to work such as the title
+
+00:17:16.596 --> 00:17:19.915 A:middle
+of that word there, it must
+be drawn into an opaque area
+
+00:17:20.576 --> 00:17:22.736 A:middle
+so the row view or
+something else that was drawn
+
+00:17:22.736 --> 00:17:26.386 A:middle
+in that layer must have filled
+with some opaque color in order
+
+00:17:26.386 --> 00:17:29.276 A:middle
+for fonts moving to work just
+something to be aware of.
+
+00:17:29.926 --> 00:17:34.466 A:middle
+So that was just
+discussing layer-backed views
+
+00:17:34.596 --> 00:17:37.206 A:middle
+in Core Animation, I'm now
+going to bring up Raleigh Ledet
+
+00:17:37.206 --> 00:17:38.476 A:middle
+to talk about Responsive
+Scrolling.
+
+00:17:38.776 --> 00:17:42.156 A:middle
+&gt;&gt; So you've seen the demos
+already for responsive scrolling
+
+00:17:42.726 --> 00:17:45.926 A:middle
+and for an overview, I want to
+give you another demo of that
+
+00:17:45.926 --> 00:17:47.756 A:middle
+so let's take an example.
+
+00:17:48.366 --> 00:17:51.356 A:middle
+So, I'm going to go ahead
+
+00:17:51.356 --> 00:17:53.986 A:middle
+and turn off responsive
+scrolling globally real quick
+
+00:17:53.986 --> 00:17:55.556 A:middle
+and I'm going to run my
+little test app here.
+
+00:17:56.256 --> 00:18:01.426 A:middle
+And this test app does lots of
+horrible things during drawRect
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:56.256 --> 00:18:01.426 A:middle
+And this test app does lots of
+horrible things during drawRect
+
+00:18:01.426 --> 00:18:04.796 A:middle
+so your drawRect performance
+is very poor and you can see
+
+00:18:04.796 --> 00:18:09.726 A:middle
+that when we try and scroll the
+scrolling performance is painful
+
+00:18:09.796 --> 00:18:10.426 A:middle
+in this app.
+
+00:18:10.426 --> 00:18:13.456 A:middle
+So we're going to go ahead and
+turn responsive scrolling back
+
+00:18:13.456 --> 00:18:16.296 A:middle
+on and we'll go ahead
+and run the same app
+
+00:18:17.316 --> 00:18:19.276 A:middle
+and I'll just [inaudible] so
+you can see it, there we go.
+
+00:18:19.766 --> 00:18:21.876 A:middle
+And now, when we do scrolling,
+
+00:18:22.106 --> 00:18:27.446 A:middle
+we have nice smooth 60 frames
+per second scrolling and--
+
+00:18:27.946 --> 00:18:31.936 A:middle
+[applause].
+
+00:18:32.436 --> 00:18:32.726 A:middle
+Thank you.
+
+00:18:33.216 --> 00:18:36.066 A:middle
+And, you know, that's--
+that was the point
+
+00:18:36.066 --> 00:18:39.346 A:middle
+of responsive scrolling, we want
+60 frames per second buttery
+
+00:18:39.346 --> 00:18:41.906 A:middle
+smooth scrolling, I could just
+keep listing bullet points
+
+00:18:41.906 --> 00:18:43.746 A:middle
+of describing this all day long.
+
+00:18:44.086 --> 00:18:45.296 A:middle
+We're excited about it.
+
+00:18:45.356 --> 00:18:48.856 A:middle
+And I'm going to give you
+a quick brief overview
+
+00:18:49.136 --> 00:18:52.706 A:middle
+of how this works and you've
+already seen this but--
+
+00:18:52.706 --> 00:18:55.166 A:middle
+say you have your document
+view which is obviously inside
+
+00:18:55.166 --> 00:18:58.666 A:middle
+of a clip view and only a
+small portion of it is visible
+
+00:18:59.016 --> 00:19:00.876 A:middle
+and traditionally,
+that's all that was drawn.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:59.016 --> 00:19:00.876 A:middle
+and traditionally,
+that's all that was drawn.
+
+00:19:00.876 --> 00:19:02.796 A:middle
+When we get responsive
+scrolling,
+
+00:19:02.796 --> 00:19:06.166 A:middle
+we're going to ask your
+document view to draw portions
+
+00:19:06.166 --> 00:19:08.976 A:middle
+that aren't visible and
+we call that the overdraw.
+
+00:19:08.976 --> 00:19:11.616 A:middle
+And now that once we
+have this overdraw,
+
+00:19:11.616 --> 00:19:14.086 A:middle
+on a background thread,
+we can go ahead
+
+00:19:14.086 --> 00:19:17.366 A:middle
+and change what the user sees
+on screen very, very quickly
+
+00:19:17.366 --> 00:19:19.626 A:middle
+to any portion that we
+have that's already drawn
+
+00:19:19.626 --> 00:19:20.386 A:middle
+in the overdraw.
+
+00:19:21.306 --> 00:19:23.786 A:middle
+And in a nutshell, that's
+all that we're really doing
+
+00:19:23.786 --> 00:19:24.846 A:middle
+with responsive scrolling.
+
+00:19:25.666 --> 00:19:27.756 A:middle
+Under the hood, there's a
+lot going on and I'm going
+
+00:19:27.756 --> 00:19:29.016 A:middle
+to cover some of those details.
+
+00:19:29.486 --> 00:19:31.296 A:middle
+Particular, I'm going to
+talk about the overdraw model
+
+00:19:31.296 --> 00:19:32.426 A:middle
+and exactly how it works.
+
+00:19:32.806 --> 00:19:35.206 A:middle
+The event model, there's lots
+of big changes going on there.
+
+00:19:35.856 --> 00:19:39.216 A:middle
+Some API that we have to
+help you adapt to the changes
+
+00:19:39.216 --> 00:19:42.066 A:middle
+that we have and what you
+need to do in your application
+
+00:19:42.066 --> 00:19:44.336 A:middle
+so that you can make sure
+that your application adopts
+
+00:19:44.336 --> 00:19:45.366 A:middle
+in to responsive scrolling.
+
+00:19:46.406 --> 00:19:48.196 A:middle
+So let's kick off with overdraw.
+
+00:19:49.976 --> 00:19:54.036 A:middle
+The main thing about overdraw
+is still main thread driven.
+
+00:19:54.036 --> 00:19:55.576 A:middle
+Your drawrect calls, they're
+always going to be called
+
+00:19:55.576 --> 00:19:57.296 A:middle
+in the main thread so
+you don't have to worry
+
+00:19:57.296 --> 00:19:58.936 A:middle
+about doing any additional
+locking
+
+00:19:59.236 --> 00:20:00.756 A:middle
+that your app wasn't
+already doing,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:59.236 --> 00:20:00.756 A:middle
+that your app wasn't
+already doing,
+
+00:20:00.756 --> 00:20:02.046 A:middle
+you can access the
+view hierarchy
+
+00:20:02.046 --> 00:20:04.276 A:middle
+and you're data model
+just like you always did.
+
+00:20:05.796 --> 00:20:07.756 A:middle
+Of course, drawRect is
+now going to be called
+
+00:20:07.756 --> 00:20:08.886 A:middle
+with nonvisible Rects.
+
+00:20:09.236 --> 00:20:11.766 A:middle
+So as Corbin mentioned
+earlier, it's really important
+
+00:20:11.766 --> 00:20:13.296 A:middle
+that you respect
+those dirtyRects
+
+00:20:13.296 --> 00:20:15.996 A:middle
+and you only do drawing and
+you do it just in the areas
+
+00:20:15.996 --> 00:20:17.266 A:middle
+that we're asking you to draw.
+
+00:20:20.256 --> 00:20:24.276 A:middle
+When your app is idle, that's
+when one figures a good time
+
+00:20:24.276 --> 00:20:27.506 A:middle
+for us to go ahead and ask
+you to generate some overdraw.
+
+00:20:27.506 --> 00:20:29.956 A:middle
+We're only going to ask you
+though for a little portion
+
+00:20:29.956 --> 00:20:32.256 A:middle
+of overdraw that way
+your drawRect can be fast
+
+00:20:32.256 --> 00:20:33.736 A:middle
+and if the user tries
+to interact
+
+00:20:33.736 --> 00:20:35.486 A:middle
+with the application
+while you're in the middle
+
+00:20:35.486 --> 00:20:38.666 A:middle
+of generating overdraw, that
+overdraw drawing will be quick
+
+00:20:38.666 --> 00:20:41.526 A:middle
+and the user will not see any
+lag between trying to interact
+
+00:20:41.526 --> 00:20:43.526 A:middle
+with your application while
+you're generating overdraw.
+
+00:20:43.826 --> 00:20:46.186 A:middle
+So last just for a little
+bit, that will get drawn,
+
+00:20:46.186 --> 00:20:47.976 A:middle
+we have some overdraw,
+that's great.
+
+00:20:47.976 --> 00:20:50.206 A:middle
+The application is still idle
+so we'll say, "Hey, great,
+
+00:20:50.206 --> 00:20:52.076 A:middle
+let's draw a little bit more
+and we'll draw some more
+
+00:20:52.076 --> 00:20:55.686 A:middle
+and this is going to go around
+all the access that you have
+
+00:20:55.806 --> 00:20:56.976 A:middle
+for your scroll view."
+
+00:20:57.176 --> 00:20:58.516 A:middle
+This one is only
+doing vertically
+
+00:20:58.516 --> 00:21:00.036 A:middle
+so we'll just go up and down.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:58.516 --> 00:21:00.036 A:middle
+so we'll just go up and down.
+
+00:21:00.036 --> 00:21:01.226 A:middle
+So we have a little bit more.
+
+00:21:01.226 --> 00:21:04.096 A:middle
+If your app is still idle,
+we just continue this process
+
+00:21:04.516 --> 00:21:09.016 A:middle
+until AppKit has decided
+that we have enough overdraw
+
+00:21:09.016 --> 00:21:11.746 A:middle
+to be responsive for what
+the user is likely to do.
+
+00:21:12.326 --> 00:21:17.196 A:middle
+Now, we don't want to
+draw your entire document,
+
+00:21:17.516 --> 00:21:20.256 A:middle
+that would be a huge backing
+store and that would take a lot
+
+00:21:20.256 --> 00:21:23.336 A:middle
+of memory and it would even
+take a lot of power just
+
+00:21:23.336 --> 00:21:25.866 A:middle
+to have you draw that
+whole document view.
+
+00:21:25.866 --> 00:21:26.616 A:middle
+So we don't want to do that.
+
+00:21:26.986 --> 00:21:28.976 A:middle
+AppKit plays a very
+careful balancing act
+
+00:21:29.096 --> 00:21:31.786 A:middle
+between how much overdraw we
+have so that it's responsive
+
+00:21:31.786 --> 00:21:35.626 A:middle
+for the user and not
+using too much memory
+
+00:21:35.626 --> 00:21:38.576 A:middle
+and not using too much power
+to be able to accomplish this.
+
+00:21:38.936 --> 00:21:40.976 A:middle
+And we even go a step
+further and where possible.
+
+00:21:40.976 --> 00:21:42.546 A:middle
+We'll make sure that
+those backing stores
+
+00:21:42.546 --> 00:21:44.966 A:middle
+that we're creating to hold
+the overdraw are purgeable
+
+00:21:44.966 --> 00:21:45.916 A:middle
+by the Kernel.
+
+00:21:45.916 --> 00:21:47.446 A:middle
+So if there's memory
+pressure on the system,
+
+00:21:48.046 --> 00:21:49.506 A:middle
+that memory can be
+freed by the Kernel
+
+00:21:49.506 --> 00:21:51.056 A:middle
+without even waking
+your application
+
+00:21:51.406 --> 00:21:53.206 A:middle
+and when your application
+becomes active again,
+
+00:21:53.206 --> 00:21:56.376 A:middle
+we'll notice that and we'll ask
+for those areas to be redrawn.
+
+00:21:56.976 --> 00:22:00.546 A:middle
+And this is great and in
+general, you won't have
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:56.976 --> 00:22:00.546 A:middle
+And this is great and in
+general, you won't have
+
+00:22:00.546 --> 00:22:03.216 A:middle
+to do anything but sometimes
+it's not quite enough.
+
+00:22:03.246 --> 00:22:06.936 A:middle
+You need to be able
+to watch what's going
+
+00:22:06.936 --> 00:22:09.626 A:middle
+on with overdraw
+and react to that.
+
+00:22:09.626 --> 00:22:12.736 A:middle
+One example is if you are
+adding your own subviews
+
+00:22:13.386 --> 00:22:15.866 A:middle
+that you only want the
+subviews for your documents
+
+00:22:15.866 --> 00:22:17.646 A:middle
+that are visible to be there.
+
+00:22:17.646 --> 00:22:18.986 A:middle
+This is a common technique.
+
+00:22:18.986 --> 00:22:20.866 A:middle
+Table view does this for
+a view-based table views.
+
+00:22:21.466 --> 00:22:23.626 A:middle
+Now, you need to make
+sure with overdraw
+
+00:22:23.626 --> 00:22:26.826 A:middle
+that those subviews exist
+in the overdraw area is well
+
+00:22:26.826 --> 00:22:28.536 A:middle
+so that they are
+always going to be ready
+
+00:22:28.576 --> 00:22:29.946 A:middle
+for when the user
+scrolls to those.
+
+00:22:30.426 --> 00:22:34.486 A:middle
+So we have new API that you
+can adopt and you can play
+
+00:22:34.486 --> 00:22:36.396 A:middle
+around in the overdraw
+world then make sure
+
+00:22:36.396 --> 00:22:38.556 A:middle
+that your content is
+going to be available.
+
+00:22:38.656 --> 00:22:40.636 A:middle
+And let's give you
+an example of that.
+
+00:22:41.216 --> 00:22:44.126 A:middle
+In your document view, you would
+override PrepareContentInRect
+
+00:22:45.526 --> 00:22:49.466 A:middle
+and we'll go ahead and pass
+in the rect during idle when--
+
+00:22:49.826 --> 00:22:52.136 A:middle
+whenever we want to
+prepare some new content.
+
+00:22:52.136 --> 00:22:53.756 A:middle
+And the rect that
+actually gets passed
+
+00:22:53.756 --> 00:22:56.096 A:middle
+in is not just a little
+sliver that we're going
+
+00:22:56.096 --> 00:22:57.336 A:middle
+to eventually ask you to draw.
+
+00:22:57.686 --> 00:23:01.476 A:middle
+It includes the entire overdraw
+area that we want currently
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:57.686 --> 00:23:01.476 A:middle
+It includes the entire overdraw
+area that we want currently
+
+00:23:01.476 --> 00:23:03.806 A:middle
+which is always going to at
+least include your visible rect
+
+00:23:03.806 --> 00:23:06.586 A:middle
+and in this case, the new
+little section of purple here.
+
+00:23:06.586 --> 00:23:09.446 A:middle
+Then you go ahead and you
+prepare you content as needed.
+
+00:23:09.776 --> 00:23:12.126 A:middle
+In this example, this is what
+we're going to add our subview
+
+00:23:12.126 --> 00:23:15.276 A:middle
+to the view hierarchy because
+this is of course called
+
+00:23:15.276 --> 00:23:16.526 A:middle
+on the main thread always.
+
+00:23:16.966 --> 00:23:19.396 A:middle
+So, adding a few
+to the hierarchy
+
+00:23:19.396 --> 00:23:20.716 A:middle
+at this point is perfectly safe.
+
+00:23:21.756 --> 00:23:25.046 A:middle
+Now, when you override
+and PrepareContentInRect,
+
+00:23:25.806 --> 00:23:28.966 A:middle
+you're not just reacting to
+the rects that we're provided
+
+00:23:28.966 --> 00:23:30.936 A:middle
+in you to do overdraw.
+
+00:23:31.216 --> 00:23:33.586 A:middle
+You can actually be
+an active participant
+
+00:23:33.586 --> 00:23:36.136 A:middle
+in deciding how much
+overdraw is being used.
+
+00:23:36.486 --> 00:23:38.926 A:middle
+And in this example of the
+subviews there, we don't want
+
+00:23:38.926 --> 00:23:41.586 A:middle
+to clip half of it
+off in the overdraw,
+
+00:23:41.746 --> 00:23:42.736 A:middle
+it's just a little bit.
+
+00:23:43.086 --> 00:23:45.936 A:middle
+So when we tell super how
+much overdraw you've prepared,
+
+00:23:46.246 --> 00:23:48.826 A:middle
+we want to extend it just a
+little bit and cover the edge
+
+00:23:48.826 --> 00:23:51.636 A:middle
+of that subview and that will
+be a little bit more efficient.
+
+00:23:51.906 --> 00:23:53.596 A:middle
+So you can be an active
+participant in this.
+
+00:23:55.076 --> 00:23:56.566 A:middle
+After you return from
+this, little bit later,
+
+00:23:56.566 --> 00:23:59.176 A:middle
+we'll go ahead ask that
+new section to be drawn
+
+00:23:59.246 --> 00:24:02.536 A:middle
+and we'll have that in the
+overdraw ready to be scrolled
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:59.246 --> 00:24:02.536 A:middle
+and we'll have that in the
+overdraw ready to be scrolled
+
+00:24:02.536 --> 00:24:04.516 A:middle
+to for the user at
+a moment's notice.
+
+00:24:05.526 --> 00:24:07.966 A:middle
+Of course, if you have a
+still idle, we'll go ahead
+
+00:24:08.146 --> 00:24:09.796 A:middle
+and start asking
+for more overdraw
+
+00:24:09.796 --> 00:24:12.416 A:middle
+and as you've seen before, we'll
+just continue this process.
+
+00:24:12.416 --> 00:24:14.696 A:middle
+Continue to call,
+PrepareContentInRect
+
+00:24:15.106 --> 00:24:17.856 A:middle
+and to just further
+drive the point home.
+
+00:24:18.086 --> 00:24:20.376 A:middle
+Now, the rect thats getting
+passed includes that overdraw
+
+00:24:20.376 --> 00:24:22.936 A:middle
+that we drew earlier, the
+visible rect and the new section
+
+00:24:22.936 --> 00:24:23.876 A:middle
+of overdraw that we want
+
+00:24:23.876 --> 00:24:26.356 A:middle
+so you can make sure the whole
+area is properly prepared.
+
+00:24:26.356 --> 00:24:31.876 A:middle
+Again, when I've talked about
+being an active participant
+
+00:24:33.006 --> 00:24:36.376 A:middle
+under very specialized
+circumstances you might know,
+
+00:24:36.736 --> 00:24:40.836 A:middle
+when is the better
+time to end overdraw?
+
+00:24:41.116 --> 00:24:43.206 A:middle
+AppKit plays is very
+careful balancing act,
+
+00:24:43.526 --> 00:24:46.306 A:middle
+there are some situations
+out there where you know
+
+00:24:46.456 --> 00:24:48.236 A:middle
+that pulling in a
+certain amount of content
+
+00:24:48.236 --> 00:24:49.326 A:middle
+for you makes more sense
+
+00:24:49.356 --> 00:24:51.096 A:middle
+than AppKit would
+otherwise want to do.
+
+00:24:51.386 --> 00:24:55.046 A:middle
+And in that case, if the rect
+you return as super as the same
+
+00:24:55.046 --> 00:24:57.946 A:middle
+as the previous time we
+called PrepareContentInRect,
+
+00:24:58.326 --> 00:25:02.366 A:middle
+then we'll of course-- we won't
+ask for that area to be drawn
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:58.326 --> 00:25:02.366 A:middle
+then we'll of course-- we won't
+ask for that area to be drawn
+
+00:25:02.726 --> 00:25:05.296 A:middle
+and we're going to stop
+asking for overdraw
+
+00:25:05.296 --> 00:25:08.456 A:middle
+on idle unless the overdraw
+gets blown away for some reason
+
+00:25:08.736 --> 00:25:11.316 A:middle
+and then we'll come back on
+idle and rebuild it from scratch
+
+00:25:11.476 --> 00:25:14.276 A:middle
+where you can terminate it
+again through the same mechanism
+
+00:25:14.276 --> 00:25:17.816 A:middle
+that once you return the same
+rect twice in a row, we go ahead
+
+00:25:17.816 --> 00:25:18.786 A:middle
+and stop asking for it.
+
+00:25:19.316 --> 00:25:23.796 A:middle
+Of course, now that you have
+content that isn't even visible,
+
+00:25:23.796 --> 00:25:26.816 A:middle
+if that content becomes dirty,
+please setNeedsDisplayInRect
+
+00:25:27.316 --> 00:25:29.486 A:middle
+and just those portions
+that have been dirtied
+
+00:25:30.016 --> 00:25:33.176 A:middle
+and we will go ahead and have
+those redrawn when appropriate
+
+00:25:33.526 --> 00:25:35.966 A:middle
+and that way when we
+scroll to that section,
+
+00:25:35.966 --> 00:25:39.126 A:middle
+it's always the most up to
+date content for the user.
+
+00:25:40.496 --> 00:25:42.836 A:middle
+There's some special
+circumstances where you need
+
+00:25:42.836 --> 00:25:46.406 A:middle
+to tell AppKit that you should
+totally get rid of any--
+
+00:25:46.406 --> 00:25:48.066 A:middle
+of all that prepared
+overdraw that we have.
+
+00:25:48.426 --> 00:25:50.436 A:middle
+And you can set the
+PreparedContentInRect
+
+00:25:50.436 --> 00:25:51.676 A:middle
+in this case to the
+visible rect.
+
+00:25:52.186 --> 00:25:55.366 A:middle
+For example, the user might
+have changed something,
+
+00:25:55.436 --> 00:25:58.796 A:middle
+choose a different group
+of items which are going
+
+00:25:58.796 --> 00:26:00.646 A:middle
+to totally change the
+content that you're showing
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:58.796 --> 00:26:00.646 A:middle
+to totally change the
+content that you're showing
+
+00:26:00.646 --> 00:26:04.766 A:middle
+in the scroll view and the
+original prepared content there
+
+00:26:04.766 --> 00:26:06.966 A:middle
+is completely not even
+appropriate anymore.
+
+00:26:06.966 --> 00:26:09.986 A:middle
+So, you want to go ahead and
+tell AppKit to just drop it all
+
+00:26:10.206 --> 00:26:11.856 A:middle
+and we'll drop down
+to the visible rect
+
+00:26:11.856 --> 00:26:13.806 A:middle
+and the next pass
+to the run loop.
+
+00:26:13.806 --> 00:26:16.036 A:middle
+We'll draw the content
+for the visible rect
+
+00:26:17.216 --> 00:26:19.206 A:middle
+and that's what the user
+will see, and during idle,
+
+00:26:19.206 --> 00:26:22.426 A:middle
+we'll build it back up with your
+new content that's appropriate.
+
+00:26:23.426 --> 00:26:26.566 A:middle
+So, all of this with overdraws
+are done on the main thread,
+
+00:26:27.456 --> 00:26:29.186 A:middle
+drawRect is being called
+your nonvisibleRect,
+
+00:26:29.186 --> 00:26:31.066 A:middle
+make sure your drawRects
+are only doing drawing
+
+00:26:31.066 --> 00:26:32.476 A:middle
+and they're as fast as possible.
+
+00:26:33.956 --> 00:26:37.486 A:middle
+In general, let AppKit balance
+the amount of overdraw along
+
+00:26:37.486 --> 00:26:41.116 A:middle
+with memory empower usage and
+purgeable memory and handle all
+
+00:26:41.116 --> 00:26:42.696 A:middle
+of that complicated matter.
+
+00:26:43.226 --> 00:26:47.076 A:middle
+Only if you have specialized
+needs then you can go ahead
+
+00:26:47.076 --> 00:26:48.906 A:middle
+and cut that short a
+little bit perhaps.
+
+00:26:50.206 --> 00:26:52.616 A:middle
+In other circumstances like when
+you're adding your own views
+
+00:26:52.616 --> 00:26:55.496 A:middle
+and then make sure that the
+prepared content is there
+
+00:26:55.546 --> 00:26:57.966 A:middle
+in the view hierarchy,
+then go ahead
+
+00:26:57.966 --> 00:27:01.126 A:middle
+and use the prepared content
+rect API that we have.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:57.966 --> 00:27:01.126 A:middle
+and use the prepared content
+rect API that we have.
+
+00:27:01.856 --> 00:27:03.196 A:middle
+So that's overdraw.
+
+00:27:03.586 --> 00:27:05.756 A:middle
+Let's move-- switch gears and
+talk about the event model.
+
+00:27:06.326 --> 00:27:09.456 A:middle
+A lot of exciting things here
+as already been pointed out.
+
+00:27:10.226 --> 00:27:12.496 A:middle
+But let's back off a
+little bit and talk
+
+00:27:12.496 --> 00:27:14.686 A:middle
+about the traditional way
+that scrolling is handled.
+
+00:27:15.936 --> 00:27:17.216 A:middle
+You got a scroll
+wheel event comes
+
+00:27:17.216 --> 00:27:18.556 A:middle
+in through your scrolling
+device.
+
+00:27:18.556 --> 00:27:20.046 A:middle
+It gets put into an event queue
+
+00:27:20.046 --> 00:27:22.586 A:middle
+and your main run loop is
+running on the main thread
+
+00:27:22.716 --> 00:27:25.356 A:middle
+of your application
+handling event sources
+
+00:27:25.726 --> 00:27:28.646 A:middle
+and other run loop sources,
+pulls the scroll wheel event
+
+00:27:28.646 --> 00:27:30.926 A:middle
+out of the queue, we hitTest
+that scroll wheel event,
+
+00:27:31.246 --> 00:27:32.576 A:middle
+they get passed to
+your document--
+
+00:27:32.576 --> 00:27:34.496 A:middle
+your some subview of
+your document view.
+
+00:27:35.196 --> 00:27:36.866 A:middle
+And then we call
+scroll wheel on that,
+
+00:27:37.606 --> 00:27:40.966 A:middle
+that goes up the responder chain
+finally gets to scroll wheel
+
+00:27:41.316 --> 00:27:42.406 A:middle
+and in that scroll view,
+
+00:27:42.686 --> 00:27:44.406 A:middle
+then that scroll view
+moves your content,
+
+00:27:44.566 --> 00:27:47.306 A:middle
+withdraw the little section of
+content that became available
+
+00:27:47.656 --> 00:27:50.156 A:middle
+and we'd let the run loop go
+back to handling event sources
+
+00:27:50.576 --> 00:27:51.886 A:middle
+and the next scroll
+wheel comes in
+
+00:27:51.886 --> 00:27:53.876 A:middle
+and we do the whole
+process all over again
+
+00:27:53.876 --> 00:27:56.126 A:middle
+for every single scroll
+wheel event that comes in.
+
+00:27:56.126 --> 00:28:00.626 A:middle
+Well with Responsive scrolling,
+we break that cycle and once
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:56.126 --> 00:28:00.626 A:middle
+Well with Responsive scrolling,
+we break that cycle and once
+
+00:28:00.626 --> 00:28:02.966 A:middle
+that first event comes in
+as soon as it gets to--
+
+00:28:02.966 --> 00:28:04.986 A:middle
+in a scroll view, and
+the scroll view sets
+
+00:28:04.986 --> 00:28:06.436 A:middle
+up concurrent tracking thread
+
+00:28:06.436 --> 00:28:09.566 A:middle
+and it will now handle the
+events on the background thread.
+
+00:28:10.196 --> 00:28:12.346 A:middle
+The scroll wheel events from
+the track pad are now going
+
+00:28:12.346 --> 00:28:15.156 A:middle
+to be routed to this private
+event queue so you won't be able
+
+00:28:15.156 --> 00:28:18.316 A:middle
+to see them at all and they will
+be processed by the scroll wheel
+
+00:28:18.436 --> 00:28:21.306 A:middle
+and now your main thread
+is allowed to just run
+
+00:28:21.576 --> 00:28:23.836 A:middle
+as it normally would
+processing other events
+
+00:28:23.836 --> 00:28:24.886 A:middle
+and other run loop sources.
+
+00:28:25.786 --> 00:28:26.796 A:middle
+Let's dig in a little bit more
+
+00:28:26.796 --> 00:28:28.216 A:middle
+with the concurrent
+tracking thread
+
+00:28:28.216 --> 00:28:32.196 A:middle
+and inspect a little bit further
+on exactly what its doing.
+
+00:28:32.986 --> 00:28:35.416 A:middle
+It's pulling events from the
+event queue and it figures
+
+00:28:35.416 --> 00:28:37.706 A:middle
+out where we want to
+move the scrolling.
+
+00:28:38.246 --> 00:28:41.196 A:middle
+And so we can change that
+do the user very quickly
+
+00:28:41.196 --> 00:28:43.506 A:middle
+on a background thread, anywhere
+that we have the overdraw.
+
+00:28:43.756 --> 00:28:45.026 A:middle
+So let's say it lands
+right there,
+
+00:28:45.926 --> 00:28:48.496 A:middle
+course your main thread
+run loop is still running,
+
+00:28:48.716 --> 00:28:50.766 A:middle
+it's still doing its
+thing respecting timers
+
+00:28:50.766 --> 00:28:51.406 A:middle
+that are firing.
+
+00:28:52.156 --> 00:28:53.606 A:middle
+But if you would ask
+your view hierarchy
+
+00:28:53.606 --> 00:28:56.166 A:middle
+at this point what the visible
+rect is, it's still going
+
+00:28:56.166 --> 00:28:58.256 A:middle
+to say is that blue
+square up there.
+
+00:28:59.056 --> 00:29:02.166 A:middle
+Though what the users sees on
+screen is the red dashed area.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:59.056 --> 00:29:02.166 A:middle
+Though what the users sees on
+screen is the red dashed area.
+
+00:29:02.646 --> 00:29:06.066 A:middle
+So, that's an important thing to
+realize as what the users sees
+
+00:29:06.066 --> 00:29:07.196 A:middle
+on screen can be different
+
+00:29:07.196 --> 00:29:08.566 A:middle
+than what your main
+thread is reporting.
+
+00:29:08.566 --> 00:29:12.486 A:middle
+Now, the concurrent tracking
+thread whenever it updates the
+
+00:29:12.486 --> 00:29:14.286 A:middle
+screen, it goes ahead
+
+00:29:14.286 --> 00:29:17.006 A:middle
+and it issues a synchronization
+request on the main thread.
+
+00:29:17.406 --> 00:29:18.586 A:middle
+This gets run in
+the main thread,
+
+00:29:18.586 --> 00:29:21.956 A:middle
+it talks it in a scroll view and
+it actually does the scroll too
+
+00:29:22.366 --> 00:29:25.766 A:middle
+and all of your view properties
+are going to be updated
+
+00:29:25.766 --> 00:29:28.496 A:middle
+and their visible rect will
+be the most up to date version
+
+00:29:28.496 --> 00:29:30.226 A:middle
+of the visible rect that
+we possible can have.
+
+00:29:31.306 --> 00:29:35.056 A:middle
+And normally and traditionally,
+this would cause drawRects
+
+00:29:35.056 --> 00:29:37.946 A:middle
+to occur but hopefully here,
+since we already have overdraw,
+
+00:29:37.946 --> 00:29:40.256 A:middle
+this is just updating
+the view frames changes,
+
+00:29:40.476 --> 00:29:41.936 A:middle
+this can happen very,
+very, quickly.
+
+00:29:42.426 --> 00:29:44.896 A:middle
+And if-- and once the
+synchronization occurs,
+
+00:29:45.346 --> 00:29:48.126 A:middle
+it'll match with what we have
+on the screen and every--
+
+00:29:48.206 --> 00:29:49.566 A:middle
+everything will be in sync.
+
+00:29:49.566 --> 00:29:52.286 A:middle
+And if this happens in
+exact same display refresh
+
+00:29:52.356 --> 00:29:55.006 A:middle
+that the concurrent tracking
+thread move things then
+
+00:29:55.366 --> 00:29:57.686 A:middle
+everything appears
+to be in sync.
+
+00:29:59.516 --> 00:30:03.106 A:middle
+The other thing that the
+synchronization request does is
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:59.516 --> 00:30:03.106 A:middle
+The other thing that the
+synchronization request does is
+
+00:30:03.106 --> 00:30:05.506 A:middle
+if your app-- if your main
+thread is otherwise idle,
+
+00:30:05.906 --> 00:30:06.906 A:middle
+it'll ask for some prefetch.
+
+00:30:07.096 --> 00:30:09.236 A:middle
+So we'll do some more overdraw.
+
+00:30:09.486 --> 00:30:12.336 A:middle
+In this case, the
+concurrent tracking thread
+
+00:30:12.336 --> 00:30:14.306 A:middle
+and the synchronizer know
+what direction the user is
+
+00:30:14.306 --> 00:30:14.786 A:middle
+scrolling in.
+
+00:30:14.786 --> 00:30:16.836 A:middle
+So we ask for prefetch
+in that direction.
+
+00:30:16.836 --> 00:30:19.166 A:middle
+So unlike idle which is
+trying to get a general case,
+
+00:30:19.166 --> 00:30:21.766 A:middle
+this is more specific and
+we can get drawing ahead
+
+00:30:21.766 --> 00:30:24.616 A:middle
+of where the user is
+going but it does bring
+
+00:30:24.616 --> 00:30:25.836 A:middle
+up an interesting situation.
+
+00:30:26.866 --> 00:30:28.616 A:middle
+What happens when the user
+tries to scroll to area
+
+00:30:28.616 --> 00:30:30.696 A:middle
+that you haven't been
+able to catch up to yet.
+
+00:30:31.156 --> 00:30:34.176 A:middle
+Well, in that case,
+we have to back off
+
+00:30:34.376 --> 00:30:37.946 A:middle
+and respect what the main
+thread can keep up with.
+
+00:30:38.286 --> 00:30:41.306 A:middle
+We don't want to show blank
+content that could be drawing
+
+00:30:41.306 --> 00:30:42.316 A:middle
+and confusing to the user.
+
+00:30:42.836 --> 00:30:46.476 A:middle
+So we end up-- what's we run
+out of overdraw, we have to slow
+
+00:30:46.476 --> 00:30:48.346 A:middle
+down to whatever the
+main thread can do
+
+00:30:48.466 --> 00:30:49.906 A:middle
+and if the main thread
+catches back up,
+
+00:30:50.296 --> 00:30:52.906 A:middle
+because maybe it was
+just a long processing
+
+00:30:52.906 --> 00:30:54.466 A:middle
+of some timer information,
+
+00:30:54.946 --> 00:30:56.566 A:middle
+once the main thread
+can catch back up,
+
+00:30:56.566 --> 00:30:58.296 A:middle
+if the user is still
+scrolling, we can get back
+
+00:30:58.296 --> 00:30:59.256 A:middle
+into responsive scrolling.
+
+00:30:59.776 --> 00:31:01.506 A:middle
+But it's a situation
+we want to avoid.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:59.776 --> 00:31:01.506 A:middle
+But it's a situation
+we want to avoid.
+
+00:31:01.896 --> 00:31:04.726 A:middle
+So, my point here is
+it's not a silver bullet.
+
+00:31:05.406 --> 00:31:08.526 A:middle
+Responsive scrolling works
+really great to make sure
+
+00:31:08.526 --> 00:31:11.736 A:middle
+that it's responsive right away
+when the users starts scrolling
+
+00:31:12.116 --> 00:31:13.916 A:middle
+and that there are
+any little hiccups
+
+00:31:13.916 --> 00:31:16.106 A:middle
+that your main thread might
+have in responding to timers
+
+00:31:16.106 --> 00:31:18.996 A:middle
+or network request or anything
+like that won't interfere
+
+00:31:18.996 --> 00:31:22.096 A:middle
+with user's experience
+but at some point,
+
+00:31:22.096 --> 00:31:24.466 A:middle
+if your app can't keep up and
+the user is scrolling fast
+
+00:31:24.466 --> 00:31:26.966 A:middle
+and they're scrolling
+far, we'll have to drop
+
+00:31:26.966 --> 00:31:28.896 A:middle
+down to whatever your
+main thread can handle.
+
+00:31:30.066 --> 00:31:31.036 A:middle
+So quick overview,
+
+00:31:31.996 --> 00:31:33.616 A:middle
+event tracking is now
+done concurrently.
+
+00:31:33.846 --> 00:31:35.586 A:middle
+Once we get that first
+scroll wheel event,
+
+00:31:35.586 --> 00:31:36.626 A:middle
+you won't see the other ones
+
+00:31:36.626 --> 00:31:38.356 A:middle
+until the gesture
+is fully completed.
+
+00:31:39.556 --> 00:31:42.126 A:middle
+What's on the screen may not
+match what the main thread is
+
+00:31:42.126 --> 00:31:45.506 A:middle
+reporting as the visibleRect
+and it's not a silver bullet.
+
+00:31:45.506 --> 00:31:48.026 A:middle
+So make sure you drawRects
+are as fast as possible
+
+00:31:48.026 --> 00:31:49.716 A:middle
+and you're only doing
+drawing in those drawRects.
+
+00:31:50.226 --> 00:31:54.296 A:middle
+Let's go ahead and move on to
+some API and how you can play
+
+00:31:54.296 --> 00:31:55.236 A:middle
+with this brand new world.
+
+00:31:55.666 --> 00:32:00.486 A:middle
+Overriding scroll wheel
+is obviously isn't going
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:55.666 --> 00:32:00.486 A:middle
+Overriding scroll wheel
+is obviously isn't going
+
+00:32:00.486 --> 00:32:02.396 A:middle
+to work the way that it used
+to because scroll will use
+
+00:32:02.396 --> 00:32:05.146 A:middle
+to see every single scroll wheel
+event in your document view
+
+00:32:05.146 --> 00:32:07.636 A:middle
+or in your subclass and
+that's not the case anymore.
+
+00:32:08.886 --> 00:32:11.266 A:middle
+A better way of watching
+scrolling changes is
+
+00:32:11.316 --> 00:32:13.216 A:middle
+to watch the clip
+views bound changes.
+
+00:32:13.636 --> 00:32:15.356 A:middle
+And the clip view of
+course is the contentView
+
+00:32:15.356 --> 00:32:17.736 A:middle
+of the scrollView and you'll
+need to tell the clip view
+
+00:32:17.736 --> 00:32:21.146 A:middle
+to pout-- to post its
+bounds change notifications
+
+00:32:21.146 --> 00:32:23.956 A:middle
+so setPostBoundsChanged
+Notifications: YES,
+
+00:32:24.666 --> 00:32:27.516 A:middle
+and then once the clip view
+is posting its bounds change
+
+00:32:27.516 --> 00:32:29.756 A:middle
+notifications, you
+can ask to observe
+
+00:32:29.756 --> 00:32:31.256 A:middle
+that on the notification center
+
+00:32:31.256 --> 00:32:34.546 A:middle
+with the NSViewBoundsDidChange
+Notification on the clip view.
+
+00:32:35.586 --> 00:32:39.116 A:middle
+Now, this is better in general
+then overriding scroll wheel
+
+00:32:39.116 --> 00:32:42.016 A:middle
+because now you'll be informed
+anytime the scroll wheel--
+
+00:32:42.496 --> 00:32:45.156 A:middle
+the scroll view scrolls
+which could be in response
+
+00:32:45.156 --> 00:32:47.286 A:middle
+to a scroll wheel event,
+it might be in response
+
+00:32:47.286 --> 00:32:51.956 A:middle
+to the user moving the scroll
+bar, it might be in response
+
+00:32:51.996 --> 00:32:54.956 A:middle
+to keyboard access or it could
+be even you've programatically
+
+00:32:54.956 --> 00:32:57.906 A:middle
+moved the clip view bounds.
+
+00:32:58.086 --> 00:33:00.186 A:middle
+And this way, you'll catch all
+of those and you can respond
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:58.086 --> 00:33:00.186 A:middle
+And this way, you'll catch all
+of those and you can respond
+
+00:33:00.186 --> 00:33:02.116 A:middle
+to them appropriately
+in your application all
+
+00:33:02.116 --> 00:33:05.416 A:middle
+in one central case-- all in
+one central place without having
+
+00:33:05.416 --> 00:33:09.096 A:middle
+to have codes sprinkled all over
+your application to handle that.
+
+00:33:09.376 --> 00:33:12.286 A:middle
+So this is the way that we've
+been suggesting that you watch
+
+00:33:12.456 --> 00:33:14.646 A:middle
+for your scroll view
+bounds changes instead
+
+00:33:14.646 --> 00:33:15.816 A:middle
+of overriding scroll wheel.
+
+00:33:16.766 --> 00:33:19.066 A:middle
+However, there's a case
+where you really want to know
+
+00:33:19.066 --> 00:33:20.926 A:middle
+that the user initiated
+scrolling.
+
+00:33:21.376 --> 00:33:22.076 A:middle
+Well, until now,
+
+00:33:22.076 --> 00:33:25.756 A:middle
+we've implemented some new
+live scroll notifications
+
+00:33:26.506 --> 00:33:28.196 A:middle
+and you can get exactly
+that information.
+
+00:33:28.596 --> 00:33:32.386 A:middle
+You can find out when the user
+starts to do a live scroll,
+
+00:33:32.546 --> 00:33:33.806 A:middle
+you'll get a whole bunch of Dids
+
+00:33:33.806 --> 00:33:36.906 A:middle
+as the user is scrolling every
+time we move the content.
+
+00:33:37.356 --> 00:33:40.096 A:middle
+And then when the last
+scrolling completely ends,
+
+00:33:40.096 --> 00:33:41.446 A:middle
+you'll get a DidEndLiveScroll.
+
+00:33:41.756 --> 00:33:44.426 A:middle
+So this worked great
+with the gesture capable
+
+00:33:44.616 --> 00:33:45.466 A:middle
+scrolling devices.
+
+00:33:45.986 --> 00:33:48.506 A:middle
+And what we do here
+with these devices is
+
+00:33:48.566 --> 00:33:51.046 A:middle
+as the user scrolls
+multiple times consecutively,
+
+00:33:51.536 --> 00:33:54.386 A:middle
+you will only see one bracket
+of will start and did end.
+
+00:33:54.686 --> 00:33:56.226 A:middle
+So even though the user
+scrolled three or four,
+
+00:33:56.226 --> 00:33:58.416 A:middle
+five times in a row
+will coalesce those all
+
+00:33:58.416 --> 00:34:01.826 A:middle
+into one will start, a whole
+bunch of dids and did end.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:58.416 --> 00:34:01.826 A:middle
+into one will start, a whole
+bunch of dids and did end.
+
+00:34:02.426 --> 00:34:06.556 A:middle
+Not only that, we will
+actually extend this
+
+00:34:06.556 --> 00:34:07.776 A:middle
+across the animations.
+
+00:34:07.776 --> 00:34:09.856 A:middle
+So if the user goes into
+rubber banding for example
+
+00:34:09.856 --> 00:34:11.485 A:middle
+and there are no more
+events coming in,
+
+00:34:11.735 --> 00:34:13.896 A:middle
+there's that little bit of a
+rubber band animation going on.
+
+00:34:14.246 --> 00:34:17.216 A:middle
+We don't call dead-end until
+the animation completes.
+
+00:34:17.525 --> 00:34:19.906 A:middle
+And every frame of the
+animation we issued dids.
+
+00:34:20.136 --> 00:34:23.156 A:middle
+So you've got a will start,
+some dids, the animation starts,
+
+00:34:23.156 --> 00:34:24.146 A:middle
+you'll get a few more dids.
+
+00:34:24.426 --> 00:34:25.446 A:middle
+When it ends, you'll get a--
+
+00:34:25.866 --> 00:34:27.456 A:middle
+in a scroll view
+did end live scroll
+
+00:34:27.456 --> 00:34:29.416 A:middle
+and the scroll is
+completely over at that point.
+
+00:34:30.176 --> 00:34:31.166 A:middle
+We take it a step further
+
+00:34:31.166 --> 00:34:33.626 A:middle
+and says this is user-initiated
+scrolling, we can--
+
+00:34:33.746 --> 00:34:35.346 A:middle
+we know when they're
+tracking the scroll bar.
+
+00:34:36.056 --> 00:34:38.116 A:middle
+Now, this is checking the
+scroll bar still driven
+
+00:34:38.116 --> 00:34:41.116 A:middle
+on the main thread in this case
+but we know when it starts,
+
+00:34:41.226 --> 00:34:43.096 A:middle
+we know every frame
+that happens in between
+
+00:34:43.096 --> 00:34:44.446 A:middle
+and we know when it stops.
+
+00:34:44.696 --> 00:34:46.545 A:middle
+So we'll go ahead and
+report those notifications
+
+00:34:46.545 --> 00:34:47.065 A:middle
+in that case.
+
+00:34:47.856 --> 00:34:50.976 A:middle
+We'll even do this for
+keyboard things, page up
+
+00:34:50.976 --> 00:34:52.096 A:middle
+and page down for example.
+
+00:34:52.315 --> 00:34:53.666 A:middle
+Those are animations generally.
+
+00:34:53.666 --> 00:34:55.065 A:middle
+Well, we know when
+the animation starts
+
+00:34:55.065 --> 00:34:57.036 A:middle
+and we knows when--
+we know when it ends.
+
+00:34:57.856 --> 00:34:59.716 A:middle
+And then all of these
+cases, the--
+
+00:34:59.716 --> 00:35:02.826 A:middle
+these notifications are being
+issued on the main thread.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:59.716 --> 00:35:02.826 A:middle
+these notifications are being
+issued on the main thread.
+
+00:35:02.886 --> 00:35:04.356 A:middle
+So that's an important
+thing to point out.
+
+00:35:04.886 --> 00:35:07.726 A:middle
+Your notifications-- these live
+scroll notifications are always
+
+00:35:07.776 --> 00:35:09.026 A:middle
+issued on the main thread.
+
+00:35:09.286 --> 00:35:12.156 A:middle
+But this device is a
+little interesting.
+
+00:35:12.726 --> 00:35:14.346 A:middle
+If you look at the devices
+
+00:35:14.346 --> 00:35:16.376 A:middle
+that actually have a physical
+scroll wheel or something
+
+00:35:16.376 --> 00:35:20.526 A:middle
+that has like a scroll ball
+like the Mighty Mouse, it does--
+
+00:35:20.696 --> 00:35:23.656 A:middle
+we don't know when it starts,
+we don't know when it ends.
+
+00:35:23.656 --> 00:35:25.666 A:middle
+All we know is that a
+scroll wheel event happened.
+
+00:35:26.376 --> 00:35:28.246 A:middle
+Another one might happen
+soon, it might not.
+
+00:35:28.836 --> 00:35:32.096 A:middle
+So in that case, we issued just
+a did live scroll notification
+
+00:35:32.096 --> 00:35:33.136 A:middle
+and of course, that's
+going to happen
+
+00:35:33.136 --> 00:35:35.086 A:middle
+on the main thread just
+like all the others.
+
+00:35:35.576 --> 00:35:37.636 A:middle
+So, if you're looking for
+this and you're looking
+
+00:35:37.636 --> 00:35:39.926 A:middle
+for user-initiated scrolling,
+it's important to realize
+
+00:35:39.926 --> 00:35:41.806 A:middle
+that some devices
+won't be bracketed
+
+00:35:41.806 --> 00:35:43.246 A:middle
+with the will start
+and a did end.
+
+00:35:43.736 --> 00:35:49.626 A:middle
+If you have some floating
+subviews in your content,
+
+00:35:50.376 --> 00:35:52.796 A:middle
+like let's look at
+this table view here.
+
+00:35:52.796 --> 00:35:54.006 A:middle
+It's a floating group row.
+
+00:35:54.986 --> 00:35:57.696 A:middle
+What's going on here during
+scrolling is that your--
+
+00:35:57.766 --> 00:36:00.706 A:middle
+generally, you have a subview
+in your content, it scrolls
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:57.766 --> 00:36:00.706 A:middle
+generally, you have a subview
+in your content, it scrolls
+
+00:36:00.706 --> 00:36:02.336 A:middle
+and you change the
+frame of this view.
+
+00:36:02.336 --> 00:36:04.146 A:middle
+So to the user, it appears
+
+00:36:04.146 --> 00:36:05.346 A:middle
+that it's floating
+above your content.
+
+00:36:05.396 --> 00:36:06.186 A:middle
+It hasn't moved.
+
+00:36:06.626 --> 00:36:09.756 A:middle
+Though in reality, it has moved
+within your view hierarchy
+
+00:36:10.546 --> 00:36:12.326 A:middle
+or for moving the content
+on the background thread
+
+00:36:12.326 --> 00:36:13.326 A:middle
+that can get out of sync.
+
+00:36:14.076 --> 00:36:16.056 A:middle
+And it's a lot of code
+that you shouldn't have
+
+00:36:16.086 --> 00:36:17.186 A:middle
+to write for yourself anyway.
+
+00:36:17.596 --> 00:36:20.976 A:middle
+So in a scroll view, we have
+this new API addFloatingSubviews
+
+00:36:20.976 --> 00:36:23.376 A:middle
+for access, you tell us which
+access you want this view
+
+00:36:23.376 --> 00:36:27.296 A:middle
+to be floating on and we'll go
+ahead and put in a special place
+
+00:36:27.296 --> 00:36:28.106 A:middle
+in the view hierarchy
+
+00:36:28.456 --> 00:36:32.556 A:middle
+and scrolling will be
+handled automatically in sync.
+
+00:36:32.606 --> 00:36:34.976 A:middle
+So if you're scrolling ob the
+access is not floating on,
+
+00:36:34.976 --> 00:36:38.396 A:middle
+it'll scroll that content in
+sync with the clip views content
+
+00:36:38.746 --> 00:36:42.276 A:middle
+and when it's floating, it's
+just handled automatically
+
+00:36:42.276 --> 00:36:45.216 A:middle
+for you without you having
+to update those frames.
+
+00:36:45.666 --> 00:36:48.466 A:middle
+So, it's less code for you
+to write, a lot easier to do,
+
+00:36:48.706 --> 00:36:51.016 A:middle
+and this is what table
+view does automatically
+
+00:36:51.496 --> 00:36:53.866 A:middle
+for responsive scrolling
+on 10.9.
+
+00:36:53.866 --> 00:37:01.136 A:middle
+So that was a whole-- there's
+a whole lot there going
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:53.866 --> 00:37:01.136 A:middle
+So that was a whole-- there's
+a whole lot there going
+
+00:37:01.136 --> 00:37:02.356 A:middle
+on with responsive scrolling.
+
+00:37:03.726 --> 00:37:06.286 A:middle
+In order to adopt in
+to responses scrolling,
+
+00:37:06.846 --> 00:37:08.586 A:middle
+you have to be linked
+on 10.8 or later.
+
+00:37:09.666 --> 00:37:11.186 A:middle
+Your window that your
+scroll view was in,
+
+00:37:11.186 --> 00:37:14.646 A:middle
+its alpha must be 1, it
+has to be completely opaque
+
+00:37:15.346 --> 00:37:17.736 A:middle
+and your document must
+not be an OpenGL context.
+
+00:37:17.736 --> 00:37:20.326 A:middle
+These are the absolute
+basics that we need
+
+00:37:20.466 --> 00:37:24.736 A:middle
+to start adopting your scroll
+views into responsive scrolling.
+
+00:37:25.686 --> 00:37:26.666 A:middle
+We have a few more.
+
+00:37:26.666 --> 00:37:29.816 A:middle
+But from that-- this point on,
+we try to make it as automatic
+
+00:37:29.816 --> 00:37:31.316 A:middle
+as possible, we want you to--
+
+00:37:31.496 --> 00:37:33.976 A:middle
+have to do as a little
+work as possible.
+
+00:37:34.976 --> 00:37:36.856 A:middle
+But as you know,
+scrolling is the cooperation
+
+00:37:36.856 --> 00:37:39.216 A:middle
+of a scroll view, the clip
+view, and your document view.
+
+00:37:39.766 --> 00:37:43.026 A:middle
+If anyone of these views for
+whatever reason can adopt
+
+00:37:43.026 --> 00:37:45.566 A:middle
+into responsive scrolling,
+then as a collection,
+
+00:37:45.806 --> 00:37:47.826 A:middle
+these three views won't
+do responsive scrolling.
+
+00:37:52.596 --> 00:37:55.646 A:middle
+I'm going to talk about some
+more things that you need to do
+
+00:37:55.646 --> 00:37:57.776 A:middle
+to adopt in the responses
+going in the next few slides.
+
+00:37:58.036 --> 00:38:01.046 A:middle
+But from this point on, you
+can use this explicit API
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:58.036 --> 00:38:01.046 A:middle
+But from this point on, you
+can use this explicit API
+
+00:38:01.286 --> 00:38:03.576 A:middle
+isCompatibleWithResponsive
+Scrolling
+
+00:38:03.986 --> 00:38:06.336 A:middle
+to bypass all those checks.
+
+00:38:06.336 --> 00:38:08.536 A:middle
+When you return yes,
+we won't even check
+
+00:38:08.766 --> 00:38:10.096 A:middle
+and we'll just adopt you
+
+00:38:10.096 --> 00:38:12.076 A:middle
+in the responsive
+scrolling from this point on.
+
+00:38:13.846 --> 00:38:18.656 A:middle
+Obviously, you can override
+scrollWheel or lockFocus,
+
+00:38:18.816 --> 00:38:20.326 A:middle
+scrollWheel in particular
+as we've covered,
+
+00:38:20.536 --> 00:38:21.976 A:middle
+there's a huge behavior
+change here.
+
+00:38:21.976 --> 00:38:24.986 A:middle
+So if you notice that,
+your scroll view subclass,
+
+00:38:24.986 --> 00:38:25.856 A:middle
+your clip view subclass,
+
+00:38:25.856 --> 00:38:29.046 A:middle
+your document view is overriding
+scroll wheel then we're going
+
+00:38:29.046 --> 00:38:30.996 A:middle
+to adopt you in to
+responsive scrolling.
+
+00:38:31.366 --> 00:38:35.106 A:middle
+So please as I've pointed out
+earlier, use other API and try
+
+00:38:35.106 --> 00:38:38.126 A:middle
+and just remove your scroll
+wheel override all together.
+
+00:38:38.736 --> 00:38:40.606 A:middle
+Or if you absolutely have
+to have it and you're OK
+
+00:38:40.606 --> 00:38:42.766 A:middle
+with just peaking at the one
+event because you need to decide
+
+00:38:42.766 --> 00:38:46.056 A:middle
+if it's a scroll or not period,
+before you have been passed it
+
+00:38:46.086 --> 00:38:49.026 A:middle
+to super, then go ahead
+and override scrollWheel
+
+00:38:49.056 --> 00:38:50.916 A:middle
+and in the class that
+you override scrollWheel,
+
+00:38:51.496 --> 00:38:54.396 A:middle
+override is compatible
+with responsive scrolling.
+
+00:38:54.426 --> 00:38:56.766 A:middle
+Remember, it's a class
+method and return yes.
+
+00:38:57.596 --> 00:38:59.176 A:middle
+lockFocus turns out with the way
+
+00:38:59.176 --> 00:39:01.216 A:middle
+that we do overdraw
+just isn't applicable.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:59.176 --> 00:39:01.216 A:middle
+that we do overdraw
+just isn't applicable.
+
+00:39:01.216 --> 00:39:03.566 A:middle
+So, please stop overriding
+lockFocus.
+
+00:39:04.406 --> 00:39:07.446 A:middle
+But, you can-- like I said,
+with the previous slide,
+
+00:39:07.646 --> 00:39:08.896 A:middle
+this is something
+that you can override
+
+00:39:08.896 --> 00:39:10.236 A:middle
+with the
+isCompatibleWithResponsive
+
+00:39:10.236 --> 00:39:11.706 A:middle
+Scrolling and you can find
+
+00:39:11.706 --> 00:39:12.926 A:middle
+out what happens in
+your application.
+
+00:39:14.216 --> 00:39:16.596 A:middle
+From this point on,
+we have two models
+
+00:39:16.966 --> 00:39:19.646 A:middle
+that we've been talking about,
+the traditional drawing model
+
+00:39:19.646 --> 00:39:21.516 A:middle
+and the layer-backed
+model that we have
+
+00:39:21.516 --> 00:39:22.946 A:middle
+and Corbin covered
+the various cases.
+
+00:39:23.836 --> 00:39:25.226 A:middle
+Responses scrolling
+support both.
+
+00:39:26.196 --> 00:39:29.016 A:middle
+If you're using traditional
+drawing then copiesOnScroll
+
+00:39:29.016 --> 00:39:31.946 A:middle
+which is a property actually on
+the clip view, but there's also
+
+00:39:31.946 --> 00:39:34.996 A:middle
+on the scroll view and it
+brought it over to the clip view
+
+00:39:34.996 --> 00:39:38.856 A:middle
+and there's little check you
+can check in interface builder.
+
+00:39:39.216 --> 00:39:42.156 A:middle
+That should be yes and
+isOpaque must return yes
+
+00:39:42.156 --> 00:39:42.986 A:middle
+for the document view.
+
+00:39:43.456 --> 00:39:45.406 A:middle
+The isOpaque one
+is really important
+
+00:39:45.406 --> 00:39:46.956 A:middle
+because as Corbin
+covered earlier,
+
+00:39:47.186 --> 00:39:49.986 A:middle
+in order to get fonts moving
+right, your checks needs to be
+
+00:39:49.986 --> 00:39:54.576 A:middle
+on an opaque-- needs to
+have opaque pixels in order
+
+00:39:54.576 --> 00:39:56.976 A:middle
+for fonts moving
+to work correctly.
+
+00:39:57.666 --> 00:39:59.586 A:middle
+And if your isOpaque
+is returning no
+
+00:39:59.586 --> 00:40:02.726 A:middle
+which is the default case, then
+we're not sure what's going
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:39:59.586 --> 00:40:02.726 A:middle
+which is the default case, then
+we're not sure what's going
+
+00:40:02.726 --> 00:40:04.136 A:middle
+on there and we won't
+be able to adopt you
+
+00:40:04.136 --> 00:40:04.976 A:middle
+in to responsive scrolling.
+
+00:40:05.636 --> 00:40:09.236 A:middle
+However, if you know that your
+view has some transparent parts
+
+00:40:09.236 --> 00:40:11.476 A:middle
+but those transparent
+parts don't have any text,
+
+00:40:12.316 --> 00:40:15.086 A:middle
+then go ahead and override
+the isCompatibleWithResponsive
+
+00:40:15.086 --> 00:40:17.926 A:middle
+Scrolling and you can have
+a non-opaque document view.
+
+00:40:18.756 --> 00:40:19.896 A:middle
+Or you can just go layer-backed.
+
+00:40:19.896 --> 00:40:21.606 A:middle
+We don't even check
+the copiesOnScroll
+
+00:40:21.606 --> 00:40:23.506 A:middle
+and isOpaque if you layer-back.
+
+00:40:24.076 --> 00:40:25.986 A:middle
+But when you go layer-back,
+you need to make sure
+
+00:40:25.986 --> 00:40:28.916 A:middle
+that your layer-back at least
+at the end of scroll view layer,
+
+00:40:29.336 --> 00:40:33.206 A:middle
+in a scroll view level, or any
+of the scroll views ancestors.
+
+00:40:33.736 --> 00:40:37.326 A:middle
+You can do that by calling
+setWantsLayer on the scroll view
+
+00:40:37.326 --> 00:40:39.196 A:middle
+or you have a scroll
+view subclass,
+
+00:40:39.196 --> 00:40:41.716 A:middle
+you can just return
+yes from wantsLayer.
+
+00:40:41.716 --> 00:40:44.206 A:middle
+An interface builder in
+the Core Animation section,
+
+00:40:44.206 --> 00:40:45.636 A:middle
+there's a nice little check box
+
+00:40:45.636 --> 00:40:49.136 A:middle
+and that check box is the same
+thing as saying setWantsLayer
+
+00:40:49.486 --> 00:40:52.276 A:middle
+and so you would do that on a
+scroll view or its ancestor.
+
+00:40:54.036 --> 00:40:55.866 A:middle
+And also, as Corbin mentioned,
+
+00:40:55.866 --> 00:40:58.726 A:middle
+I want to reiterate the
+canDrawSubviewsIntoLayer.
+
+00:40:59.946 --> 00:41:01.446 A:middle
+There are different
+performance characteristics
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:59.946 --> 00:41:01.446 A:middle
+There are different
+performance characteristics
+
+00:41:01.446 --> 00:41:03.106 A:middle
+when you go layer-back,
+when you have--
+
+00:41:03.206 --> 00:41:05.206 A:middle
+you have to composite all those
+different layers together.
+
+00:41:05.576 --> 00:41:09.096 A:middle
+So, depending on your
+application and the amount
+
+00:41:09.096 --> 00:41:11.686 A:middle
+of memory that all these
+layers use and what--
+
+00:41:11.686 --> 00:41:15.446 A:middle
+and exactly what you're
+animating, you can decide
+
+00:41:15.446 --> 00:41:17.856 A:middle
+at what is the appropriate
+level that you want
+
+00:41:17.856 --> 00:41:21.086 A:middle
+to collapse these all down
+into one layer and the--
+
+00:41:21.406 --> 00:41:23.416 A:middle
+Corbin's example that he gave
+was great, you might want
+
+00:41:23.416 --> 00:41:24.936 A:middle
+to do it for a view-based
+table view
+
+00:41:24.936 --> 00:41:26.326 A:middle
+on the row view for example.
+
+00:41:26.376 --> 00:41:29.566 A:middle
+And that way, you can animate
+each individual row smoothly
+
+00:41:29.616 --> 00:41:35.706 A:middle
+and quickly, but this will be a
+lot less layers for us to have
+
+00:41:35.706 --> 00:41:36.666 A:middle
+in the view hierarchy
+
+00:41:37.286 --> 00:41:39.666 A:middle
+to composite together
+for each frame.
+
+00:41:40.216 --> 00:41:43.566 A:middle
+We have some support in Xcode
+
+00:41:43.566 --> 00:41:45.386 A:middle
+for helping you debug
+some of this stuff.
+
+00:41:45.826 --> 00:41:47.706 A:middle
+When you're running
+application at this new menu
+
+00:41:47.706 --> 00:41:50.166 A:middle
+which has some neat--
+some neat options,
+
+00:41:50.166 --> 00:41:52.346 A:middle
+in particular Show
+Responsive Scrolling Status.
+
+00:41:52.926 --> 00:41:56.116 A:middle
+If your scroll view is not
+opted into responsive scrolling,
+
+00:41:56.116 --> 00:41:58.866 A:middle
+it'll look like this and
+well, we don't want that.
+
+00:41:58.866 --> 00:41:59.916 A:middle
+What we want is this.
+
+00:41:59.916 --> 00:42:00.506 A:middle
+We want green.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:59.916 --> 00:42:00.506 A:middle
+We want green.
+
+00:42:01.056 --> 00:42:05.456 A:middle
+So, if everything turns out--
+
+00:42:05.516 --> 00:42:07.886 A:middle
+everything is laid out
+appropriately, and we can opt
+
+00:42:07.886 --> 00:42:11.236 A:middle
+in your view, all of the views
+into the responsive scrolling,
+
+00:42:11.236 --> 00:42:14.096 A:middle
+your scroll view or subclass,
+your NSClipView subclass,
+
+00:42:14.636 --> 00:42:18.146 A:middle
+and the document view, it'll
+be green and this is a way
+
+00:42:18.146 --> 00:42:20.016 A:middle
+of being able to provide
+that feedback to you
+
+00:42:20.016 --> 00:42:23.106 A:middle
+through the debugger that your
+scroll view has completely opted
+
+00:42:23.106 --> 00:42:24.096 A:middle
+in to responsive scrolling.
+
+00:42:25.476 --> 00:42:27.346 A:middle
+So in summary, we
+really want to make this
+
+00:42:27.346 --> 00:42:28.866 A:middle
+as automatic as possible.
+
+00:42:29.306 --> 00:42:33.826 A:middle
+You can explicitly opt in but
+do that as a last resort please,
+
+00:42:34.696 --> 00:42:37.706 A:middle
+but there are cases where
+that's the only way to do it.
+
+00:42:38.516 --> 00:42:40.236 A:middle
+Think carefully about
+layer-backing
+
+00:42:40.236 --> 00:42:41.206 A:middle
+if you're not already
+layer backed,
+
+00:42:41.206 --> 00:42:42.176 A:middle
+if you want to go layer-backed,
+
+00:42:42.176 --> 00:42:43.926 A:middle
+there's some difference
+performance characteristics.
+
+00:42:43.926 --> 00:42:46.666 A:middle
+So, but for responsive
+scrolling,
+
+00:42:46.666 --> 00:42:48.956 A:middle
+we'll support both layer-backed
+and traditional drawing.
+
+00:42:49.556 --> 00:42:52.076 A:middle
+And you can use Xcode to verify.
+
+00:42:52.076 --> 00:42:53.506 A:middle
+So that comes out to be handy.
+
+00:42:54.696 --> 00:42:58.066 A:middle
+So, thats responsive
+scrolling and we'll go ahead
+
+00:42:58.066 --> 00:42:59.696 A:middle
+and move on to magnification.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:43:00.326 --> 00:43:04.016 A:middle
+Specifically, in magnification
+as relates to NSScrollView.
+
+00:43:04.546 --> 00:43:08.286 A:middle
+And 10.8, we introduced
+magnification support natively
+
+00:43:08.286 --> 00:43:09.896 A:middle
+into NSScrollView
+and all you have
+
+00:43:09.896 --> 00:43:11.926 A:middle
+to do is set the
+allowsMagnification property
+
+00:43:11.926 --> 00:43:14.646 A:middle
+which you can also do
+an interface builder.
+
+00:43:14.646 --> 00:43:16.646 A:middle
+There's a nice little check
+box and you could check that.
+
+00:43:17.666 --> 00:43:21.786 A:middle
+And your scroll view will
+response to the pitch gesture
+
+00:43:21.786 --> 00:43:24.086 A:middle
+and we'll do zooming
+and magnification
+
+00:43:24.086 --> 00:43:24.776 A:middle
+for you automatically.
+
+00:43:24.776 --> 00:43:30.156 A:middle
+When it comes to responsiveness,
+if your scroll view is opted
+
+00:43:30.156 --> 00:43:31.116 A:middle
+into responsive scrolling,
+
+00:43:31.766 --> 00:43:34.546 A:middle
+magnification is still main
+thread driven at the moment.
+
+00:43:35.136 --> 00:43:38.916 A:middle
+But you'll likely to have
+overdraw and we can use that.
+
+00:43:39.766 --> 00:43:43.326 A:middle
+So during the magnification
+gesture, we use that overdraw
+
+00:43:43.326 --> 00:43:44.956 A:middle
+and we scale your
+existing content.
+
+00:43:44.956 --> 00:43:46.866 A:middle
+So if you have content like
+this and you zoom into it,
+
+00:43:47.256 --> 00:43:49.806 A:middle
+during the overdraw, it
+will scale that content
+
+00:43:49.806 --> 00:43:50.936 A:middle
+and it will look
+kind of like this.
+
+00:43:50.936 --> 00:43:53.606 A:middle
+But when the gesture
+completes, we'll go ahead
+
+00:43:53.606 --> 00:43:56.376 A:middle
+and redraw the visible
+rect when the gesture ends
+
+00:43:56.376 --> 00:43:59.276 A:middle
+and we'll get the nice
+crisp content back in there.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:44:00.016 --> 00:44:02.656 A:middle
+But during that whole gesture,
+it was nice and responsive
+
+00:44:02.656 --> 00:44:04.896 A:middle
+to the user, we weren't
+even calling drawRect,
+
+00:44:05.336 --> 00:44:06.976 A:middle
+so that was great.
+
+00:44:06.976 --> 00:44:09.776 A:middle
+If you're going the opposite
+direction for example
+
+00:44:09.776 --> 00:44:12.816 A:middle
+and you get to here and we run
+out of overdraw, we don't want
+
+00:44:12.816 --> 00:44:14.736 A:middle
+to draw blank content
+on the sides there.
+
+00:44:15.366 --> 00:44:18.316 A:middle
+So in this case, if we run out
+of overdraw, we have to pause
+
+00:44:18.316 --> 00:44:19.416 A:middle
+and wait for new drawing to come
+
+00:44:19.416 --> 00:44:21.726 A:middle
+in since this is all
+main thread driven
+
+00:44:22.096 --> 00:44:25.786 A:middle
+and so the user will see a
+lag in the responsiveness
+
+00:44:25.856 --> 00:44:27.856 A:middle
+of your magnification here.
+
+00:44:28.146 --> 00:44:30.036 A:middle
+So make sure you
+drawRects are as fast
+
+00:44:30.036 --> 00:44:32.306 A:middle
+as possible but they'll pop in.
+
+00:44:33.546 --> 00:44:34.676 A:middle
+During the middle
+of the gesture,
+
+00:44:35.406 --> 00:44:37.656 A:middle
+if new content comes in,
+that content will be drawn
+
+00:44:37.656 --> 00:44:39.746 A:middle
+at the appropriate scale because
+your drawRect will be called.
+
+00:44:39.746 --> 00:44:43.066 A:middle
+Likewise, if you dirty
+any content in the middle
+
+00:44:43.066 --> 00:44:46.016 A:middle
+of a magnification gesture,
+we will redraw that content
+
+00:44:46.016 --> 00:44:47.146 A:middle
+at the appropriate scale factors
+
+00:44:47.666 --> 00:44:51.026 A:middle
+but that will require
+a drawRect right
+
+00:44:51.026 --> 00:44:52.286 A:middle
+in the middle of your gestures.
+
+00:44:52.286 --> 00:44:53.936 A:middle
+So you want to try
+and prevent that.
+
+00:44:53.936 --> 00:44:57.736 A:middle
+So when it comes
+to magnification,
+
+00:44:57.736 --> 00:45:00.116 A:middle
+your drawRect speed is crucial
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:44:57.736 --> 00:45:00.116 A:middle
+your drawRect speed is crucial
+
+00:45:00.116 --> 00:45:03.156 A:middle
+to getting responsive
+feedback to the user.
+
+00:45:04.446 --> 00:45:06.656 A:middle
+We do have some live
+magnification notifications,
+
+00:45:07.146 --> 00:45:08.266 A:middle
+these were introduced with 10.8
+
+00:45:08.266 --> 00:45:10.826 A:middle
+when we introduced
+magnifications NSScrollView,
+
+00:45:10.826 --> 00:45:12.826 A:middle
+the WillStartLiveMagnification
+Notification
+
+00:45:12.826 --> 00:45:15.366 A:middle
+and
+DidEndLiveMagnifynNotification.
+
+00:45:15.366 --> 00:45:19.876 A:middle
+These are great that you can
+perhaps stop doing some things
+
+00:45:19.876 --> 00:45:23.426 A:middle
+in the main thread, turn off
+some timers or pause some things
+
+00:45:23.426 --> 00:45:26.316 A:middle
+so that you can devote as much
+as your resources as possible
+
+00:45:26.566 --> 00:45:28.326 A:middle
+to being responsive to
+what the user is the doing
+
+00:45:28.326 --> 00:45:29.466 A:middle
+with the magnification gesture.
+
+00:45:31.856 --> 00:45:34.786 A:middle
+If you're overriding clip
+view, one of the reasons--
+
+00:45:34.786 --> 00:45:36.616 A:middle
+main reasons people
+override clip view is
+
+00:45:36.696 --> 00:45:39.066 A:middle
+to center the content
+in your clip view
+
+00:45:39.066 --> 00:45:41.406 A:middle
+when your content is smaller
+than the size of your clip view.
+
+00:45:41.826 --> 00:45:44.076 A:middle
+And to do that, you override
+constrainScrollPoint.
+
+00:45:45.056 --> 00:45:46.556 A:middle
+And with magnification,
+
+00:45:47.116 --> 00:45:49.166 A:middle
+if you zoom pass the
+minimum amount here,
+
+00:45:50.036 --> 00:45:53.066 A:middle
+when the user removes their
+fingers, we want that to animate
+
+00:45:53.066 --> 00:45:55.046 A:middle
+to the center, but
+this is what happens.
+
+00:45:56.116 --> 00:45:58.326 A:middle
+In constrainScrollPoint,
+you're given a point
+
+00:45:58.476 --> 00:46:01.636 A:middle
+and all you have is whatever
+the current bounds are
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:45:58.476 --> 00:46:01.636 A:middle
+and all you have is whatever
+the current bounds are
+
+00:46:01.636 --> 00:46:02.826 A:middle
+of the clip view.
+
+00:46:02.826 --> 00:46:05.726 A:middle
+You don't know where we're
+going to, what the new size
+
+00:46:05.726 --> 00:46:06.696 A:middle
+of the clip view is going to be.
+
+00:46:06.696 --> 00:46:09.016 A:middle
+So you can't give us an
+appropriately constrained scroll
+
+00:46:09.016 --> 00:46:11.806 A:middle
+point and your content isn't
+centered like you want it to be.
+
+00:46:12.256 --> 00:46:14.366 A:middle
+So we've deprecated
+constrainScrollPoint
+
+00:46:14.396 --> 00:46:16.616 A:middle
+and we've replaced it
+with constrainBoundsRect.
+
+00:46:17.246 --> 00:46:19.086 A:middle
+We'll go ahead and
+pass in a complete rect
+
+00:46:19.436 --> 00:46:22.676 A:middle
+so that you have what we want
+the proposed new size to be
+
+00:46:22.936 --> 00:46:24.326 A:middle
+and you can constrain
+that hopefully,
+
+00:46:24.326 --> 00:46:25.846 A:middle
+all you're changing
+is the origin.
+
+00:46:26.206 --> 00:46:29.806 A:middle
+But now, as the user
+pinches and go
+
+00:46:29.806 --> 00:46:31.996 A:middle
+and pass the minimum
+allowed size so that we need
+
+00:46:32.126 --> 00:46:35.156 A:middle
+to bounce back, when they
+let go, we'll animate
+
+00:46:35.156 --> 00:46:36.786 A:middle
+to the appropriate
+centered position.
+
+00:46:37.456 --> 00:46:40.446 A:middle
+So, for those of you that
+are overriding clip views,
+
+00:46:40.496 --> 00:46:43.426 A:middle
+please add constrainBoundsRect
+and override
+
+00:46:43.426 --> 00:46:44.346 A:middle
+that in your application.
+
+00:46:44.946 --> 00:46:48.676 A:middle
+So in conclusion, we covered
+a lot in this session.
+
+00:46:49.216 --> 00:46:51.966 A:middle
+We talked about optimizing
+your AppKit drawing
+
+00:46:52.806 --> 00:46:55.486 A:middle
+and layer-backed drawing
+and optimizing that and some
+
+00:46:55.486 --> 00:46:56.776 A:middle
+of the performance
+characteristics
+
+00:46:56.776 --> 00:46:58.136 A:middle
+with layer-backed drawing.
+
+00:46:59.216 --> 00:47:02.266 A:middle
+These are still very important
+with responsive scrolling
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:46:59.216 --> 00:47:02.266 A:middle
+These are still very important
+with responsive scrolling
+
+00:47:02.266 --> 00:47:06.036 A:middle
+as you've seen, it can get
+over a lot of rough edges and--
+
+00:47:06.036 --> 00:47:08.496 A:middle
+that the main thread might
+be doing and be responsive
+
+00:47:08.496 --> 00:47:12.456 A:middle
+to the user and that is
+a tremendous advantage
+
+00:47:12.456 --> 00:47:15.186 A:middle
+for your application as you've
+seen in that demo application,
+
+00:47:15.186 --> 00:47:16.296 A:middle
+it can make a huge difference.
+
+00:47:16.716 --> 00:47:18.346 A:middle
+However, it's not
+a silver bullet,
+
+00:47:18.346 --> 00:47:21.896 A:middle
+so make sure your drawing is as
+fast as possible at all times.
+
+00:47:22.276 --> 00:47:23.966 A:middle
+So all-- everything that
+we said at the beginning
+
+00:47:23.966 --> 00:47:25.426 A:middle
+of this talk is very important.
+
+00:47:26.626 --> 00:47:28.346 A:middle
+And we've also covered
+magnification
+
+00:47:28.656 --> 00:47:29.846 A:middle
+and how we've made
+some changes there
+
+00:47:29.846 --> 00:47:31.756 A:middle
+to make it a little bit more
+responsive even though it's
+
+00:47:31.756 --> 00:47:32.886 A:middle
+still main thread driven.
+
+00:47:34.636 --> 00:47:36.846 A:middle
+For more information, there's--
+
+00:47:36.846 --> 00:47:39.296 A:middle
+you can see our App
+Frameworks Evangelist Jake
+
+00:47:39.296 --> 00:47:41.376 A:middle
+and we have the documentation
+
+00:47:41.376 --> 00:47:45.266 A:middle
+in particular the Core Animation
+Programming Guide has got some
+
+00:47:45.266 --> 00:47:46.606 A:middle
+really nice information there
+
+00:47:46.606 --> 00:47:48.906 A:middle
+for when you're making
+your views layer-backed
+
+00:47:48.906 --> 00:47:49.676 A:middle
+and doing animations.
+
+00:47:50.316 --> 00:47:52.896 A:middle
+The Developer Forums and I
+didn't get a chance to put
+
+00:47:52.896 --> 00:47:55.056 A:middle
+on the slide but make sure
+you read the release notes,
+
+00:47:55.316 --> 00:47:58.706 A:middle
+we cover a lot of details and
+everything I've talked here
+
+00:47:59.016 --> 00:48:04.256 A:middle
+in the release notes as it
+relates to responsive scrolling.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:47:59.016 --> 00:48:04.256 A:middle
+in the release notes as it
+relates to responsive scrolling.
+
+00:48:07.276 --> 00:48:09.176 A:middle
+The Best Practices
+for Cocoa Animation
+
+00:48:09.176 --> 00:48:11.336 A:middle
+which actually just occurred
+right before this one,
+
+00:48:11.336 --> 00:48:13.036 A:middle
+but if you haven't seen
+that one yet, please go back
+
+00:48:13.036 --> 00:48:15.856 A:middle
+and watch the video, it's
+another great session that you--
+
+00:48:15.856 --> 00:48:17.436 A:middle
+that relates to responsive
+scrolling
+
+00:48:17.436 --> 00:48:17.976 A:middle
+and animating your views.
+
+00:48:19.056 --> 00:48:19.976 A:middle
+And that's it for
+responsive scrolling.
+
+00:48:21.196 --> 00:48:21.966 A:middle
+Thank you guys for coming out.
+
+00:48:22.126 --> 00:48:22.976 A:middle
+I hope you enjoy the
+rest of the show.
+
+00:48:23.516 --> 00:48:28.430 A:middle
+[Applause]
+

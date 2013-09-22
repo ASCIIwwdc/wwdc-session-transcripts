@@ -1,0 +1,1908 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:09.576 A:middle
+[ Silence ]
+
+00:00:10.076 --> 00:00:12.736 A:middle
+&gt;&gt; Hello and welcome
+to the advanced editing
+
+00:00:12.736 --> 00:00:13.986 A:middle
+with AV foundation session.
+
+00:00:14.646 --> 00:00:17.116 A:middle
+My name's Scott Johnston
+on the AV Foundation Team.
+
+00:00:17.616 --> 00:00:25.146 A:middle
+[ Applause ]
+
+00:00:25.646 --> 00:00:27.626 A:middle
+So today we have two
+main topics for you.
+
+00:00:28.446 --> 00:00:32.066 A:middle
+Introducing custom video
+compositing, and secondly,
+
+00:00:32.226 --> 00:00:34.226 A:middle
+a really useful debugging
+technique
+
+00:00:34.346 --> 00:00:35.846 A:middle
+for debugging compositions.
+
+00:00:36.286 --> 00:00:38.766 A:middle
+So let's start with
+custom video compositing.
+
+00:00:41.266 --> 00:00:43.036 A:middle
+First of all, we're going
+to take a few moments just
+
+00:00:43.036 --> 00:00:46.026 A:middle
+to review the existing AV
+Foundation Architecture.
+
+00:00:49.116 --> 00:00:53.806 A:middle
+AV Foundation has been
+available for a few years now.
+
+00:00:54.266 --> 00:00:56.746 A:middle
+Ever since iOS 4 and Lion.
+
+00:00:57.886 --> 00:01:00.926 A:middle
+It's used in a wide variety
+of video editing applications
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:57.886 --> 00:01:00.926 A:middle
+It's used in a wide variety
+of video editing applications
+
+00:01:00.926 --> 00:01:04.366 A:middle
+in the app store
+including those from Apple.
+
+00:01:04.495 --> 00:01:08.116 A:middle
+It provides core and
+key fundamental tools
+
+00:01:08.606 --> 00:01:11.526 A:middle
+to create cuts only
+temporal compositions,
+
+00:01:12.336 --> 00:01:15.276 A:middle
+video mixing compositions,
+and of course audio mixing.
+
+00:01:21.416 --> 00:01:24.136 A:middle
+In Mountain Lion and iOS
+6, it's quite possible
+
+00:01:24.136 --> 00:01:28.066 A:middle
+to create a wide variety
+of visual effects.
+
+00:01:30.216 --> 00:01:35.176 A:middle
+Dissolves, scaling,
+transformation effects,
+
+00:01:35.446 --> 00:01:43.636 A:middle
+layering, picture in picture
+effects, wipes, and slides.
+
+00:01:43.636 --> 00:01:54.906 A:middle
+And now, new for
+Mavericks and iOS 7,
+
+00:01:55.396 --> 00:01:57.276 A:middle
+we'd like to give you
+guys the opportunity
+
+00:01:57.276 --> 00:02:00.386 A:middle
+to place your code inside
+the video composition
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:57.276 --> 00:02:00.386 A:middle
+to place your code inside
+the video composition
+
+00:02:00.386 --> 00:02:01.206 A:middle
+render pipeline.
+
+00:02:01.826 --> 00:02:10.686 A:middle
+So giving you direct access
+to the pixels with the CPU
+
+00:02:10.686 --> 00:02:17.746 A:middle
+and the GPU to colorize,
+warp, texture map.
+
+00:02:18.706 --> 00:02:21.836 A:middle
+Achieve a much wider
+variety of complex effects.
+
+00:02:25.926 --> 00:02:29.756 A:middle
+And we'll see more of the
+sea otters later [laughter].
+
+00:02:30.716 --> 00:02:32.396 A:middle
+So custom video compositor.
+
+00:02:33.726 --> 00:02:35.356 A:middle
+But what is a video compositor?
+
+00:02:36.446 --> 00:02:39.626 A:middle
+Well, it's basically a
+chunk of video mixing code.
+
+00:02:40.556 --> 00:02:44.756 A:middle
+Which takes zero or more
+source frames blending
+
+00:02:45.196 --> 00:02:50.186 A:middle
+or modifying the pixels to
+deliver a single output frame.
+
+00:02:50.516 --> 00:02:54.876 A:middle
+We'll find the existing
+built-in compositor inside the
+
+00:02:54.876 --> 00:02:55.986 A:middle
+composition architecture.
+
+00:02:58.316 --> 00:03:01.566 A:middle
+So looking inside
+compositions as a whole,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:58.316 --> 00:03:01.566 A:middle
+So looking inside
+compositions as a whole,
+
+00:03:01.986 --> 00:03:04.176 A:middle
+we first see the AVComposition,
+
+00:03:04.936 --> 00:03:07.306 A:middle
+which is our temporal
+cuts-only edit.
+
+00:03:07.976 --> 00:03:14.956 A:middle
+We place time ranges of
+source assets in tracks.
+
+00:03:15.676 --> 00:03:17.466 A:middle
+Here we have two
+tracks, A and B,
+
+00:03:18.276 --> 00:03:21.986 A:middle
+and in this example we're going
+to be dissolving from track A
+
+00:03:21.986 --> 00:03:23.866 A:middle
+to B and back to A again.
+
+00:03:23.866 --> 00:03:27.826 A:middle
+In order to achieve
+the dissolve,
+
+00:03:28.576 --> 00:03:32.786 A:middle
+we have the AVVideoComposition,
+
+00:03:32.786 --> 00:03:38.296 A:middle
+which stores the video mixing
+parameters and time ranges.
+
+00:03:38.296 --> 00:03:48.466 A:middle
+So let's take a closer look at
+the video composition itself.
+
+00:03:48.466 --> 00:03:51.876 A:middle
+Now for these time ranges
+in the video composition,
+
+00:03:52.206 --> 00:03:53.536 A:middle
+they're instruction objects,
+
+00:03:54.716 --> 00:03:56.736 A:middle
+which store the mixing
+parameters.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:00.696 --> 00:04:02.976 A:middle
+But some instructions
+are simpler than others.
+
+00:04:02.976 --> 00:04:04.906 A:middle
+For example, one source track.
+
+00:04:05.446 --> 00:04:07.856 A:middle
+Another can take more than one.
+
+00:04:07.856 --> 00:04:16.125 A:middle
+And looking at the first
+simple segment there,
+
+00:04:16.125 --> 00:04:17.206 A:middle
+that first instruction.
+
+00:04:17.805 --> 00:04:22.106 A:middle
+It's effectively just passing
+through frames from track A
+
+00:04:22.106 --> 00:04:27.276 A:middle
+through the compositor
+rendering the first segment.
+
+00:04:27.746 --> 00:04:29.046 A:middle
+Now the more interesting
+segment is
+
+00:04:29.076 --> 00:04:30.916 A:middle
+where the initial
+dissolve happens,
+
+00:04:30.916 --> 00:04:35.096 A:middle
+where we take two frames,
+and using the parameters
+
+00:04:35.096 --> 00:04:37.936 A:middle
+from the instruction to tell
+the compositor to blend them.
+
+00:04:38.886 --> 00:04:44.986 A:middle
+And with them, we render
+the rest of the edit.
+
+00:04:44.986 --> 00:04:46.466 A:middle
+Focusing even more
+on the compositor,
+
+00:04:47.096 --> 00:04:53.146 A:middle
+we have multiple source
+frames and a single frame out.
+
+00:04:55.256 --> 00:04:57.846 A:middle
+Along with the source frames,
+we have the instruction object
+
+00:04:57.996 --> 00:04:59.196 A:middle
+with the mixing parameters.
+
+00:04:59.736 --> 00:05:04.326 A:middle
+In this case, a dissolve
+which we encode
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:59.736 --> 00:05:04.326 A:middle
+In this case, a dissolve
+which we encode
+
+00:05:04.326 --> 00:05:05.966 A:middle
+as a property in
+the instruction.
+
+00:05:05.966 --> 00:05:09.716 A:middle
+In this case, in ramp
+from one down to zero.
+
+00:05:10.296 --> 00:05:15.686 A:middle
+At this point, we're
+at the compositor,
+
+00:05:15.686 --> 00:05:18.396 A:middle
+so let's introduce the new
+custom compositing API.
+
+00:05:19.236 --> 00:05:25.326 A:middle
+The built-in compositor is
+green, you can now replace that
+
+00:05:26.646 --> 00:05:30.546 A:middle
+and do your own stuff
+in Mavericks and iOS 7.
+
+00:05:32.476 --> 00:05:36.096 A:middle
+In addition, you can implement
+your own instruction to gather
+
+00:05:36.096 --> 00:05:39.396 A:middle
+up and carry your own
+set of mixing parameters.
+
+00:05:39.956 --> 00:05:45.506 A:middle
+It's bundled up with the source
+frames in the request object.
+
+00:05:46.026 --> 00:05:52.596 A:middle
+So you'll be implementing the
+new protocol AVVideoCompositing,
+
+00:05:53.116 --> 00:05:56.836 A:middle
+which receives the new object,
+
+00:05:56.836 --> 00:06:00.306 A:middle
+AVAsynchronousVideoComposition
+request.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:56.836 --> 00:06:00.306 A:middle
+AVAsynchronousVideoComposition
+request.
+
+00:06:00.876 --> 00:06:06.846 A:middle
+And, in addition, you'll
+be implementing the
+
+00:06:07.116 --> 00:06:09.966 A:middle
+AVVideoCompositionInstruction.
+
+00:06:10.506 --> 00:06:16.546 A:middle
+Now looking at the
+methods involved here,
+
+00:06:17.856 --> 00:06:19.196 A:middle
+you'll be receiving your request
+
+00:06:19.536 --> 00:06:21.756 A:middle
+when you implement
+startVideo CompositionRequest.
+
+00:06:22.326 --> 00:06:26.006 A:middle
+And then deliver the
+frame once you've rendered
+
+00:06:26.826 --> 00:06:28.396 A:middle
+with finishWith
+ComposedVideoFrame.
+
+00:06:28.396 --> 00:06:32.986 A:middle
+Now in the event of an error,
+you can call finishWithError
+
+00:06:33.046 --> 00:06:35.666 A:middle
+or acknowledge a
+cancelled request.
+
+00:06:36.286 --> 00:06:44.066 A:middle
+Okay, so what about the
+format of the source frames?
+
+00:06:44.066 --> 00:06:45.886 A:middle
+How are the pixels arranged?
+
+00:06:45.886 --> 00:06:50.276 A:middle
+Well you've probably
+looked in our header files
+
+00:06:50.276 --> 00:06:52.136 A:middle
+and seen a wide variety
+of formats.
+
+00:06:52.706 --> 00:06:57.406 A:middle
+You'll probably only see a
+small subset here, but generally
+
+00:06:58.106 --> 00:07:09.876 A:middle
+when we're decoding H.264 video,
+you'll receive YUV 8-bit 420.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:58.106 --> 00:07:09.876 A:middle
+when we're decoding H.264 video,
+you'll receive YUV 8-bit 420.
+
+00:07:10.026 --> 00:07:13.596 A:middle
+But that could vary and
+your code may not be able
+
+00:07:13.596 --> 00:07:14.716 A:middle
+to render into YUV.
+
+00:07:15.016 --> 00:07:17.176 A:middle
+So you can express the exact
+format that you require
+
+00:07:17.886 --> 00:07:20.086 A:middle
+by implementing source
+pixel buffer attributes.
+
+00:07:20.666 --> 00:07:25.806 A:middle
+Now here you can provide
+an array of formats
+
+00:07:25.806 --> 00:07:27.416 A:middle
+that you would like to receive.
+
+00:07:28.406 --> 00:07:33.196 A:middle
+In this case, our example
+requires 32-bit BGRA,
+
+00:07:34.266 --> 00:07:37.216 A:middle
+and by doing so the
+system will, on the fly,
+
+00:07:37.216 --> 00:07:45.396 A:middle
+convert the source
+frames into that format.
+
+00:07:45.616 --> 00:07:47.986 A:middle
+Similarly for the
+output pixel format,
+
+00:07:49.356 --> 00:07:50.996 A:middle
+you implement
+requiredPixelBuffer
+
+00:07:50.996 --> 00:07:52.426 A:middle
+AttributesForRenderContext.
+
+00:07:55.386 --> 00:08:05.276 A:middle
+And we're requiring
+32-bit BGRA here.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:55.386 --> 00:08:05.276 A:middle
+And we're requiring
+32-bit BGRA here.
+
+00:08:05.356 --> 00:08:08.956 A:middle
+Now in order to get hold of a
+new empty frame to render into,
+
+00:08:09.386 --> 00:08:10.956 A:middle
+we go back to the
+request object,
+
+00:08:11.806 --> 00:08:16.166 A:middle
+ask it for the render context,
+which contains information
+
+00:08:16.556 --> 00:08:20.186 A:middle
+about the aspect ratio and the
+size that we're rendering to,
+
+00:08:20.706 --> 00:08:25.696 A:middle
+and also the required
+pixel format.
+
+00:08:25.906 --> 00:08:27.396 A:middle
+So we ask it for a
+new pixel buffer.
+
+00:08:27.606 --> 00:08:29.316 A:middle
+Now this comes from
+a managed pool.
+
+00:08:29.826 --> 00:08:39.346 A:middle
+So the frame is allocated, we
+can then render in to their,
+
+00:08:39.346 --> 00:08:43.275 A:middle
+in this case our dissolve and
+send the output on its way.
+
+00:08:43.275 --> 00:08:49.156 A:middle
+Now let's jump into Xcode
+and we'll have a demo.
+
+00:08:49.286 --> 00:08:54.186 A:middle
+Okay, so, in Xcode, here we are
+with the Hello World equivalent
+
+00:08:54.186 --> 00:08:56.006 A:middle
+of a custom compositor.
+
+00:08:56.746 --> 00:09:01.176 A:middle
+So, here we're implementing
+our AVVideoCompositing protocol
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:56.746 --> 00:09:01.176 A:middle
+So, here we're implementing
+our AVVideoCompositing protocol
+
+00:09:02.256 --> 00:09:08.616 A:middle
+and those three methods that
+we called out in the slides.
+
+00:09:09.206 --> 00:09:14.866 A:middle
+So again, we're requiring
+BGRA and it's simply a case
+
+00:09:14.866 --> 00:09:16.516 A:middle
+of putting in that value.
+
+00:09:16.516 --> 00:09:20.866 A:middle
+Now remember it's an array, so
+we can, if we do support YUV
+
+00:09:20.866 --> 00:09:26.066 A:middle
+in some flavor, we
+can drop it in there.
+
+00:09:26.126 --> 00:09:29.146 A:middle
+Similarly for the output,
+in this case it's identical.
+
+00:09:29.766 --> 00:09:36.656 A:middle
+Now the action happens
+inside the rendering function
+
+00:09:36.656 --> 00:09:41.546 A:middle
+startVideo CompositionRequest
+receiving our request object.
+
+00:09:42.596 --> 00:09:43.566 A:middle
+Let's open this guy.
+
+00:09:45.186 --> 00:09:49.996 A:middle
+Okay, so, the first
+thing we do here is -
+
+00:09:49.996 --> 00:09:52.736 A:middle
+it's slightly hard coded
+just for simplicity -
+
+00:09:53.766 --> 00:09:56.826 A:middle
+but we fish out the
+source frames
+
+00:09:56.826 --> 00:09:59.726 A:middle
+from the passed in
+request object.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:00.616 --> 00:10:03.056 A:middle
+Now you'll get these as
+Core Video pixel buffers,
+
+00:10:03.316 --> 00:10:07.936 A:middle
+and we'll try our hardest
+
+00:10:07.936 --> 00:10:09.736 A:middle
+to make sure they're
+IOSurface backed,
+
+00:10:09.736 --> 00:10:11.966 A:middle
+so they're going
+to be on the GPU.
+
+00:10:12.436 --> 00:10:16.966 A:middle
+The next thing we do
+is we allocate a fresh,
+
+00:10:16.966 --> 00:10:20.526 A:middle
+new pixel buffer to render into
+so, as we saw in the slides,
+
+00:10:20.526 --> 00:10:23.216 A:middle
+we ask the request object
+for the render context
+
+00:10:24.476 --> 00:10:25.756 A:middle
+and allocate a new pixel buffer.
+
+00:10:26.086 --> 00:10:31.406 A:middle
+Then we do the rendering and
+deliver the output frame.
+
+00:10:31.726 --> 00:10:35.366 A:middle
+So before we look at what's
+inside that little render block,
+
+00:10:35.556 --> 00:10:39.436 A:middle
+let's run up and
+see what this does.
+
+00:10:39.996 --> 00:10:43.256 A:middle
+Okay here we are
+with a deer again.
+
+00:10:43.516 --> 00:10:46.866 A:middle
+Okay so this app, a simple
+app, and it's really simple
+
+00:10:46.866 --> 00:10:50.766 A:middle
+because we've managed to use
+the new AVPlayerView from AVKit,
+
+00:10:51.546 --> 00:10:55.116 A:middle
+which gives you a nice, simple
+player view with a scrubber
+
+00:10:55.766 --> 00:10:57.226 A:middle
+and various other goodies.
+
+00:10:57.946 --> 00:11:00.816 A:middle
+So let's play and
+we'll see what happens.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:57.946 --> 00:11:00.816 A:middle
+So let's play and
+we'll see what happens.
+
+00:11:01.496 --> 00:11:03.596 A:middle
+Okay so we've got a
+really simple wipe,
+
+00:11:03.596 --> 00:11:05.246 A:middle
+with that white line
+coming down.
+
+00:11:06.086 --> 00:11:08.186 A:middle
+Let's play it again
+if you missed it.
+
+00:11:08.836 --> 00:11:11.526 A:middle
+Okay so there's nothing
+particularly exciting,
+
+00:11:11.526 --> 00:11:17.456 A:middle
+but the main thing is this will
+illustrate how we can get hold
+
+00:11:17.456 --> 00:11:20.876 A:middle
+of those pixels, in
+this case which is CPU,
+
+00:11:21.586 --> 00:11:25.276 A:middle
+so the pixel buffers you can
+lock to the base address.
+
+00:11:25.336 --> 00:11:33.056 A:middle
+At which point, you can then
+ask for the usual things
+
+00:11:33.056 --> 00:11:36.636 A:middle
+like the bytes-per-row
+and the base address,
+
+00:11:36.636 --> 00:11:39.846 A:middle
+and at which point we can then
+start splatting the pixels.
+
+00:11:39.846 --> 00:11:43.286 A:middle
+Now, you'll see this rather ugly
+- and don't do this at home -
+
+00:11:43.286 --> 00:11:44.736 A:middle
+memcpy and memset stuff.
+
+00:11:45.326 --> 00:11:52.676 A:middle
+Just purely for simplicity
+here, but I'll close that.
+
+00:11:52.676 --> 00:11:56.616 A:middle
+Now, up here, when we
+play that transition,
+
+00:11:56.616 --> 00:11:59.606 A:middle
+obviously we're doing some
+sort of animation and on
+
+00:11:59.606 --> 00:12:02.576 A:middle
+to calculate the vertical
+position of the white band.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:59.606 --> 00:12:02.576 A:middle
+to calculate the vertical
+position of the white band.
+
+00:12:03.496 --> 00:12:08.056 A:middle
+We have to basically interpolate
+across our time range to work
+
+00:12:08.056 --> 00:12:12.206 A:middle
+out exactly at what
+point we are,
+
+00:12:12.206 --> 00:12:14.366 A:middle
+we use a thing called
+tweening here,
+
+00:12:14.366 --> 00:12:16.976 A:middle
+we calculate this tween factor.
+
+00:12:17.166 --> 00:12:20.496 A:middle
+Now we're going to come back to
+this in the slides in a moment,
+
+00:12:20.926 --> 00:12:23.656 A:middle
+but basically there's some basic
+arithmetic going on in here
+
+00:12:24.346 --> 00:12:28.726 A:middle
+and it's all to do with
+the time range associated
+
+00:12:28.786 --> 00:12:32.166 A:middle
+with the current video
+composition instruction.
+
+00:12:32.616 --> 00:12:34.256 A:middle
+We'll come back to
+that in a sec.
+
+00:12:34.926 --> 00:12:37.266 A:middle
+But this isn't a
+particularly exciting example
+
+00:12:37.266 --> 00:12:38.506 A:middle
+of a compositor, so
+let's have a look
+
+00:12:38.506 --> 00:12:41.416 A:middle
+at something using
+the GPU, using OpenGL.
+
+00:12:42.226 --> 00:12:43.566 A:middle
+So let's run this guy again.
+
+00:12:43.566 --> 00:12:49.066 A:middle
+And this time we're going
+to change the composition,
+
+00:12:49.066 --> 00:12:51.586 A:middle
+and I've got some pre-prepared
+ones fortunately, so,
+
+00:12:52.736 --> 00:12:56.126 A:middle
+let's switch to this guy.
+
+00:12:56.126 --> 00:12:58.516 A:middle
+Okay, so, let's play
+it this time.
+
+00:12:58.666 --> 00:13:01.236 A:middle
+Coming in quite fast, and
+there's our otters again.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:58.666 --> 00:13:01.236 A:middle
+Coming in quite fast, and
+there's our otters again.
+
+00:13:01.816 --> 00:13:03.646 A:middle
+I'll play that again.
+
+00:13:04.386 --> 00:13:08.196 A:middle
+It goes through quite quickly,
+but we can do something
+
+00:13:08.196 --> 00:13:13.896 A:middle
+about that, we can change the
+[pause] video mixing parameters
+
+00:13:14.216 --> 00:13:16.216 A:middle
+that we've placed
+in our composition,
+
+00:13:17.366 --> 00:13:24.416 A:middle
+and I can reveal some controls
+wired directly to properties
+
+00:13:24.416 --> 00:13:26.996 A:middle
+in our instruction, in our
+custom instruction here.
+
+00:13:26.996 --> 00:13:30.336 A:middle
+In this case, stiffening
+and damping.
+
+00:13:31.116 --> 00:13:35.826 A:middle
+Now these are going to influence
+the way we're calculating
+
+00:13:35.826 --> 00:13:36.446 A:middle
+the physics.
+
+00:13:36.646 --> 00:13:37.846 A:middle
+In this case we're mapping,
+
+00:13:37.846 --> 00:13:41.036 A:middle
+texture mapping the
+video onto a mash.
+
+00:13:41.646 --> 00:13:46.926 A:middle
+And then applying some
+physics to the vertices.
+
+00:13:46.926 --> 00:13:49.306 A:middle
+So let's see if we can slow
+this down a little bit, so,
+
+00:13:49.766 --> 00:13:54.216 A:middle
+[pause] let's play
+that through again.
+
+00:13:54.216 --> 00:13:56.336 A:middle
+Okay, it's a little
+bit different.
+
+00:13:56.856 --> 00:14:02.716 A:middle
+You can see the, as it comes in,
+it's a strange, hypnotic effect.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:56.856 --> 00:14:02.716 A:middle
+You can see the, as it comes in,
+it's a strange, hypnotic effect.
+
+00:14:02.966 --> 00:14:06.866 A:middle
+But this we can play
+with it even more
+
+00:14:08.076 --> 00:14:09.206 A:middle
+by playing with the damping.
+
+00:14:10.566 --> 00:14:13.176 A:middle
+Woops. Okay.
+
+00:14:13.456 --> 00:14:29.356 A:middle
+Of course that was all planned.
+
+00:14:32.196 --> 00:14:34.386 A:middle
+Okay so, we've set up
+the stiffness and damping
+
+00:14:34.386 --> 00:14:37.156 A:middle
+to be a little bit
+wilder this time.
+
+00:14:38.316 --> 00:14:44.416 A:middle
+Yeah. [Pause] Okay, so
+anyway, that's an example
+
+00:14:44.416 --> 00:14:46.556 A:middle
+of the OpenGL doing
+something useful.
+
+00:14:47.606 --> 00:14:52.566 A:middle
+Let's switch back to the slides.
+
+00:14:54.006 --> 00:14:55.426 A:middle
+Okay we mentioned
+tweening there,
+
+00:14:55.426 --> 00:14:56.546 A:middle
+which is an interpolation.
+
+00:14:56.546 --> 00:15:00.246 A:middle
+So let's have a quick
+overview of that
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:56.546 --> 00:15:00.246 A:middle
+So let's have a quick
+overview of that
+
+00:15:00.246 --> 00:15:03.316 A:middle
+in case you're not familiar
+with how that works.
+
+00:15:03.986 --> 00:15:06.946 A:middle
+Now we'll focus in on
+the second segment,
+
+00:15:06.946 --> 00:15:09.586 A:middle
+which does the dissolve
+in this example.
+
+00:15:10.336 --> 00:15:22.426 A:middle
+Okay our instruction
+contains our opacity ramp
+
+00:15:23.376 --> 00:15:25.186 A:middle
+from 100 percent
+down to 0 percent.
+
+00:15:25.736 --> 00:15:30.306 A:middle
+Of course the interesting
+properties in there,
+
+00:15:30.306 --> 00:15:33.386 A:middle
+as well as the opacity
+ramp is the time range
+
+00:15:33.576 --> 00:15:36.286 A:middle
+and our first example
+is arbitrarily starting
+
+00:15:36.286 --> 00:15:41.336 A:middle
+at 5 seconds with a duration
+of ten-thirtieths of a second.
+
+00:15:41.946 --> 00:15:47.106 A:middle
+Now in the first frame we've
+only elapsed a few seconds in.
+
+00:15:48.576 --> 00:15:50.976 A:middle
+At which point, the passed
+capacity should be 100 percent.
+
+00:15:50.976 --> 00:15:56.016 A:middle
+Now we calculate
+this tween factor
+
+00:15:56.606 --> 00:16:01.586 A:middle
+by dividing the elapsed
+time by the duration.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:56.606 --> 00:16:01.586 A:middle
+by dividing the elapsed
+time by the duration.
+
+00:16:01.586 --> 00:16:04.866 A:middle
+In which case we calculate
+zero, which leads right
+
+00:16:04.866 --> 00:16:06.716 A:middle
+to the beginning of
+the opacity ramp.
+
+00:16:06.716 --> 00:16:08.876 A:middle
+Now things get a
+bit more interesting
+
+00:16:08.876 --> 00:16:10.536 A:middle
+when we move forward one frame.
+
+00:16:11.626 --> 00:16:13.486 A:middle
+We've elapsed one-thirtieth
+of a second in.
+
+00:16:14.886 --> 00:16:19.126 A:middle
+The tween factor is now
+calculated to be 0.1,
+
+00:16:19.126 --> 00:16:23.386 A:middle
+which means we're a tenth of the
+way through the opacity ramp.
+
+00:16:24.776 --> 00:16:28.206 A:middle
+By multiplying the opacity
+by the tween factor,
+
+00:16:28.206 --> 00:16:32.426 A:middle
+we can then arrive at the
+desired opacity for this kind
+
+00:16:32.476 --> 00:16:34.186 A:middle
+of point in time
+with 90 percent.
+
+00:16:34.796 --> 00:16:38.716 A:middle
+We do the same calculation
+
+00:16:38.716 --> 00:16:41.626 A:middle
+for each frame all the
+way through to the end.
+
+00:16:42.956 --> 00:16:44.786 A:middle
+Arriving with a tween
+factor of 1,
+
+00:16:44.786 --> 00:16:47.666 A:middle
+which means we'll get the
+exact destination opacity
+
+00:16:48.376 --> 00:16:49.276 A:middle
+of 0 percent.
+
+00:16:56.336 --> 00:16:59.836 A:middle
+Okay, so there's some
+performance considerations.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:00.426 --> 00:17:07.996 A:middle
+[Pause] But before we get to the
+performance, there's a caveat.
+
+00:17:09.106 --> 00:17:13.656 A:middle
+When your app on
+iOS is backgrounded,
+
+00:17:13.656 --> 00:17:15.906 A:middle
+OpenGL won't be available.
+
+00:17:15.906 --> 00:17:19.016 A:middle
+So you'll have to
+have a CPU equivalent.
+
+00:17:19.106 --> 00:17:29.976 A:middle
+Of course you can use the
+CPU in foreground too.
+
+00:17:30.856 --> 00:17:34.436 A:middle
+So, the three booleans inside
+the new composition instruction.
+
+00:17:34.966 --> 00:17:37.886 A:middle
+It's important to look at these
+
+00:17:37.886 --> 00:17:44.416 A:middle
+because there are
+performance wins to be had.
+
+00:17:44.416 --> 00:17:46.326 A:middle
+First up, passthroughTrackID.
+
+00:17:50.656 --> 00:17:52.356 A:middle
+So some segments are, sorry,
+
+00:17:52.356 --> 00:17:56.316 A:middle
+some instructions are
+simpler than others.
+
+00:17:57.636 --> 00:18:01.336 A:middle
+Some just take one source and
+don't modify the frame at all,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:57.636 --> 00:18:01.336 A:middle
+Some just take one source and
+don't modify the frame at all,
+
+00:18:01.336 --> 00:18:03.796 A:middle
+they simply pass through
+frames from track A.
+
+00:18:03.796 --> 00:18:08.376 A:middle
+In this example, this gets
+you to the first segment.
+
+00:18:08.466 --> 00:18:11.646 A:middle
+Simply passing through
+frames on track A.
+
+00:18:12.166 --> 00:18:14.776 A:middle
+[Pause] If we're not modifying
+the frame, then we might
+
+00:18:14.776 --> 00:18:16.686 A:middle
+as well bypass the
+compositor completely.
+
+00:18:17.306 --> 00:18:21.056 A:middle
+Now this is a power win.
+
+00:18:27.626 --> 00:18:30.276 A:middle
+Next up is
+requiredSourceTrackIDs.
+
+00:18:30.276 --> 00:18:35.006 A:middle
+So let's say that first
+instruction is actually
+
+00:18:35.006 --> 00:18:38.816 A:middle
+modifying those single
+source frames coming through.
+
+00:18:39.186 --> 00:18:41.666 A:middle
+This say it's doing some
+colorization effect.
+
+00:18:42.476 --> 00:18:45.896 A:middle
+In which case we do
+require frames from track A
+
+00:18:45.896 --> 00:18:47.696 A:middle
+and we do want the
+compositor to be called.
+
+00:18:48.376 --> 00:18:50.376 A:middle
+So we set required
+source track IDs
+
+00:18:50.376 --> 00:18:53.736 A:middle
+to be track A, that
+single track.
+
+00:18:54.266 --> 00:19:00.246 A:middle
+Now what we don't want
+to do is just leave it
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:54.266 --> 00:19:00.246 A:middle
+Now what we don't want
+to do is just leave it
+
+00:19:00.566 --> 00:19:03.666 A:middle
+to be the default value of
+nil, because that's equivalent,
+
+00:19:04.126 --> 00:19:06.696 A:middle
+that says, deliver me
+frames from all the tracks,
+
+00:19:06.696 --> 00:19:09.586 A:middle
+and it's going to
+be wasted effort.
+
+00:19:15.296 --> 00:19:17.176 A:middle
+So containsTweening.
+
+00:19:17.896 --> 00:19:20.066 A:middle
+This is about our
+animation again.
+
+00:19:20.066 --> 00:19:23.446 A:middle
+Now consider this composition.
+
+00:19:23.446 --> 00:19:28.596 A:middle
+We have a moving
+picture-in-picture effect.
+
+00:19:29.156 --> 00:19:31.786 A:middle
+But all the source frames
+coming at us are the same.
+
+00:19:32.286 --> 00:19:36.176 A:middle
+Perhaps we've time extended
+the source so we got a run
+
+00:19:36.176 --> 00:19:38.846 A:middle
+of identical frames coming
+through the compositor,
+
+00:19:38.906 --> 00:19:40.386 A:middle
+but we're still doing animations
+
+00:19:40.386 --> 00:19:42.796 A:middle
+so every output frame
+is going to be unique.
+
+00:19:43.536 --> 00:19:50.356 A:middle
+Because of that we set,
+containsTweening to be yes.
+
+00:19:50.396 --> 00:19:53.446 A:middle
+[Pause] But if we leave
+containsTweening as yes,
+
+00:19:54.876 --> 00:19:56.846 A:middle
+and then we stop doing
+animation for some reason,
+
+00:19:56.846 --> 00:19:58.756 A:middle
+so we have a static
+picture-in-picture effect.
+
+00:19:59.766 --> 00:20:03.366 A:middle
+The picture-in-picture is at
+the top right for every frame.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:59.766 --> 00:20:03.366 A:middle
+The picture-in-picture is at
+the top right for every frame.
+
+00:20:03.886 --> 00:20:05.446 A:middle
+The same source frames
+every time.
+
+00:20:06.756 --> 00:20:09.486 A:middle
+We're just re-rendering
+identical output.
+
+00:20:11.236 --> 00:20:13.756 A:middle
+So by being careful to
+set contains to be no
+
+00:20:13.756 --> 00:20:15.226 A:middle
+when you have no animation.
+
+00:20:15.766 --> 00:20:22.566 A:middle
+Then after the initial frame,
+the system is at liberty
+
+00:20:22.566 --> 00:20:28.766 A:middle
+to optimize away those renders
+and reuse the identical output.
+
+00:20:33.236 --> 00:20:37.946 A:middle
+And then we look at the
+pixel buffer formats.
+
+00:20:37.946 --> 00:20:41.736 A:middle
+There's another performance
+win to be had here.
+
+00:20:41.956 --> 00:20:45.506 A:middle
+I think, as I said maybe
+earlier, if we can work
+
+00:20:46.166 --> 00:20:47.756 A:middle
+in a wider variety of formats,
+
+00:20:49.076 --> 00:20:52.356 A:middle
+in particular YUV 420
+then do so, because then
+
+00:20:52.686 --> 00:20:55.826 A:middle
+that will avoid, generally
+avoid a conversion hit
+
+00:20:56.046 --> 00:20:57.366 A:middle
+on this source frames coming in.
+
+00:20:57.906 --> 00:21:05.626 A:middle
+With output it's less critical
+since the display, for example,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:57.906 --> 00:21:05.626 A:middle
+With output it's less critical
+since the display, for example,
+
+00:21:05.626 --> 00:21:08.376 A:middle
+can accept multiple
+formats, like BGRA and YUV.
+
+00:21:08.376 --> 00:21:11.966 A:middle
+There will be no conversion.
+
+00:21:16.536 --> 00:21:25.516 A:middle
+Okay, so we have some
+sample code, AVCustomEdit.
+
+00:21:26.276 --> 00:21:30.206 A:middle
+In there you'll find
+some OpenGL examples.
+
+00:21:35.296 --> 00:21:43.076 A:middle
+Okay, the second topic is
+debugging compositions.
+
+00:21:43.386 --> 00:21:55.486 A:middle
+Debugging compositions,
+well, it's quite possible
+
+00:21:55.816 --> 00:22:01.696 A:middle
+to construct elaborate
+and complex compositions
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:55.816 --> 00:22:01.696 A:middle
+to construct elaborate
+and complex compositions
+
+00:22:01.826 --> 00:22:09.396 A:middle
+with entirely legal values while
+producing unexpected results.
+
+00:22:10.796 --> 00:22:12.276 A:middle
+Sometimes that's
+just a black frame.
+
+00:22:12.636 --> 00:22:18.986 A:middle
+I like to think of this a bit
+like building an OpenGL scene,
+
+00:22:19.366 --> 00:22:23.286 A:middle
+but inadvertently pointing
+the camera view vector
+
+00:22:23.286 --> 00:22:24.186 A:middle
+in the wrong direction.
+
+00:22:25.456 --> 00:22:28.266 A:middle
+In all these cases, again,
+there's a black frame.
+
+00:22:28.356 --> 00:22:29.786 A:middle
+How do you debug that?
+
+00:22:29.786 --> 00:22:30.526 A:middle
+What's the best way?
+
+00:22:30.816 --> 00:22:34.766 A:middle
+Well we found internally
+something really useful.
+
+00:22:35.726 --> 00:22:39.306 A:middle
+Let's just consider
+the types of problems
+
+00:22:39.846 --> 00:22:40.566 A:middle
+that you may encounter[Pause].
+
+00:22:41.316 --> 00:22:45.956 A:middle
+First of all, and probably
+one of the worst ones,
+
+00:22:45.956 --> 00:22:50.006 A:middle
+is leaving gaps between
+the segments
+
+00:22:50.006 --> 00:22:51.306 A:middle
+in the video composition.
+
+00:22:51.876 --> 00:22:55.376 A:middle
+It will almost certainly
+result in black frames
+
+00:22:55.376 --> 00:22:58.106 A:middle
+or just hanging onto
+the last frame.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:02.156 --> 00:23:06.256 A:middle
+And then just getting that
+alignment in the tracks wrong.
+
+00:23:06.256 --> 00:23:08.236 A:middle
+Maybe it's a rounding
+error when working
+
+00:23:08.346 --> 00:23:11.686 A:middle
+with CMTime or something.
+
+00:23:12.456 --> 00:23:19.376 A:middle
+Or misalignment between the
+video composition time ranges
+
+00:23:19.376 --> 00:23:23.196 A:middle
+and the AVComposition
+track segments.
+
+00:23:23.836 --> 00:23:29.416 A:middle
+Or a mistake in one of the
+ramps, too long for example.
+
+00:23:29.446 --> 00:23:37.726 A:middle
+Or an error in the
+transformation matrix
+
+00:23:37.726 --> 00:23:40.116 A:middle
+and spinning off your layers
+
+00:23:40.286 --> 00:23:43.836 A:middle
+into the ether beyond the
+boundaries of the output frame.
+
+00:23:44.926 --> 00:23:49.436 A:middle
+[Pause] As I've said we've
+found something really useful
+
+00:23:49.436 --> 00:23:53.126 A:middle
+internally and that is to
+visualize the composition.
+
+00:23:53.926 --> 00:23:56.566 A:middle
+Rather than looking at the
+code, you look at the picture.
+
+00:23:57.386 --> 00:24:00.406 A:middle
+So let's switch back
+to the demo machine.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:57.386 --> 00:24:00.406 A:middle
+So let's switch back
+to the demo machine.
+
+00:24:01.176 --> 00:24:03.536 A:middle
+I think I see that, yeah, okay.
+
+00:24:04.416 --> 00:24:07.006 A:middle
+Alright so if I run,
+little lagging here,
+
+00:24:07.116 --> 00:24:09.856 A:middle
+hopefully it doesn't crash.
+
+00:24:10.706 --> 00:24:16.296 A:middle
+Okay, so, we're looking
+at our simple wipe again.
+
+00:24:16.946 --> 00:24:21.176 A:middle
+Now let's see, this is
+AVCompositionDebugView.
+
+00:24:22.066 --> 00:24:24.056 A:middle
+This is going to be sample code.
+
+00:24:25.626 --> 00:24:26.856 A:middle
+I can display it like this.
+
+00:24:27.676 --> 00:24:34.086 A:middle
+And what were looking at here,
+get it big enough here, okay,
+
+00:24:34.086 --> 00:24:36.336 A:middle
+so, what we're seeing
+here in green
+
+00:24:36.386 --> 00:24:41.956 A:middle
+and dark blue are
+AVComposition tracks,
+
+00:24:42.506 --> 00:24:47.506 A:middle
+and green is the video tracks,
+dark blue is the audio tracks.
+
+00:24:47.506 --> 00:24:51.576 A:middle
+And remember this is
+the cuts only part.
+
+00:24:52.396 --> 00:25:00.176 A:middle
+So our source media starts
+here for video track 2
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:52.396 --> 00:25:00.176 A:middle
+So our source media starts
+here for video track 2
+
+00:25:00.176 --> 00:25:02.396 A:middle
+and there for video track 1.
+
+00:25:03.126 --> 00:25:07.026 A:middle
+And then down here's
+the video mixing part,
+
+00:25:07.026 --> 00:25:10.896 A:middle
+is the AVVideoComposition
+containing our instructions,
+
+00:25:11.496 --> 00:25:16.106 A:middle
+in this case this
+instruction's made use
+
+00:25:16.106 --> 00:25:19.576 A:middle
+of that passthroughTackID
+so we can label it as such.
+
+00:25:20.296 --> 00:25:26.006 A:middle
+And then into the
+custom instruction.
+
+00:25:26.976 --> 00:25:28.726 A:middle
+And then at the bottom
+is the audio mix.
+
+00:25:28.726 --> 00:25:33.476 A:middle
+Now you see the yellow
+volume ramp there.
+
+00:25:33.476 --> 00:25:36.216 A:middle
+So, this looks like it
+could be quite useful.
+
+00:25:36.566 --> 00:25:38.546 A:middle
+So let's put it to the test.
+
+00:25:38.546 --> 00:25:43.526 A:middle
+Let's give it a composition
+that's broken in some way.
+
+00:25:43.746 --> 00:25:47.116 A:middle
+So let's switch to our
+pre-prepared compositions.
+
+00:25:47.376 --> 00:25:51.826 A:middle
+Alright, I wasn't going to
+show you the debug viewer yet.
+
+00:25:51.826 --> 00:25:52.716 A:middle
+Let's play this guy.
+
+00:25:52.716 --> 00:25:57.756 A:middle
+It's going to dissolve
+into the deer,
+
+00:25:58.286 --> 00:25:59.886 A:middle
+there's something
+visually wrong there,
+
+00:25:59.886 --> 00:26:02.306 A:middle
+let's just play that
+slowly through.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:59.886 --> 00:26:02.306 A:middle
+let's just play that
+slowly through.
+
+00:26:03.416 --> 00:26:07.256 A:middle
+If we dissolve away from the
+boat, the deer comes through
+
+00:26:07.256 --> 00:26:09.786 A:middle
+and it jumps straight
+through that is not right.
+
+00:26:10.086 --> 00:26:11.326 A:middle
+Okay, so we've got
+something wrong here.
+
+00:26:11.516 --> 00:26:14.806 A:middle
+Rather look at the code,
+
+00:26:15.046 --> 00:26:17.786 A:middle
+we'll see if we can
+spot it with this guy.
+
+00:26:17.786 --> 00:26:23.096 A:middle
+Okay, you can probably spot that
+straight away and you can see
+
+00:26:23.096 --> 00:26:26.576 A:middle
+that for video instruction,
+the dissolve,
+
+00:26:26.576 --> 00:26:32.046 A:middle
+we can see the opacity ramp
+descending all the way here.
+
+00:26:32.666 --> 00:26:37.106 A:middle
+So the video instruction
+starts here and ends there,
+
+00:26:37.106 --> 00:26:40.126 A:middle
+so that's supposed to be
+our dissolve, which is going
+
+00:26:40.126 --> 00:26:44.056 A:middle
+to take two source video tracks.
+
+00:26:45.236 --> 00:26:50.126 A:middle
+One, that starts here, it
+does last for the duration,
+
+00:26:50.126 --> 00:26:54.306 A:middle
+but this guy is too short.
+
+00:26:55.996 --> 00:26:56.086 A:middle
+[Pause] So.
+
+00:26:56.336 --> 00:27:03.376 A:middle
+And I just happen to know
+where that problem is.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:56.336 --> 00:27:03.376 A:middle
+And I just happen to know
+where that problem is.
+
+00:27:03.376 --> 00:27:08.866 A:middle
+And your bugs won't
+be this easy.
+
+00:27:08.866 --> 00:27:15.956 A:middle
+I tried to obfuscate
+that, but [laughing].
+
+00:27:16.176 --> 00:27:16.516 A:middle
+[Pause] Okay.
+
+00:27:17.706 --> 00:27:21.316 A:middle
+Switch to the, hopefully
+now fixed, composition.
+
+00:27:21.926 --> 00:27:26.846 A:middle
+And there we see the
+first video track.
+
+00:27:27.046 --> 00:27:27.646 A:middle
+It looks good.
+
+00:27:29.016 --> 00:27:30.046 A:middle
+Now we get the dissolve.
+
+00:27:30.686 --> 00:27:36.176 A:middle
+Awesome. But there are worse
+ways for the composition
+
+00:27:36.176 --> 00:27:38.026 A:middle
+to be broken than that.
+
+00:27:39.076 --> 00:27:40.716 A:middle
+In fact, let me just
+run that again.
+
+00:27:42.956 --> 00:27:45.426 A:middle
+Okay so let's have
+a look at the,
+
+00:27:46.256 --> 00:27:47.576 A:middle
+the gap in the video
+instruction.
+
+00:27:48.716 --> 00:27:51.716 A:middle
+Black. Not good.
+
+00:27:51.716 --> 00:27:54.496 A:middle
+We'll have a look there.
+
+00:27:55.186 --> 00:27:58.636 A:middle
+And here, now, we can spot
+this guy straight away.
+
+00:27:59.256 --> 00:28:03.666 A:middle
+Down here we have a gap between
+the dissolve instructions
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:59.256 --> 00:28:03.666 A:middle
+Down here we have a gap between
+the dissolve instructions
+
+00:28:04.616 --> 00:28:07.726 A:middle
+and the last instruction,
+which isn't good.
+
+00:28:08.196 --> 00:28:12.206 A:middle
+So, that should be nice and easy
+to fix just like the last one.
+
+00:28:13.726 --> 00:28:14.436 A:middle
+Now this guy here.
+
+00:28:14.789 --> 00:28:16.789 A:middle
+[Laughing]
+
+00:28:17.142 --> 00:28:19.142 A:middle
+[ Silence ]
+
+00:28:19.496 --> 00:28:26.336 A:middle
+Now the sea otters.
+
+00:28:26.836 --> 00:28:32.516 A:middle
+[ Silence ]
+
+00:28:33.016 --> 00:28:37.606 A:middle
+And there we go,
+job done, fixed.
+
+00:28:38.926 --> 00:28:46.596 A:middle
+Okay. Okay so that's
+AVCompositionDebugViewer,
+
+00:28:46.596 --> 00:28:50.106 A:middle
+which is a sample for
+Mavericks and iOS 7.
+
+00:28:51.816 --> 00:28:54.036 A:middle
+Now we've made it simple so
+that it's particularly easy
+
+00:28:54.036 --> 00:28:58.326 A:middle
+for you guys to drop it
+into your app and modify it.
+
+00:28:58.326 --> 00:29:00.316 A:middle
+Extend it to draw your
+own video instructions.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:58.326 --> 00:29:00.316 A:middle
+Extend it to draw your
+own video instructions.
+
+00:29:01.066 --> 00:29:05.296 A:middle
+Now remember, it's just a
+noninteractive view, okay.
+
+00:29:05.746 --> 00:29:10.806 A:middle
+Now it's going to help you
+spot those overlaps and gaps
+
+00:29:10.806 --> 00:29:12.266 A:middle
+as we saw, you know,
+in the tracks,
+
+00:29:12.266 --> 00:29:13.976 A:middle
+the video instructions,
+and the audio.
+
+00:29:15.026 --> 00:29:21.946 A:middle
+But don't forget the validation
+API that we have in there,
+
+00:29:22.376 --> 00:29:25.966 A:middle
+the AVVideoComposition
+ValidationHandling protocol.
+
+00:29:26.276 --> 00:29:30.296 A:middle
+So you want to implement that
+and then you'll get callbacks
+
+00:29:30.296 --> 00:29:33.026 A:middle
+to see when we encounter
+something a bit untoward
+
+00:29:33.026 --> 00:29:33.906 A:middle
+in your composition.
+
+00:29:33.906 --> 00:29:44.266 A:middle
+So what have you
+looked at today?
+
+00:29:44.266 --> 00:29:47.886 A:middle
+Well, we've spent a few minutes
+just reviewing the composition
+
+00:29:47.886 --> 00:29:51.136 A:middle
+architecture, to see where
+the built-in compositor fits
+
+00:29:51.136 --> 00:29:51.366 A:middle
+in [Pause].
+
+00:29:51.956 --> 00:29:58.216 A:middle
+And we've discovered the
+new custom compositing API
+
+00:29:58.436 --> 00:30:02.366 A:middle
+with the two new protocols
+and the request object.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:58.436 --> 00:30:02.366 A:middle
+with the two new protocols
+and the request object.
+
+00:30:03.076 --> 00:30:07.586 A:middle
+And we've see how
+important it is
+
+00:30:07.586 --> 00:30:12.166 A:middle
+to choose the source pixel
+buffer formats and the output.
+
+00:30:12.836 --> 00:30:17.336 A:middle
+And we looked a little
+bit at tweening
+
+00:30:17.336 --> 00:30:20.306 A:middle
+and interpolating your
+video mixing parameters
+
+00:30:20.556 --> 00:30:22.176 A:middle
+across the time range
+of your effect.
+
+00:30:26.456 --> 00:30:28.356 A:middle
+And we talked a bit
+about performance,
+
+00:30:28.936 --> 00:30:32.676 A:middle
+so remember those three booleans
+inside the instruction protocol,
+
+00:30:33.166 --> 00:30:36.966 A:middle
+have a good look at them.
+
+00:30:37.156 --> 00:30:39.496 A:middle
+And lastly, we saw
+our sea otters again
+
+00:30:39.496 --> 00:30:41.696 A:middle
+in debugging compositions.
+
+00:30:42.746 --> 00:30:45.546 A:middle
+So that's
+AVCompositionDebugViewer,
+
+00:30:45.816 --> 00:30:48.976 A:middle
+which is a great visualization
+technique and much simpler
+
+00:30:48.976 --> 00:30:50.766 A:middle
+than looking at reams of code.
+
+00:30:56.456 --> 00:31:00.566 A:middle
+So over the next few months,
+I want to see you guys drop
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:56.456 --> 00:31:00.566 A:middle
+So over the next few months,
+I want to see you guys drop
+
+00:31:00.566 --> 00:31:04.236 A:middle
+in some great OpenGL visuals
+and I want to see them appearing
+
+00:31:04.236 --> 00:31:06.086 A:middle
+in those video editing apps.
+
+00:31:06.666 --> 00:31:09.446 A:middle
+It's going to be, we're
+going to see awesome effects,
+
+00:31:09.876 --> 00:31:12.166 A:middle
+transitions, and video
+generators[Pause].
+
+00:31:12.976 --> 00:31:17.456 A:middle
+So if you need some information,
+
+00:31:17.456 --> 00:31:21.856 A:middle
+then do e-mail our
+evangelist, John Geleynse.
+
+00:31:21.856 --> 00:31:28.616 A:middle
+We'll have some related
+sessions that you can catch
+
+00:31:28.616 --> 00:31:31.846 A:middle
+on video now at WWDC app.
+
+00:31:32.106 --> 00:31:32.926 A:middle
+Thank you very much.
+
+00:31:33.426 --> 00:31:46.740 A:middle
+[ Applause ]
+

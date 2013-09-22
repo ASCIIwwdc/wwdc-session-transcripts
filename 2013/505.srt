@@ -1,0 +1,4431 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:09.516 A:middle
+[ Applause ]
+
+00:00:10.016 --> 00:00:13.866 A:middle
+&gt;&gt; Good morning and welcome.
+
+00:00:14.496 --> 00:00:15.756 A:middle
+My name is Dan Omachi.
+
+00:00:15.866 --> 00:00:18.066 A:middle
+I work in Apple's
+GPU software group
+
+00:00:18.266 --> 00:00:20.276 A:middle
+on the OpenGL ES framework.
+
+00:00:20.846 --> 00:00:24.056 A:middle
+I also work very closely
+with our GPU driver engineers
+
+00:00:24.056 --> 00:00:26.956 A:middle
+on improving performance
+and implementing features
+
+00:00:27.056 --> 00:00:28.146 A:middle
+on our graphics hardware.
+
+00:00:28.206 --> 00:00:31.446 A:middle
+And today I'm going to
+talk to you about Advances
+
+00:00:31.446 --> 00:00:36.796 A:middle
+in OpenGL ES on iOS 7.
+
+00:00:37.066 --> 00:00:40.046 A:middle
+Apple offers a number
+of rendering API's
+
+00:00:40.046 --> 00:00:43.396 A:middle
+that are highly optimized
+for a variety
+
+00:00:43.396 --> 00:00:47.866 A:middle
+of specific rendering scenarios
+- Core Graphics, Core Animation,
+
+00:00:47.866 --> 00:00:49.956 A:middle
+and now Sprite Kit
+are among those.
+
+00:00:50.426 --> 00:00:54.656 A:middle
+They do a ton for you,
+and they do it very well.
+
+00:00:55.516 --> 00:00:58.986 A:middle
+OpenGL ES, however, offers
+the most direct access
+
+00:00:59.056 --> 00:01:00.006 A:middle
+to graphics hardware.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.056 --> 00:01:00.006 A:middle
+to graphics hardware.
+
+00:01:00.486 --> 00:01:02.196 A:middle
+This enables a lot
+of flexibility
+
+00:01:02.446 --> 00:01:06.606 A:middle
+to create custom effects
+and bring something new
+
+00:01:06.606 --> 00:01:08.866 A:middle
+and innovative into
+your rendering.
+
+00:01:09.976 --> 00:01:13.836 A:middle
+Now, this flexibility can
+be a challenge to master.
+
+00:01:14.576 --> 00:01:17.526 A:middle
+It's a low-level library,
+
+00:01:18.106 --> 00:01:20.286 A:middle
+and there can be some
+stumbling blocks,
+
+00:01:20.436 --> 00:01:24.586 A:middle
+but if you can utilize
+the API to its fullest,
+
+00:01:24.946 --> 00:01:27.866 A:middle
+you can bring some
+really wild custom effects
+
+00:01:28.226 --> 00:01:32.026 A:middle
+that people are amazed
+by and love.
+
+00:01:32.636 --> 00:01:33.606 A:middle
+This can make the difference
+
+00:01:33.606 --> 00:01:36.686 A:middle
+between shipping
+a good application
+
+00:01:36.686 --> 00:01:40.846 A:middle
+that a few people download and
+maybe play with for a few days,
+
+00:01:41.376 --> 00:01:45.166 A:middle
+and something great that people
+talk about, use day to day,
+
+00:01:45.166 --> 00:01:46.766 A:middle
+and download in droves.
+
+00:01:46.766 --> 00:01:47.266 A:middle
+[ Pause ]
+
+00:01:47.266 --> 00:01:51.526 A:middle
+So what am I going to
+be talking about today?
+
+00:01:52.416 --> 00:01:54.886 A:middle
+First, there are a
+number of new features
+
+00:01:54.886 --> 00:01:57.296 A:middle
+in the OpenGL ES API on iOS7.
+
+00:01:58.446 --> 00:02:00.956 A:middle
+The first feature I'll
+talk about is instancing,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:58.446 --> 00:02:00.956 A:middle
+The first feature I'll
+talk about is instancing,
+
+00:02:01.416 --> 00:02:03.996 A:middle
+and we support two
+new extensions
+
+00:02:04.376 --> 00:02:06.036 A:middle
+to implement that feature.
+
+00:02:07.076 --> 00:02:10.175 A:middle
+We're also now supporting
+texturing in the vertex shader.
+
+00:02:10.265 --> 00:02:12.676 A:middle
+I'll talk about why you
+might want to do that
+
+00:02:12.676 --> 00:02:14.566 A:middle
+and how it can be done.
+
+00:02:14.776 --> 00:02:18.296 A:middle
+We're also now supporting
+sRGB texture formats,
+
+00:02:18.296 --> 00:02:22.756 A:middle
+an alternate color
+space that you can use.
+
+00:02:22.756 --> 00:02:27.196 A:middle
+I'll also talk in detail about
+how you can utilize the API
+
+00:02:27.356 --> 00:02:30.636 A:middle
+and really optimize
+it for your needs.
+
+00:02:31.356 --> 00:02:33.086 A:middle
+I'll give you an
+in-depth understanding
+
+00:02:33.266 --> 00:02:37.136 A:middle
+of the GPU pipeline, which
+should give you some insight
+
+00:02:37.136 --> 00:02:40.606 A:middle
+into the feedback that
+our GPU tools provide.
+
+00:02:40.981 --> 00:02:42.981 A:middle
+[ Pause ]
+
+00:02:43.356 --> 00:02:45.056 A:middle
+But before I get
+into any of that,
+
+00:02:45.056 --> 00:02:46.356 A:middle
+I just want to touch briefly
+
+00:02:46.356 --> 00:02:48.986 A:middle
+on a very important
+topic: power efficiency.
+
+00:02:51.056 --> 00:02:53.016 A:middle
+So rendering requires power.
+
+00:02:53.386 --> 00:02:57.786 A:middle
+All the GPU's on iOS
+are power efficient.
+
+00:02:57.996 --> 00:03:02.326 A:middle
+However, there's still
+considerable needed
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:57.996 --> 00:03:02.326 A:middle
+However, there's still
+considerable needed
+
+00:03:02.326 --> 00:03:06.086 A:middle
+to put vertices into the
+pipe and spit out pixels.
+
+00:03:07.226 --> 00:03:10.596 A:middle
+The easiest thing that
+your application can do
+
+00:03:11.106 --> 00:03:14.826 A:middle
+to conserve power is to manage
+your frame rate appropriately.
+
+00:03:14.926 --> 00:03:18.206 A:middle
+You can use the CADisplayLink
+API to sync to the display.
+
+00:03:18.596 --> 00:03:21.316 A:middle
+The display refreshes
+60 times a second.
+
+00:03:21.586 --> 00:03:24.206 A:middle
+So that's really the maximum
+frame rate you could possibly
+
+00:03:24.206 --> 00:03:28.236 A:middle
+achieve, but in many
+cases, it really makes sense
+
+00:03:28.236 --> 00:03:32.706 A:middle
+to just limit your frame rate to
+a steady 30 frames per second.
+
+00:03:33.316 --> 00:03:35.896 A:middle
+You can achieve some
+smooth animations,
+
+00:03:36.286 --> 00:03:39.856 A:middle
+and you're conserving way more
+power than rendering at 60.
+
+00:03:41.256 --> 00:03:43.866 A:middle
+Additionally, it's not
+necessary to render at all
+
+00:03:44.006 --> 00:03:46.476 A:middle
+if there's no animation
+or movement in your scene.
+
+00:03:46.806 --> 00:03:49.206 A:middle
+You don't have to submit
+vertices to the pipe
+
+00:03:49.596 --> 00:03:53.236 A:middle
+and have pixels produced
+if you're just going
+
+00:03:53.236 --> 00:03:55.906 A:middle
+to show the same thing
+you showed a sixtieth
+
+00:03:55.906 --> 00:03:57.966 A:middle
+of a second ago or a
+thirtieth of a second ago.
+
+00:03:58.636 --> 00:04:01.686 A:middle
+Just blit what's already in
+your buffers to the front
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:58.636 --> 00:04:01.686 A:middle
+Just blit what's already in
+your buffers to the front
+
+00:04:02.386 --> 00:04:03.746 A:middle
+or don't even blit at all
+
+00:04:03.826 --> 00:04:05.026 A:middle
+because nothing's
+going to change.
+
+00:04:05.836 --> 00:04:10.136 A:middle
+This is particularly important
+with the multi-layered iOS 7 UI
+
+00:04:10.436 --> 00:04:12.886 A:middle
+where there's a lot of
+compositing is going on.
+
+00:04:13.056 --> 00:04:15.936 A:middle
+The UI can skip this compositing
+if nothing has changed
+
+00:04:15.936 --> 00:04:18.706 A:middle
+in the layer, thereby
+saving some power
+
+00:04:18.866 --> 00:04:20.906 A:middle
+in the compositing operation.
+
+00:04:24.366 --> 00:04:24.546 A:middle
+[Pause] Alright.
+
+00:04:24.666 --> 00:04:28.626 A:middle
+I just wanted to
+touch on that briefly.
+
+00:04:29.326 --> 00:04:31.506 A:middle
+Now I would really like to
+get onto the meat of our talk
+
+00:04:31.506 --> 00:04:32.506 A:middle
+and some of the new features.
+
+00:04:32.506 --> 00:04:34.186 A:middle
+The first of which
+is instancing.
+
+00:04:34.716 --> 00:04:38.366 A:middle
+If you're familiar at all with
+the types of games that are
+
+00:04:38.366 --> 00:04:39.926 A:middle
+on the App Store, you'll know
+
+00:04:40.216 --> 00:04:43.146 A:middle
+that the Tower Defense
+genre is quite popular.
+
+00:04:43.326 --> 00:04:46.376 A:middle
+In these games, you've got
+hundreds of enemies trying
+
+00:04:46.376 --> 00:04:47.636 A:middle
+to storm your fortress.
+
+00:04:47.756 --> 00:04:52.466 A:middle
+The interesting thing about this
+rendering is these enemies often
+
+00:04:52.466 --> 00:04:55.186 A:middle
+share the same vertex data
+and use the same models.
+
+00:04:55.186 --> 00:04:56.556 A:middle
+They may be doing
+something different.
+
+00:04:56.906 --> 00:04:58.306 A:middle
+Some may be running.
+
+00:04:58.306 --> 00:04:59.736 A:middle
+Some may be attacking you,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:00.106 --> 00:05:02.216 A:middle
+but it's still the
+same base vertex data.
+
+00:05:03.106 --> 00:05:05.266 A:middle
+Also, maybe you've
+seen an adventure game
+
+00:05:05.266 --> 00:05:06.526 A:middle
+where your hero's running
+
+00:05:06.526 --> 00:05:09.406 A:middle
+through a forest that's
+densely populated.
+
+00:05:09.406 --> 00:05:10.856 A:middle
+It's got trees all about .
+
+00:05:10.856 --> 00:05:14.616 A:middle
+You've got trees in different
+orientations with branches
+
+00:05:14.616 --> 00:05:17.486 A:middle
+in different configurations,
+but, again,
+
+00:05:17.486 --> 00:05:19.176 A:middle
+all using the same vertex data.
+
+00:05:19.886 --> 00:05:21.426 A:middle
+They look distinct, however.
+
+00:05:22.516 --> 00:05:25.876 A:middle
+This type of rendering
+is a prime candidate
+
+00:05:26.086 --> 00:05:27.916 A:middle
+for optimization
+with instancing.
+
+00:05:28.426 --> 00:05:31.626 A:middle
+[Pause] Let me start
+with a simple example.
+
+00:05:31.866 --> 00:05:35.126 A:middle
+I've got a gear model, and I'd
+like to render it 100 times
+
+00:05:35.126 --> 00:05:37.996 A:middle
+on the screen as you see here.
+
+00:05:38.206 --> 00:05:42.426 A:middle
+Without instancing, what I
+would do before iOS 7 is,
+
+00:05:42.426 --> 00:05:44.416 A:middle
+I would create a for
+loop, and in this case,
+
+00:05:44.506 --> 00:05:47.816 A:middle
+I'm going down the width of
+the screen via the X axis,
+
+00:05:48.296 --> 00:05:49.806 A:middle
+and then within that loop,
+
+00:05:49.806 --> 00:05:53.386 A:middle
+I'm going up the
+screen on the Y axis.
+
+00:05:53.956 --> 00:05:57.966 A:middle
+For each iteration, I'm setting
+a uniform with the position
+
+00:05:57.966 --> 00:06:00.526 A:middle
+of my gear, and then
+drawing that gear.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:57.966 --> 00:06:00.526 A:middle
+of my gear, and then
+drawing that gear.
+
+00:06:01.746 --> 00:06:06.076 A:middle
+That's 100 uniform sets and 100
+draw calls, and as you may know,
+
+00:06:06.456 --> 00:06:10.336 A:middle
+draw calls consume
+a lot of CPU cycles.
+
+00:06:10.726 --> 00:06:13.766 A:middle
+So it would be great if we
+could trim that down a bit.
+
+00:06:14.806 --> 00:06:16.796 A:middle
+[Pause] Jere's what
+instancing does.
+
+00:06:17.456 --> 00:06:20.426 A:middle
+It allows you to draw
+the same model many,
+
+00:06:20.426 --> 00:06:22.866 A:middle
+many times in a single
+draw call.
+
+00:06:23.516 --> 00:06:28.606 A:middle
+Each instance of that model
+can have different parameters.
+
+00:06:28.606 --> 00:06:32.286 A:middle
+You can have different
+positions for each model,
+
+00:06:32.356 --> 00:06:36.336 A:middle
+a different matrix for each
+model, or a different set
+
+00:06:36.336 --> 00:06:37.306 A:middle
+of texture coordinates.
+
+00:06:37.636 --> 00:06:39.656 A:middle
+Even though it's the
+same vertex data,
+
+00:06:39.886 --> 00:06:42.846 A:middle
+these models can look
+significantly different.
+
+00:06:44.116 --> 00:06:47.626 A:middle
+So there are two forms of
+instancing that we're shipping
+
+00:06:47.796 --> 00:06:51.466 A:middle
+on iOS 7, the first of which
+is using an extension called
+
+00:06:51.466 --> 00:06:55.266 A:middle
+APPLE-instanced-arrays,
+and this allows you
+
+00:06:55.266 --> 00:06:57.386 A:middle
+to send these instance
+parameters
+
+00:06:57.486 --> 00:06:59.626 A:middle
+down via another vertex array.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:00.976 --> 00:07:04.046 A:middle
+The second form is
+Shader Instance ID,
+
+00:07:04.666 --> 00:07:08.346 A:middle
+and we support this via an
+extension APPLE-draw-instance,
+
+00:07:08.346 --> 00:07:11.616 A:middle
+and the way this works is
+there's a new built-in ID
+
+00:07:11.616 --> 00:07:14.216 A:middle
+variable in the vertex
+shader that gets incremented
+
+00:07:14.276 --> 00:07:18.056 A:middle
+for each instance drawn within
+the draw call that you made.
+
+00:07:18.526 --> 00:07:22.396 A:middle
+[Pause] Let me talk about
+the first method here:
+
+00:07:22.636 --> 00:07:23.536 A:middle
+instanced arrays.
+
+00:07:24.406 --> 00:07:27.696 A:middle
+We're introducing a new call
+glVertexAttribDivisorAPPLE,
+
+00:07:27.696 --> 00:07:30.956 A:middle
+which indicates the
+attribute array that is going
+
+00:07:30.956 --> 00:07:32.616 A:middle
+to supply the instance data.
+
+00:07:33.546 --> 00:07:36.046 A:middle
+It also indicates the
+number of instances
+
+00:07:36.046 --> 00:07:40.006 A:middle
+to draw before you advanced to
+the next element in this array.
+
+00:07:40.436 --> 00:07:46.056 A:middle
+You could, for example
+have ten instances
+
+00:07:46.056 --> 00:07:49.926 A:middle
+that use the same
+parameter and then move
+
+00:07:49.926 --> 00:07:53.916 A:middle
+on to the next parameter,
+but the most common case is
+
+00:07:53.916 --> 00:07:56.206 A:middle
+to send a unique parameter
+
+00:07:56.206 --> 00:07:59.706 A:middle
+down to each instance
+inside your draw call.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:00.166 --> 00:08:02.256 A:middle
+Now we're introducing
+two new draw calls
+
+00:08:02.596 --> 00:08:04.726 A:middle
+to use this form of instancing.
+
+00:08:05.156 --> 00:08:07.466 A:middle
+This includes
+glDrawArraysInstancedAPPLE
+
+00:08:07.466 --> 00:08:09.126 A:middle
+and
+glDrawElementsInstancedAPPLE,
+
+00:08:09.526 --> 00:08:12.716 A:middle
+and these work exactly the
+same as the usual glDrawArrays
+
+00:08:12.716 --> 00:08:15.856 A:middle
+and glDrawElements, but
+there's an extra parameter
+
+00:08:16.116 --> 00:08:17.346 A:middle
+which indicates the number
+
+00:08:17.346 --> 00:08:21.116 A:middle
+of instances you
+would like to draw.
+
+00:08:21.316 --> 00:08:22.936 A:middle
+Alright. Here's our example.
+
+00:08:22.936 --> 00:08:27.136 A:middle
+We've got three vertex
+arrays that have model data,
+
+00:08:27.506 --> 00:08:29.976 A:middle
+the first of which is the
+position, the second normal,
+
+00:08:30.316 --> 00:08:35.275 A:middle
+and the third is vertex colors,
+and we have an extra array
+
+00:08:35.275 --> 00:08:36.816 A:middle
+that I'll get to in a minute.
+
+00:08:37.275 --> 00:08:40.895 A:middle
+We set up our arrays the
+same as we usually do.
+
+00:08:40.946 --> 00:08:43.926 A:middle
+We use glVertexAttribDivisor
+pointer
+
+00:08:43.926 --> 00:08:46.636 A:middle
+to specify the location
+of the array.
+
+00:08:46.636 --> 00:08:50.396 A:middle
+It also specifies
+things like the type,
+
+00:08:50.456 --> 00:08:52.666 A:middle
+whether it's unsigned
+byte, float, etc.,
+
+00:08:52.926 --> 00:08:56.956 A:middle
+whether the elements in it are
+normalized or unnormalized,
+
+00:08:56.956 --> 00:09:01.736 A:middle
+and the number of scalars or
+number of values per element.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:56.956 --> 00:09:01.736 A:middle
+and the number of scalars or
+number of values per element.
+
+00:09:02.526 --> 00:09:07.206 A:middle
+We do this for our per vertex
+position here, and, again,
+
+00:09:07.256 --> 00:09:12.256 A:middle
+for our normal, and then a third
+time for our vertex colors.
+
+00:09:13.166 --> 00:09:17.006 A:middle
+Now we also do the same
+thing for this other array,
+
+00:09:17.006 --> 00:09:21.726 A:middle
+the instance positions, and,
+additionally, we make a call
+
+00:09:22.116 --> 00:09:24.376 A:middle
+to glVertexAttribDivisor.
+
+00:09:25.186 --> 00:09:30.486 A:middle
+The first argument here
+specifies it's attribute number
+
+00:09:30.576 --> 00:09:34.976 A:middle
+three that has our per
+instance attribute data.
+
+00:09:34.976 --> 00:09:37.296 A:middle
+These are the per
+instance parameters
+
+00:09:37.296 --> 00:09:38.496 A:middle
+that we'd like send to OpenGL.
+
+00:09:38.946 --> 00:09:41.066 A:middle
+The second argument
+here indicates
+
+00:09:41.066 --> 00:09:44.816 A:middle
+that each instance
+will get its own value.
+
+00:09:48.236 --> 00:09:50.236 A:middle
+Alright. We've done the set up.
+
+00:09:50.376 --> 00:09:51.296 A:middle
+We're ready to draw.
+
+00:09:52.896 --> 00:09:56.846 A:middle
+This K argument here: this
+indicates the size of our model,
+
+00:09:56.846 --> 00:09:58.566 A:middle
+the number of vertices
+in our model.
+
+00:09:58.956 --> 00:10:00.776 A:middle
+It's the same as
+in glDrawArrarys.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:58.956 --> 00:10:00.776 A:middle
+It's the same as
+in glDrawArrarys.
+
+00:10:02.526 --> 00:10:08.486 A:middle
+The second or last argument
+here, N, is the number
+
+00:10:08.486 --> 00:10:10.116 A:middle
+of instances we would
+like to draw,
+
+00:10:10.116 --> 00:10:13.886 A:middle
+and since each instance
+is getting a unique value,
+
+00:10:14.306 --> 00:10:17.886 A:middle
+we're setting it to the
+same value as the number
+
+00:10:17.886 --> 00:10:19.606 A:middle
+of elements inside
+this instance array.
+
+00:10:19.606 --> 00:10:24.726 A:middle
+Alright. We're ready
+to submit our vertices
+
+00:10:24.806 --> 00:10:28.456 A:middle
+to the vertex shader,
+and here's what happens.
+
+00:10:29.276 --> 00:10:34.826 A:middle
+That instance element gets set
+the vertex shader, and it's used
+
+00:10:34.826 --> 00:10:37.546 A:middle
+for all of the vertices inside
+
+00:10:37.546 --> 00:10:40.346 A:middle
+of the vertex array
+containing our model.
+
+00:10:41.586 --> 00:10:44.556 A:middle
+The second instance is
+drawn, in the same draw call,
+
+00:10:44.556 --> 00:10:49.736 A:middle
+and we set the second
+value here,
+
+00:10:50.406 --> 00:10:52.426 A:middle
+and all of the vertices inside
+
+00:10:52.426 --> 00:10:54.686 A:middle
+of the model are
+submitted to vertex shader.
+
+00:10:55.086 --> 00:10:59.836 A:middle
+They all use that same value
+throughout the entire array.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:00.846 --> 00:11:04.626 A:middle
+And we go through all of
+instances in our instance array,
+
+00:11:05.096 --> 00:11:08.286 A:middle
+and all of them get a unique
+instance value, and we submit
+
+00:11:08.286 --> 00:11:11.036 A:middle
+for every element inside
+that instance array all
+
+00:11:11.036 --> 00:11:12.416 A:middle
+of the vertices in our model.
+
+00:11:12.896 --> 00:11:18.466 A:middle
+Here's the API set
+up...just going over again.
+
+00:11:19.396 --> 00:11:24.056 A:middle
+As we usually do, we
+call glVertxAttribPointer
+
+00:11:24.406 --> 00:11:27.506 A:middle
+to indicate how we've
+set up our model data.
+
+00:11:28.196 --> 00:11:31.996 A:middle
+We also call
+glVertexAttribPointer
+
+00:11:31.996 --> 00:11:37.246 A:middle
+for this instance array
+and glVertexAttribDivisor.
+
+00:11:37.956 --> 00:11:43.546 A:middle
+We're indicating that attribute
+three is our instance array,
+
+00:11:43.686 --> 00:11:46.926 A:middle
+and we're iterating one
+element for each instance.
+
+00:11:47.936 --> 00:11:49.436 A:middle
+Finally, we're ready to draw.
+
+00:11:49.676 --> 00:11:54.856 A:middle
+We call glDrawArraysInstanced
+with the value 100
+
+00:11:54.856 --> 00:11:57.266 A:middle
+since e're going to
+render 100 gears.
+
+00:11:58.606 --> 00:11:59.576 A:middle
+Here's the vertex shader.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:01.336 --> 00:12:05.636 A:middle
+As usual, we've got attributes
+for our per vertex model data.
+
+00:12:06.556 --> 00:12:08.196 A:middle
+Here we've got position
+and normal.
+
+00:12:09.436 --> 00:12:12.906 A:middle
+And another attribute which will
+contain our per instance data.
+
+00:12:13.886 --> 00:12:15.056 A:middle
+Per instance position.
+
+00:12:15.056 --> 00:12:15.966 A:middle
+Not per vertex.
+
+00:12:16.096 --> 00:12:16.926 A:middle
+Per instance.
+
+00:12:18.256 --> 00:12:21.396 A:middle
+And we do a simple add
+of that instance position
+
+00:12:21.846 --> 00:12:24.006 A:middle
+to the vertex position.
+
+00:12:24.036 --> 00:12:27.486 A:middle
+We're displacing all the
+vertices by this constant value,
+
+00:12:27.486 --> 00:12:30.136 A:middle
+or at least it's constant
+throughout that instance.
+
+00:12:30.966 --> 00:12:37.876 A:middle
+And, finally, we will transform
+our model space position
+
+00:12:38.136 --> 00:12:42.046 A:middle
+into clip space by transforming
+
+00:12:42.216 --> 00:12:45.576 A:middle
+with our model view
+projection matrix and output
+
+00:12:45.666 --> 00:12:47.866 A:middle
+to the built-in gl-Position
+variable.
+
+00:12:48.176 --> 00:12:51.816 A:middle
+We also will do any other
+per vertex processing
+
+00:12:51.816 --> 00:12:54.136 A:middle
+such as maybe computing
+color via lighting
+
+00:12:54.136 --> 00:12:57.146 A:middle
+or generating texture
+coordinates, etc. Alright.
+
+00:12:58.336 --> 00:13:01.596 A:middle
+Here's the second method.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:58.336 --> 00:13:01.596 A:middle
+Here's the second method.
+
+00:13:02.796 --> 00:13:05.716 A:middle
+This is using the
+instance ID parameter.
+
+00:13:06.446 --> 00:13:09.856 A:middle
+We've built in this
+gl-InstanceIDAPPLE variable
+
+00:13:09.856 --> 00:13:10.836 A:middle
+inside the vertex shader,
+
+00:13:11.266 --> 00:13:14.076 A:middle
+and it gets incremented
+once for each instance.
+
+00:13:14.846 --> 00:13:17.996 A:middle
+You can use this ID
+in a number of ways.
+
+00:13:18.546 --> 00:13:22.086 A:middle
+You can calculate a unique
+info for each instance.
+
+00:13:22.086 --> 00:13:25.596 A:middle
+You can use the standard
+math functions that available
+
+00:13:25.596 --> 00:13:27.976 A:middle
+in the vertex shader to
+figure out unique details
+
+00:13:28.336 --> 00:13:31.426 A:middle
+of that instance, or you
+can use it as an index
+
+00:13:31.426 --> 00:13:34.826 A:middle
+into a uniform array or
+a texture, and I'll talk
+
+00:13:34.826 --> 00:13:36.986 A:middle
+about texturing in a vertex
+shader in just a minute.
+
+00:13:38.376 --> 00:13:41.776 A:middle
+This method also uses the
+same glDrawArraysInstanced
+
+00:13:41.776 --> 00:13:45.316 A:middle
+or glDrawElementsIntanced
+as the previous method.
+
+00:13:45.726 --> 00:13:50.636 A:middle
+Here's how this works: We call
+glDrawArraysInstancedAPPLE,
+
+00:13:51.956 --> 00:13:55.616 A:middle
+and the instance ID is
+set inside the shader,
+
+00:13:55.856 --> 00:13:58.466 A:middle
+and it's the same value
+for all the vertices.
+
+00:13:59.666 --> 00:14:01.996 A:middle
+It's incremented for
+the next instance,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:59.666 --> 00:14:01.996 A:middle
+It's incremented for
+the next instance,
+
+00:14:02.266 --> 00:14:08.476 A:middle
+and we submit all the vertices
+using the value of one.
+
+00:14:08.646 --> 00:14:11.726 A:middle
+Finally, we iterate through
+the entire number of instances
+
+00:14:11.946 --> 00:14:14.206 A:middle
+until we get to the
+Nth instance,
+
+00:14:14.766 --> 00:14:18.626 A:middle
+and we submit all the vertices
+for each instance value.
+
+00:14:19.366 --> 00:14:21.826 A:middle
+And we can reference
+that gl-InstanceID
+
+00:14:21.826 --> 00:14:22.836 A:middle
+within our vertex shader.
+
+00:14:23.666 --> 00:14:27.356 A:middle
+And here's what that looks like.
+
+00:14:27.856 --> 00:14:31.756 A:middle
+We use this gl-InstanceIDAPPLE
+variable,
+
+00:14:31.756 --> 00:14:34.946 A:middle
+and it's actually
+an integer value,
+
+00:14:34.946 --> 00:14:36.476 A:middle
+but we don't have integer math
+
+00:14:36.526 --> 00:14:39.006 A:middle
+in the OpenGL ES 100
+shading language.
+
+00:14:39.006 --> 00:14:41.656 A:middle
+So the first thing we need
+to do is cast it to a float
+
+00:14:41.656 --> 00:14:46.156 A:middle
+so that we can use our floating
+point math operations on it.
+
+00:14:46.986 --> 00:14:51.066 A:middle
+And now we perform
+a modulo of ten,
+
+00:14:51.386 --> 00:14:54.916 A:middle
+which will give us the x
+position, and we multiply it
+
+00:14:54.916 --> 00:14:59.046 A:middle
+by a gear size, then
+we divide by ten
+
+00:14:59.246 --> 00:15:00.926 A:middle
+to give us the y position.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:59.246 --> 00:15:00.926 A:middle
+to give us the y position.
+
+00:15:01.376 --> 00:15:05.426 A:middle
+Now we have an instance
+position, which we can add
+
+00:15:05.426 --> 00:15:09.476 A:middle
+to our vertex and output
+to this temp position.
+
+00:15:10.316 --> 00:15:12.076 A:middle
+And like the other method,
+
+00:15:12.256 --> 00:15:15.856 A:middle
+we will do our model view
+projection matrix multiply,
+
+00:15:15.856 --> 00:15:19.116 A:middle
+which will put our
+position into clip space
+
+00:15:19.116 --> 00:15:21.326 A:middle
+and give us a position
+that we can output.
+
+00:15:21.326 --> 00:15:21.796 A:middle
+[ Pause ]
+
+00:15:21.796 --> 00:15:25.776 A:middle
+So that was instancing.
+
+00:15:27.696 --> 00:15:30.996 A:middle
+The next feature is
+vertex texture sampling.
+
+00:15:31.046 --> 00:15:33.346 A:middle
+Why would you want a
+texture in the vertex shader?
+
+00:15:33.346 --> 00:15:34.726 A:middle
+It's not like you can see an
+image [in the vertex stage],
+
+00:15:34.726 --> 00:15:35.006 A:middle
+right?
+
+00:15:35.956 --> 00:15:38.326 A:middle
+Well, there are a
+number of uses for this.
+
+00:15:39.416 --> 00:15:43.256 A:middle
+The first and most obvious
+is displacement mapping.
+
+00:15:43.256 --> 00:15:46.306 A:middle
+You can put an image
+in memory and fetch it
+
+00:15:46.306 --> 00:15:48.496 A:middle
+in the vertex shader,
+and if you've got a mesh,
+
+00:15:49.036 --> 00:15:53.846 A:middle
+you can take the values from
+that texture and displace
+
+00:15:53.846 --> 00:15:57.056 A:middle
+that mesh with the
+values in the texture.
+
+00:15:58.176 --> 00:16:00.776 A:middle
+You can also use it as an
+alternative to uniforms.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:58.176 --> 00:16:00.776 A:middle
+You can also use it as an
+alternative to uniforms.
+
+00:16:02.126 --> 00:16:05.916 A:middle
+Uniforms have a much smaller
+data store whereas textures has
+
+00:16:05.916 --> 00:16:08.496 A:middle
+a very large data store
+that you can now access
+
+00:16:08.696 --> 00:16:09.466 A:middle
+in the vertex shader.
+
+00:16:10.676 --> 00:16:12.146 A:middle
+Here's a height mapping example.
+
+00:16:12.606 --> 00:16:15.636 A:middle
+On the left, we've got our
+grey scale height map image,
+
+00:16:15.746 --> 00:16:18.806 A:middle
+and on the right, we've
+got the results of that.
+
+00:16:19.816 --> 00:16:21.686 A:middle
+And here's how we
+implemented it.
+
+00:16:22.896 --> 00:16:26.586 A:middle
+First, we've got an x and
+z position that we've sent
+
+00:16:26.586 --> 00:16:28.656 A:middle
+down via a vertex array.
+
+00:16:29.816 --> 00:16:30.866 A:middle
+Just X and Z.
+
+00:16:30.926 --> 00:16:35.606 A:middle
+No Y here, and we have
+a height map sampler.
+
+00:16:35.606 --> 00:16:38.906 A:middle
+Now this looks exactly like it
+would in the fragment shader.
+
+00:16:38.966 --> 00:16:40.286 A:middle
+This, however, is
+a vertex shader,
+
+00:16:41.576 --> 00:16:47.826 A:middle
+and this height map is a
+reference to a texture.
+
+00:16:47.826 --> 00:16:51.676 A:middle
+Now we sample from that texture
+and get our Y value from it.
+
+00:16:52.586 --> 00:16:54.976 A:middle
+Now, it splats the Y value
+
+00:16:54.976 --> 00:16:58.136 A:middle
+across all four components
+of temp position.
+
+00:16:59.026 --> 00:17:03.046 A:middle
+And so we overwrite
+the X and Z values
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:59.026 --> 00:17:03.046 A:middle
+And so we overwrite
+the X and Z values
+
+00:17:03.046 --> 00:17:04.826 A:middle
+with the X and Z positions.
+
+00:17:04.826 --> 00:17:07.886 A:middle
+Now we have X, Y, and Z
+inside of our temp position.
+
+00:17:08.126 --> 00:17:12.246 A:middle
+The Y we just happened to
+have gotten from the texture.
+
+00:17:13.476 --> 00:17:17.425 A:middle
+And as with our other shaders,
+we can transform to clip space
+
+00:17:17.476 --> 00:17:19.096 A:middle
+and output to gl-Position.
+
+00:17:19.096 --> 00:17:19.526 A:middle
+[ Pause ]
+
+00:17:19.526 --> 00:17:23.415 A:middle
+Alright. That's a
+pretty simple example
+
+00:17:23.415 --> 00:17:26.156 A:middle
+of how you might use
+vertex texturing.
+
+00:17:26.806 --> 00:17:30.236 A:middle
+As I mentioned, the more
+interesting way you can use this
+
+00:17:30.236 --> 00:17:33.526 A:middle
+is to store just about
+any kind of generic data
+
+00:17:33.526 --> 00:17:35.756 A:middle
+into a texture for
+shader access.
+
+00:17:36.246 --> 00:17:39.466 A:middle
+It's really just a very large
+store of random access memory.
+
+00:17:40.116 --> 00:17:41.966 A:middle
+Read-only random
+access memory, that is.
+
+00:17:42.906 --> 00:17:45.756 A:middle
+Data normally passed in via
+a glUniform can be passed
+
+00:17:45.756 --> 00:17:46.546 A:middle
+in via a texture.
+
+00:17:47.516 --> 00:17:49.776 A:middle
+There are a number
+of advantages here.
+
+00:17:50.376 --> 00:17:52.626 A:middle
+It's a really, a
+much larger store.
+
+00:17:53.116 --> 00:17:56.756 A:middle
+We support 4K by 4K textures
+on most iOS 7 hardware.
+
+00:17:57.186 --> 00:18:01.416 A:middle
+Whereas uniform arrays are
+limited to 128 uniform,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:57.186 --> 00:18:01.416 A:middle
+Whereas uniform arrays are
+limited to 128 uniform,
+
+00:18:02.226 --> 00:18:06.506 A:middle
+that's four values per uniform,
+
+00:18:06.646 --> 00:18:09.306 A:middle
+there's way more storage
+inside of a texture.
+
+00:18:10.456 --> 00:18:14.146 A:middle
+This also enables potentially
+less API calls to set the data.
+
+00:18:14.666 --> 00:18:17.896 A:middle
+If you load your
+texture at app startup,
+
+00:18:17.896 --> 00:18:20.946 A:middle
+and you have all these values
+inside this large data store,
+
+00:18:21.236 --> 00:18:25.316 A:middle
+you can just bind the texture,
+and it's set up for you to draw.
+
+00:18:25.786 --> 00:18:28.166 A:middle
+You don't have to load
+a bunch of values to set
+
+00:18:28.166 --> 00:18:29.926 A:middle
+up for your draw call.
+
+00:18:30.186 --> 00:18:32.716 A:middle
+There's a bit more
+variety and types
+
+00:18:32.716 --> 00:18:35.946 A:middle
+that you can use whereas
+uniforms only allow you
+
+00:18:35.946 --> 00:18:37.966 A:middle
+to use 32-bit floats.
+
+00:18:38.396 --> 00:18:42.116 A:middle
+You can use unsigned byte,
+half float, and float.
+
+00:18:42.116 --> 00:18:45.716 A:middle
+Any of the texture
+types that you can use,
+
+00:18:45.916 --> 00:18:48.756 A:middle
+you can use for vertex
+texture sampling.
+
+00:18:50.196 --> 00:18:54.116 A:middle
+You can choose the appropriate
+type for the data that you'd
+
+00:18:54.116 --> 00:18:56.386 A:middle
+like to consume in your shader.
+
+00:18:56.386 --> 00:18:59.246 A:middle
+You can use filtering
+with the texture.
+
+00:18:59.246 --> 00:19:00.486 A:middle
+Anything you can do
+with the texture,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:59.246 --> 00:19:00.486 A:middle
+Anything you can do
+with the texture,
+
+00:19:00.486 --> 00:19:03.766 A:middle
+you can do with a vertex
+texture, and filtering is kind
+
+00:19:03.766 --> 00:19:06.026 A:middle
+of nice because you can average
+sequential values that are
+
+00:19:06.326 --> 00:19:09.926 A:middle
+in your texture,
+and with wrapping,
+
+00:19:09.956 --> 00:19:12.056 A:middle
+you can actually
+average the last value
+
+00:19:12.356 --> 00:19:14.426 A:middle
+in your texture with
+the first value.
+
+00:19:14.886 --> 00:19:17.776 A:middle
+So you can do a wraparound
+of averaging.
+
+00:19:18.436 --> 00:19:20.396 A:middle
+And because you can
+render to a texture,
+
+00:19:20.936 --> 00:19:23.026 A:middle
+you can have the
+GPU produce data.
+
+00:19:23.586 --> 00:19:27.066 A:middle
+Instead of just loading it
+in from CPU generated values,
+
+00:19:27.066 --> 00:19:29.426 A:middle
+you can render to the
+texture and then consume
+
+00:19:29.426 --> 00:19:30.796 A:middle
+that data in the vertex shader.
+
+00:19:31.536 --> 00:19:33.326 A:middle
+[Pause] Now I'd like
+to show you a demo
+
+00:19:33.836 --> 00:19:36.186 A:middle
+with some of these features.
+
+00:19:36.906 --> 00:19:42.516 A:middle
+Here we have 15,000 asteroids
+rotating about this planet,
+
+00:19:43.616 --> 00:19:46.896 A:middle
+and this is using what
+we call immediate mode.
+
+00:19:47.156 --> 00:19:51.686 A:middle
+There is a draw call
+for each asteroid here.
+
+00:19:51.686 --> 00:19:54.726 A:middle
+So that's over 15,000
+draw calls.
+
+00:19:55.606 --> 00:19:58.436 A:middle
+Now we're running at
+17 frames per second,
+
+00:19:58.436 --> 00:20:00.086 A:middle
+maybe 18 in some case.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:58.436 --> 00:20:00.086 A:middle
+maybe 18 in some case.
+
+00:20:00.086 --> 00:20:03.406 A:middle
+That's alright, I guess.
+
+00:20:04.556 --> 00:20:07.466 A:middle
+The real problem here is
+
+00:20:07.466 --> 00:20:10.006 A:middle
+that we're consuming
+a lot of CPU cycles.
+
+00:20:10.006 --> 00:20:12.866 A:middle
+We're really leaving
+nothing for the app so that
+
+00:20:12.866 --> 00:20:15.666 A:middle
+if you've got some logic
+there, the frame rate's going
+
+00:20:15.846 --> 00:20:17.756 A:middle
+to slow down even more.
+
+00:20:18.746 --> 00:20:21.646 A:middle
+So what we like to do is
+offload this to the GPU.
+
+00:20:22.966 --> 00:20:27.446 A:middle
+Here we have the
+first improvement,
+
+00:20:28.076 --> 00:20:31.186 A:middle
+which is using instance
+ID, the built-in variable
+
+00:20:31.266 --> 00:20:32.416 A:middle
+within our vertex shader.
+
+00:20:32.866 --> 00:20:35.896 A:middle
+Now what's cool about this
+is we're actually rotating
+
+00:20:35.896 --> 00:20:37.366 A:middle
+or spinning each asteroid.
+
+00:20:37.776 --> 00:20:40.106 A:middle
+They all have unique
+values, and,
+
+00:20:40.616 --> 00:20:41.946 A:middle
+obviously, unique positions.
+
+00:20:42.466 --> 00:20:47.466 A:middle
+And here's another mode
+that we've implemented.
+
+00:20:47.506 --> 00:20:50.976 A:middle
+This uses the
+glVertexAttribDivisor method,
+
+00:20:50.976 --> 00:20:54.206 A:middle
+and we're getting even a
+slightly better frame rate here.
+
+00:20:55.676 --> 00:21:00.006 A:middle
+This is due to our pre-computing
+all of the rotations
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:55.676 --> 00:21:00.006 A:middle
+This is due to our pre-computing
+all of the rotations
+
+00:21:00.006 --> 00:21:02.686 A:middle
+and position of values
+outside the shader,
+
+00:21:02.686 --> 00:21:03.916 A:middle
+and we're just passing them in.
+
+00:21:03.916 --> 00:21:06.496 A:middle
+We're not actually doing
+much computation inside
+
+00:21:06.496 --> 00:21:07.426 A:middle
+of our vertex shader.
+
+00:21:07.926 --> 00:21:10.016 A:middle
+What's cool to note
+about this is
+
+00:21:10.016 --> 00:21:12.736 A:middle
+that a few years ago
+we presented this
+
+00:21:12.766 --> 00:21:17.536 A:middle
+on a Mac Pro with, I
+don't know how many cores
+
+00:21:17.536 --> 00:21:19.266 A:middle
+and a beefy desktop GPU.
+
+00:21:19.816 --> 00:21:23.536 A:middle
+This is really pretty nice
+that we are now showing this
+
+00:21:23.536 --> 00:21:25.626 A:middle
+to you on an iOS device.
+
+00:21:25.626 --> 00:21:25.786 A:middle
+[ Pause ]
+
+00:21:25.786 --> 00:21:25.946 A:middle
+[ Applause ]
+
+00:21:25.946 --> 00:21:26.106 A:middle
+[ Pause ]
+
+00:21:26.106 --> 00:21:35.466 A:middle
+Let me talk about some
+implementation details here.
+
+00:21:36.696 --> 00:21:39.836 A:middle
+With that second mode
+using the instance ID,
+
+00:21:40.176 --> 00:21:43.716 A:middle
+we calculate the transformation
+matrix in the vertex shader.
+
+00:21:44.046 --> 00:21:48.526 A:middle
+First, we figure out a spin
+value by doing a modulo
+
+00:21:48.526 --> 00:21:51.616 A:middle
+of our instance ID, and this
+gives us some spin value
+
+00:21:51.616 --> 00:21:54.996 A:middle
+in radians and we can then use
+the cosine and sine functions
+
+00:21:55.246 --> 00:21:56.976 A:middle
+to build a rotation matrix.
+
+00:21:57.426 --> 00:22:00.586 A:middle
+We then apply a translation
+matrix
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:57.426 --> 00:22:00.586 A:middle
+We then apply a translation
+matrix
+
+00:22:00.956 --> 00:22:04.276 A:middle
+that gives us the
+position of the asteroid.
+
+00:22:05.046 --> 00:22:09.186 A:middle
+We also use the instance
+ID variable to figure
+
+00:22:09.186 --> 00:22:12.986 A:middle
+out the positions, and
+then we create this matrix.
+
+00:22:13.556 --> 00:22:16.576 A:middle
+Now the matrix calculations
+are done per vertex.
+
+00:22:16.966 --> 00:22:20.846 A:middle
+So even though this
+matrix will be the same
+
+00:22:20.846 --> 00:22:23.396 A:middle
+for the entire asteroid,
+which is about 30
+
+00:22:23.396 --> 00:22:28.086 A:middle
+to 60 vertices (I think
+it's maybe a little bit
+
+00:22:28.086 --> 00:22:30.236 A:middle
+on the lower end)
+but that's 30 times
+
+00:22:30.236 --> 00:22:33.486 A:middle
+that we're calculating this
+transformation matrix, at least.
+
+00:22:33.716 --> 00:22:39.216 A:middle
+What we'd really like to do is
+just create this matrix once per
+
+00:22:39.546 --> 00:22:41.576 A:middle
+instance, not per vertex.
+
+00:22:42.186 --> 00:22:46.666 A:middle
+This is what the instance
+arrays method does.
+
+00:22:47.206 --> 00:22:49.976 A:middle
+We actually calculate
+this matrix array up front
+
+00:22:49.976 --> 00:22:52.396 A:middle
+at app startup, or
+all these matrices
+
+00:22:52.396 --> 00:22:53.346 A:middle
+up front at app startup.
+
+00:22:53.346 --> 00:22:56.026 A:middle
+We calculate positions
+and rotations.
+
+00:22:56.356 --> 00:22:59.706 A:middle
+We stuff that into a
+vertex array, and then set
+
+00:22:59.706 --> 00:23:03.306 A:middle
+up the vertex array with the
+glVertexAttribDivisor call,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:59.706 --> 00:23:03.306 A:middle
+up the vertex array with the
+glVertexAttribDivisor call,
+
+00:23:03.666 --> 00:23:06.226 A:middle
+and pass the parameters
+down for each asteroid,
+
+00:23:07.446 --> 00:23:08.956 A:middle
+not for each vertex.
+
+00:23:10.676 --> 00:23:13.616 A:middle
+There are a couple of
+advantages and disadvantages
+
+00:23:13.836 --> 00:23:16.866 A:middle
+to each of these methods.
+
+00:23:16.866 --> 00:23:19.916 A:middle
+Using the instance ID method,
+we're not using any memory
+
+00:23:20.076 --> 00:23:21.476 A:middle
+or really very little memory
+
+00:23:21.546 --> 00:23:23.266 A:middle
+because we're doing
+all the calculation
+
+00:23:23.586 --> 00:23:26.146 A:middle
+as needed on the GPU.
+
+00:23:26.586 --> 00:23:29.086 A:middle
+Another advantage is
+that you're using the GPU
+
+00:23:29.086 --> 00:23:30.526 A:middle
+as another computation device.
+
+00:23:30.596 --> 00:23:34.626 A:middle
+If you're not GPU bound, and
+you need the CPU for a lot
+
+00:23:34.626 --> 00:23:38.016 A:middle
+of cycles, well, then
+this may be the way to go.
+
+00:23:38.956 --> 00:23:42.046 A:middle
+But in general you may,
+if you have a number
+
+00:23:42.046 --> 00:23:46.616 A:middle
+of instances using the GPU, you
+could potentially overload it
+
+00:23:46.666 --> 00:23:50.806 A:middle
+with computation, which would
+really slow it down if you need
+
+00:23:50.806 --> 00:23:51.946 A:middle
+to do other computations.
+
+00:23:51.946 --> 00:23:55.146 A:middle
+So what we've got here
+is a different method
+
+00:23:55.146 --> 00:23:57.096 A:middle
+where we use instance array.
+
+00:23:57.666 --> 00:24:01.166 A:middle
+Instance arrays is generally
+faster than computing on the GPU
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:57.666 --> 00:24:01.166 A:middle
+Instance arrays is generally
+faster than computing on the GPU
+
+00:24:01.446 --> 00:24:03.776 A:middle
+since you can save
+cycles on the GPU.
+
+00:24:04.246 --> 00:24:09.836 A:middle
+There's a lot more flexibility
+and types over uniforms.
+
+00:24:11.086 --> 00:24:16.346 A:middle
+You can use any type that
+a vertex array can use,
+
+00:24:16.346 --> 00:24:20.396 A:middle
+including bytes, unsigned
+bytes, floats, half floats,
+
+00:24:20.396 --> 00:24:26.416 A:middle
+etc. Now there's a third method
+that I didn't demonstrate,
+
+00:24:26.416 --> 00:24:29.706 A:middle
+but this would be to
+use the instance ID
+
+00:24:30.156 --> 00:24:32.006 A:middle
+as an index into a texture.
+
+00:24:32.126 --> 00:24:33.566 A:middle
+So instead of passing parameters
+
+00:24:33.566 --> 00:24:38.036 A:middle
+down via a vertex attribute
+array, you stuff them
+
+00:24:38.036 --> 00:24:41.776 A:middle
+into a texture and then fetch
+using the instance ID variable
+
+00:24:42.736 --> 00:24:46.456 A:middle
+to get the location, the
+position, and the rotation.
+
+00:24:47.216 --> 00:24:48.586 A:middle
+Now, as I mentioned before,
+
+00:24:49.126 --> 00:24:52.056 A:middle
+the textures are just this large
+storage of random access memory.
+
+00:24:53.106 --> 00:24:54.556 A:middle
+It's often logically simpler
+[to store data in a texture],
+
+00:24:54.666 --> 00:24:58.766 A:middle
+since you've got a 2D array,
+to put tables or any other sort
+
+00:24:58.766 --> 00:25:00.286 A:middle
+of data inside of a texture.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:58.766 --> 00:25:00.286 A:middle
+of data inside of a texture.
+
+00:25:00.286 --> 00:25:04.096 A:middle
+So this is really cool
+for bone matrices,
+
+00:25:04.096 --> 00:25:09.246 A:middle
+you can use the first row for
+the arm matrix, the second row
+
+00:25:09.246 --> 00:25:11.166 A:middle
+for the other arm
+matrix, the third row
+
+00:25:11.166 --> 00:25:13.176 A:middle
+for the leg matrix,
+head, and so on.
+
+00:25:13.626 --> 00:25:17.126 A:middle
+So it's actually a lot
+easier to use a texture
+
+00:25:17.576 --> 00:25:19.356 A:middle
+for your bone matrix parameters.
+
+00:25:19.621 --> 00:25:21.621 A:middle
+[ Pause ]
+
+00:25:21.886 --> 00:25:24.936 A:middle
+So here's a summary
+of instancing
+
+00:25:24.936 --> 00:25:26.456 A:middle
+and vertex texture sampling.
+
+00:25:26.996 --> 00:25:29.536 A:middle
+Instancing allows you
+to draw many models
+
+00:25:29.536 --> 00:25:32.086 A:middle
+of the single draw call, which
+is particularly important
+
+00:25:32.086 --> 00:25:35.476 A:middle
+because draw calls consume
+a number of CPU cycles,
+
+00:25:36.036 --> 00:25:38.636 A:middle
+and even though it's the same
+model that you're drawing,
+
+00:25:39.156 --> 00:25:41.376 A:middle
+they can look distinct
+since you are passing
+
+00:25:41.376 --> 00:25:43.626 A:middle
+down different parameters
+for each instance.
+
+00:25:44.316 --> 00:25:47.006 A:middle
+Vertex texture sampling:
+just think of it
+
+00:25:47.006 --> 00:25:51.366 A:middle
+as a large data store for
+random access read-only memory
+
+00:25:51.366 --> 00:25:52.036 A:middle
+in the vertex shader.
+
+00:25:52.606 --> 00:25:54.276 A:middle
+You can use it with
+the instance ID
+
+00:25:54.276 --> 00:25:56.706 A:middle
+to fetch per instance
+parameters.
+
+00:25:58.636 --> 00:26:02.616 A:middle
+These extensions and these
+features are supported
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:58.636 --> 00:26:02.616 A:middle
+These extensions and these
+features are supported
+
+00:26:02.616 --> 00:26:04.996 A:middle
+on all iOS 7 devices.
+
+00:26:05.286 --> 00:26:07.286 A:middle
+[ Pause ]
+
+00:26:07.576 --> 00:26:13.836 A:middle
+OK. Let's move on to the third
+feature in iOS 7 on OpenGLES.
+
+00:26:17.196 --> 00:26:20.276 A:middle
+sRGB is an alternate
+caller space,
+
+00:26:20.996 --> 00:26:23.996 A:middle
+which is more perceptually
+correct.
+
+00:26:23.996 --> 00:26:26.046 A:middle
+It matches the gamma
+curve of displays.
+
+00:26:26.476 --> 00:26:32.266 A:middle
+If you're looking at blacks and
+greys and whites, what you'd see
+
+00:26:32.266 --> 00:26:36.766 A:middle
+with the usual color space
+is that you'd move from black
+
+00:26:37.136 --> 00:26:41.706 A:middle
+to grey much more quickly
+than from grey to white,
+
+00:26:42.166 --> 00:26:43.066 A:middle
+which effectively means
+
+00:26:43.066 --> 00:26:46.476 A:middle
+that your brighter colors
+are weighted more heavily
+
+00:26:46.546 --> 00:26:49.656 A:middle
+when you're doing averaging
+or mixing of colors.
+
+00:26:50.076 --> 00:26:52.876 A:middle
+So it's not a linear
+distribution.
+
+00:26:53.326 --> 00:26:55.196 A:middle
+There's weight on
+some of the values.
+
+00:26:55.896 --> 00:26:58.226 A:middle
+aRGB compensates for this
+
+00:26:58.226 --> 00:27:00.346 A:middle
+by basically applying
+an inverse curve
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:58.226 --> 00:27:00.346 A:middle
+by basically applying
+an inverse curve
+
+00:27:00.346 --> 00:27:02.986 A:middle
+so that the darker colors
+get a little bit more weight
+
+00:27:02.986 --> 00:27:07.036 A:middle
+than usual, and this allows
+you to have a linear mixing
+
+00:27:07.036 --> 00:27:10.186 A:middle
+when your image is
+presented on the display.
+
+00:27:12.576 --> 00:27:14.526 A:middle
+Here's some API details.
+
+00:27:15.286 --> 00:27:19.196 A:middle
+There are two external formats
+that you would put your data in.
+
+00:27:20.516 --> 00:27:23.156 A:middle
+This is sRGB8 and sRGB8-Alpha.
+
+00:27:23.676 --> 00:27:27.206 A:middle
+There is an internal
+format, SRGB 8 alpha 8,
+
+00:27:27.946 --> 00:27:31.986 A:middle
+and four compressed internal
+formats that you can read
+
+00:27:31.986 --> 00:27:34.916 A:middle
+from that support
+this sRGB color space.
+
+00:27:36.206 --> 00:27:40.396 A:middle
+Now the non-compressed
+format here is renderable.
+
+00:27:40.396 --> 00:27:44.376 A:middle
+This allows you to do linear
+blending or color calculations
+
+00:27:44.376 --> 00:27:48.046 A:middle
+in the shaders and have them
+come up in a linear fashion.
+
+00:27:48.986 --> 00:27:54.336 A:middle
+You need to check for the
+GL-EXT-sRGB extension string
+
+00:27:54.836 --> 00:27:55.866 A:middle
+because this is supported
+
+00:27:55.866 --> 00:28:00.636 A:middle
+on all iOS 7 devices
+except for the iPhone 4.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:55.866 --> 00:28:00.636 A:middle
+on all iOS 7 devices
+except for the iPhone 4.
+
+00:28:01.086 --> 00:28:04.026 A:middle
+This is a great new feature.
+
+00:28:04.226 --> 00:28:06.516 A:middle
+It's perceptually correct.
+
+00:28:07.266 --> 00:28:09.466 A:middle
+However, you don't want
+to just turn this on.
+
+00:28:09.876 --> 00:28:12.746 A:middle
+You'll start getting some
+things that may not look right.
+
+00:28:13.886 --> 00:28:15.926 A:middle
+You need to author
+your textures for it.
+
+00:28:15.926 --> 00:28:19.866 A:middle
+You need your artists to keep
+the SRGB color space in mind
+
+00:28:20.316 --> 00:28:22.306 A:middle
+so that when they're
+actually presented,
+
+00:28:22.376 --> 00:28:24.456 A:middle
+they look as you
+intended them to.
+
+00:28:24.456 --> 00:28:29.626 A:middle
+And you should only use these
+SRGB textures for color data.
+
+00:28:30.176 --> 00:28:32.556 A:middle
+Lot of people encode normal maps
+
+00:28:32.956 --> 00:28:36.076 A:middle
+or just use an alpha
+map perhaps.
+
+00:28:36.706 --> 00:28:38.126 A:middle
+You shouldn't even
+use this for alpha.
+
+00:28:38.126 --> 00:28:41.066 A:middle
+Alpha is often thought
+of as going with RGB,
+
+00:28:41.266 --> 00:28:44.846 A:middle
+but alpha should use
+its own linear space.
+
+00:28:45.311 --> 00:28:47.311 A:middle
+[ Pause ]
+
+00:28:47.776 --> 00:28:53.266 A:middle
+Alright. So a lot of great new
+features in the OpenGL ES API,
+
+00:28:54.836 --> 00:28:59.596 A:middle
+but you really need to have a
+rock solid foundation before you
+
+00:28:59.596 --> 00:29:01.896 A:middle
+start adding to your
+rendering engines.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:59.596 --> 00:29:01.896 A:middle
+start adding to your
+rendering engines.
+
+00:29:02.666 --> 00:29:08.046 A:middle
+And, fortunately, Apple provides
+a slew of excellent GPU tools
+
+00:29:08.046 --> 00:29:10.136 A:middle
+to help you build
+this foundation.
+
+00:29:11.916 --> 00:29:13.206 A:middle
+The first tool I'd like to talk
+
+00:29:13.206 --> 00:29:15.206 A:middle
+about the OpenGLES
+frame debugger.
+
+00:29:15.596 --> 00:29:20.826 A:middle
+It allows you to capture a
+frame of rendering and debug it
+
+00:29:20.826 --> 00:29:22.786 A:middle
+and play with it and
+experiment with it.
+
+00:29:23.566 --> 00:29:26.876 A:middle
+Now, there are a ton of
+widgets here that I'll
+
+00:29:27.086 --> 00:29:30.346 A:middle
+and I'll just go
+over a few of them.
+
+00:29:30.556 --> 00:29:32.806 A:middle
+The first thing I'd like to
+point out is the scrubber bar.
+
+00:29:33.046 --> 00:29:35.176 A:middle
+So you've captured a
+frame of rendering,
+
+00:29:35.376 --> 00:29:37.776 A:middle
+and the scrubber bar
+allows you to position
+
+00:29:38.106 --> 00:29:41.696 A:middle
+on a particular call
+through your frame.
+
+00:29:41.696 --> 00:29:47.406 A:middle
+You can stop at a draw call or
+a bind or a uniform set, etc.,
+
+00:29:48.536 --> 00:29:51.806 A:middle
+and you can see what
+has just been rendered.
+
+00:29:51.916 --> 00:29:54.546 A:middle
+You can see your scene at
+it gets built up not only
+
+00:29:54.546 --> 00:29:56.476 A:middle
+in the color buffer,
+which is on the left,
+
+00:29:56.576 --> 00:29:58.656 A:middle
+but also the depth
+buffer on the right,
+
+00:29:58.876 --> 00:30:00.736 A:middle
+and whatever you've
+just rendered,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:58.876 --> 00:30:00.736 A:middle
+and whatever you've
+just rendered,
+
+00:30:00.736 --> 00:30:04.496 A:middle
+the results of last draw call
+you've made, shows up in green.
+
+00:30:04.996 --> 00:30:09.796 A:middle
+[ Pause ]
+
+00:30:10.296 --> 00:30:13.816 A:middle
+You can also examine all of
+the contents of context state
+
+00:30:13.816 --> 00:30:15.996 A:middle
+at a particular call
+inside that frame.
+
+00:30:16.476 --> 00:30:18.236 A:middle
+You can see everything
+in the context,
+
+00:30:18.236 --> 00:30:20.546 A:middle
+the whole state vector
+of OpenGL ES.
+
+00:30:21.036 --> 00:30:23.786 A:middle
+Everything that's bound,
+the programs, textures,
+
+00:30:23.786 --> 00:30:26.686 A:middle
+etc. Your blend state,
+your depth state,
+
+00:30:26.896 --> 00:30:28.076 A:middle
+whatever state you'd like.
+
+00:30:28.796 --> 00:30:30.496 A:middle
+If you think something
+may be going wrong
+
+00:30:30.496 --> 00:30:34.146 A:middle
+with the state vector, you
+can search in there for it.
+
+00:30:34.816 --> 00:30:39.616 A:middle
+But what's even nicer
+is that in Xcode 5,
+
+00:30:40.166 --> 00:30:43.966 A:middle
+you can now view the
+information that pertains
+
+00:30:43.966 --> 00:30:46.476 A:middle
+to the particular call
+that you're stopped on.
+
+00:30:47.386 --> 00:30:50.356 A:middle
+Instead of looking through
+all of the context state,
+
+00:30:50.516 --> 00:30:53.886 A:middle
+you can look at what's really
+useful to you at the moment.
+
+00:30:54.946 --> 00:30:58.546 A:middle
+Here, I am stopped at
+a glUseProgram call.
+
+00:30:58.636 --> 00:31:01.746 A:middle
+And so now I can look at
+all of the information
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:58.636 --> 00:31:01.746 A:middle
+And so now I can look at
+all of the information
+
+00:31:01.746 --> 00:31:03.586 A:middle
+that pertains to
+that GLSL program.
+
+00:31:04.056 --> 00:31:06.076 A:middle
+All the uniforms
+and their values,
+
+00:31:06.356 --> 00:31:11.336 A:middle
+what attributes are
+necessary for that program,
+
+00:31:12.136 --> 00:31:19.056 A:middle
+etc. You can set that view in
+the lower left-hand corner here.
+
+00:31:19.056 --> 00:31:20.726 A:middle
+There's this auto
+variables view,
+
+00:31:20.906 --> 00:31:29.126 A:middle
+and this is new with Xcode 5.
+
+00:31:29.126 --> 00:31:29.326 A:middle
+[ Pause ]
+
+00:31:29.326 --> 00:31:30.616 A:middle
+You also have an object viewer.
+
+00:31:30.616 --> 00:31:34.046 A:middle
+You can view any of the
+objects in the OpenGL context.
+
+00:31:34.046 --> 00:31:36.836 A:middle
+You can view textures,
+vertex buffer objects,
+
+00:31:37.106 --> 00:31:39.696 A:middle
+and I think the most
+powerful feature here,
+
+00:31:39.696 --> 00:31:43.806 A:middle
+the most powerful object
+viewer is your shader viewer.
+
+00:31:43.806 --> 00:31:46.866 A:middle
+And you can take a look at the
+shaders and edit your shader
+
+00:31:46.866 --> 00:31:49.706 A:middle
+within it, and hit
+this button here
+
+00:31:49.706 --> 00:31:51.306 A:middle
+on the lower left-hand corner,
+
+00:31:51.306 --> 00:31:53.256 A:middle
+which will compile your
+shader immediately,
+
+00:31:53.416 --> 00:31:57.526 A:middle
+apply it to your scene, and then
+you can see how it has changed
+
+00:31:57.786 --> 00:31:58.586 A:middle
+your rendering.
+
+00:31:59.086 --> 00:32:03.166 A:middle
+[ Applause ]
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:59.086 --> 00:32:03.166 A:middle
+[ Applause ]
+
+00:32:03.666 --> 00:32:05.596 A:middle
+So this allows you to experiment
+
+00:32:05.986 --> 00:32:08.426 A:middle
+and even debug shader
+compiler error.
+
+00:32:08.426 --> 00:32:12.596 A:middle
+As you see here, I've got use
+of an undeclared variable,
+
+00:32:12.926 --> 00:32:17.856 A:middle
+and it flags my error, and I can
+go ahead and fix it right away.
+
+00:32:18.356 --> 00:32:20.756 A:middle
+[ Pause ]
+
+00:32:21.256 --> 00:32:23.396 A:middle
+So an often overlooked feature
+
+00:32:23.396 --> 00:32:28.006 A:middle
+of the OpenGL ES frame debugger
+is the OpenGL issues navigator.
+
+00:32:28.496 --> 00:32:32.026 A:middle
+Here we point out a number
+of things that you could do
+
+00:32:32.026 --> 00:32:33.696 A:middle
+to improve your rendering.
+
+00:32:33.696 --> 00:32:36.626 A:middle
+There's also some
+information about things
+
+00:32:36.626 --> 00:32:40.466 A:middle
+that may cause rendering
+errors, but more importantly,
+
+00:32:40.466 --> 00:32:41.506 A:middle
+there is a lot of information
+
+00:32:41.506 --> 00:32:46.526 A:middle
+about how you can
+improve your performance.
+
+00:32:46.526 --> 00:32:50.786 A:middle
+Also in Xcode 5, we have the
+performance analysis page,
+
+00:32:51.536 --> 00:32:53.286 A:middle
+which allows you
+to hit this button
+
+00:32:53.286 --> 00:32:57.446 A:middle
+in the upper right-hand
+corner, and we'll run a couple
+
+00:32:57.446 --> 00:33:01.096 A:middle
+of experiments on your frame
+and figure out what bottlenecks
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:57.446 --> 00:33:01.096 A:middle
+of experiments on your frame
+and figure out what bottlenecks
+
+00:33:01.096 --> 00:33:03.676 A:middle
+that you've got, whether you're
+vertex bound, fragment bound,
+
+00:33:03.676 --> 00:33:06.156 A:middle
+etc., and there are
+some helpful suggestions
+
+00:33:06.156 --> 00:33:08.806 A:middle
+as to what you might
+like to do next.
+
+00:33:09.406 --> 00:33:10.886 A:middle
+It also gives you
+some information
+
+00:33:10.886 --> 00:33:15.846 A:middle
+such as whether your GPU is
+pegged or your CPU is pegged.
+
+00:33:17.046 --> 00:33:19.366 A:middle
+So a lot of useful
+information here as well.
+
+00:33:19.366 --> 00:33:20.236 A:middle
+[ Pause ]
+
+00:33:20.236 --> 00:33:23.096 A:middle
+And new in Xcode
+5 is the ability
+
+00:33:23.096 --> 00:33:24.936 A:middle
+to break on any OpenGL error.
+
+00:33:25.246 --> 00:33:29.556 A:middle
+Now, what you used to have to
+do is add a glGetError call
+
+00:33:29.556 --> 00:33:32.486 A:middle
+after every single OpenGL call
+to stomp out these errors,
+
+00:33:32.756 --> 00:33:37.856 A:middle
+Figure out if your OpenGL call
+produced some sort of some error
+
+00:33:37.856 --> 00:33:39.926 A:middle
+because you sent in
+some bad arguments
+
+00:33:39.926 --> 00:33:41.496 A:middle
+or the state wasn't
+set up properly.
+
+00:33:41.886 --> 00:33:43.516 A:middle
+Well, you don't have
+to do this anymore.
+
+00:33:43.906 --> 00:33:45.196 A:middle
+In the lower left-hand
+corner here,
+
+00:33:45.196 --> 00:33:50.606 A:middle
+you can just say add OpenGL ES
+breakpoint, and any OpenGL call
+
+00:33:50.606 --> 00:33:53.116 A:middle
+that produces an error
+will break immediately,
+
+00:33:53.116 --> 00:33:59.986 A:middle
+and you can immediately fix it.
+
+00:33:59.986 --> 00:34:00.166 A:middle
+[ Applause ]
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:59.986 --> 00:34:00.166 A:middle
+[ Applause ]
+
+00:34:00.166 --> 00:34:02.906 A:middle
+We also have the OpenGL
+ES Analyzer instrument,
+
+00:34:03.156 --> 00:34:05.146 A:middle
+and there are a number
+of very helpful views
+
+00:34:05.146 --> 00:34:06.896 A:middle
+for improving performance.
+
+00:34:07.406 --> 00:34:11.485 A:middle
+And a very powerful part
+
+00:34:11.485 --> 00:34:18.966 A:middle
+of the OpenGL ES Analyzer is the
+OpenGL ES Expert, which points
+
+00:34:18.966 --> 00:34:22.576 A:middle
+out more information, more
+things that you can do
+
+00:34:22.576 --> 00:34:25.876 A:middle
+to improve the performance
+in your application.
+
+00:34:26.126 --> 00:34:30.206 A:middle
+This points out a lot of
+data that is very similar
+
+00:34:30.206 --> 00:34:33.025 A:middle
+to what comes up in
+the issues navigator.
+
+00:34:33.416 --> 00:34:37.606 A:middle
+Whereas the issues navigator can
+actually run some more in-depth
+
+00:34:37.606 --> 00:34:40.786 A:middle
+experiments and give
+you more data,
+
+00:34:41.275 --> 00:34:46.886 A:middle
+it only can analyze one frame
+whereas the OpenGLES expert can
+
+00:34:46.886 --> 00:34:48.985 A:middle
+analyze multiple
+frames of rendering.
+
+00:34:49.485 --> 00:34:53.196 A:middle
+[ Pause ]
+
+00:34:53.696 --> 00:34:56.656 A:middle
+We offer a number of tools
+
+00:34:57.126 --> 00:35:00.526 A:middle
+that really provide
+an excellent means
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:57.126 --> 00:35:00.526 A:middle
+that really provide
+an excellent means
+
+00:35:00.526 --> 00:35:02.226 A:middle
+for debugging your rendering.
+
+00:35:03.606 --> 00:35:06.036 A:middle
+Additionally, with
+the OpenGL ES Expert,
+
+00:35:06.876 --> 00:35:09.486 A:middle
+the performance analysis
+page and the frame debugger
+
+00:35:09.816 --> 00:35:14.466 A:middle
+with the issues navigator, we're
+providing lots of valuable data
+
+00:35:14.606 --> 00:35:15.876 A:middle
+to improve performance.
+
+00:35:17.026 --> 00:35:18.826 A:middle
+But there is a lot of
+data coming at you,
+
+00:35:18.966 --> 00:35:22.266 A:middle
+and it can be difficult to
+digest and assess the severity
+
+00:35:22.266 --> 00:35:25.066 A:middle
+of the issues that come up.
+
+00:35:25.306 --> 00:35:27.416 A:middle
+So I think it would be helpful
+
+00:35:27.826 --> 00:35:32.006 A:middle
+if I can give you a more
+in-depth understanding
+
+00:35:32.556 --> 00:35:35.926 A:middle
+of how OpenGL works
+and, in particular,
+
+00:35:36.336 --> 00:35:40.756 A:middle
+how the GPU beneath it takes the
+vertex data and transforms it
+
+00:35:40.816 --> 00:35:42.726 A:middle
+into pixels on the screen.
+
+00:35:43.346 --> 00:35:45.596 A:middle
+That way, you can keep the
+OpenGL architecture in mind
+
+00:35:45.596 --> 00:35:48.456 A:middle
+when you're designing your
+rendering architecture
+
+00:35:49.406 --> 00:35:54.676 A:middle
+and really assess the severity
+of issues that crop up.
+
+00:35:54.676 --> 00:35:54.743 A:middle
+[ Pause ]
+
+00:35:54.743 --> 00:35:56.396 A:middle
+I'm going to give
+you an overview
+
+00:35:56.606 --> 00:36:01.396 A:middle
+of the GPU architecture now.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:56.606 --> 00:36:01.396 A:middle
+of the GPU architecture now.
+
+00:36:01.616 --> 00:36:07.666 A:middle
+All of the iOS GPU's are
+tile-based deferred renderers.
+
+00:36:08.536 --> 00:36:12.326 A:middle
+They are high-performance,
+low-power GPUs,
+
+00:36:12.966 --> 00:36:17.196 A:middle
+and the TBDR pipeline is
+significantly different
+
+00:36:17.196 --> 00:36:19.026 A:middle
+than that of traditional
+streaming GPUs
+
+00:36:19.026 --> 00:36:20.216 A:middle
+that you would find on the Mac.
+
+00:36:21.276 --> 00:36:22.986 A:middle
+There are a number
+of optimizations
+
+00:36:23.346 --> 00:36:27.506 A:middle
+to reduce the processing load,
+which increase performance
+
+00:36:27.576 --> 00:36:29.736 A:middle
+and really save lots of power.
+
+00:36:29.956 --> 00:36:32.896 A:middle
+Very important on
+these iOS devices.
+
+00:36:33.296 --> 00:36:37.016 A:middle
+Now the architecture
+depends heavily on caches
+
+00:36:38.026 --> 00:36:39.416 A:middle
+because large transfers
+
+00:36:39.416 --> 00:36:43.616 A:middle
+to unified memory are costly
+not only in terms of performance
+
+00:36:43.616 --> 00:36:46.126 A:middle
+and latency, but also
+in terms of power.
+
+00:36:46.126 --> 00:36:48.716 A:middle
+I t takes a lot of power
+to reach out across the bus
+
+00:36:48.716 --> 00:36:49.946 A:middle
+and grab something back in.
+
+00:36:50.456 --> 00:36:54.406 A:middle
+So we have these very
+nice, significantly large,
+
+00:36:54.606 --> 00:36:58.256 A:middle
+caches so that we can do
+a lot of work on the GPU.
+
+00:36:59.346 --> 00:37:02.296 A:middle
+There are certain operations
+that developers can do
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:59.346 --> 00:37:02.296 A:middle
+There are certain operations
+that developers can do
+
+00:37:02.296 --> 00:37:04.626 A:middle
+that can prevent
+these optimizations
+
+00:37:04.776 --> 00:37:06.066 A:middle
+or cause cache misses.
+
+00:37:07.076 --> 00:37:10.106 A:middle
+Fortunately, these operations
+are entirely avoidable.
+
+00:37:10.106 --> 00:37:10.626 A:middle
+[ Pause ]
+
+00:37:10.626 --> 00:37:15.666 A:middle
+What I thought I'd do
+is take you on a trip
+
+00:37:16.026 --> 00:37:18.746 A:middle
+down the tile-based
+deferred rendering pipeline,
+
+00:37:19.676 --> 00:37:22.546 A:middle
+and along the way, I'll
+point out some issues
+
+00:37:22.836 --> 00:37:25.986 A:middle
+that you may stumble across
+and describe what's going
+
+00:37:25.986 --> 00:37:28.536 A:middle
+on when we warn you
+about these issues.
+
+00:37:29.356 --> 00:37:31.516 A:middle
+Let's start out with
+the vertex processor.
+
+00:37:32.396 --> 00:37:37.396 A:middle
+On your left, you've got the
+vertex arrays that we've set up.
+
+00:37:37.396 --> 00:37:41.156 A:middle
+Hopefully, you've used
+a vertex buffer object
+
+00:37:41.156 --> 00:37:45.116 A:middle
+or a vertex array object
+to encapsulate this data,
+
+00:37:45.286 --> 00:37:47.126 A:middle
+And we issue a draw call,
+
+00:37:47.266 --> 00:37:49.116 A:middle
+which begins this trip
+down the pipeline.
+
+00:37:49.836 --> 00:37:52.996 A:middle
+We shade the vertices,
+transform them into clip space,
+
+00:37:53.146 --> 00:37:56.036 A:middle
+and actually also apply the
+view port transformation
+
+00:37:56.036 --> 00:37:58.476 A:middle
+so that they're now
+window coordinate vertices.
+
+00:37:59.596 --> 00:38:02.446 A:middle
+The vertices are shaded and
+transformed, as I mentioned,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:59.596 --> 00:38:02.446 A:middle
+The vertices are shaded and
+transformed, as I mentioned,
+
+00:38:02.686 --> 00:38:04.676 A:middle
+and stored out to
+unified memory.
+
+00:38:05.176 --> 00:38:10.736 A:middle
+[ Pause ]
+
+00:38:11.236 --> 00:38:13.956 A:middle
+Now a frames' worth of
+vertices are stored.
+
+00:38:14.116 --> 00:38:16.986 A:middle
+Unlike a traditional
+streaming GPU
+
+00:38:17.126 --> 00:38:20.596 A:middle
+where it only needs three
+vertices to produce a triangle
+
+00:38:20.846 --> 00:38:23.606 A:middle
+to go onto the next stage
+and start rasterization
+
+00:38:23.876 --> 00:38:27.896 A:middle
+and fragment processing,
+we defer all of that work
+
+00:38:28.246 --> 00:38:31.016 A:middle
+until you call
+presentRenderbuffer
+
+00:38:31.246 --> 00:38:34.466 A:middle
+or somehow change the
+render buffer another way,
+
+00:38:34.466 --> 00:38:38.596 A:middle
+by either binding a render
+buffer or changing an attachment
+
+00:38:38.706 --> 00:38:40.236 A:middle
+to a frame buffer object.
+
+00:38:41.036 --> 00:38:43.686 A:middle
+Let's say now we call
+presentRenderbuffer.
+
+00:38:44.306 --> 00:38:48.966 A:middle
+This, and only now is when
+we move to the next stage
+
+00:38:49.456 --> 00:38:56.436 A:middle
+of the pipeline, which
+is the tiling processor.
+
+00:38:56.466 --> 00:38:58.616 A:middle
+Every render buffer
+is split into tiles.
+
+00:38:59.036 --> 00:39:03.986 A:middle
+This allows rasterization
+and fragment shading to occur
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:59.036 --> 00:39:03.986 A:middle
+This allows rasterization
+and fragment shading to occur
+
+00:39:03.986 --> 00:39:07.586 A:middle
+on the GPU in little tile-sized
+pieces of embedded memory.
+
+00:39:08.236 --> 00:39:11.326 A:middle
+We can't push the entire
+frame buffer onto the GPU;
+
+00:39:11.326 --> 00:39:12.946 A:middle
+that's just way too large.
+
+00:39:13.236 --> 00:39:16.386 A:middle
+So we just split up this render
+buffer into much smaller tiles,
+
+00:39:16.626 --> 00:39:18.676 A:middle
+and then we can render
+to those one by one.
+
+00:39:20.496 --> 00:39:24.816 A:middle
+Here's what the tile processor
+does: It works in groups
+
+00:39:24.816 --> 00:39:26.746 A:middle
+of triangles, and it figures
+
+00:39:26.746 --> 00:39:29.186 A:middle
+out where the triangles
+would be rendered here.
+
+00:39:29.186 --> 00:39:30.666 A:middle
+Which tile they'll go to.
+
+00:39:31.906 --> 00:39:35.356 A:middle
+The larger triangles, which
+intersect multiple tiles,
+
+00:39:35.496 --> 00:39:37.796 A:middle
+may be binned into
+these multiple tiles.
+
+00:39:37.796 --> 00:39:38.346 A:middle
+[ Pause ]
+
+00:39:38.346 --> 00:39:44.266 A:middle
+And then we're ready
+for raster set up,
+
+00:39:44.486 --> 00:39:45.936 A:middle
+or set up for the rasterizer.
+
+00:39:48.136 --> 00:39:53.216 A:middle
+Here's the first issue
+that you could run across -
+
+00:39:53.466 --> 00:39:56.446 A:middle
+logical buffer load, and
+here's what this means.
+
+00:39:59.176 --> 00:40:02.606 A:middle
+The rasterizer uses tile size
+embedded memory, as I said.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:39:59.176 --> 00:40:02.606 A:middle
+The rasterizer uses tile size
+embedded memory, as I said.
+
+00:40:03.226 --> 00:40:06.006 A:middle
+Now if there is data already
+in this render buffer,
+
+00:40:06.376 --> 00:40:08.636 A:middle
+the GPU needs to load
+it from unified memory
+
+00:40:08.676 --> 00:40:10.176 A:middle
+because you're going
+to write on top of it.
+
+00:40:11.346 --> 00:40:13.566 A:middle
+This is pretty costly, OK.
+
+00:40:13.566 --> 00:40:16.286 A:middle
+We need to reach out
+across the bus, pull it in.
+
+00:40:17.606 --> 00:40:20.086 A:middle
+Same for the depth buffer:
+if there is data in it,
+
+00:40:20.246 --> 00:40:22.846 A:middle
+we also need to pull it
+in from unified memory.
+
+00:40:27.026 --> 00:40:29.666 A:middle
+Fortunately, you
+guys can avoid this.
+
+00:40:30.716 --> 00:40:33.016 A:middle
+Loading tiles is called
+a logical buffer load,
+
+00:40:33.416 --> 00:40:36.586 A:middle
+and you can avoid such
+a logical buffer load
+
+00:40:36.636 --> 00:40:38.766 A:middle
+if you call glClear
+before your rendering.
+
+00:40:39.716 --> 00:40:43.246 A:middle
+The driver knows that there is
+nothing important out in memory
+
+00:40:43.536 --> 00:40:44.736 A:middle
+since you're clearing the buffer
+
+00:40:44.736 --> 00:40:47.416 A:middle
+so in can just start
+rendering to this tile memory.
+
+00:40:47.986 --> 00:40:49.646 A:middle
+Great. No load necessary.
+
+00:40:50.096 --> 00:40:52.526 A:middle
+Very fast.
+
+00:40:52.526 --> 00:40:52.596 A:middle
+[ Pause ]
+
+00:40:52.596 --> 00:40:57.546 A:middle
+Logical buffer loads can happen
+in some less obvious ways.
+
+00:40:58.226 --> 00:41:02.516 A:middle
+For instance, if we render to a
+texture, render to a new buffer
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:58.226 --> 00:41:02.516 A:middle
+For instance, if we render to a
+texture, render to a new buffer
+
+00:41:02.516 --> 00:41:04.086 A:middle
+or a new texture,
+and then render
+
+00:41:04.086 --> 00:41:05.306 A:middle
+to that first texture again.
+
+00:41:05.556 --> 00:41:07.296 A:middle
+Here's what happens: we
+render to our texture.
+
+00:41:08.076 --> 00:41:09.626 A:middle
+Now we want to render
+to a new texture.
+
+00:41:09.626 --> 00:41:11.446 A:middle
+We clear it, and render to that.
+
+00:41:11.646 --> 00:41:16.296 A:middle
+Great. Now we would like to
+render to our first texture.
+
+00:41:17.056 --> 00:41:18.626 A:middle
+Well, logical buffer load.
+
+00:41:19.806 --> 00:41:26.496 A:middle
+Need to load both the color
+buffer and depth buffer.
+
+00:41:26.626 --> 00:41:34.046 A:middle
+Developers should avoid frequent
+switching of render buffers.
+
+00:41:34.256 --> 00:41:35.186 A:middle
+Complete your rendering
+
+00:41:35.186 --> 00:41:36.936 A:middle
+to one buffer before
+switching to another.
+
+00:41:37.216 --> 00:41:38.666 A:middle
+Don't just say, "hey, you know,
+
+00:41:38.916 --> 00:41:41.256 A:middle
+I've finished a pretty
+good amount of rendering.
+
+00:41:41.256 --> 00:41:42.486 A:middle
+Let's just switch my buffer.
+
+00:41:42.686 --> 00:41:45.996 A:middle
+Go out and render something new,
+and then now I'd like to go back
+
+00:41:45.996 --> 00:41:46.726 A:middle
+to that first buffer."
+
+00:41:47.136 --> 00:41:51.846 A:middle
+You'll get this tile thrashing
+that I've just described.
+
+00:41:51.846 --> 00:41:51.913 A:middle
+[ Pause ]
+
+00:41:51.913 --> 00:41:52.646 A:middle
+Rasterization.
+
+00:41:53.616 --> 00:41:58.566 A:middle
+We're ready to actually do
+some further computation.
+
+00:41:59.116 --> 00:42:01.646 A:middle
+The GPU reads the triangles
+assigned to the tile,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:59.116 --> 00:42:01.646 A:middle
+The GPU reads the triangles
+assigned to the tile,
+
+00:42:01.806 --> 00:42:04.406 A:middle
+and it computes the X
+and Y pixel coordinates
+
+00:42:04.836 --> 00:42:07.236 A:middle
+and the Z value,
+the depth value.
+
+00:42:08.626 --> 00:42:10.996 A:middle
+The fragment shader
+is not yet run.
+
+00:42:11.626 --> 00:42:14.436 A:middle
+Positions and depth
+are calculated only.
+
+00:42:16.676 --> 00:42:20.866 A:middle
+This allows an optimization
+called hidden surface removal.
+
+00:42:21.506 --> 00:42:23.816 A:middle
+Now let's say we
+submit a triangle,
+
+00:42:23.816 --> 00:42:26.856 A:middle
+and it's partially obscured
+by another triangle.
+
+00:42:27.166 --> 00:42:29.066 A:middle
+Well, a portion of that
+triangle is hidden.
+
+00:42:29.066 --> 00:42:31.196 A:middle
+W e don't need to run
+the fragment shader
+
+00:42:31.436 --> 00:42:32.676 A:middle
+on that hidden portion.
+
+00:42:32.986 --> 00:42:36.326 A:middle
+That saves us from
+fragment shader processing.
+
+00:42:37.036 --> 00:42:38.586 A:middle
+We can reject those fragments.
+
+00:42:39.936 --> 00:42:42.726 A:middle
+Now this is why we
+deferred all the rendering
+
+00:42:42.726 --> 00:42:44.616 A:middle
+until you called
+present render buffer.
+
+00:42:45.176 --> 00:42:48.056 A:middle
+W e have the entire
+frames' worth of triangles.
+
+00:42:48.666 --> 00:42:51.416 A:middle
+That's potentially a lot of
+fragments that we can reject.
+
+00:42:51.416 --> 00:42:53.156 A:middle
+[ Pause ]
+
+00:42:53.156 --> 00:42:55.476 A:middle
+But you can get this warning.
+
+00:42:55.896 --> 00:42:58.906 A:middle
+Loss of depth test
+hardware optimizations.
+
+00:42:59.256 --> 00:43:00.746 A:middle
+Loss of hidden surface removal.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:42:59.256 --> 00:43:00.746 A:middle
+Loss of hidden surface removal.
+
+00:43:01.586 --> 00:43:03.756 A:middle
+It's really costly
+to enable blending
+
+00:43:03.756 --> 00:43:05.556 A:middle
+or use discard in the shader.
+
+00:43:05.596 --> 00:43:08.696 A:middle
+Lots of times we like to
+use discard for things
+
+00:43:08.696 --> 00:43:10.376 A:middle
+like implementing an alpha test,
+
+00:43:10.946 --> 00:43:13.676 A:middle
+but it defeats the hidden
+surface removal optimization.
+
+00:43:14.086 --> 00:43:16.266 A:middle
+We submit a triangle
+that maybe is blending
+
+00:43:16.656 --> 00:43:18.576 A:middle
+and it's transparent.
+
+00:43:18.726 --> 00:43:20.436 A:middle
+So you can see stuff behind it.
+
+00:43:21.236 --> 00:43:24.356 A:middle
+We need to run that fragment
+shader even for triangles
+
+00:43:24.356 --> 00:43:26.126 A:middle
+that are behind that
+other triangle.
+
+00:43:26.426 --> 00:43:29.406 A:middle
+The shader must run
+a lot more times.
+
+00:43:30.036 --> 00:43:33.446 A:middle
+This is a cost of
+performance and power.
+
+00:43:33.446 --> 00:43:34.776 A:middle
+We're doing a lot
+more processing.
+
+00:43:36.036 --> 00:43:40.526 A:middle
+Therefore, you guys need
+to be judicious in your use
+
+00:43:40.526 --> 00:43:41.846 A:middle
+of discard and blending.
+
+00:43:42.646 --> 00:43:45.896 A:middle
+Allow the GPU to reject as
+many fragments as possible.
+
+00:43:45.896 --> 00:43:47.576 A:middle
+[ Pause ]
+
+00:43:47.576 --> 00:43:50.016 A:middle
+Next up, we can perform
+fragment shading.
+
+00:43:53.436 --> 00:43:57.596 A:middle
+And what's great about
+the TBDR renderer is that,
+
+00:43:57.596 --> 00:44:00.666 A:middle
+if the hidden surface removal
+algorithm is allowed to work,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:43:57.596 --> 00:44:00.666 A:middle
+if the hidden surface removal
+algorithm is allowed to work,
+
+00:44:01.056 --> 00:44:04.466 A:middle
+we only need to run the fragment
+shader on each pixel once.
+
+00:44:04.466 --> 00:44:06.656 A:middle
+It doesn't matter how
+many layers of triangles.
+
+00:44:06.956 --> 00:44:08.896 A:middle
+Doesn't matter what your
+depth complexity is.
+
+00:44:09.386 --> 00:44:15.666 A:middle
+Only one fragment shader
+is run on each pixel.
+
+00:44:15.666 --> 00:44:18.996 A:middle
+The fragment processor shades
+and produces color pixels,
+
+00:44:19.536 --> 00:44:20.716 A:middle
+and those colors are written
+
+00:44:20.716 --> 00:44:23.236 A:middle
+to the embedded tile
+memory on the GPU.
+
+00:44:24.836 --> 00:44:26.346 A:middle
+Now we're ready for
+tile storage.
+
+00:44:26.846 --> 00:44:33.486 A:middle
+[ Pause ]
+
+00:44:33.986 --> 00:44:37.116 A:middle
+Alright. The tile stored
+into unified memory,
+
+00:44:37.476 --> 00:44:39.086 A:middle
+and once all the
+tiles are processed,
+
+00:44:39.496 --> 00:44:40.936 A:middle
+the renderbuffer
+is ready for use.
+
+00:44:41.066 --> 00:44:44.926 A:middle
+You can present it to the user
+on the screen or you can use it
+
+00:44:44.926 --> 00:44:46.576 A:middle
+as a texture for another pass.
+
+00:44:48.086 --> 00:44:50.926 A:middle
+Storing a tile to unified memory
+is called a logical buffer
+
+00:44:50.926 --> 00:44:53.466 A:middle
+store, and each frame
+needs at least one.
+
+00:44:53.926 --> 00:44:57.286 A:middle
+It's considered a frame because
+you've presented your buffer
+
+00:44:57.286 --> 00:45:00.036 A:middle
+to the user, and that requires
+a logical buffer store.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:44:57.286 --> 00:45:00.036 A:middle
+to the user, and that requires
+a logical buffer store.
+
+00:45:01.636 --> 00:45:03.256 A:middle
+However, you can
+get this warning -
+
+00:45:03.916 --> 00:45:05.826 A:middle
+unnecessary logical
+buffer store.
+
+00:45:06.196 --> 00:45:07.136 A:middle
+And here's what that's about.
+
+00:45:07.696 --> 00:45:10.266 A:middle
+A depth buffer is only
+needed to be stored
+
+00:45:10.266 --> 00:45:12.596 A:middle
+if you're using an
+effect like shadowing
+
+00:45:12.886 --> 00:45:15.206 A:middle
+or screen space ambient
+occlusion.
+
+00:45:15.726 --> 00:45:18.606 A:middle
+In general, if you're not
+using an effect like that,
+
+00:45:19.236 --> 00:45:23.226 A:middle
+it doesn't need to be stored;
+it's unnecessary to push it
+
+00:45:23.226 --> 00:45:24.236 A:middle
+out to unified memory.
+
+00:45:25.636 --> 00:45:28.996 A:middle
+So developers could call
+glDiscardFramebuffer
+
+00:45:29.316 --> 00:45:32.436 A:middle
+to skip this logical buffer
+store on the depth buffer.
+
+00:45:33.426 --> 00:45:34.436 A:middle
+It's simply flushed away.
+
+00:45:34.636 --> 00:45:36.716 A:middle
+We don't need that after
+rendering is complete.
+
+00:45:37.876 --> 00:45:41.616 A:middle
+The same thing for multisample
+anti-aliased renderbuffers,
+
+00:45:41.686 --> 00:45:45.606 A:middle
+and this is particularly
+important because these are big.
+
+00:45:45.606 --> 00:45:50.706 A:middle
+A multisample 4xaa render
+buffer has four times the amount
+
+00:45:50.706 --> 00:45:54.306 A:middle
+of data as a regular
+color buffer.
+
+00:45:54.546 --> 00:45:58.866 A:middle
+Fortunately, you guys don't need
+the pre-resolved MSAA buffer.
+
+00:45:59.716 --> 00:46:03.506 A:middle
+What you need is the
+resolved, much smaller tile
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:45:59.716 --> 00:46:03.506 A:middle
+What you need is the
+resolved, much smaller tile
+
+00:46:04.396 --> 00:46:06.566 A:middle
+that you can store
+out to unified memory.
+
+00:46:06.736 --> 00:46:10.706 A:middle
+Not the large tile that
+has not been resolved yet.
+
+00:46:11.946 --> 00:46:13.846 A:middle
+You can call
+glDiscardFramebuffer
+
+00:46:13.846 --> 00:46:15.846 A:middle
+for the MSAA color
+buffer as well.
+
+00:46:16.376 --> 00:46:20.226 A:middle
+Same thing for depth.
+
+00:46:21.036 --> 00:46:24.426 A:middle
+Don't need the MSAA
+depth buffer.
+
+00:46:24.766 --> 00:46:27.726 A:middle
+Call glDiscardFramebuffer
+on the MSAA depth buffer.
+
+00:46:28.246 --> 00:46:30.246 A:middle
+Don't store that out.
+
+00:46:30.246 --> 00:46:31.086 A:middle
+[ Pause ]
+
+00:46:31.086 --> 00:46:33.566 A:middle
+We finished our trip down
+the tile base deferred
+
+00:46:33.566 --> 00:46:34.376 A:middle
+rendering pipeline.
+
+00:46:35.046 --> 00:46:35.956 A:middle
+Here are some take aways.
+
+00:46:36.456 --> 00:46:39.076 A:middle
+Hidden surface removal is
+a really unique strength
+
+00:46:39.076 --> 00:46:39.976 A:middle
+of this architecture.
+
+00:46:40.016 --> 00:46:43.056 A:middle
+It greatly reduces work
+load which saves power,
+
+00:46:43.206 --> 00:46:44.196 A:middle
+increases performance.
+
+00:46:45.376 --> 00:46:46.996 A:middle
+There are certain
+operations, however,
+
+00:46:46.996 --> 00:46:50.336 A:middle
+that defeat this HSR
+process, alpha blending
+
+00:46:50.856 --> 00:46:52.436 A:middle
+or using discard and the shader.
+
+00:46:53.116 --> 00:46:54.436 A:middle
+But I'm not saying you
+shouldn't use them.
+
+00:46:54.436 --> 00:46:56.406 A:middle
+There are some really cool
+effects that you can achieve
+
+00:46:56.706 --> 00:46:58.866 A:middle
+by enabling blending
+or using discard,
+
+00:46:59.376 --> 00:47:02.776 A:middle
+but there are some
+perfereable ways to use them.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:46:59.376 --> 00:47:02.776 A:middle
+but there are some
+perfereable ways to use them.
+
+00:47:02.936 --> 00:47:05.606 A:middle
+First of all, draw all your
+triangles using discard
+
+00:47:05.606 --> 00:47:07.626 A:middle
+or blending after
+triangles that do not.
+
+00:47:08.366 --> 00:47:10.516 A:middle
+Hidden surface removal
+can at least be used
+
+00:47:10.516 --> 00:47:13.006 A:middle
+for the triangles in
+that opaque group.
+
+00:47:14.416 --> 00:47:18.866 A:middle
+Additionally, trim the
+geometry around the triangles
+
+00:47:18.866 --> 00:47:21.756 A:middle
+that need this sort
+of operation.
+
+00:47:21.756 --> 00:47:23.506 A:middle
+If you've implemented
+an alpha test,
+
+00:47:24.116 --> 00:47:29.216 A:middle
+make sure you wrap your
+alpha-tested object
+
+00:47:29.616 --> 00:47:33.466 A:middle
+so that you produce
+less fragments
+
+00:47:33.466 --> 00:47:34.706 A:middle
+that need this operation.
+
+00:47:35.006 --> 00:47:36.796 A:middle
+It's worth adding more vertices
+
+00:47:36.796 --> 00:47:41.136 A:middle
+to reduce fragments
+that need them.
+
+00:47:41.136 --> 00:47:41.286 A:middle
+[ Pause ]
+
+00:47:41.286 --> 00:47:45.396 A:middle
+Also, we've seen that transfers
+between the unified memory
+
+00:47:45.396 --> 00:47:49.706 A:middle
+and the GPU are expensive, and
+the best things that you can do
+
+00:47:49.706 --> 00:47:52.426 A:middle
+to avoid them is to call glClear
+
+00:47:52.426 --> 00:47:53.966 A:middle
+to avoid the logical
+buffer loads
+
+00:47:54.086 --> 00:47:56.416 A:middle
+so that the GPU can just
+simply start rendering.
+
+00:47:56.416 --> 00:47:58.696 A:middle
+Doesn't need to read
+the framebuffer.
+
+00:47:58.926 --> 00:48:01.166 A:middle
+Also avoid frequent
+render buffer switches,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:47:58.926 --> 00:48:01.166 A:middle
+Also avoid frequent
+render buffer switches,
+
+00:48:01.476 --> 00:48:02.926 A:middle
+which can cause tile thrashing.
+
+00:48:04.056 --> 00:48:05.726 A:middle
+And avoid logical buffer stores.
+
+00:48:05.916 --> 00:48:08.416 A:middle
+Use the glDiscardFramebuffer
+call,
+
+00:48:08.716 --> 00:48:11.306 A:middle
+especially for large
+multi-sampled
+
+00:48:11.396 --> 00:48:12.706 A:middle
+anti-alias buffers.
+
+00:48:12.706 --> 00:48:13.176 A:middle
+[ Pause ]
+
+00:48:13.176 --> 00:48:16.906 A:middle
+There are a couple of
+things that didn't fit
+
+00:48:16.906 --> 00:48:19.666 A:middle
+on that pipeline diagram,
+
+00:48:19.666 --> 00:48:21.386 A:middle
+and I want to point
+those out to you now.
+
+00:48:21.736 --> 00:48:23.686 A:middle
+The first is dependent
+texture sampling.
+
+00:48:24.316 --> 00:48:26.756 A:middle
+Now this happens if you
+calculate a texture coordinate
+
+00:48:27.086 --> 00:48:31.446 A:middle
+in the fragment shader and
+then sample from that texture
+
+00:48:31.446 --> 00:48:34.226 A:middle
+with the texture function.
+
+00:48:34.326 --> 00:48:40.096 A:middle
+Here I've got our texture
+sampler and two varyings here,
+
+00:48:41.346 --> 00:48:45.196 A:middle
+and the first thing I do is
+I add these values together
+
+00:48:45.256 --> 00:48:49.556 A:middle
+to produce a coordinate offset
+cord, and I use this offset cord
+
+00:48:49.556 --> 00:48:50.796 A:middle
+in the texture function.
+
+00:48:50.796 --> 00:48:54.936 A:middle
+Because it's a result of two
+previously-calculated varyings,
+
+00:48:55.646 --> 00:48:59.706 A:middle
+we now are making
+a dependent fetch
+
+00:48:59.706 --> 00:49:02.096 A:middle
+or a dependent sample
+or dependent read.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:48:59.706 --> 00:49:02.096 A:middle
+or a dependent sample
+or dependent read.
+
+00:49:03.776 --> 00:49:07.706 A:middle
+Here's a more devious example,
+a much less obvious example
+
+00:49:07.706 --> 00:49:09.016 A:middle
+of a dependent texture read.
+
+00:49:09.376 --> 00:49:14.406 A:middle
+Some developers get clever, and
+they think, "hey, you know what,
+
+00:49:14.406 --> 00:49:17.226 A:middle
+I've got two textures
+I want to sample from,
+
+00:49:17.496 --> 00:49:20.596 A:middle
+and I only need two scalars
+
+00:49:20.916 --> 00:49:24.626 A:middle
+to get a 2D texture
+for each texture.
+
+00:49:24.696 --> 00:49:28.596 A:middle
+What I'm going to do is pack
+them into a single vec4.
+
+00:49:28.656 --> 00:49:31.236 A:middle
+So I've got an S and
+T texture coordinate
+
+00:49:31.236 --> 00:49:33.456 A:middle
+in the first two components
+of the vec 4 and another S
+
+00:49:33.456 --> 00:49:34.416 A:middle
+and T texture coordinate
+
+00:49:34.416 --> 00:49:36.676 A:middle
+in the second two
+components of the vec4.
+
+00:49:36.986 --> 00:49:42.196 A:middle
+And then what I'm going to do is
+I'm going to use the first two
+
+00:49:42.196 --> 00:49:47.646 A:middle
+as the first texture coordinate,
+make the first texture fetch
+
+00:49:47.646 --> 00:49:51.116 A:middle
+with the X and Y and then
+a second one with Z and W."
+
+00:49:51.116 --> 00:49:53.796 A:middle
+Now these are actually
+both dependent reads.
+
+00:49:54.096 --> 00:49:56.796 A:middle
+Because what happens is the
+texture coordinates need
+
+00:49:56.796 --> 00:50:01.076 A:middle
+to be converted first
+from a vec4 to two vec2s.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:49:56.796 --> 00:50:01.076 A:middle
+to be converted first
+from a vec4 to two vec2s.
+
+00:50:01.076 --> 00:50:02.756 A:middle
+This is happening
+all under the hood.
+
+00:50:02.756 --> 00:50:03.896 A:middle
+You don't actually see it,
+
+00:50:04.046 --> 00:50:06.946 A:middle
+but there is some
+calculation being done
+
+00:50:07.186 --> 00:50:13.396 A:middle
+which makes these
+dependent texture read.
+
+00:50:13.396 --> 00:50:13.576 A:middle
+[ Pause ]
+
+00:50:13.576 --> 00:50:14.296 A:middle
+Here's why it's bad.
+
+00:50:14.576 --> 00:50:18.196 A:middle
+There's a high latency to sample
+a texture in unified memory.
+
+00:50:18.936 --> 00:50:21.016 A:middle
+Now we avoid this latency
+
+00:50:21.016 --> 00:50:23.356 A:middle
+when you're not doing a
+dependent texture read
+
+00:50:23.546 --> 00:50:25.236 A:middle
+because the rasterizer
+says, "Hey,
+
+00:50:25.666 --> 00:50:31.066 A:middle
+this triangle uses a texture
+in this fragment shader,
+
+00:50:31.066 --> 00:50:32.296 A:middle
+and we've already
+got the coordinates.
+
+00:50:32.296 --> 00:50:35.536 A:middle
+So let's signal out to a memory
+and pull that data back in,
+
+00:50:35.536 --> 00:50:36.856 A:middle
+and soon as we start
+
+00:50:37.186 --> 00:50:39.716 A:middle
+that fragment shader,
+we'll have the data."
+
+00:50:40.226 --> 00:50:44.156 A:middle
+We can't do that if you're
+calculating the texture
+
+00:50:44.156 --> 00:50:45.886 A:middle
+coordinate in the shader.
+
+00:50:46.496 --> 00:50:47.556 A:middle
+The shader stalls.
+
+00:50:48.016 --> 00:50:50.236 A:middle
+It waits for the data
+to come back to it.
+
+00:50:51.016 --> 00:50:53.786 A:middle
+So minimize your
+dependent texture samples.
+
+00:50:54.526 --> 00:50:55.756 A:middle
+Hoist your calculation.
+
+00:50:55.756 --> 00:51:00.486 A:middle
+Do it in the vertex shader if
+possible, put it in a uniform
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:50:55.756 --> 00:51:00.486 A:middle
+Do it in the vertex shader if
+possible, put it in a uniform
+
+00:51:00.486 --> 00:51:02.266 A:middle
+or put it in the vertex array.
+
+00:51:02.536 --> 00:51:06.706 A:middle
+Try to avoid, putting
+the calculation
+
+00:51:06.706 --> 00:51:07.566 A:middle
+in the fragment shader.
+
+00:51:08.016 --> 00:51:13.176 A:middle
+Here's the fixed version of
+that devious shader here.
+
+00:51:13.736 --> 00:51:16.986 A:middle
+We've now split that
+vec4 into two vec2's.
+
+00:51:17.936 --> 00:51:19.286 A:middle
+There's no calculations done.
+
+00:51:19.286 --> 00:51:22.776 A:middle
+We simply fetch using these
+two separate variables.
+
+00:51:22.776 --> 00:51:23.206 A:middle
+[ Pause ]
+
+00:51:23.206 --> 00:51:27.576 A:middle
+Alright. Here's another
+warning that shows up.
+
+00:51:27.906 --> 00:51:29.766 A:middle
+Fragment shader dynamic
+branching
+
+00:51:29.766 --> 00:51:31.456 A:middle
+or also Vertex shader
+dynamic branching.
+
+00:51:33.516 --> 00:51:39.356 A:middle
+Here we've got our varying and
+attributes that vary from vertex
+
+00:51:39.356 --> 00:51:43.376 A:middle
+to vertex, and because
+it varies,
+
+00:51:43.436 --> 00:51:46.806 A:middle
+it becomes a little bit
+difficult for the GPU to manage
+
+00:51:46.806 --> 00:51:51.126 A:middle
+because we now test, and the
+outcome of that test in the
+
+00:51:51.126 --> 00:51:54.296 A:middle
+if statement is dependent
+upon the test.
+
+00:51:55.346 --> 00:51:56.366 A:middle
+Here's why it's difficult.
+
+00:51:56.676 --> 00:51:58.866 A:middle
+GPU's are highly
+parallel devices.
+
+00:51:58.866 --> 00:52:01.966 A:middle
+It can process multiple vertices
+and fragments simultaneously.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:51:58.866 --> 00:52:01.966 A:middle
+It can process multiple vertices
+and fragments simultaneously.
+
+00:52:03.106 --> 00:52:05.946 A:middle
+We need a special
+branch mode for execution
+
+00:52:06.066 --> 00:52:10.076 A:middle
+of a dynamic branch, and
+this adds a bit more latency
+
+00:52:10.076 --> 00:52:13.896 A:middle
+for the parallel
+device to stay in sync.
+
+00:52:13.896 --> 00:52:18.506 A:middle
+If it's possible, calculate
+the predicate of your
+
+00:52:18.506 --> 00:52:20.626 A:middle
+if statements outside
+of the shader.
+
+00:52:21.436 --> 00:52:25.336 A:middle
+A branch on a uniform does
+not incur that same overhead
+
+00:52:25.336 --> 00:52:29.726 A:middle
+because it's constant across all
+of the vertices or fragments.
+
+00:52:29.846 --> 00:52:31.456 A:middle
+All of the shader execution.
+
+00:52:33.226 --> 00:52:36.156 A:middle
+And really if there's a shader
+
+00:52:36.156 --> 00:52:38.506 A:middle
+that uses both a
+dependent texture sample
+
+00:52:38.506 --> 00:52:41.956 A:middle
+and dynamic branching,
+this adds a lot of latency
+
+00:52:41.956 --> 00:52:43.796 A:middle
+and can be really costly.
+
+00:52:44.416 --> 00:52:48.446 A:middle
+Really look for that.
+
+00:52:48.446 --> 00:52:48.586 A:middle
+[ Pause ]
+
+00:52:48.586 --> 00:52:52.966 A:middle
+OK. I've talked a lot about how
+
+00:52:52.966 --> 00:52:55.076 A:middle
+to utilize the GPU
+to its fullest.
+
+00:52:55.886 --> 00:53:00.336 A:middle
+You also really want to get to
+the GPU as quick as possible
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:52:55.886 --> 00:53:00.336 A:middle
+You also really want to get to
+the GPU as quick as possible
+
+00:53:00.336 --> 00:53:02.526 A:middle
+and minimize the CPU overhead.
+
+00:53:03.526 --> 00:53:07.016 A:middle
+And as you may know, a lot of
+time is spent in draw calls.
+
+00:53:07.856 --> 00:53:09.786 A:middle
+But what's less obvious is
+
+00:53:09.786 --> 00:53:12.756 A:middle
+that while state setting
+looks inexpensive,
+
+00:53:12.756 --> 00:53:17.126 A:middle
+if you make a bind
+call or an enable call
+
+00:53:17.126 --> 00:53:20.976 A:middle
+or use the new program, and
+you profile that or add timers
+
+00:53:20.976 --> 00:53:23.376 A:middle
+around it, it doesn't
+look like much time,
+
+00:53:23.956 --> 00:53:25.576 A:middle
+but that's because
+a lot of that time,
+
+00:53:25.576 --> 00:53:28.226 A:middle
+a lot of the work is
+deferred until draw.
+
+00:53:28.226 --> 00:53:29.336 A:middle
+We don't actually do a lot
+
+00:53:29.336 --> 00:53:31.306 A:middle
+of processing during
+the state setting.
+
+00:53:31.696 --> 00:53:33.716 A:middle
+It's all done later on.
+
+00:53:34.466 --> 00:53:37.836 A:middle
+The more state you
+set before a draw,
+
+00:53:37.876 --> 00:53:40.056 A:middle
+the more expensive
+that draw becomes.
+
+00:53:41.346 --> 00:53:43.736 A:middle
+So maximize the efficiency
+of each draw,
+
+00:53:44.476 --> 00:53:47.906 A:middle
+and the tools give you a
+couple of warnings of ways
+
+00:53:47.906 --> 00:53:53.086 A:middle
+that you can reduce the
+overhead for a particular call.
+
+00:53:53.086 --> 00:53:56.526 A:middle
+Redundant call and inefficient
+state update are these two
+
+00:53:56.526 --> 00:53:57.866 A:middle
+warnings you should
+look out for.
+
+00:53:58.316 --> 00:54:07.756 A:middle
+And what you can do is
+there are some algorithms
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:53:58.316 --> 00:54:07.756 A:middle
+And what you can do is
+there are some algorithms
+
+00:54:07.996 --> 00:54:09.326 A:middle
+such as shadowing state.
+
+00:54:10.226 --> 00:54:12.796 A:middle
+Keep the state vector
+that you've been changing
+
+00:54:12.796 --> 00:54:15.556 A:middle
+in your application and
+don't set it in OpenGL
+
+00:54:15.556 --> 00:54:17.006 A:middle
+if you've already set it.
+
+00:54:18.066 --> 00:54:22.496 A:middle
+Also a more elegant algorithm
+is to use state sorting,
+
+00:54:23.066 --> 00:54:26.656 A:middle
+which minimizes the
+number of state sets.
+
+00:54:26.656 --> 00:54:28.696 A:middle
+You can use a state
+tree, for example,
+
+00:54:28.696 --> 00:54:31.776 A:middle
+and only set the
+expensive states once,
+
+00:54:31.836 --> 00:54:36.966 A:middle
+and draw with a unique
+vector each time.
+
+00:54:37.101 --> 00:54:39.101 A:middle
+[ Pause ]
+
+00:54:39.236 --> 00:54:42.316 A:middle
+However, there is some
+fixed overhead for a draw.
+
+00:54:42.316 --> 00:54:44.886 A:middle
+It doesn't matter
+how little the number
+
+00:54:44.886 --> 00:54:46.276 A:middle
+of state setting you make.
+
+00:54:46.566 --> 00:54:48.526 A:middle
+We still have to do
+some state validation.
+
+00:54:48.526 --> 00:54:50.616 A:middle
+We need to check that
+the parameters you've set
+
+00:54:51.046 --> 00:54:55.156 A:middle
+in the draw are appropriate for
+the state that has been set,
+
+00:54:55.956 --> 00:54:58.806 A:middle
+and we need to make a call to
+the driver, and the driver needs
+
+00:54:58.856 --> 00:55:04.076 A:middle
+to do some calculations to
+convert to hardware state.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:54:58.856 --> 00:55:04.076 A:middle
+to do some calculations to
+convert to hardware state.
+
+00:55:04.956 --> 00:55:08.646 A:middle
+So minimize the number
+of draw calls you make.
+
+00:55:08.646 --> 00:55:10.986 A:middle
+The most obvious way
+is to don't draw things
+
+00:55:10.986 --> 00:55:13.256 A:middle
+that don't show up
+on the screen.
+
+00:55:13.326 --> 00:55:14.246 A:middle
+Cull your objects.
+
+00:55:14.246 --> 00:55:18.226 A:middle
+You can use frustrum
+culling if it's a 3D scene.
+
+00:55:18.486 --> 00:55:21.046 A:middle
+Just draw things that are
+in the area of visibility,
+
+00:55:21.276 --> 00:55:24.766 A:middle
+and don't draw things that are
+not in the area of visibility.
+
+00:55:25.106 --> 00:55:28.316 A:middle
+You can combine your draw
+calls via instancing,
+
+00:55:28.446 --> 00:55:29.826 A:middle
+which I talked about
+a lot earlier.
+
+00:55:29.826 --> 00:55:32.896 A:middle
+And also vertex batching
+and texture atlases.
+
+00:55:32.896 --> 00:55:33.886 A:middle
+[ Pause ]
+
+00:55:33.886 --> 00:55:36.246 A:middle
+Here's a way to reduce
+your binds.
+
+00:55:36.246 --> 00:55:40.886 A:middle
+What we would normally do is
+we'd have these four models
+
+00:55:40.886 --> 00:55:41.736 A:middle
+and four textures.
+
+00:55:41.826 --> 00:55:47.576 A:middle
+We would bind, draw, bind, draw,
+bind, draw, and bind and draw.
+
+00:55:47.576 --> 00:55:50.276 A:middle
+Now that's four binds, four
+draws, and each draw needs
+
+00:55:50.276 --> 00:55:53.236 A:middle
+to validate that that bind
+made sense for that draw.
+
+00:55:53.236 --> 00:55:57.856 A:middle
+We can reduce the number of
+binds, create a texture atlas
+
+00:55:57.856 --> 00:55:59.746 A:middle
+by combining all of
+these textures into one.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:56:00.356 --> 00:56:04.236 A:middle
+Simply bind once, then we can
+draw, draw, draw, and draw.
+
+00:56:04.336 --> 00:56:07.976 A:middle
+Great. We can even go
+further and combine our draws,
+
+00:56:07.976 --> 00:56:11.116 A:middle
+which would allow us to
+bind once and draw them all.
+
+00:56:11.116 --> 00:56:14.606 A:middle
+This would require us to
+combine all of our vertex data
+
+00:56:14.666 --> 00:56:16.136 A:middle
+into one vertex buffer object.
+
+00:56:16.136 --> 00:56:17.976 A:middle
+[ Pause ]
+
+00:56:17.976 --> 00:56:20.756 A:middle
+There is a new texture
+atlas tool.
+
+00:56:20.756 --> 00:56:26.096 A:middle
+Sprite Kit is a new framework
+in iOS 7, and it is mainly
+
+00:56:26.096 --> 00:56:30.336 A:middle
+for 2D games, but there
+are some nice tools
+
+00:56:30.336 --> 00:56:32.496 A:middle
+that we can take
+advantage of in OpenGL.
+
+00:56:33.126 --> 00:56:36.336 A:middle
+The texture atlas tool
+combines images efficiently,
+
+00:56:36.776 --> 00:56:40.096 A:middle
+and it produces a property
+list denoting the subimage.
+
+00:56:40.806 --> 00:56:42.786 A:middle
+You can scale your
+texture coordinates based
+
+00:56:42.786 --> 00:56:47.486 A:middle
+on this property list, enabling
+you to render your 3D models
+
+00:56:47.486 --> 00:56:49.936 A:middle
+with this texture atlas
+that has been produced.
+
+00:56:50.436 --> 00:56:54.956 A:middle
+This texture atlas
+tool comes with Xcode.
+
+00:56:54.956 --> 00:56:55.023 A:middle
+[ Pause ]
+
+00:56:55.023 --> 00:56:58.306 A:middle
+For more information, you
+can talk to Alan Schaffer,
+
+00:56:58.306 --> 00:57:00.816 A:middle
+our graphics and games
+technologies evangelist,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:56:58.306 --> 00:57:00.816 A:middle
+our graphics and games
+technologies evangelist,
+
+00:57:01.226 --> 00:57:03.086 A:middle
+and there's some
+excellent documentation
+
+00:57:03.436 --> 00:57:05.056 A:middle
+on our developer site.
+
+00:57:05.146 --> 00:57:08.926 A:middle
+You can also contact the
+community via the developer
+
+00:57:08.926 --> 00:57:11.626 A:middle
+forum, and there are
+some engineers that lurk
+
+00:57:11.626 --> 00:57:12.676 A:middle
+on those forums as well.
+
+00:57:12.676 --> 00:57:16.776 A:middle
+So you can get your questions
+answered in a lot of detail.
+
+00:57:16.876 --> 00:57:20.416 A:middle
+There are a couple
+of related sessions.
+
+00:57:20.416 --> 00:57:22.626 A:middle
+There were 2 Sprite Kit sessions
+that happened yesterday,
+
+00:57:22.626 --> 00:57:25.556 A:middle
+but you can catch
+the video of them.
+
+00:57:25.556 --> 00:57:28.216 A:middle
+And the Sprite Kit sessions
+talked a little bit more
+
+00:57:28.216 --> 00:57:32.376 A:middle
+in detail about their
+texture atlas tool.
+
+00:57:32.496 --> 00:57:34.816 A:middle
+Later on in the afternoon
+there is
+
+00:57:34.816 --> 00:57:37.426 A:middle
+"What's new in OpenGL for OS X."
+
+00:57:37.776 --> 00:57:40.406 A:middle
+OpenGL ES is derived
+from its big brother
+
+00:57:40.406 --> 00:57:41.596 A:middle
+on the desktop world.
+
+00:57:41.886 --> 00:57:44.176 A:middle
+So you can get a bigger picture
+
+00:57:44.176 --> 00:57:47.106 A:middle
+of what's happening
+in 3D graphics there.
+
+00:57:47.106 --> 00:57:47.173 A:middle
+[ Pause ]
+
+00:57:47.173 --> 00:57:50.026 A:middle
+In summary, you want to reduce
+your draw call overhead,
+
+00:57:50.406 --> 00:57:52.146 A:middle
+use the techniques
+including instancing
+
+00:57:52.146 --> 00:57:54.146 A:middle
+and texture atlases to do that.
+
+00:57:54.806 --> 00:57:56.526 A:middle
+Consider the GPU's operation
+
+00:57:57.026 --> 00:57:58.886 A:middle
+when you're architecting
+your rendering engine
+
+00:57:59.196 --> 00:58:01.546 A:middle
+and in your performance
+investigations.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:57:59.196 --> 00:58:01.546 A:middle
+and in your performance
+investigations.
+
+00:58:01.946 --> 00:58:04.226 A:middle
+The GPU tools really
+help greatly
+
+00:58:04.226 --> 00:58:07.376 A:middle
+in this effort while the
+tile-based deferred rendering
+
+00:58:07.376 --> 00:58:10.226 A:middle
+architecture has some
+special considerations
+
+00:58:10.566 --> 00:58:11.846 A:middle
+that you want to think about.
+
+00:58:12.076 --> 00:58:15.186 A:middle
+Thank you very much.
+

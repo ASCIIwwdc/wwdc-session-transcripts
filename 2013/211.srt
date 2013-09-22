@@ -1,0 +1,3941 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:10.146 A:middle
+[ Silence ]
+
+00:00:10.646 --> 00:00:11.946 A:middle
+&gt;&gt; Hi. I'm Tim Isted.
+
+00:00:12.166 --> 00:00:13.256 A:middle
+Welcome back after lunch.
+
+00:00:13.706 --> 00:00:15.256 A:middle
+Let's talk Core Data
+performance,
+
+00:00:16.616 --> 00:00:18.836 A:middle
+so you've taken the
+time to learn Core Data
+
+00:00:18.906 --> 00:00:20.406 A:middle
+and you've built
+your app around it.
+
+00:00:21.546 --> 00:00:23.616 A:middle
+Maybe you found
+
+00:00:23.756 --> 00:00:26.456 A:middle
+that occasionally you get
+slightly just re-scroll view,
+
+00:00:27.446 --> 00:00:27.916 A:middle
+table view.
+
+00:00:28.466 --> 00:00:30.566 A:middle
+Maybe the information takes a
+while to come into your app.
+
+00:00:31.256 --> 00:00:33.446 A:middle
+Maybe users are reporting
+a few occasional issues.
+
+00:00:34.246 --> 00:00:36.956 A:middle
+We're going to look at we can
+identify those issues today
+
+00:00:36.956 --> 00:00:41.256 A:middle
+and how we can fix them, so when
+we're talking about optimization
+
+00:00:41.256 --> 00:00:44.786 A:middle
+and particularly with Core Data,
+we're trying to make a balance
+
+00:00:44.976 --> 00:00:47.806 A:middle
+between memory usage on the one
+hand and speed on the other,
+
+00:00:48.386 --> 00:00:51.176 A:middle
+so the more memory we use,
+the more information we have
+
+00:00:51.176 --> 00:00:53.266 A:middle
+in memory, but we're
+using more memory.
+
+00:00:54.416 --> 00:00:56.576 A:middle
+The less information we have in
+memory, the slower things get
+
+00:00:56.576 --> 00:00:58.396 A:middle
+because we have to pull it in
+and push it back out again.
+
+00:00:59.026 --> 00:01:02.866 A:middle
+In iOS, obviously, you're
+even more limited with memory
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.026 --> 00:01:02.866 A:middle
+In iOS, obviously, you're
+even more limited with memory
+
+00:01:02.866 --> 00:01:03.796 A:middle
+than you are on the desktop,
+
+00:01:04.146 --> 00:01:06.236 A:middle
+so you can't sacrifice
+memory for speed.
+
+00:01:06.236 --> 00:01:08.776 A:middle
+You have to find a way to
+optimize where possible
+
+00:01:08.776 --> 00:01:11.946 A:middle
+without using too much
+memory, so some of the things
+
+00:01:11.946 --> 00:01:15.106 A:middle
+that cause people problems are
+loading too much information.
+
+00:01:15.196 --> 00:01:16.836 A:middle
+Maybe you're pulling in
+more than you really need.
+
+00:01:17.476 --> 00:01:19.146 A:middle
+Maybe you're firing
+too many faults.
+
+00:01:19.886 --> 00:01:20.826 A:middle
+You're trying to
+use up something
+
+00:01:20.826 --> 00:01:22.726 A:middle
+that you haven't previously
+indicated you wanted
+
+00:01:22.726 --> 00:01:24.756 A:middle
+and Core Data has to go out
+and fetch it and bring it in.
+
+00:01:25.736 --> 00:01:27.216 A:middle
+Maybe your queries
+are too expensive.
+
+00:01:28.386 --> 00:01:32.266 A:middle
+Maybe your text searches are
+using the wrong type of query
+
+00:01:32.266 --> 00:01:34.136 A:middle
+or using something more
+expensive than you really need,
+
+00:01:34.606 --> 00:01:35.976 A:middle
+and finally, a more
+advanced thing,
+
+00:01:35.976 --> 00:01:37.846 A:middle
+maybe you're incurring
+too many locks
+
+00:01:37.906 --> 00:01:39.646 A:middle
+when you're accessing
+through context.
+
+00:01:39.646 --> 00:01:43.266 A:middle
+So today we're going to be
+talking a lot about Instruments
+
+00:01:43.266 --> 00:01:45.356 A:middle
+and not only how we use
+Instruments to find problems,
+
+00:01:45.356 --> 00:01:47.376 A:middle
+but how we interpret the
+information that we see
+
+00:01:47.376 --> 00:01:49.406 A:middle
+and figure out what it means
+and what we need to do about it.
+
+00:01:49.406 --> 00:01:51.856 A:middle
+We're going to be talking
+about debug logging
+
+00:01:51.856 --> 00:01:54.086 A:middle
+so that you can see exactly
+what's happening underneath the
+
+00:01:54.086 --> 00:01:56.286 A:middle
+hood and what Core Data is
+doing behind the scenes,
+
+00:01:56.736 --> 00:01:58.886 A:middle
+and we'll be talking about some
+of the optimizations we can make
+
+00:01:58.886 --> 00:02:01.426 A:middle
+to our model, to fetch
+requests and predicates.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:58.886 --> 00:02:01.426 A:middle
+to our model, to fetch
+requests and predicates.
+
+00:02:01.726 --> 00:02:04.856 A:middle
+We're looking at concurrency
+and optimizing text searches.
+
+00:02:05.256 --> 00:02:08.106 A:middle
+So let's jump right in and talk
+about measuring performance
+
+00:02:09.196 --> 00:02:12.936 A:middle
+and primarily our tool for this
+is Instruments, but obviously
+
+00:02:12.936 --> 00:02:15.316 A:middle
+with Xcode 5 you've now got
+debug gauges that are there
+
+00:02:15.316 --> 00:02:16.376 A:middle
+without even running
+Instruments,
+
+00:02:16.376 --> 00:02:19.106 A:middle
+so you can get read outs
+on memory usage, CP usage,
+
+00:02:19.106 --> 00:02:22.056 A:middle
+et cetera, but your
+first port of call
+
+00:02:22.056 --> 00:02:24.356 A:middle
+for a more advanced information
+is the Core Data Instrument,
+
+00:02:24.586 --> 00:02:25.766 A:middle
+but that's not all.
+
+00:02:25.846 --> 00:02:28.316 A:middle
+Also consider running a
+time profiler allocation.
+
+00:02:28.316 --> 00:02:29.576 A:middle
+See how much memory
+you're using.
+
+00:02:29.576 --> 00:02:30.716 A:middle
+Look at file activity.
+
+00:02:30.716 --> 00:02:31.416 A:middle
+Look at disk IO.
+
+00:02:31.416 --> 00:02:34.056 A:middle
+How many times are you hitting
+the disk to pull information in?
+
+00:02:34.676 --> 00:02:35.826 A:middle
+Though when you're
+using instruments,
+
+00:02:36.526 --> 00:02:37.696 A:middle
+you need to know two things.
+
+00:02:37.946 --> 00:02:39.456 A:middle
+First of all, what
+are you looking for?
+
+00:02:39.746 --> 00:02:41.366 A:middle
+What are the patterns
+you're trying to find out?
+
+00:02:41.366 --> 00:02:41.966 A:middle
+What's wrong?
+
+00:02:42.036 --> 00:02:44.196 A:middle
+How do you interpret
+that information?
+
+00:02:44.196 --> 00:02:46.006 A:middle
+How do you use it
+to make a change?
+
+00:02:47.416 --> 00:02:49.236 A:middle
+And you also need to know
+how long to something --
+
+00:02:49.326 --> 00:02:50.406 A:middle
+should something take.
+
+00:02:50.596 --> 00:02:51.806 A:middle
+At app launch it should be fast.
+
+00:02:51.806 --> 00:02:54.056 A:middle
+Whatever you're doing to load
+initial information should
+
+00:02:54.056 --> 00:02:54.716 A:middle
+happen quickly.
+
+00:02:54.796 --> 00:02:56.896 A:middle
+A table view should
+pop up straight away.
+
+00:02:56.896 --> 00:02:58.696 A:middle
+If you're doing something
+in the background,
+
+00:02:58.696 --> 00:03:01.346 A:middle
+obviously that can take longer,
+but how long is too long?
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:58.696 --> 00:03:01.346 A:middle
+obviously that can take longer,
+but how long is too long?
+
+00:03:01.346 --> 00:03:02.956 A:middle
+How short is the right amount?
+
+00:03:04.346 --> 00:03:06.796 A:middle
+Let's jump straight to a
+quick demo, so here's an app
+
+00:03:07.186 --> 00:03:09.436 A:middle
+and it has a problem that I'm
+sure you -- many of you've seen,
+
+00:03:09.436 --> 00:03:10.066 A:middle
+that when I run it
+
+00:03:10.376 --> 00:03:13.556 A:middle
+in the simulator takes
+really a rather long time
+
+00:03:13.556 --> 00:03:15.956 A:middle
+for anything to happen.
+
+00:03:15.956 --> 00:03:19.836 A:middle
+Eventually my UI appears, and
+if I look in the debug gauge,
+
+00:03:20.376 --> 00:03:22.806 A:middle
+my memory usage is
+way up at 640 Meg.
+
+00:03:22.906 --> 00:03:24.046 A:middle
+That's a lot.
+
+00:03:24.046 --> 00:03:25.786 A:middle
+On a device, that's
+probably going to get killed,
+
+00:03:26.196 --> 00:03:28.176 A:middle
+and if it took that long
+in the simulator to launch,
+
+00:03:28.176 --> 00:03:29.876 A:middle
+it's going to take much,
+much longer on a device
+
+00:03:29.876 --> 00:03:31.306 A:middle
+and probably won't
+even launch at all,
+
+00:03:32.506 --> 00:03:34.546 A:middle
+so we can say it's taking
+a long time to launch,
+
+00:03:34.546 --> 00:03:35.666 A:middle
+but that's rather subjective.
+
+00:03:36.046 --> 00:03:37.366 A:middle
+How do we get an
+objective measure?
+
+00:03:38.006 --> 00:03:39.646 A:middle
+Lets choose Profile,
+and we're going
+
+00:03:39.646 --> 00:03:42.756 A:middle
+to choose the Core Data template
+and let's see what comes in.
+
+00:03:42.756 --> 00:03:45.976 A:middle
+Let's look at the Core
+Data Fetches Instrument,
+
+00:03:45.976 --> 00:03:47.556 A:middle
+and I'm going to look at the UI.
+
+00:03:47.726 --> 00:03:50.606 A:middle
+Just before that UI eventually
+appears I get some blocks
+
+00:03:50.606 --> 00:03:51.586 A:middle
+up here in the read out,
+
+00:03:51.586 --> 00:03:54.476 A:middle
+and this time line
+shows a wide block.
+
+00:03:54.566 --> 00:03:57.416 A:middle
+Those blue and those pink
+blocks are big, and this is bad,
+
+00:03:57.686 --> 00:03:59.176 A:middle
+particularly at app launch.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:00.526 --> 00:04:02.086 A:middle
+And to see exactly what's bad,
+
+00:04:02.826 --> 00:04:04.216 A:middle
+let's look in the
+bottom right hand corner,
+
+00:04:04.476 --> 00:04:08.146 A:middle
+so we've got a duration here
+of just over three seconds,
+
+00:04:08.426 --> 00:04:11.006 A:middle
+so the initial fetch request is
+taking three seconds to come in,
+
+00:04:11.046 --> 00:04:13.416 A:middle
+and we're fetching 505 objects
+
+00:04:13.756 --> 00:04:15.606 A:middle
+so there are two things
+we might look at here.
+
+00:04:15.606 --> 00:04:17.596 A:middle
+One is the fetch is
+taking way too long.
+
+00:04:17.596 --> 00:04:20.505 A:middle
+Three seconds is like a
+millennium in computer cycles,
+
+00:04:20.966 --> 00:04:23.116 A:middle
+and we're fetching 505 objects.
+
+00:04:23.416 --> 00:04:25.966 A:middle
+Do we really need to do that?
+
+00:04:26.166 --> 00:04:30.056 A:middle
+Let's look at optimizing fetch
+requests, and the first thing.
+
+00:04:30.626 --> 00:04:31.936 A:middle
+Don't fetch more than you need.
+
+00:04:32.826 --> 00:04:34.706 A:middle
+This is a really, really
+quick fix that you can make.
+
+00:04:34.926 --> 00:04:35.786 A:middle
+You've got a table view.
+
+00:04:36.146 --> 00:04:38.416 A:middle
+It's showing maybe ten,
+twelve, thirteen views --
+
+00:04:38.416 --> 00:04:40.426 A:middle
+rows, depending on, you
+know, your configuration
+
+00:04:40.426 --> 00:04:43.996 A:middle
+of the table view on the device,
+so don't fetch all 505 objects
+
+00:04:43.996 --> 00:04:45.396 A:middle
+from the store just
+for the first ten.
+
+00:04:45.396 --> 00:04:47.576 A:middle
+And there are various
+ways we can do this,
+
+00:04:47.576 --> 00:04:49.796 A:middle
+but the very easiest is
+to add one line of code.
+
+00:04:50.276 --> 00:04:52.656 A:middle
+Use a fetch batch size,
+and this limits the number
+
+00:04:52.656 --> 00:04:53.526 A:middle
+of results that come in.
+
+00:04:53.526 --> 00:04:55.606 A:middle
+We can use a fetch
+batch size of twenty.
+
+00:04:55.606 --> 00:04:57.256 A:middle
+That accounts for what's in
+the table view at the time
+
+00:04:57.256 --> 00:04:58.196 A:middle
+and a little bit of scrolling,
+
+00:04:59.076 --> 00:05:01.146 A:middle
+so do that we just
+set a fetch batch size
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:59.076 --> 00:05:01.146 A:middle
+so do that we just
+set a fetch batch size
+
+00:05:01.226 --> 00:05:02.406 A:middle
+on the request itself.
+
+00:05:02.866 --> 00:05:06.766 A:middle
+And what this means is that
+the results that we get back
+
+00:05:06.886 --> 00:05:09.976 A:middle
+from the batched fetch is
+a special kind of array.
+
+00:05:09.976 --> 00:05:11.716 A:middle
+It behaves just like
+any other array.
+
+00:05:11.716 --> 00:05:13.546 A:middle
+You can query the count,
+and you get the right number
+
+00:05:13.546 --> 00:05:16.026 A:middle
+of objects back as to what would
+be there without the batch,
+
+00:05:16.496 --> 00:05:19.536 A:middle
+but only the first fetched
+batch size worth of objects are
+
+00:05:19.536 --> 00:05:21.256 A:middle
+in the array, in this
+case the first twenty,
+
+00:05:21.906 --> 00:05:25.126 A:middle
+so as you iterate through,
+everything works as normal,
+
+00:05:25.126 --> 00:05:28.486 A:middle
+but when you reach the 20th
+object and then you try to put
+
+00:05:28.486 --> 00:05:30.926 A:middle
+in the 21st, that's a
+promise from Core Data
+
+00:05:30.926 --> 00:05:32.706 A:middle
+that the results will be
+there when you need them.
+
+00:05:32.976 --> 00:05:34.016 A:middle
+So Core Data will go out,
+
+00:05:34.016 --> 00:05:35.696 A:middle
+and it will execute another
+fetch request to bring
+
+00:05:35.696 --> 00:05:37.176 A:middle
+in those objects
+as you want them,
+
+00:05:37.176 --> 00:05:38.966 A:middle
+and this all happens
+automatically,
+
+00:05:38.966 --> 00:05:40.336 A:middle
+so you don't need
+to worry about it.
+
+00:05:40.516 --> 00:05:41.286 A:middle
+Just set this.
+
+00:05:41.286 --> 00:05:42.946 A:middle
+Iterate through the results
+as you would normally,
+
+00:05:43.106 --> 00:05:44.996 A:middle
+and the information flows
+in as it did before,
+
+00:05:45.416 --> 00:05:47.706 A:middle
+but you're minimizing the amount
+of objects you have in memory
+
+00:05:47.706 --> 00:05:49.486 A:middle
+because you're limiting the
+initial fetch to twenty.
+
+00:05:49.976 --> 00:05:51.456 A:middle
+Let's take a look in the
+app and see what happens,
+
+00:05:51.646 --> 00:05:54.006 A:middle
+so here I've got a fetch
+batch size of zero.
+
+00:05:54.006 --> 00:05:54.726 A:middle
+That's the default.
+
+00:05:54.856 --> 00:05:56.066 A:middle
+It means an unlimited batch.
+
+00:05:56.126 --> 00:05:56.926 A:middle
+Everything will come in.
+
+00:05:57.166 --> 00:06:00.866 A:middle
+Let's change it to 20, and
+then we're re-profile the app,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:57.166 --> 00:06:00.866 A:middle
+Let's change it to 20, and
+then we're re-profile the app,
+
+00:06:02.026 --> 00:06:04.796 A:middle
+so product, profile,
+Core Data Instruments.
+
+00:06:05.176 --> 00:06:08.156 A:middle
+Sorry, I'm going to run it first
+apparently, and here we have --
+
+00:06:08.246 --> 00:06:10.306 A:middle
+the memory has gone right
+down, so we're using a tenth
+
+00:06:10.306 --> 00:06:11.166 A:middle
+of what we had before.
+
+00:06:11.166 --> 00:06:13.976 A:middle
+Instead of the 600 Meg
+before, we've now got 62,
+
+00:06:14.036 --> 00:06:15.126 A:middle
+so that's a big improvement.
+
+00:06:15.126 --> 00:06:16.596 A:middle
+It's not ideal.
+
+00:06:16.596 --> 00:06:17.616 A:middle
+That's still quite
+a lot of memory,
+
+00:06:17.886 --> 00:06:19.576 A:middle
+but it's better than
+it was before.
+
+00:06:20.576 --> 00:06:23.876 A:middle
+Let's profile it and see
+what's happened, so stop it
+
+00:06:23.876 --> 00:06:27.176 A:middle
+and re-profile, and take
+a look at the read out.
+
+00:06:27.496 --> 00:06:30.386 A:middle
+So this time the app
+launches very quickly.
+
+00:06:30.386 --> 00:06:34.366 A:middle
+If we look in the simulator --
+if we look in the time line,
+
+00:06:34.486 --> 00:06:35.776 A:middle
+we've got a very thin line.
+
+00:06:35.776 --> 00:06:37.046 A:middle
+The thin line is good.
+
+00:06:37.506 --> 00:06:39.566 A:middle
+Thin line means a
+very fast fetch.
+
+00:06:40.446 --> 00:06:41.226 A:middle
+That's what you want to see.
+
+00:06:41.226 --> 00:06:42.346 A:middle
+You don't want to
+see wide lines.
+
+00:06:42.346 --> 00:06:43.416 A:middle
+You want to see very thin ones.
+
+00:06:43.466 --> 00:06:47.706 A:middle
+If we look in the simulator,
+and we scroll the table view,
+
+00:06:48.006 --> 00:06:49.176 A:middle
+then you'll see more
+entries appear
+
+00:06:49.176 --> 00:06:51.416 A:middle
+in the fetches instrument, and
+this is Core Data going out
+
+00:06:51.416 --> 00:06:53.206 A:middle
+and bringing in more
+objects as it's needed.
+
+00:06:53.486 --> 00:06:55.776 A:middle
+This would, you know, to
+fulfill different rows
+
+00:06:55.776 --> 00:06:59.316 A:middle
+in the table view, so you've got
+the thin line at the beginning
+
+00:06:59.316 --> 00:07:01.536 A:middle
+for the initial fetch and then
+you've got subsequent lines
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:59.316 --> 00:07:01.536 A:middle
+for the initial fetch and then
+you've got subsequent lines
+
+00:07:01.536 --> 00:07:04.136 A:middle
+appearing, ten lines again
+to bring in more objects.
+
+00:07:04.196 --> 00:07:06.886 A:middle
+If we look in the bottom right
+hand -- this slide, this time,
+
+00:07:07.826 --> 00:07:10.346 A:middle
+we see something interesting,
+so we've got one fetch count
+
+00:07:10.346 --> 00:07:13.766 A:middle
+of 505, and that's Core Data
+going out and doing a count
+
+00:07:13.766 --> 00:07:16.326 A:middle
+for fetch request to see how
+many objects should eventually
+
+00:07:16.326 --> 00:07:19.386 A:middle
+be in this array, 505,
+and the duration is short.
+
+00:07:19.446 --> 00:07:21.496 A:middle
+That's three milliseconds,
+less than three milliseconds.
+
+00:07:21.526 --> 00:07:22.016 A:middle
+That's okay.
+
+00:07:22.016 --> 00:07:23.166 A:middle
+That's a reasonable amount.
+
+00:07:23.166 --> 00:07:26.776 A:middle
+The first fetch batch that
+comes in is for 20 objects,
+
+00:07:26.896 --> 00:07:31.916 A:middle
+and that's 176 milliseconds,
+177, so a huge improvement
+
+00:07:31.916 --> 00:07:34.336 A:middle
+over the three seconds we had
+before just by changing one line
+
+00:07:34.336 --> 00:07:37.556 A:middle
+of code and setting a fetch
+batch size, but is it enough?
+
+00:07:37.926 --> 00:07:40.246 A:middle
+One hundred and seventy six
+milliseconds is still quite a
+
+00:07:40.246 --> 00:07:42.396 A:middle
+long time, especially in
+the simulator on a device
+
+00:07:42.396 --> 00:07:44.666 A:middle
+that will be more, and at
+app launch you want the UI
+
+00:07:44.666 --> 00:07:46.616 A:middle
+to appear immediately,
+so what else can we do?
+
+00:07:47.186 --> 00:07:51.696 A:middle
+Let's talk about optimizing the
+data model, so if you've been
+
+00:07:51.696 --> 00:07:54.266 A:middle
+to the WWDC presentations
+on Core Data
+
+00:07:54.266 --> 00:07:56.156 A:middle
+and performance before, you'll
+know that we've talked a lot
+
+00:07:56.156 --> 00:07:58.486 A:middle
+about designing your
+model for your apps usage
+
+00:07:59.006 --> 00:08:01.176 A:middle
+and in particular saying
+don't over-normalize.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:59.006 --> 00:08:01.176 A:middle
+and in particular saying
+don't over-normalize.
+
+00:08:01.526 --> 00:08:04.506 A:middle
+And normalization in a
+traditional sense means
+
+00:08:04.506 --> 00:08:05.886 A:middle
+that you're trying to
+minimize the amount
+
+00:08:05.886 --> 00:08:08.256 A:middle
+of information that's
+duplicated across a database,
+
+00:08:09.016 --> 00:08:10.206 A:middle
+so if you've got something
+
+00:08:10.206 --> 00:08:11.776 A:middle
+in one place you don't
+really want it anywhere else
+
+00:08:11.776 --> 00:08:13.046 A:middle
+because if you need to
+change it you've got
+
+00:08:13.046 --> 00:08:13.866 A:middle
+to update it everywhere.
+
+00:08:14.846 --> 00:08:16.926 A:middle
+With Core Data, you
+might be able
+
+00:08:16.926 --> 00:08:19.456 A:middle
+to get a performance benefit
+by actually caching information
+
+00:08:19.456 --> 00:08:21.786 A:middle
+or storing it in multiple
+places where you really need it,
+
+00:08:21.786 --> 00:08:23.966 A:middle
+so you don't have to keep
+firing relationships to go off
+
+00:08:23.966 --> 00:08:25.076 A:middle
+and get related information.
+
+00:08:25.666 --> 00:08:27.816 A:middle
+Duplication is not
+necessarily a bad thing.
+
+00:08:30.446 --> 00:08:33.566 A:middle
+We've also said that when
+you're using large blobs,
+
+00:08:33.566 --> 00:08:34.966 A:middle
+in this case our
+photos that we're seeing
+
+00:08:34.966 --> 00:08:37.866 A:middle
+in the contact list, you should
+use external storage attribute.
+
+00:08:38.176 --> 00:08:40.405 A:middle
+It's a simple checkbox
+in the data model.
+
+00:08:40.486 --> 00:08:44.015 A:middle
+You just enable it, and we will
+store blobs as you set them
+
+00:08:44.015 --> 00:08:46.756 A:middle
+on a property -- out to
+disk, but not necessarily.
+
+00:08:46.986 --> 00:08:50.006 A:middle
+Sometimes SQLite is actually
+better for small file sizes.
+
+00:08:50.006 --> 00:08:52.526 A:middle
+It's much more responsive
+giving back data blobs
+
+00:08:52.526 --> 00:08:55.946 A:middle
+than using a separate file,
+so if the file is below
+
+00:08:55.946 --> 00:08:58.476 A:middle
+that threshold we will store
+it out there in SQLite.
+
+00:08:58.626 --> 00:09:00.596 A:middle
+If it's above the threshold,
+we'll write it to a file
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:58.626 --> 00:09:00.596 A:middle
+If it's above the threshold,
+we'll write it to a file
+
+00:09:00.596 --> 00:09:01.486 A:middle
+and store a reference.
+
+00:09:01.746 --> 00:09:03.056 A:middle
+That all happens automatically.
+
+00:09:03.056 --> 00:09:04.226 A:middle
+You don't need to
+worry about it.
+
+00:09:04.506 --> 00:09:05.846 A:middle
+You simply set a data property,
+
+00:09:05.846 --> 00:09:07.096 A:middle
+and then you get it
+back when you want it.
+
+00:09:07.526 --> 00:09:11.326 A:middle
+Now this is my current entity.
+
+00:09:11.486 --> 00:09:13.126 A:middle
+I have a first name, a
+last name and a photo,
+
+00:09:13.126 --> 00:09:14.916 A:middle
+and that's what's
+displayed in my UI.
+
+00:09:16.976 --> 00:09:19.176 A:middle
+Do we really need
+that photo in there?
+
+00:09:19.606 --> 00:09:21.746 A:middle
+It might be that we could
+change our UI to get rid
+
+00:09:21.746 --> 00:09:23.876 A:middle
+of the little thumbnail and just
+show first name and last name,
+
+00:09:23.876 --> 00:09:25.276 A:middle
+but we still want the photo.
+
+00:09:25.276 --> 00:09:26.546 A:middle
+Maybe we're going to
+push a view controller
+
+00:09:26.546 --> 00:09:29.756 A:middle
+on screen that's going to give
+us maybe the picture of the user
+
+00:09:29.756 --> 00:09:32.266 A:middle
+and then all their
+information overlaid on top,
+
+00:09:32.566 --> 00:09:34.516 A:middle
+so in previous talks
+we've recommended
+
+00:09:34.516 --> 00:09:36.776 A:middle
+that you split your data
+out into a separate entity.
+
+00:09:36.776 --> 00:09:38.886 A:middle
+Anything that's a big
+blob of data should go
+
+00:09:38.886 --> 00:09:41.156 A:middle
+into a separate entity, in
+this case, a photo entity
+
+00:09:41.156 --> 00:09:42.436 A:middle
+with a photo data attribute,
+
+00:09:42.436 --> 00:09:43.916 A:middle
+and there's a one-to-one
+relationship
+
+00:09:43.916 --> 00:09:47.156 A:middle
+between them, but there's more.
+
+00:09:48.176 --> 00:09:50.016 A:middle
+Let's see what happens
+when we try this.
+
+00:09:50.836 --> 00:09:53.066 A:middle
+I've put the data
+into my photo entity,
+
+00:09:53.186 --> 00:09:55.086 A:middle
+and I've got my external
+storage checkbox used.
+
+00:09:55.256 --> 00:09:56.206 A:middle
+Let's profile this again.
+
+00:09:59.236 --> 00:10:02.006 A:middle
+This time the app
+launches quickly again,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:59.236 --> 00:10:02.006 A:middle
+This time the app
+launches quickly again,
+
+00:10:02.006 --> 00:10:02.976 A:middle
+but there's some
+marks appearing.
+
+00:10:03.046 --> 00:10:06.066 A:middle
+Have a look in this instrument
+as I scroll the table view,
+
+00:10:06.376 --> 00:10:09.586 A:middle
+got little black marks appearing
+the Core Data Cache Misses
+
+00:10:09.586 --> 00:10:12.926 A:middle
+Instrument, and this is because
+we have actually still used
+
+00:10:12.926 --> 00:10:15.286 A:middle
+that photo to display a
+little tiny thumbnail.
+
+00:10:15.836 --> 00:10:18.346 A:middle
+We've got the contacts
+being loaded,
+
+00:10:18.346 --> 00:10:19.906 A:middle
+and that's what we're
+fetching right now,
+
+00:10:19.906 --> 00:10:22.536 A:middle
+but each time we access that
+photo relationship to display
+
+00:10:22.536 --> 00:10:25.486 A:middle
+in the table view, Core Data's
+having to go out and fetch
+
+00:10:25.486 --> 00:10:26.956 A:middle
+that related photo
+blob and bring it
+
+00:10:26.956 --> 00:10:28.206 A:middle
+in so we can create
+the thumbnail.
+
+00:10:29.696 --> 00:10:36.526 A:middle
+What we should really consider
+doing is maybe we can pre-fetch
+
+00:10:36.526 --> 00:10:37.486 A:middle
+the objects that we need.
+
+00:10:37.826 --> 00:10:39.676 A:middle
+If you're seeing that kind
+of activity in an instrument,
+
+00:10:39.676 --> 00:10:41.976 A:middle
+it generally means that you
+haven't set enough information
+
+00:10:41.976 --> 00:10:43.746 A:middle
+on what you -- what you're
+trying to bring in and use.
+
+00:10:44.366 --> 00:10:45.526 A:middle
+You've requested your contacts,
+
+00:10:45.526 --> 00:10:47.126 A:middle
+but you haven't told it
+you also want the photo,
+
+00:10:47.336 --> 00:10:50.046 A:middle
+so you do that by calling
+set relationship key paths
+
+00:10:50.046 --> 00:10:51.726 A:middle
+for pre-fetching and
+providing an array
+
+00:10:51.726 --> 00:10:53.756 A:middle
+of key paths, in
+this case photo.
+
+00:10:54.046 --> 00:10:55.116 A:middle
+That's the name of
+the relationship,
+
+00:10:57.326 --> 00:11:00.016 A:middle
+but that might not be the
+right thing to do in this case
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:57.326 --> 00:11:00.016 A:middle
+but that might not be the
+right thing to do in this case
+
+00:11:00.466 --> 00:11:01.806 A:middle
+because our photo is 10 Meg.
+
+00:11:02.266 --> 00:11:04.236 A:middle
+We're actually displaying
+a little tiny thumbnail.
+
+00:11:04.236 --> 00:11:06.906 A:middle
+We don't really need an
+entire image just to show
+
+00:11:06.906 --> 00:11:09.716 A:middle
+that thumbnail, nor do we really
+want to scale it at runtime,
+
+00:11:10.326 --> 00:11:12.606 A:middle
+so what we should really do is
+cache the thumbnail separately
+
+00:11:12.606 --> 00:11:13.766 A:middle
+in the contact identity.
+
+00:11:14.486 --> 00:11:16.296 A:middle
+If we're loading the first name
+and last name and the thumbnail
+
+00:11:16.296 --> 00:11:17.796 A:middle
+in one go, and we're
+displaying it in the UI,
+
+00:11:17.796 --> 00:11:19.376 A:middle
+let's have it all
+in the same entity.
+
+00:11:20.026 --> 00:11:21.756 A:middle
+Less data takes less
+time to fetch.
+
+00:11:21.756 --> 00:11:23.276 A:middle
+We're not skipping
+a relationship.
+
+00:11:23.276 --> 00:11:24.456 A:middle
+We're not having
+to scale in memory,
+
+00:11:25.486 --> 00:11:27.656 A:middle
+so let's move to
+this arrangement.
+
+00:11:27.716 --> 00:11:29.476 A:middle
+I've got my first name,
+last name and a thumbnail
+
+00:11:29.476 --> 00:11:32.526 A:middle
+in the contact entity and
+photo data in the photo entity.
+
+00:11:33.996 --> 00:11:35.306 A:middle
+What happens when
+I profile this?
+
+00:11:38.216 --> 00:11:39.806 A:middle
+Again, product profile.
+
+00:11:40.076 --> 00:11:42.666 A:middle
+Look at the Core Data
+template, and let's look
+
+00:11:42.666 --> 00:11:46.136 A:middle
+in the Fetches Instrument.
+
+00:11:46.926 --> 00:11:49.856 A:middle
+As I scroll my table view
+this time I see no activity
+
+00:11:49.856 --> 00:11:51.556 A:middle
+in cache misses, but the
+information is still brought
+
+00:11:51.556 --> 00:11:53.856 A:middle
+in by the batches, seems
+to be very responsive.
+
+00:11:53.856 --> 00:11:54.626 A:middle
+The scrolling's great.
+
+00:11:54.626 --> 00:11:57.106 A:middle
+Let's have a look
+in the bottom right.
+
+00:11:57.496 --> 00:12:00.656 A:middle
+This time my fetch durations
+have dropped dramatically,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:57.496 --> 00:12:00.656 A:middle
+This time my fetch durations
+have dropped dramatically,
+
+00:12:00.956 --> 00:12:03.006 A:middle
+so the longest thing right
+now is actually the count,
+
+00:12:03.006 --> 00:12:04.006 A:middle
+505 objects.
+
+00:12:04.006 --> 00:12:05.496 A:middle
+It's taking about
+three milliseconds.
+
+00:12:05.736 --> 00:12:09.326 A:middle
+All the 20 individual object
+fetches, about two milliseconds,
+
+00:12:09.976 --> 00:12:11.546 A:middle
+even less than that
+as it goes on.
+
+00:12:11.736 --> 00:12:12.866 A:middle
+That's much more realistic.
+
+00:12:12.866 --> 00:12:14.076 A:middle
+That's what it should
+be at app launch.
+
+00:12:14.076 --> 00:12:15.416 A:middle
+We want the UI to
+appear immediately.
+
+00:12:15.416 --> 00:12:16.926 A:middle
+We want the information
+pulled in quickly.
+
+00:12:16.926 --> 00:12:18.386 A:middle
+We don't want to keep
+the user waiting.
+
+00:12:18.966 --> 00:12:20.476 A:middle
+Good user experience is
+what we're aiming for,
+
+00:12:21.266 --> 00:12:25.036 A:middle
+so that's basic problems
+with simple applications.
+
+00:12:25.206 --> 00:12:26.586 A:middle
+Let's talk a little bit now
+
+00:12:26.586 --> 00:12:28.496 A:middle
+about performing
+background tasks,
+
+00:12:28.816 --> 00:12:32.826 A:middle
+so this might involve importing
+information from somewhere.
+
+00:12:32.826 --> 00:12:35.696 A:middle
+It might involve doing some
+complicated calculations
+
+00:12:35.696 --> 00:12:37.376 A:middle
+on a lot of data that
+you've already saved.
+
+00:12:37.916 --> 00:12:41.266 A:middle
+First of all, let's look at
+dealing with a simple app.
+
+00:12:41.266 --> 00:12:42.346 A:middle
+This is an earthquakes app.
+
+00:12:42.346 --> 00:12:45.066 A:middle
+It shows the location of recent
+earthquakes, which it gets
+
+00:12:45.096 --> 00:12:46.006 A:middle
+from a [inaudible] web service.
+
+00:12:46.006 --> 00:12:48.396 A:middle
+It pulls in some JSON
+data, translates it
+
+00:12:48.996 --> 00:12:52.736 A:middle
+and updates the local store.
+
+00:12:52.926 --> 00:12:54.716 A:middle
+What I have right
+now has a problem,
+
+00:12:54.826 --> 00:12:57.636 A:middle
+so profile it once more.
+
+00:12:57.636 --> 00:13:00.426 A:middle
+Let's look at the Fetches
+Instrument, and I'm going
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:57.636 --> 00:13:00.426 A:middle
+Let's look at the Fetches
+Instrument, and I'm going
+
+00:13:00.426 --> 00:13:03.656 A:middle
+to hit my little
+refresh button in my UI,
+
+00:13:03.766 --> 00:13:05.056 A:middle
+which will trigger an update.
+
+00:13:05.556 --> 00:13:10.186 A:middle
+So what you're seeing
+is a large amount
+
+00:13:10.186 --> 00:13:11.356 A:middle
+of activity in that instrument.
+
+00:13:12.226 --> 00:13:14.666 A:middle
+It's kind of like red
+meadow grass, lots and lots
+
+00:13:14.666 --> 00:13:15.986 A:middle
+of thin lines, one
+after the other.
+
+00:13:16.816 --> 00:13:17.906 A:middle
+This is also a bad thing.
+
+00:13:17.906 --> 00:13:19.936 A:middle
+I'm not going to make you
+sit through all of this,
+
+00:13:19.936 --> 00:13:23.726 A:middle
+so let's skip on a little bit
+and hey, it's still going on.
+
+00:13:24.566 --> 00:13:27.846 A:middle
+This is now nearly a 50
+second import operation.
+
+00:13:29.126 --> 00:13:31.626 A:middle
+That seems a little excessive
+even for a background operation.
+
+00:13:31.876 --> 00:13:34.566 A:middle
+If you look in the bottom
+right, we've got a whole bunch
+
+00:13:34.566 --> 00:13:36.306 A:middle
+of fetches that just
+have a count of one.
+
+00:13:37.626 --> 00:13:41.296 A:middle
+That's -- that seems a bit odd,
+and what's even more if we look
+
+00:13:41.356 --> 00:13:43.556 A:middle
+in the Saves Instrument, you see
+
+00:13:43.556 --> 00:13:45.216 A:middle
+that we've got a single
+save happening at the end
+
+00:13:45.216 --> 00:13:47.346 A:middle
+and it's taking 175
+milliseconds.
+
+00:13:47.696 --> 00:13:50.106 A:middle
+Again, quite a long time even
+on the -- on my simulator,
+
+00:13:50.106 --> 00:13:52.126 A:middle
+going to be much longer
+than that on the device.
+
+00:13:52.126 --> 00:13:54.606 A:middle
+When we talk about locking
+later, this is going to be key.
+
+00:13:54.606 --> 00:13:56.666 A:middle
+We want to keep the
+time it takes to save
+
+00:13:56.766 --> 00:14:00.656 A:middle
+to a minimum wherever
+possible, and the reason
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:56.766 --> 00:14:00.656 A:middle
+to a minimum wherever
+possible, and the reason
+
+00:14:00.656 --> 00:14:02.966 A:middle
+that that's bad is that we're
+performing a fetch request
+
+00:14:02.966 --> 00:14:04.496 A:middle
+for every object that
+we're trying to update.
+
+00:14:04.736 --> 00:14:06.416 A:middle
+Every item in our JSON
+dictionary we're going out
+
+00:14:06.416 --> 00:14:08.336 A:middle
+and we're executing fetch
+requests to see if it exists.
+
+00:14:08.336 --> 00:14:09.156 A:middle
+If it does we update it.
+
+00:14:09.156 --> 00:14:10.426 A:middle
+If we don't, we insert it.
+
+00:14:10.426 --> 00:14:12.856 A:middle
+Let's talk about a
+better algorithm,
+
+00:14:13.576 --> 00:14:16.346 A:middle
+so the first you do is you
+sort your input objects
+
+00:14:16.346 --> 00:14:17.326 A:middle
+by some kind of ID.
+
+00:14:17.326 --> 00:14:20.436 A:middle
+That's how you tie some relation
+data to the thing in the store,
+
+00:14:20.436 --> 00:14:24.796 A:middle
+and you execute one sorted
+fetch against your store to pull
+
+00:14:24.796 --> 00:14:26.896 A:middle
+in all the objects that have
+a matching ID from the ones
+
+00:14:26.896 --> 00:14:29.156 A:middle
+that you're trying to
+import, and then you iterate
+
+00:14:29.156 --> 00:14:30.116 A:middle
+through them concurrently.
+
+00:14:30.876 --> 00:14:32.886 A:middle
+If the next object in each
+enumerator is the same,
+
+00:14:32.886 --> 00:14:33.396 A:middle
+you update.
+
+00:14:33.466 --> 00:14:34.606 A:middle
+If it's different, you insert,
+
+00:14:35.146 --> 00:14:36.766 A:middle
+so a picture's worth
+a thousand words.
+
+00:14:36.766 --> 00:14:38.106 A:middle
+Let's take a look
+at this in practice.
+
+00:14:38.896 --> 00:14:40.096 A:middle
+Say we've got three
+objects, and we're trying
+
+00:14:40.096 --> 00:14:44.006 A:middle
+to update our local store, and
+we've got a couple of objects
+
+00:14:44.006 --> 00:14:46.636 A:middle
+that actually exist in
+this particular data.
+
+00:14:46.956 --> 00:14:48.046 A:middle
+First thing we do, we sort them,
+
+00:14:48.046 --> 00:14:49.356 A:middle
+so the fetch request
+must be sorted.
+
+00:14:49.396 --> 00:14:51.206 A:middle
+We can sort our JSON
+dictionary as well by ID,
+
+00:14:51.336 --> 00:14:55.016 A:middle
+and we enumerate concurrently,
+so the first object in each
+
+00:14:55.016 --> 00:14:57.266 A:middle
+of these collections has ID 101.
+
+00:14:57.676 --> 00:14:58.206 A:middle
+It's a match.
+
+00:14:58.406 --> 00:15:00.286 A:middle
+That's an update, and we go
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:58.406 --> 00:15:00.286 A:middle
+That's an update, and we go
+
+00:15:00.286 --> 00:15:01.696 A:middle
+to the next object
+in each enumerator.
+
+00:15:01.696 --> 00:15:03.626 A:middle
+In this case, they don't match.
+
+00:15:04.566 --> 00:15:05.616 A:middle
+That's saying it's an insert,
+
+00:15:05.786 --> 00:15:08.146 A:middle
+so we can insert the
+object into the store.
+
+00:15:09.076 --> 00:15:12.056 A:middle
+And this point we increment
+only the information to update
+
+00:15:12.056 --> 00:15:13.816 A:middle
+because we haven't yet
+dealt with the one --
+
+00:15:13.886 --> 00:15:15.776 A:middle
+number 104 in our
+existing objects.
+
+00:15:16.486 --> 00:15:17.986 A:middle
+This time they match.
+
+00:15:17.986 --> 00:15:19.596 A:middle
+It's an update, so
+we can update.
+
+00:15:20.336 --> 00:15:22.456 A:middle
+That's a much more efficient
+algorithm for inserting
+
+00:15:22.456 --> 00:15:25.466 A:middle
+or update because you're only
+ever executing one fetch request
+
+00:15:25.466 --> 00:15:26.036 A:middle
+to the store.
+
+00:15:26.036 --> 00:15:27.496 A:middle
+You're only pulling
+in one lot of data.
+
+00:15:27.546 --> 00:15:29.446 A:middle
+You're not going
+out individual times
+
+00:15:29.786 --> 00:15:31.166 A:middle
+to get each object separately,
+
+00:15:31.416 --> 00:15:33.566 A:middle
+and you won't see these
+little crazy lines going
+
+00:15:33.566 --> 00:15:35.856 A:middle
+across in the time -- in
+the profile in Instruments.
+
+00:15:36.206 --> 00:15:38.676 A:middle
+Let's see what difference
+this makes.
+
+00:15:38.676 --> 00:15:41.056 A:middle
+I've got two enumerators
+here, JSON quake enumerator
+
+00:15:41.056 --> 00:15:42.336 A:middle
+and matching quake enumerator.
+
+00:15:43.056 --> 00:15:44.816 A:middle
+When I run -- I profile it.
+
+00:15:45.866 --> 00:15:46.976 A:middle
+See how much faster this is.
+
+00:15:47.516 --> 00:15:52.976 A:middle
+[ Pause ]
+
+00:15:53.476 --> 00:15:54.696 A:middle
+Boom. That's pretty good.
+
+00:15:55.176 --> 00:15:58.716 A:middle
+I've got one line in my
+Fetch Request Instrument now.
+
+00:15:59.046 --> 00:15:59.966 A:middle
+It's not thin.
+
+00:15:59.966 --> 00:16:01.676 A:middle
+It's a little bit wide,
+a few pixels wide,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:59.966 --> 00:16:01.676 A:middle
+It's a little bit wide,
+a few pixels wide,
+
+00:16:01.676 --> 00:16:03.026 A:middle
+but it's a certainly
+better than before.
+
+00:16:03.026 --> 00:16:04.616 A:middle
+Instead of like a
+minute's worth of import,
+
+00:16:04.616 --> 00:16:05.836 A:middle
+we've got maybe a second.
+
+00:16:05.956 --> 00:16:10.286 A:middle
+I kept saying that thin
+was better than wide.
+
+00:16:11.246 --> 00:16:12.106 A:middle
+Why is it wide?
+
+00:16:12.106 --> 00:16:17.086 A:middle
+Well our fetch count is actually
+23,000 objects, so I had a batch
+
+00:16:17.086 --> 00:16:18.856 A:middle
+of JSON dictionaries to
+update, and I've gone out
+
+00:16:18.856 --> 00:16:20.076 A:middle
+and I've fetched
+all my existing ones
+
+00:16:20.076 --> 00:16:22.726 A:middle
+and I got 23,000 objects
+coming back into memory.
+
+00:16:23.296 --> 00:16:26.876 A:middle
+That's probably not a good
+thing, and it took just
+
+00:16:26.876 --> 00:16:28.746 A:middle
+under 300 milliseconds, so again
+
+00:16:28.746 --> 00:16:30.506 A:middle
+that will be slow
+on an actual device.
+
+00:16:31.556 --> 00:16:32.336 A:middle
+This isn't good.
+
+00:16:33.046 --> 00:16:34.646 A:middle
+You want to minimize the number
+of objects you're dealing
+
+00:16:34.646 --> 00:16:36.616 A:middle
+with at any time and keep
+those fetch durations low,
+
+00:16:36.616 --> 00:16:38.626 A:middle
+again for locking purposes
+as we'll talk later.
+
+00:16:40.906 --> 00:16:42.636 A:middle
+What we really want to
+do is work in batches,
+
+00:16:42.636 --> 00:16:44.786 A:middle
+and this applies both to the
+implementing update or insert
+
+00:16:44.846 --> 00:16:48.016 A:middle
+but also any kind of background
+activity that you're doing
+
+00:16:48.016 --> 00:16:49.796 A:middle
+where you're pulling in
+lots of objects at the time.
+
+00:16:49.796 --> 00:16:52.366 A:middle
+You should be working in batches
+rather than the whole lot
+
+00:16:52.366 --> 00:16:54.536 A:middle
+at once, and it's
+worth experimenting
+
+00:16:54.536 --> 00:16:56.006 A:middle
+to find the optimal batch size.
+
+00:16:56.826 --> 00:16:57.846 A:middle
+Maybe it's 500.
+
+00:16:57.846 --> 00:16:58.646 A:middle
+Maybe it's 1000.
+
+00:16:58.896 --> 00:17:00.126 A:middle
+Maybe it's 550.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:58.896 --> 00:17:00.126 A:middle
+Maybe it's 550.
+
+00:17:00.676 --> 00:17:02.426 A:middle
+Just that little bit
+of difference means
+
+00:17:02.426 --> 00:17:03.546 A:middle
+that you get things much faster,
+
+00:17:03.546 --> 00:17:06.915 A:middle
+but without using too much
+memory, so experiment and test
+
+00:17:06.915 --> 00:17:08.165 A:middle
+on every device that
+you support.
+
+00:17:08.276 --> 00:17:08.925 A:middle
+Just because it works
+
+00:17:08.925 --> 00:17:11.616 A:middle
+on an iPhone 5 very well doesn't
+necessarily mean it'll be
+
+00:17:11.616 --> 00:17:13.516 A:middle
+so good on a 4 or even a 3GS.
+
+00:17:15.715 --> 00:17:19.215 A:middle
+So, let's talk about minimizing
+memory usage we'll be batching.
+
+00:17:20.195 --> 00:17:22.836 A:middle
+You've got a number of ways to
+deal with getting rid of some
+
+00:17:22.836 --> 00:17:24.425 A:middle
+of the information that
+you've just pulled in,
+
+00:17:24.425 --> 00:17:27.656 A:middle
+and the first way is to turn
+a single managed object back
+
+00:17:27.656 --> 00:17:29.816 A:middle
+into a fault, so this
+can be really helpful
+
+00:17:29.816 --> 00:17:32.376 A:middle
+if you've got a single managed
+object and it has a bunch
+
+00:17:32.376 --> 00:17:35.366 A:middle
+of related objects hanging
+off it, and you fetch them all
+
+00:17:35.366 --> 00:17:36.996 A:middle
+in to do something and you've
+been operating on them,
+
+00:17:36.996 --> 00:17:37.936 A:middle
+and then you've finished
+with it.
+
+00:17:37.936 --> 00:17:40.776 A:middle
+So on to arc, you've probably
+got a strong reference
+
+00:17:40.776 --> 00:17:43.106 A:middle
+to your managed object and then
+this will have references all
+
+00:17:43.106 --> 00:17:44.876 A:middle
+the way across to all the
+related objects, so they'll stay
+
+00:17:44.876 --> 00:17:46.156 A:middle
+in memory and use memory
+
+00:17:46.156 --> 00:17:47.556 A:middle
+that you don't really
+need at this point.
+
+00:17:48.166 --> 00:17:50.766 A:middle
+So by calling refresh object
+merge changes on this object,
+
+00:17:50.766 --> 00:17:51.836 A:middle
+you'll turn it into a fault.
+
+00:17:52.146 --> 00:17:53.556 A:middle
+All its other data
+will disappear,
+
+00:17:53.556 --> 00:17:55.336 A:middle
+and it will be re-fetched
+if you need it,
+
+00:17:56.526 --> 00:17:57.416 A:middle
+but that's a single object.
+
+00:17:57.416 --> 00:17:59.116 A:middle
+What about, you know,
+doing a batch?
+
+00:17:59.466 --> 00:18:01.726 A:middle
+The most efficient way
+is to reset the context
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:59.466 --> 00:18:01.726 A:middle
+The most efficient way
+is to reset the context
+
+00:18:01.806 --> 00:18:04.136 A:middle
+by calling reset,
+and this will clear
+
+00:18:04.136 --> 00:18:05.606 A:middle
+out all the existing
+managed objects
+
+00:18:05.846 --> 00:18:07.906 A:middle
+so they'll be re-fetched the
+next time you need to use them.
+
+00:18:08.986 --> 00:18:10.146 A:middle
+It does come with a caveat.
+
+00:18:10.146 --> 00:18:12.596 A:middle
+If you have any existing
+references to any of the objects
+
+00:18:12.596 --> 00:18:15.716 A:middle
+in that context, they will be
+invalid after you've reset.
+
+00:18:16.306 --> 00:18:17.826 A:middle
+If you try and access
+one, you'll get an error
+
+00:18:17.826 --> 00:18:19.306 A:middle
+in the console that
+says something like,
+
+00:18:19.556 --> 00:18:20.526 A:middle
+"Could not fulfill a fault."
+
+00:18:21.126 --> 00:18:25.426 A:middle
+So let's look at the batch
+size and see what's happened
+
+00:18:25.426 --> 00:18:26.566 A:middle
+when I've re-profiled the app.
+
+00:18:26.896 --> 00:18:28.346 A:middle
+Got a batch size of 500 here.
+
+00:18:28.346 --> 00:18:29.586 A:middle
+That seemed to work quite well
+
+00:18:30.016 --> 00:18:33.606 A:middle
+when I profile with
+the instrument.
+
+00:18:34.036 --> 00:18:36.856 A:middle
+Check the fetch requests, and
+then click refresh in the app.
+
+00:18:36.976 --> 00:18:39.156 A:middle
+I get a little flurry
+of activity,
+
+00:18:39.156 --> 00:18:40.996 A:middle
+but this time it's
+only a few entries
+
+00:18:40.996 --> 00:18:41.896 A:middle
+in the time line, which is good.
+
+00:18:41.896 --> 00:18:47.066 A:middle
+They're few and thin, and the
+times are far much reduced,
+
+00:18:47.596 --> 00:18:52.066 A:middle
+so if I look down in the bottom
+right you can see we've only got
+
+00:18:52.066 --> 00:18:55.246 A:middle
+500 objects coming in at a time
+and we're dealing with a matter
+
+00:18:55.246 --> 00:18:59.336 A:middle
+of maybe 13, 14 milliseconds, so
+each of these fetches is going
+
+00:18:59.336 --> 00:19:03.036 A:middle
+to be very, very short and
+we're not using too much memory
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:59.336 --> 00:19:03.036 A:middle
+to be very, very short and
+we're not using too much memory
+
+00:19:03.036 --> 00:19:05.136 A:middle
+because we're using a
+batch, so this is the ideal,
+
+00:19:05.746 --> 00:19:07.356 A:middle
+most optimized background import
+
+00:19:07.356 --> 00:19:09.246 A:middle
+that we could possibly
+use for this process.
+
+00:19:09.696 --> 00:19:11.246 A:middle
+So that's importing data.
+
+00:19:12.906 --> 00:19:14.796 A:middle
+What about operations
+that we need to do?
+
+00:19:15.756 --> 00:19:18.136 A:middle
+Well, it's always worth saying
+only fetch what you need.
+
+00:19:18.186 --> 00:19:19.836 A:middle
+We talked earlier about
+the fetch batch size,
+
+00:19:19.836 --> 00:19:21.396 A:middle
+so that's a way to limit
+the number of results
+
+00:19:21.396 --> 00:19:23.466 A:middle
+that you get initially rather
+than fetching everything,
+
+00:19:23.466 --> 00:19:25.406 A:middle
+but there are other
+things you can consider.
+
+00:19:25.946 --> 00:19:28.216 A:middle
+If all you're doing is
+performing a calculation
+
+00:19:28.216 --> 00:19:31.066 A:middle
+on your data, you don't need
+read write access to that data.
+
+00:19:32.046 --> 00:19:34.186 A:middle
+Potentially you don't even
+need an entire managed object
+
+00:19:34.186 --> 00:19:35.916 A:middle
+with all your business
+logic hanging off it.
+
+00:19:36.516 --> 00:19:37.596 A:middle
+What you might be able to do is
+
+00:19:37.596 --> 00:19:38.976 A:middle
+to use a dictionary
+request type --
+
+00:19:39.576 --> 00:19:41.846 A:middle
+result type, so when
+you execute this,
+
+00:19:41.846 --> 00:19:43.296 A:middle
+instead of getting
+managed objects back,
+
+00:19:43.826 --> 00:19:45.856 A:middle
+you get plain NS
+Dictionary instances,
+
+00:19:46.176 --> 00:19:48.006 A:middle
+and you can even limit
+the number of properties
+
+00:19:48.006 --> 00:19:49.146 A:middle
+that you actually get so rather
+
+00:19:49.146 --> 00:19:50.676 A:middle
+than getting your
+entire managed object,
+
+00:19:50.786 --> 00:19:52.246 A:middle
+you can just specify one value.
+
+00:19:52.586 --> 00:19:54.766 A:middle
+In this case, I want
+to get the magnitudes
+
+00:19:54.766 --> 00:19:57.016 A:middle
+of all the earthquakes
+in my app.
+
+00:19:57.976 --> 00:19:59.966 A:middle
+Perhaps I'm trying to use
+this make a calculation.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:00.046 --> 00:20:03.556 A:middle
+Maybe I want to get a minimum
+or a maximum or an average,
+
+00:20:04.016 --> 00:20:05.416 A:middle
+so I'm loading all
+the information in
+
+00:20:05.416 --> 00:20:06.686 A:middle
+and then performing
+some calculation
+
+00:20:06.686 --> 00:20:07.406 A:middle
+in the background on that.
+
+00:20:07.406 --> 00:20:11.456 A:middle
+And that certainly will work,
+but it's not the best way
+
+00:20:11.456 --> 00:20:13.966 A:middle
+to do this because it requires
+us to bring in everything
+
+00:20:14.286 --> 00:20:16.086 A:middle
+and build objects around
+the data that we have.
+
+00:20:17.416 --> 00:20:20.016 A:middle
+What's far better is to
+use aggregate operations,
+
+00:20:20.466 --> 00:20:24.076 A:middle
+and what we can do is we could
+actually have Core Data query
+
+00:20:24.186 --> 00:20:26.486 A:middle
+the SQL store --
+SQLite store and say,
+
+00:20:27.016 --> 00:20:28.396 A:middle
+"Perform these operations
+on the data,
+
+00:20:28.396 --> 00:20:30.686 A:middle
+and give me a single
+result back,"
+
+00:20:30.936 --> 00:20:32.706 A:middle
+so in this case I've got
+an expression description
+
+00:20:33.206 --> 00:20:33.916 A:middle
+called minimum.
+
+00:20:33.916 --> 00:20:36.006 A:middle
+That would be the key in the
+dictionary that I get back,
+
+00:20:36.496 --> 00:20:38.586 A:middle
+and I'm calling expression
+for function Min.
+
+00:20:39.236 --> 00:20:42.436 A:middle
+As it might seem, you're going
+to get minimum values back,
+
+00:20:43.476 --> 00:20:46.106 A:middle
+a single minimum value back
+for the minimum magnitude
+
+00:20:46.106 --> 00:20:47.386 A:middle
+in the app, so rather
+than having
+
+00:20:47.506 --> 00:20:48.716 A:middle
+to fetch all the information in,
+
+00:20:48.716 --> 00:20:49.936 A:middle
+I've got a single
+result come in.
+
+00:20:50.686 --> 00:20:51.706 A:middle
+Now you can take this further
+
+00:20:51.706 --> 00:20:53.286 A:middle
+because not only are
+you specifying that,
+
+00:20:53.286 --> 00:20:55.126 A:middle
+but you can also specify a
+predicate, so if you want
+
+00:20:55.126 --> 00:20:57.356 A:middle
+to say, for example, "Give
+me the minimum values
+
+00:20:57.356 --> 00:20:59.676 A:middle
+across the last seven days,"
+you could still set a predicate
+
+00:20:59.676 --> 00:21:02.886 A:middle
+on the fetch request and
+set the properties to fetch.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:59.676 --> 00:21:02.886 A:middle
+on the fetch request and
+set the properties to fetch.
+
+00:21:03.376 --> 00:21:06.176 A:middle
+I just want this expression
+description to come back,
+
+00:21:06.686 --> 00:21:08.796 A:middle
+and you will get a dictionary
+back with a single result,
+
+00:21:08.976 --> 00:21:10.296 A:middle
+minimum and the minimum value.
+
+00:21:12.676 --> 00:21:16.916 A:middle
+This is another complicated
+potentially scenario.
+
+00:21:16.916 --> 00:21:20.106 A:middle
+I want to summarize my
+data, so I want to look
+
+00:21:20.106 --> 00:21:22.956 A:middle
+at all the different
+magnitudes and get the number
+
+00:21:22.956 --> 00:21:26.196 A:middle
+of earthquakes that happen
+with that magnitude, and yes,
+
+00:21:26.196 --> 00:21:28.116 A:middle
+there really is a
+magnitude of minus one.
+
+00:21:28.256 --> 00:21:29.266 A:middle
+It's a logarithmic scale,
+
+00:21:29.356 --> 00:21:31.506 A:middle
+smaller the earthquake
+actually goes to minus one.
+
+00:21:33.236 --> 00:21:34.026 A:middle
+How do I do this?
+
+00:21:34.026 --> 00:21:36.546 A:middle
+Well I might go and I might
+go and get the unique values
+
+00:21:36.546 --> 00:21:38.186 A:middle
+from the store for magnitude
+
+00:21:38.186 --> 00:21:40.976 A:middle
+and then count how many
+earthquakes actually have
+
+00:21:40.976 --> 00:21:41.646 A:middle
+that magnitude.
+
+00:21:43.016 --> 00:21:44.186 A:middle
+That's not the most
+efficient way though.
+
+00:21:44.186 --> 00:21:46.556 A:middle
+We can actually do this
+with a single fetch request.
+
+00:21:46.876 --> 00:21:49.906 A:middle
+We can execute expression for
+function count, so that's going
+
+00:21:49.906 --> 00:21:52.426 A:middle
+to give us a count of something,
+in case the magnitudes,
+
+00:21:52.526 --> 00:21:54.866 A:middle
+and we're going to supply
+the properties to fetch,
+
+00:21:54.866 --> 00:21:56.476 A:middle
+both magnitude and
+account, and we're going
+
+00:21:56.476 --> 00:22:00.186 A:middle
+to group the results using
+group by, specify magnitude.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:56.476 --> 00:22:00.186 A:middle
+to group the results using
+group by, specify magnitude.
+
+00:22:00.186 --> 00:22:02.356 A:middle
+And this will actually
+give us back a dictionary
+
+00:22:02.456 --> 00:22:05.026 A:middle
+with all these results in a
+single dictionary with magnitude
+
+00:22:05.166 --> 00:22:07.126 A:middle
+and count, and that's it
+so we can just display
+
+00:22:07.126 --> 00:22:07.996 A:middle
+that straight in a table view.
+
+00:22:07.996 --> 00:22:09.096 A:middle
+We've not had to load anything
+
+00:22:09.096 --> 00:22:10.376 A:middle
+into memory other
+than this dictionary.
+
+00:22:10.466 --> 00:22:14.956 A:middle
+We're not performing any complex
+calculations, so that's going
+
+00:22:14.956 --> 00:22:16.426 A:middle
+to be quite complicated
+when we implement this,
+
+00:22:16.426 --> 00:22:18.616 A:middle
+and it's also interesting to
+see what's really going on.
+
+00:22:19.306 --> 00:22:21.646 A:middle
+So you've made these
+optimizations.
+
+00:22:21.646 --> 00:22:23.156 A:middle
+You've tried these
+aggregate queries,
+
+00:22:23.156 --> 00:22:25.066 A:middle
+but what you really want to
+know is actually what Core
+
+00:22:25.066 --> 00:22:25.666 A:middle
+Data's doing.
+
+00:22:26.436 --> 00:22:28.706 A:middle
+In the labs quite frequently
+we hear that, you know,
+
+00:22:28.706 --> 00:22:30.406 A:middle
+you find Core Data a
+bit of a black box.
+
+00:22:30.406 --> 00:22:31.776 A:middle
+You're not sure what's
+really happening,
+
+00:22:32.426 --> 00:22:34.646 A:middle
+so you can actually
+use SQL logging
+
+00:22:34.646 --> 00:22:38.116 A:middle
+to tell you exactly what Core
+Data's doing, passing argument
+
+00:22:38.116 --> 00:22:40.436 A:middle
+on launch or even in
+your user defaults called
+
+00:22:40.496 --> 00:22:43.876 A:middle
+Com.Apple.CoreData.SQLDebug,
+and you supply an Apple of one,
+
+00:22:43.876 --> 00:22:45.896 A:middle
+two -- I'm sorry, a value
+of one, two or three.
+
+00:22:45.896 --> 00:22:48.136 A:middle
+Don't forget the dash
+on the beginning.
+
+00:22:48.366 --> 00:22:50.896 A:middle
+This will give you
+the raw SQL queries
+
+00:22:50.896 --> 00:22:52.676 A:middle
+that Core Data's
+generating, and the more --
+
+00:22:52.676 --> 00:22:53.756 A:middle
+the higher the value
+you provide,
+
+00:22:53.756 --> 00:22:55.306 A:middle
+the more information
+you get back.
+
+00:22:55.776 --> 00:22:57.946 A:middle
+You also get exact timings
+for how long a fetch took
+
+00:22:57.946 --> 00:23:00.106 A:middle
+or how long an insert took
+and writing the values back
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:57.946 --> 00:23:00.106 A:middle
+or how long an insert took
+and writing the values back
+
+00:23:00.106 --> 00:23:03.316 A:middle
+and forth, but it does give
+you a lot of information
+
+00:23:03.376 --> 00:23:05.056 A:middle
+and don't use it unwisely.
+
+00:23:05.836 --> 00:23:07.686 A:middle
+Just because you can see
+how we've used a schema,
+
+00:23:07.686 --> 00:23:09.866 A:middle
+don't trust that that's always
+going to be the same way.
+
+00:23:09.866 --> 00:23:13.256 A:middle
+You should never, ever try and
+access data directly in SQLite.
+
+00:23:13.326 --> 00:23:15.056 A:middle
+Always, always go
+through Core Data.
+
+00:23:15.136 --> 00:23:17.716 A:middle
+We have changed it in the past.
+
+00:23:17.886 --> 00:23:18.556 A:middle
+Don't risk it.
+
+00:23:19.826 --> 00:23:21.386 A:middle
+So, let's take a look at this.
+
+00:23:21.676 --> 00:23:23.176 A:middle
+I built my app.
+
+00:23:23.586 --> 00:23:26.456 A:middle
+I've changed the UA slightly so
+that I now don't have my map.
+
+00:23:26.456 --> 00:23:27.726 A:middle
+I actually get some
+summary data.
+
+00:23:28.496 --> 00:23:31.446 A:middle
+When I run the app, I get my
+minimum average and maximum,
+
+00:23:31.756 --> 00:23:34.106 A:middle
+and I also get my nice list
+with the different magnitudes
+
+00:23:34.106 --> 00:23:35.276 A:middle
+and the number of
+quakes that happened.
+
+00:23:37.726 --> 00:23:39.826 A:middle
+My fetch request is maybe
+a bit more complicated now
+
+00:23:39.826 --> 00:23:41.146 A:middle
+in using expression
+descriptions,
+
+00:23:41.196 --> 00:23:43.506 A:middle
+so let's use logging to find
+out exactly what's going.
+
+00:23:43.646 --> 00:23:44.006 A:middle
+I'm sorry.
+
+00:23:44.136 --> 00:23:49.216 A:middle
+I'm going to go back a bit.
+
+00:23:49.276 --> 00:23:52.986 A:middle
+Right, so if I stop the app, I'm
+going to go to Product, Scheme,
+
+00:23:52.986 --> 00:23:58.056 A:middle
+Edit Scheme, and I'm going
+to add a launch argument.
+
+00:23:58.616 --> 00:24:01.296 A:middle
+Again,
+-Com.Apple.CoreData.SQLDebug.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:58.616 --> 00:24:01.296 A:middle
+Again,
+-Com.Apple.CoreData.SQLDebug.
+
+00:24:01.426 --> 00:24:02.996 A:middle
+Let's specify a value of one.
+
+00:24:02.996 --> 00:24:07.156 A:middle
+When we re-launch the app, we're
+going to get some information
+
+00:24:07.156 --> 00:24:10.196 A:middle
+in the console, and here we
+can actually see the raw SQL.
+
+00:24:10.196 --> 00:24:10.956 A:middle
+Select Min.
+
+00:24:11.026 --> 00:24:14.746 A:middle
+That's the SQL minimum value
+of magnitude from quake
+
+00:24:15.096 --> 00:24:16.076 A:middle
+where time is equal to this.
+
+00:24:16.076 --> 00:24:18.446 A:middle
+I've actually got a predicate
+on there giving me a rough idea
+
+00:24:18.446 --> 00:24:19.496 A:middle
+of the last seven days.
+
+00:24:21.366 --> 00:24:25.456 A:middle
+Let's take a look when I go and
+look at the grouped information.
+
+00:24:25.576 --> 00:24:26.896 A:middle
+Well, we get more
+information now.
+
+00:24:26.896 --> 00:24:28.736 A:middle
+We get the very complicated
+SQL statement.
+
+00:24:29.246 --> 00:24:30.536 A:middle
+Select magnitude.
+
+00:24:31.026 --> 00:24:35.536 A:middle
+Count it from quake grouped by
+magnitude, ordered by magnitude,
+
+00:24:35.536 --> 00:24:37.296 A:middle
+and this gives us the
+dictionary back that we want,
+
+00:24:37.296 --> 00:24:40.346 A:middle
+so at this point you might
+be tempted to use NSLog
+
+00:24:40.346 --> 00:24:41.996 A:middle
+or something to see exactly
+what you're getting back
+
+00:24:41.996 --> 00:24:44.226 A:middle
+so that you can work out how to
+use it, but you don't have to.
+
+00:24:44.976 --> 00:24:48.226 A:middle
+Let's try increasing the value
+for the log level to three,
+
+00:24:49.136 --> 00:24:50.656 A:middle
+so again, Product,
+Scheme, Edit Scheme.
+
+00:24:51.206 --> 00:24:56.206 A:middle
+Change one to three, and this
+time when we re-run the app,
+
+00:24:56.566 --> 00:24:57.886 A:middle
+we get a lot more information,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:00.576 --> 00:25:02.126 A:middle
+so we've got our
+average showing there.
+
+00:25:02.126 --> 00:25:05.616 A:middle
+When I hit list, I get actually
+the entire dictionary results.
+
+00:25:05.616 --> 00:25:07.406 A:middle
+I get all -- to see
+all the bound variables
+
+00:25:07.406 --> 00:25:10.056 A:middle
+that Core Data has used to
+give us the information back
+
+00:25:10.566 --> 00:25:13.256 A:middle
+from the queries it's executed,
+so this can be really helpful
+
+00:25:13.256 --> 00:25:14.586 A:middle
+to debug what's going on.
+
+00:25:14.726 --> 00:25:16.256 A:middle
+If you make performance
+optimizations,
+
+00:25:16.256 --> 00:25:17.936 A:middle
+you can see whether what
+you've done has actually made a
+
+00:25:17.936 --> 00:25:19.806 A:middle
+benefit, whether it
+looks great in the SQL
+
+00:25:20.326 --> 00:25:21.286 A:middle
+and it gives you a little peek
+
+00:25:21.286 --> 00:25:24.266 A:middle
+into what we're doing behind the
+scenes, so that's debug logging.
+
+00:25:24.816 --> 00:25:29.676 A:middle
+We talked a little bit
+about background tasks.
+
+00:25:29.716 --> 00:25:31.766 A:middle
+Let's talk about concurrency
+models that we can use
+
+00:25:31.766 --> 00:25:36.116 A:middle
+when we're working
+with background tasks.
+
+00:25:36.116 --> 00:25:37.936 A:middle
+In previous years we've
+talked in great detail
+
+00:25:37.936 --> 00:25:40.046 A:middle
+about the different
+confinement types,
+
+00:25:40.046 --> 00:25:42.966 A:middle
+so you should be using private
+queue types for background work,
+
+00:25:43.026 --> 00:25:45.776 A:middle
+main queue types for your UI
+work, and then you interact
+
+00:25:45.776 --> 00:25:47.086 A:middle
+with those with the
+perform block API.
+
+00:25:47.346 --> 00:25:49.056 A:middle
+Don't use the old style
+thread confinement,
+
+00:25:49.896 --> 00:25:52.926 A:middle
+and you might perhaps have a
+set up that looks like this
+
+00:25:52.926 --> 00:25:55.296 A:middle
+with a main queue context and
+a private queue context talking
+
+00:25:55.296 --> 00:25:56.766 A:middle
+to the same persistent
+store coordinator.
+
+00:25:57.576 --> 00:25:59.176 A:middle
+Maybe you've got something
+a little more complicated.
+
+00:25:59.176 --> 00:26:00.796 A:middle
+Maybe this time you're
+using a nested context.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:59.176 --> 00:26:00.796 A:middle
+Maybe this time you're
+using a nested context.
+
+00:26:00.796 --> 00:26:02.806 A:middle
+Maybe a main queue talks
+to the private queue,
+
+00:26:02.996 --> 00:26:04.716 A:middle
+which talks to the
+persistent store coordinator.
+
+00:26:05.116 --> 00:26:07.156 A:middle
+This will give you asynchronous
+saves because a save --
+
+00:26:07.156 --> 00:26:08.876 A:middle
+and it only goes up one
+level, so when you save
+
+00:26:08.876 --> 00:26:11.646 A:middle
+in the main queue context,
+it saves the information just
+
+00:26:11.646 --> 00:26:12.816 A:middle
+to the private queue context.
+
+00:26:13.026 --> 00:26:15.886 A:middle
+When you call save on that, it
+will then save to the store.
+
+00:26:17.096 --> 00:26:18.906 A:middle
+Maybe you've got something a
+little more complicated still,
+
+00:26:19.956 --> 00:26:22.606 A:middle
+or maybe even more than
+this, and this is all fine.
+
+00:26:22.606 --> 00:26:26.256 A:middle
+If it's working for you, that's
+great, but if you're running
+
+00:26:26.256 --> 00:26:28.986 A:middle
+into a non-deterministic issue.
+
+00:26:28.986 --> 00:26:30.466 A:middle
+Maybe occasionally
+you're seeing something
+
+00:26:30.466 --> 00:26:33.086 A:middle
+that you can't reproduce, maybe
+a little jitter in a table view.
+
+00:26:33.406 --> 00:26:34.796 A:middle
+Maybe something's taking
+a little bit longer
+
+00:26:34.796 --> 00:26:36.896 A:middle
+to save sometimes, but
+not the other times.
+
+00:26:37.236 --> 00:26:39.086 A:middle
+It may be that you're
+running into a locking issue,
+
+00:26:40.796 --> 00:26:44.196 A:middle
+so when you're working in this
+context, and you call save,
+
+00:26:45.576 --> 00:26:47.586 A:middle
+in order to make sure nothing
+goes wrong during the save we
+
+00:26:47.586 --> 00:26:48.876 A:middle
+lock the level above
+because that's
+
+00:26:48.876 --> 00:26:50.236 A:middle
+where the save information
+goes to.
+
+00:26:51.496 --> 00:26:52.966 A:middle
+That doesn't mean
+that, you know,
+
+00:26:52.966 --> 00:26:54.256 A:middle
+you're completely
+locked out from anything.
+
+00:26:54.256 --> 00:26:57.416 A:middle
+It just means that if you need
+to execute a fetch or a save
+
+00:26:57.766 --> 00:27:01.286 A:middle
+in the main queue context up on
+the top right, that will have
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:57.766 --> 00:27:01.286 A:middle
+in the main queue context up on
+the top right, that will have
+
+00:27:01.316 --> 00:27:04.346 A:middle
+to wait until the lock is
+removed, but you can continue
+
+00:27:04.346 --> 00:27:05.696 A:middle
+to use objects just
+like you did before.
+
+00:27:05.696 --> 00:27:09.486 A:middle
+If you have to queue to save on
+this context in the background,
+
+00:27:09.736 --> 00:27:12.826 A:middle
+so maybe you've got that 173
+milliseconds saved in the end
+
+00:27:12.826 --> 00:27:13.996 A:middle
+of a big batch operation.
+
+00:27:15.006 --> 00:27:17.076 A:middle
+Then we lock the
+persistent store quantity.
+
+00:27:17.076 --> 00:27:19.746 A:middle
+The save goes up one level,
+so again, you can continue
+
+00:27:19.746 --> 00:27:21.106 A:middle
+to operate with the
+objects you already have
+
+00:27:21.106 --> 00:27:23.386 A:middle
+in the other context, but if
+you need to execute a fetch
+
+00:27:23.386 --> 00:27:26.436 A:middle
+or a save, it won't complete
+until the lock is removed.
+
+00:27:26.696 --> 00:27:27.986 A:middle
+Otherwise the data
+might be corrupted.
+
+00:27:30.536 --> 00:27:33.826 A:middle
+When we're fetching, potentially
+we're having to pull information
+
+00:27:33.826 --> 00:27:36.846 A:middle
+out of the store, so the
+locks go all the way down.
+
+00:27:37.966 --> 00:27:39.966 A:middle
+Again, you can continue
+to use your other context
+
+00:27:39.966 --> 00:27:41.926 A:middle
+as you were before, but
+if a fetch or a save needs
+
+00:27:41.926 --> 00:27:44.696 A:middle
+to happen it will be blocked
+until the lock is released,
+
+00:27:46.076 --> 00:27:48.906 A:middle
+so if you're not seeing
+problems with this,
+
+00:27:48.956 --> 00:27:50.876 A:middle
+this is absolutely the model
+that you should be using,
+
+00:27:51.346 --> 00:27:54.796 A:middle
+if you are seeing issues that
+you can't do anything about.
+
+00:27:54.796 --> 00:27:56.396 A:middle
+You've done all the other
+optimization tricks.
+
+00:27:56.946 --> 00:28:01.116 A:middle
+You might want to consider using
+a different concurrency style,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:56.946 --> 00:28:01.116 A:middle
+You might want to consider using
+a different concurrency style,
+
+00:28:01.116 --> 00:28:03.616 A:middle
+and this time you have two
+persistent store coordinators,
+
+00:28:03.616 --> 00:28:05.926 A:middle
+two almost completely
+separate Core Data stacks,
+
+00:28:06.326 --> 00:28:08.196 A:middle
+so you've got one stack
+for your background work,
+
+00:28:08.316 --> 00:28:10.966 A:middle
+one stack for your main
+queue work and they both talk
+
+00:28:10.966 --> 00:28:14.376 A:middle
+to the same persistent store
+file, and the benefit of this is
+
+00:28:14.376 --> 00:28:15.656 A:middle
+that when we need
+to perform a lock
+
+00:28:15.656 --> 00:28:18.206 A:middle
+for something the only
+really relevant bit to one
+
+00:28:18.206 --> 00:28:21.926 A:middle
+of the other context is the
+store file, so when you work
+
+00:28:22.076 --> 00:28:25.046 A:middle
+in the background, for example,
+the lock is on the store file.
+
+00:28:25.646 --> 00:28:27.696 A:middle
+And file locks will come
+and go much more quickly,
+
+00:28:28.406 --> 00:28:30.886 A:middle
+so if you're performing
+background work,
+
+00:28:30.886 --> 00:28:32.266 A:middle
+like a massive import,
+operation,
+
+00:28:33.336 --> 00:28:36.256 A:middle
+then this will be a good way
+to avoid locks particularly
+
+00:28:36.256 --> 00:28:40.706 A:middle
+with a change that we've just
+made, but if you're saying,
+
+00:28:40.706 --> 00:28:42.556 A:middle
+"How do I use this in the
+way that I am right now?
+
+00:28:42.766 --> 00:28:43.286 A:middle
+What happens?
+
+00:28:43.286 --> 00:28:44.656 A:middle
+How do I merge changes across?"
+
+00:28:45.016 --> 00:28:46.926 A:middle
+Well, just like you do now.
+
+00:28:47.086 --> 00:28:48.786 A:middle
+When you get a contexted
+save notification,
+
+00:28:49.366 --> 00:28:52.126 A:middle
+you can call merge changes from
+contexted save notification
+
+00:28:52.506 --> 00:28:55.946 A:middle
+and pass the context across and
+poof, it will be imported just
+
+00:28:55.946 --> 00:28:57.436 A:middle
+as you wish, but you should ask,
+
+00:28:57.436 --> 00:28:58.876 A:middle
+"Is this really what
+you want to do?"
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:00.256 --> 00:29:02.356 A:middle
+If you're using a fetch
+results controller, for example,
+
+00:29:02.356 --> 00:29:04.876 A:middle
+in iOS and you've got -- you've
+just imported maybe 1000 objects
+
+00:29:04.876 --> 00:29:07.896 A:middle
+into the background and your
+Fetch Results Controller is tied
+
+00:29:07.896 --> 00:29:08.566 A:middle
+to a table view.
+
+00:29:08.566 --> 00:29:10.106 A:middle
+You've got all the
+delegate methods set up.
+
+00:29:10.376 --> 00:29:13.616 A:middle
+Then we have to make 1000
+changes in that table view
+
+00:29:13.616 --> 00:29:15.726 A:middle
+on a row by row basis, so
+rows are being inserted,
+
+00:29:15.726 --> 00:29:17.156 A:middle
+moved, pushed up and down.
+
+00:29:17.156 --> 00:29:19.866 A:middle
+That's probably not
+what you really want.
+
+00:29:19.866 --> 00:29:20.756 A:middle
+That's going to take a while.
+
+00:29:21.386 --> 00:29:23.266 A:middle
+Instead what you probably want
+to do is listen out for them,
+
+00:29:23.296 --> 00:29:26.586 A:middle
+contexted save notification
+and then re-fetch the data,
+
+00:29:26.586 --> 00:29:27.966 A:middle
+reload it in the table view.
+
+00:29:27.966 --> 00:29:29.336 A:middle
+That will be much
+faster to call.
+
+00:29:29.336 --> 00:29:31.006 A:middle
+Perform fetch on the
+fetch results controller
+
+00:29:31.006 --> 00:29:32.056 A:middle
+and reload the table view
+
+00:29:32.276 --> 00:29:34.296 A:middle
+than making 1000
+changes individually.
+
+00:29:37.236 --> 00:29:39.516 A:middle
+If you were there this morning
+-- well, you see the video.
+
+00:29:39.876 --> 00:29:42.416 A:middle
+We talked so that we've not
+made price [inaudible] mode the
+
+00:29:42.416 --> 00:29:47.286 A:middle
+default journaling mode with
+Core Data with SQLite in iOS 7
+
+00:29:47.346 --> 00:29:49.276 A:middle
+and OS X 10.9 Mavericks.
+
+00:29:49.276 --> 00:29:52.176 A:middle
+And what this means is that we
+actually now support multiple
+
+00:29:52.176 --> 00:29:54.896 A:middle
+concurrent reads and one
+concurrent write on the file
+
+00:29:54.896 --> 00:29:59.826 A:middle
+at any one time, so if
+you've got multiple stacks
+
+00:29:59.876 --> 00:30:01.726 A:middle
+and you're doing a
+background import over here
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:59.876 --> 00:30:01.726 A:middle
+and you're doing a
+background import over here
+
+00:30:01.726 --> 00:30:04.246 A:middle
+and it's saving data into
+the store, there are no locks
+
+00:30:04.246 --> 00:30:05.106 A:middle
+on the store at this point
+
+00:30:05.106 --> 00:30:05.976 A:middle
+because there's only
+one write happening.
+
+00:30:06.746 --> 00:30:09.316 A:middle
+Multiple reads can be happening,
+potentially from multiple stacks
+
+00:30:09.856 --> 00:30:11.756 A:middle
+and getting that
+data out, no locks.
+
+00:30:12.096 --> 00:30:16.906 A:middle
+This is also available in iOS
+4 and 10.7 Lion and above,
+
+00:30:17.406 --> 00:30:19.016 A:middle
+just by setting this
+options dictionary
+
+00:30:19.016 --> 00:30:20.556 A:middle
+when you add the persistent
+store, and you call
+
+00:30:20.556 --> 00:30:22.166 A:middle
+that at persistent store
+with options method
+
+00:30:22.506 --> 00:30:24.946 A:middle
+and that's SQLite
+PRAGMAs option,
+
+00:30:24.946 --> 00:30:26.276 A:middle
+journal mode equals wall.
+
+00:30:29.476 --> 00:30:31.616 A:middle
+Okay, let's move onto
+something a little different,
+
+00:30:32.296 --> 00:30:35.706 A:middle
+text queries, so
+there's some very,
+
+00:30:35.706 --> 00:30:37.836 A:middle
+very simple things you can
+do immediately to speed
+
+00:30:37.836 --> 00:30:39.416 A:middle
+up when you're working
+with predicates
+
+00:30:39.686 --> 00:30:43.026 A:middle
+that involve some kind of text
+query, so a predicate is the way
+
+00:30:43.026 --> 00:30:44.576 A:middle
+that you limit the
+results that you get back.
+
+00:30:44.646 --> 00:30:47.316 A:middle
+In this case, I'm querying
+against my contact entity.
+
+00:30:47.406 --> 00:30:49.726 A:middle
+Perhaps the contacts app that
+you saw at the beginning,
+
+00:30:51.176 --> 00:30:53.986 A:middle
+and I'm asking for all the
+objects that have a first name
+
+00:30:54.046 --> 00:30:56.406 A:middle
+with John, and they're
+aged over 40.
+
+00:30:57.176 --> 00:31:00.876 A:middle
+In this case I'm asking for
+a text query to happen first,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:57.176 --> 00:31:00.876 A:middle
+In this case I'm asking for
+a text query to happen first,
+
+00:31:00.876 --> 00:31:04.496 A:middle
+so I'm saying I want to query
+all the objects with the name
+
+00:31:04.496 --> 00:31:06.806 A:middle
+of John, so I'm going through
+ever single item in that table,
+
+00:31:07.306 --> 00:31:08.436 A:middle
+pulling out the ones
+that are called John,
+
+00:31:08.436 --> 00:31:11.326 A:middle
+and then I'm executing the
+age query on them to pull
+
+00:31:11.326 --> 00:31:12.486 A:middle
+out the ones that are over 40.
+
+00:31:12.486 --> 00:31:15.356 A:middle
+Text comparison is
+quite expensive
+
+00:31:16.106 --> 00:31:18.686 A:middle
+and much more expensive
+than the numeric comparison.
+
+00:31:18.906 --> 00:31:20.126 A:middle
+Computers are great
+with numbers.
+
+00:31:20.596 --> 00:31:22.326 A:middle
+A greater than is actually
+a very cheap operation,
+
+00:31:22.326 --> 00:31:25.786 A:middle
+so what's much better to
+do is to swap these round
+
+00:31:25.786 --> 00:31:27.346 A:middle
+and put the numeric
+comparison first.
+
+00:31:27.716 --> 00:31:29.816 A:middle
+This means that we're pulling
+out, looking through our data,
+
+00:31:30.166 --> 00:31:32.586 A:middle
+checking all the ones
+that are over 40 and then,
+
+00:31:32.676 --> 00:31:34.766 A:middle
+we then use that reduced
+set to check for the ones
+
+00:31:34.766 --> 00:31:36.386 A:middle
+that are called John, so always,
+
+00:31:36.386 --> 00:31:38.296 A:middle
+always put your numeric
+comparison,
+
+00:31:38.296 --> 00:31:40.786 A:middle
+your most limiting
+numeric comparison first
+
+00:31:40.786 --> 00:31:42.816 A:middle
+and that will speed up
+your predicate immediately.
+
+00:31:45.196 --> 00:31:47.766 A:middle
+You should also look at which
+type of query you're using,
+
+00:31:48.496 --> 00:31:53.096 A:middle
+so in increasing cost at the top
+we've got begins with and ends
+
+00:31:53.096 --> 00:31:54.866 A:middle
+with and that's by
+far the cheapest query
+
+00:31:54.866 --> 00:31:55.596 A:middle
+that you can execute.
+
+00:31:56.016 --> 00:31:58.096 A:middle
+What we're doing at that point
+is we're checking the first
+
+00:31:58.096 --> 00:31:58.916 A:middle
+characters match.
+
+00:31:58.916 --> 00:32:00.286 A:middle
+As soon as we come across
+one that doesn't match,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:58.916 --> 00:32:00.286 A:middle
+As soon as we come across
+one that doesn't match,
+
+00:32:00.286 --> 00:32:01.236 A:middle
+we can move on to the next one.
+
+00:32:01.566 --> 00:32:03.576 A:middle
+Ends with is the same thing,
+but coming from the other end.
+
+00:32:04.606 --> 00:32:06.506 A:middle
+Equality, well obviously we're
+checking all the characters
+
+00:32:06.506 --> 00:32:07.066 A:middle
+at this point.
+
+00:32:07.756 --> 00:32:10.686 A:middle
+Contains is more expensive
+because we have to work along
+
+00:32:10.686 --> 00:32:12.826 A:middle
+and see whether it contains, and
+then we'll keep going through
+
+00:32:13.286 --> 00:32:15.166 A:middle
+and Match is the most expensive.
+
+00:32:15.536 --> 00:32:17.356 A:middle
+We fire up a regular
+Expression Engine for this.
+
+00:32:17.356 --> 00:32:18.946 A:middle
+This is going to take
+up a lot more time than,
+
+00:32:18.946 --> 00:32:20.216 A:middle
+for example, a begins
+with query.
+
+00:32:20.216 --> 00:32:23.586 A:middle
+If you're at case and
+diacritic insensitivity,
+
+00:32:23.636 --> 00:32:24.876 A:middle
+that's the square bracket CD,
+
+00:32:25.096 --> 00:32:26.826 A:middle
+that increases the
+cost even more,
+
+00:32:26.826 --> 00:32:30.636 A:middle
+so it's always worth
+trying to work
+
+00:32:30.636 --> 00:32:32.336 A:middle
+out whether this is really
+what you want to be doing.
+
+00:32:33.006 --> 00:32:34.636 A:middle
+If you writing a
+dictionary app, for example,
+
+00:32:34.966 --> 00:32:36.536 A:middle
+and you allow the user
+to search in that,
+
+00:32:36.536 --> 00:32:38.266 A:middle
+which is what they probably
+want to do in a dictionary,
+
+00:32:38.866 --> 00:32:41.206 A:middle
+what they're probably
+looking for is a word
+
+00:32:41.206 --> 00:32:42.976 A:middle
+that matches the first few
+characters that they've typed.
+
+00:32:42.976 --> 00:32:44.556 A:middle
+You probably don't need
+to do a matches query.
+
+00:32:44.556 --> 00:32:46.176 A:middle
+What you really want
+is a begins with query.
+
+00:32:46.176 --> 00:32:49.706 A:middle
+That will be much faster, give
+the results much more quickly,
+
+00:32:50.336 --> 00:32:51.916 A:middle
+so that's simple
+predicate optimization,
+
+00:32:52.076 --> 00:32:52.996 A:middle
+but what else can we do?
+
+00:32:53.476 --> 00:32:54.996 A:middle
+Well I talked to you about case
+
+00:32:54.996 --> 00:32:57.376 A:middle
+and diacritic insensitivity
+being more expensive.
+
+00:32:58.596 --> 00:33:00.646 A:middle
+How can we deal with that?
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:58.596 --> 00:33:00.646 A:middle
+How can we deal with that?
+
+00:33:01.976 --> 00:33:04.456 A:middle
+And again, let's come
+back to this idea
+
+00:33:04.456 --> 00:33:05.966 A:middle
+of not duplicating information,
+
+00:33:06.076 --> 00:33:08.236 A:middle
+and somehow actually duplicating
+information is a good thing.
+
+00:33:08.236 --> 00:33:12.436 A:middle
+We can use a canonicalized
+search, so in addition
+
+00:33:12.906 --> 00:33:14.836 A:middle
+to a text property that
+maybe supports case
+
+00:33:14.836 --> 00:33:16.246 A:middle
+and diacritic insensitivity,
+
+00:33:17.396 --> 00:33:18.746 A:middle
+so maybe you've got
+different cases.
+
+00:33:18.746 --> 00:33:19.666 A:middle
+You've got lots of
+different marks.
+
+00:33:19.666 --> 00:33:21.546 A:middle
+Maybe, hopefully, you've
+localized your apps
+
+00:33:21.546 --> 00:33:24.096 A:middle
+for multiple languages and
+the user's typing all sorts
+
+00:33:24.096 --> 00:33:25.766 A:middle
+of stuff, but when they search
+they want to just be able
+
+00:33:25.766 --> 00:33:26.976 A:middle
+to type a few characters easily.
+
+00:33:28.466 --> 00:33:31.196 A:middle
+We can save a second
+text property at the time
+
+00:33:31.196 --> 00:33:34.416 A:middle
+that you update the
+localized text that has all
+
+00:33:34.416 --> 00:33:36.226 A:middle
+that stripped out,
+so you normalize it.
+
+00:33:36.226 --> 00:33:37.866 A:middle
+You remove all the case
+and the diacritic marks
+
+00:33:37.866 --> 00:33:38.836 A:middle
+and you store it in, you know,
+
+00:33:38.836 --> 00:33:41.326 A:middle
+a canonicalized property
+in the same entity.
+
+00:33:42.226 --> 00:33:44.986 A:middle
+You can then use a normalized
+query, a square bracket N
+
+00:33:44.986 --> 00:33:48.446 A:middle
+and parse in a normalized
+version of the query term
+
+00:33:48.446 --> 00:33:49.326 A:middle
+that the user's typed.
+
+00:33:49.326 --> 00:33:51.556 A:middle
+So for example, if
+they typed t-h-e,
+
+00:33:51.636 --> 00:33:54.136 A:middle
+it should match maybe
+capital T, h, and then e acute
+
+00:33:54.136 --> 00:33:56.726 A:middle
+or something, and that will
+happen much more quickly
+
+00:33:56.816 --> 00:33:59.076 A:middle
+than having to fire up whatever
+we need to do to do the case
+
+00:33:59.076 --> 00:34:00.616 A:middle
+and diacritic insensitive
+search,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:59.076 --> 00:34:00.616 A:middle
+and diacritic insensitive
+search,
+
+00:34:01.126 --> 00:34:02.876 A:middle
+so that's another way
+to speed things up.
+
+00:34:03.556 --> 00:34:07.686 A:middle
+If that's not enough, then you
+might consider using tokens,
+
+00:34:08.176 --> 00:34:11.766 A:middle
+so rather than maintaining
+a separate attribute,
+
+00:34:12.266 --> 00:34:14.335 A:middle
+we actually maintain an
+entirely separate entity
+
+00:34:14.686 --> 00:34:18.056 A:middle
+and in this case, this is a
+journal app, so I allow the user
+
+00:34:18.056 --> 00:34:19.636 A:middle
+to have a journal
+entry with a date
+
+00:34:19.636 --> 00:34:21.466 A:middle
+and then they can type
+whatever they want in there,
+
+00:34:22.045 --> 00:34:25.556 A:middle
+but to make it as fast as
+possible to search I'm going
+
+00:34:25.556 --> 00:34:28.656 A:middle
+to create a second entity that
+has a many-to-many relationship
+
+00:34:28.656 --> 00:34:31.746 A:middle
+between these two, that contains
+all the tokens whenever they set
+
+00:34:31.746 --> 00:34:34.056 A:middle
+a string for the text
+in my journal entry
+
+00:34:34.126 --> 00:34:38.505 A:middle
+and that will be a normalized
+token of each word in the entry,
+
+00:34:38.505 --> 00:34:41.406 A:middle
+and we can get those tokens
+out by calling something
+
+00:34:41.406 --> 00:34:43.476 A:middle
+like components separated
+by characters in a set.
+
+00:34:43.476 --> 00:34:46.676 A:middle
+And maybe you want to separate
+by whitespace, by symbol,
+
+00:34:46.676 --> 00:34:48.735 A:middle
+punctuation, maybe a
+combination of all of those.
+
+00:34:49.266 --> 00:34:51.096 A:middle
+Maybe in an -- a, you know,
+engineering app you should think
+
+00:34:51.096 --> 00:34:52.755 A:middle
+about whether symbols
+are important to you,
+
+00:34:53.036 --> 00:34:55.306 A:middle
+but essentially you're
+separating out tokens.
+
+00:34:55.446 --> 00:34:57.956 A:middle
+And this means that you've
+got tokens stored separately
+
+00:34:57.956 --> 00:35:00.076 A:middle
+from the text and
+you can now query
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:57.956 --> 00:35:00.076 A:middle
+from the text and
+you can now query
+
+00:35:00.076 --> 00:35:01.836 A:middle
+against those using
+a begins with query
+
+00:35:01.946 --> 00:35:03.416 A:middle
+because if the user's
+typing something,
+
+00:35:03.416 --> 00:35:05.776 A:middle
+it's probably the beginning of
+a word that they're looking for,
+
+00:35:05.776 --> 00:35:08.366 A:middle
+and you can go straight
+out to the token entity.
+
+00:35:08.646 --> 00:35:11.046 A:middle
+Find the matching ones, and
+then immediately get the related
+
+00:35:11.046 --> 00:35:12.276 A:middle
+journal entries that
+are tied to that,
+
+00:35:12.276 --> 00:35:14.016 A:middle
+so that's even faster again.
+
+00:35:14.016 --> 00:35:16.956 A:middle
+If it still doesn't
+quite give you enough,
+
+00:35:17.376 --> 00:35:20.646 A:middle
+then consider using a separate
+stack, and I'm not just talking
+
+00:35:20.646 --> 00:35:22.186 A:middle
+about a different
+managed object context
+
+00:35:22.186 --> 00:35:23.246 A:middle
+and persistent store
+coordinator.
+
+00:35:23.246 --> 00:35:25.156 A:middle
+I'm talking about a separate
+store file all together,
+
+00:35:25.156 --> 00:35:27.426 A:middle
+so you've got a completely
+separate system.
+
+00:35:27.696 --> 00:35:29.326 A:middle
+You've got your search
+tokens stored on one side
+
+00:35:29.326 --> 00:35:30.356 A:middle
+and you can query against that
+
+00:35:30.356 --> 00:35:32.176 A:middle
+without having any
+effect whatsoever
+
+00:35:32.176 --> 00:35:36.006 A:middle
+with the primary context on
+the other, and if you do that,
+
+00:35:36.006 --> 00:35:38.516 A:middle
+and obviously you cannot have a
+relationship between one object
+
+00:35:38.516 --> 00:35:40.326 A:middle
+in one store and an
+object in the other store,
+
+00:35:40.896 --> 00:35:47.936 A:middle
+so use the URI representation
+and you can call that
+
+00:35:47.936 --> 00:35:50.106 A:middle
+and store the result that
+you get from managed objects
+
+00:35:50.106 --> 00:35:53.626 A:middle
+and store that in a secondary
+persistent store stack.
+
+00:35:54.516 --> 00:35:56.506 A:middle
+When you need to pull the
+results out, you can then get
+
+00:35:56.506 --> 00:35:58.456 A:middle
+that and then query
+for objects that match.
+
+00:35:59.026 --> 00:36:03.786 A:middle
+If that still doesn't give
+enough, then you might need
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:59.026 --> 00:36:03.786 A:middle
+If that still doesn't give
+enough, then you might need
+
+00:36:03.786 --> 00:36:06.986 A:middle
+to consider having a hash
+table in memory, and for this,
+
+00:36:07.576 --> 00:36:09.866 A:middle
+you would create a
+table for every --
+
+00:36:09.866 --> 00:36:12.216 A:middle
+for the first three letters
+of every token that you have.
+
+00:36:13.376 --> 00:36:15.606 A:middle
+That's not that many items,
+and you can keep that in memory
+
+00:36:15.996 --> 00:36:17.756 A:middle
+and then as the user
+starts typing something --
+
+00:36:17.756 --> 00:36:19.746 A:middle
+well the first three letters are
+going to limit it quite heavily,
+
+00:36:19.746 --> 00:36:21.876 A:middle
+so then you can go out and
+get the related tokens,
+
+00:36:21.876 --> 00:36:23.086 A:middle
+the related journal entries
+
+00:36:23.406 --> 00:36:25.456 A:middle
+and that will speed
+things up considerably.
+
+00:36:29.086 --> 00:36:32.036 A:middle
+So this is a debugging
+and performance talk.
+
+00:36:32.096 --> 00:36:33.806 A:middle
+Let's have a quick
+chat about iCloud.
+
+00:36:35.336 --> 00:36:36.956 A:middle
+Most of the content
+here was discussed
+
+00:36:36.956 --> 00:36:39.036 A:middle
+in great detail this morning,
+so if you missed a session,
+
+00:36:39.036 --> 00:36:39.966 A:middle
+catch up with a video.
+
+00:36:40.736 --> 00:36:44.116 A:middle
+We've added a lot of information
+to help you debug problems
+
+00:36:44.116 --> 00:36:45.986 A:middle
+that you might find in your app.
+
+00:36:46.316 --> 00:36:48.946 A:middle
+In particular we've added the
+debug gauges, so we saw earlier
+
+00:36:48.946 --> 00:36:49.946 A:middle
+that you were using
+these to find
+
+00:36:49.946 --> 00:36:52.156 A:middle
+out how much memory an
+app is using very quickly.
+
+00:36:52.686 --> 00:36:55.206 A:middle
+The iCloud gauge will give
+you the usage that you've got,
+
+00:36:55.206 --> 00:36:56.746 A:middle
+how much space is
+left so you can check
+
+00:36:56.746 --> 00:36:58.026 A:middle
+that everything is
+connected properly.
+
+00:36:58.026 --> 00:37:00.306 A:middle
+You'll get a little graph
+of transfer activity,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:58.026 --> 00:37:00.306 A:middle
+You'll get a little graph
+of transfer activity,
+
+00:37:00.396 --> 00:37:02.416 A:middle
+so as information goes up to
+the Cloud, you get a green bar.
+
+00:37:02.416 --> 00:37:04.256 A:middle
+As information comes
+down, you get a blue bar,
+
+00:37:04.426 --> 00:37:06.806 A:middle
+so that will help you check
+that information is being pushed
+
+00:37:06.806 --> 00:37:08.156 A:middle
+to the Cloud and
+pulled in correctly.
+
+00:37:08.206 --> 00:37:11.696 A:middle
+It will also give you a summary
+of your documents directory
+
+00:37:11.696 --> 00:37:13.376 A:middle
+with all the information that's
+in there, so you can see,
+
+00:37:13.376 --> 00:37:15.086 A:middle
+you know, when files are
+changing, when they're --
+
+00:37:15.086 --> 00:37:16.276 A:middle
+and when they're being created.
+
+00:37:17.596 --> 00:37:20.496 A:middle
+We've also added a logging
+option, so in addition
+
+00:37:20.496 --> 00:37:22.276 A:middle
+to being able to see what Core
+Data's doing underneath the
+
+00:37:22.276 --> 00:37:24.696 A:middle
+hood, you can also see what
+the ubiquity system is doing.
+
+00:37:25.666 --> 00:37:28.426 A:middle
+Very similar as before,
+Com.Apple.CoreData.
+
+00:37:28.426 --> 00:37:31.306 A:middle
+Ubiquity.LogLevel and
+again it takes a value
+
+00:37:31.306 --> 00:37:32.126 A:middle
+of one, two or three.
+
+00:37:32.516 --> 00:37:34.066 A:middle
+Specify this in the
+same way as before,
+
+00:37:34.066 --> 00:37:36.366 A:middle
+and your launch arguments
+or in your user defaults,
+
+00:37:36.726 --> 00:37:37.926 A:middle
+and you'll get a whole
+bunch of logging.
+
+00:37:38.736 --> 00:37:41.126 A:middle
+If you do run into
+issues, enable the logging.
+
+00:37:41.246 --> 00:37:43.686 A:middle
+File a bug, and that
+helps us look
+
+00:37:43.686 --> 00:37:47.416 A:middle
+into whether it's a
+problem, so that's Core Data.
+
+00:37:49.906 --> 00:37:51.066 A:middle
+Let's recap what
+we've talked about.
+
+00:37:51.506 --> 00:37:53.696 A:middle
+Above all, don't work too hard.
+
+00:37:54.976 --> 00:37:55.916 A:middle
+Measure everything first.
+
+00:37:55.916 --> 00:37:57.536 A:middle
+Use Instruments to tell
+you what's going on.
+
+00:37:57.536 --> 00:37:59.766 A:middle
+Get an objective measure of
+problems that you're seeing.
+
+00:37:59.766 --> 00:38:02.096 A:middle
+If something's taken a long
+time, see how long it's taking.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:59.766 --> 00:38:02.096 A:middle
+If something's taken a long
+time, see how long it's taking.
+
+00:38:02.176 --> 00:38:05.476 A:middle
+Wherever possible don't
+bring more information
+
+00:38:05.476 --> 00:38:06.676 A:middle
+into memory than
+you really need.
+
+00:38:07.186 --> 00:38:08.966 A:middle
+Use SQLite to do
+your work for you.
+
+00:38:08.966 --> 00:38:10.786 A:middle
+If you can perform some
+kind of aggregate operation,
+
+00:38:10.786 --> 00:38:12.366 A:middle
+maybe a minimum value
+in the database,
+
+00:38:12.636 --> 00:38:13.616 A:middle
+have it do that for you.
+
+00:38:13.616 --> 00:38:15.766 A:middle
+Don't bring all the objects in,
+and then calculate something.
+
+00:38:16.646 --> 00:38:17.376 A:middle
+Measure again.
+
+00:38:17.756 --> 00:38:19.366 A:middle
+See every change that you make.
+
+00:38:19.366 --> 00:38:20.806 A:middle
+Make sure that you're
+making those bars thinner
+
+00:38:21.266 --> 00:38:22.506 A:middle
+and things are taking less time.
+
+00:38:23.496 --> 00:38:24.726 A:middle
+Balance memory against speed.
+
+00:38:25.326 --> 00:38:28.636 A:middle
+Don't use too much memory,
+but don't slow things
+
+00:38:28.636 --> 00:38:30.806 A:middle
+down by completely minimizing
+the memory all together
+
+00:38:30.806 --> 00:38:31.976 A:middle
+and then you're doing
+a fetch request
+
+00:38:32.176 --> 00:38:33.616 A:middle
+of one object multiple times.
+
+00:38:34.126 --> 00:38:35.166 A:middle
+Optimize your predicates.
+
+00:38:35.166 --> 00:38:36.946 A:middle
+Make sure you're doing the
+right thing with text queries.
+
+00:38:37.326 --> 00:38:38.366 A:middle
+Optimize your fetches.
+
+00:38:38.366 --> 00:38:39.376 A:middle
+Use batch size.
+
+00:38:39.896 --> 00:38:41.746 A:middle
+Optimize your saves so that
+you're not saving too much.
+
+00:38:41.746 --> 00:38:42.616 A:middle
+Use batches.
+
+00:38:43.086 --> 00:38:43.886 A:middle
+Measure again.
+
+00:38:44.596 --> 00:38:48.926 A:middle
+Profit. And for information, see
+the usual suspects, Dave DeLong.
+
+00:38:48.926 --> 00:38:50.096 A:middle
+He's our foremost evangelist.
+
+00:38:50.096 --> 00:38:51.176 A:middle
+We have some documentation,
+
+00:38:51.286 --> 00:38:52.616 A:middle
+and the dev forums
+are there to help you.
+
+00:38:53.446 --> 00:38:54.686 A:middle
+Thank you very much.
+
+00:38:55.516 --> 00:39:00.516 A:middle
+[ Applause ]
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:55.516 --> 00:39:00.516 A:middle
+[ Applause ]
+
+00:39:01.016 --> 00:39:03.306 A:middle
+[ Silence ]
+

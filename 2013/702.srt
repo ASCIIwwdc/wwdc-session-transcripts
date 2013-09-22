@@ -1,0 +1,3468 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:10.546 A:middle
+[ Silence ]
+
+00:00:11.046 --> 00:00:11.396 A:middle
+&gt;&gt; Morning.
+
+00:00:11.396 --> 00:00:12.846 A:middle
+Everyone hear me?
+
+00:00:13.226 --> 00:00:16.966 A:middle
+All right, welcome to
+Efficient Design with XPC.
+
+00:00:16.966 --> 00:00:19.866 A:middle
+Thanks for choosing Russian
+Hill for your post-lunch siesta.
+
+00:00:20.516 --> 00:00:21.276 A:middle
+Let's get started.
+
+00:00:22.126 --> 00:00:25.856 A:middle
+So on the agenda for today, this
+a talk that's going to focus
+
+00:00:25.856 --> 00:00:29.586 A:middle
+on performance and the two
+dimensions of that are going
+
+00:00:29.586 --> 00:00:32.555 A:middle
+to be architectural
+design and implementation.
+
+00:00:32.866 --> 00:00:33.926 A:middle
+And towards those ends,
+
+00:00:33.926 --> 00:00:36.386 A:middle
+we're going to be covering
+some new features in XPC
+
+00:00:36.686 --> 00:00:38.856 A:middle
+and cover some more advanced
+
+00:00:38.856 --> 00:00:41.426 A:middle
+and more efficient usage
+patterns beyond some
+
+00:00:41.486 --> 00:00:43.866 A:middle
+of the basics that you might
+have been exposed to over time.
+
+00:00:44.956 --> 00:00:50.216 A:middle
+So last time we gave a talk
+on XPC, it was WWDC 2011.
+
+00:00:50.836 --> 00:00:53.006 A:middle
+So, let's do a short recap.
+
+00:00:54.216 --> 00:00:59.136 A:middle
+XPC is combined service
+bootstrapping and IPC.
+
+00:00:59.136 --> 00:01:02.416 A:middle
+So, everything relating to
+getting a service up and running
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.136 --> 00:01:02.416 A:middle
+So, everything relating to
+getting a service up and running
+
+00:01:02.416 --> 00:01:05.596 A:middle
+and talking to it,
+exchanging messages,
+
+00:01:05.596 --> 00:01:08.156 A:middle
+it's all in the same library.
+
+00:01:08.986 --> 00:01:11.316 A:middle
+And this enables you to
+easily factor your app
+
+00:01:11.316 --> 00:01:16.086 A:middle
+into different services so that
+one service can be responsible
+
+00:01:16.086 --> 00:01:17.976 A:middle
+for, say, network communication,
+
+00:01:18.226 --> 00:01:19.886 A:middle
+they can have additional
+privilege levels,
+
+00:01:19.886 --> 00:01:20.536 A:middle
+things like that.
+
+00:01:21.136 --> 00:01:23.686 A:middle
+And they are all deployed
+within the App Bundle
+
+00:01:23.686 --> 00:01:25.146 A:middle
+and they never leave
+the App Bundle.
+
+00:01:25.766 --> 00:01:28.226 A:middle
+So why would you use this?
+
+00:01:28.226 --> 00:01:31.156 A:middle
+Well, separate address basis
+provide some key benefits.
+
+00:01:31.156 --> 00:01:33.686 A:middle
+The first big one
+is Fault Isolation.
+
+00:01:33.996 --> 00:01:36.236 A:middle
+So if you have a piece of code
+that's going to be running
+
+00:01:36.236 --> 00:01:38.956 A:middle
+in your app, let's say it's
+dealing with untrusted data
+
+00:01:38.956 --> 00:01:41.306 A:middle
+and you don't necessarily
+want bugs in your parser
+
+00:01:41.306 --> 00:01:43.016 A:middle
+to bring down the entire app.
+
+00:01:43.816 --> 00:01:45.356 A:middle
+Putting in another process means
+
+00:01:45.356 --> 00:01:47.716 A:middle
+that if you do encounter
+a bug parsing some
+
+00:01:47.716 --> 00:01:52.536 A:middle
+of that untrusted data,
+you'll end up crashing, say,
+
+00:01:52.536 --> 00:01:55.186 A:middle
+the service but the main
+app is free to try again
+
+00:01:55.446 --> 00:01:57.146 A:middle
+or display some UI
+to the user saying,
+
+00:01:57.146 --> 00:01:58.276 A:middle
+"Sorry, I couldn't do this."
+
+00:01:58.996 --> 00:02:01.236 A:middle
+And also, on the other
+side of this coin,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:58.996 --> 00:02:01.236 A:middle
+And also, on the other
+side of this coin,
+
+00:02:01.446 --> 00:02:03.726 A:middle
+you'll have a different
+set of privilege levels
+
+00:02:03.726 --> 00:02:06.016 A:middle
+for that same-- for
+that service.
+
+00:02:06.336 --> 00:02:09.256 A:middle
+So your app might have a set
+of entitlements for example
+
+00:02:09.515 --> 00:02:11.566 A:middle
+that allow it to,
+say, talk to iCloud
+
+00:02:11.566 --> 00:02:15.536 A:middle
+or read the contacts database
+but the service that's working
+
+00:02:15.536 --> 00:02:18.566 A:middle
+with untrusted data doesn't
+necessarily need all of that.
+
+00:02:18.706 --> 00:02:21.836 A:middle
+So, even if there is a
+bug in a parser to exploit
+
+00:02:21.896 --> 00:02:24.596 A:middle
+to get random code
+running, code running
+
+00:02:24.596 --> 00:02:28.396 A:middle
+in that process will not be able
+to really do a whole lot that,
+
+00:02:28.396 --> 00:02:29.996 A:middle
+say, the main app
+would be able to do.
+
+00:02:29.996 --> 00:02:32.876 A:middle
+And this allows you to
+design with the principle
+
+00:02:32.876 --> 00:02:34.636 A:middle
+of least required
+privilege in mind.
+
+00:02:35.316 --> 00:02:38.796 A:middle
+And we also provide a
+completely managed lifecycle
+
+00:02:38.796 --> 00:02:39.956 A:middle
+for all these services.
+
+00:02:40.156 --> 00:02:44.086 A:middle
+So, you don't have to worry
+about spawning them yourself
+
+00:02:44.086 --> 00:02:46.396 A:middle
+or setting up an idle exit
+timer so that they exit
+
+00:02:46.396 --> 00:02:49.066 A:middle
+in an appropriate time.
+
+00:02:49.276 --> 00:02:51.026 A:middle
+We completely manage
+all of it for you
+
+00:02:51.026 --> 00:02:53.086 A:middle
+and there's a lot less
+boilerplate for you to write.
+
+00:02:54.246 --> 00:02:57.996 A:middle
+So we have two ways that
+XPC is kind of exported
+
+00:02:57.996 --> 00:02:58.956 A:middle
+to you, the developer.
+
+00:02:58.956 --> 00:03:01.476 A:middle
+The main one is Bundled
+Services.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:58.956 --> 00:03:01.476 A:middle
+The main one is Bundled
+Services.
+
+00:03:01.476 --> 00:03:03.676 A:middle
+These are the things that
+we were just talking about.
+
+00:03:03.946 --> 00:03:04.826 A:middle
+They ship in the app.
+
+00:03:05.026 --> 00:03:06.036 A:middle
+They never leave there.
+
+00:03:06.256 --> 00:03:07.516 A:middle
+They're completely--
+they're meant
+
+00:03:07.516 --> 00:03:10.366 A:middle
+to be basically stateless
+on-demand helpers that come
+
+00:03:10.366 --> 00:03:13.346 A:middle
+up to do something, maybe a
+service, few more request,
+
+00:03:13.346 --> 00:03:16.066 A:middle
+and can then be reclaimed
+by the system later.
+
+00:03:16.156 --> 00:03:18.296 A:middle
+And that's part of that
+fully managed lifecycle.
+
+00:03:18.706 --> 00:03:21.296 A:middle
+And this is the supported
+way on the App Store
+
+00:03:21.296 --> 00:03:25.876 A:middle
+to have multiple processes
+running in your application.
+
+00:03:26.856 --> 00:03:31.646 A:middle
+We also support launchd services
+so that you can XPC to talk
+
+00:03:31.646 --> 00:03:33.466 A:middle
+to a launchd job that
+you put on the system.
+
+00:03:33.826 --> 00:03:36.976 A:middle
+But this requires an additional
+step for installation.
+
+00:03:36.976 --> 00:03:38.516 A:middle
+You have to have
+the launchd plist
+
+00:03:38.516 --> 00:03:41.516 A:middle
+in either Library LaunchDaemons
+or Library LaunchAgents.
+
+00:03:41.906 --> 00:03:43.926 A:middle
+And so the App Store
+does not like that.
+
+00:03:44.076 --> 00:03:45.676 A:middle
+We want everything to
+stay in the bundle.
+
+00:03:45.806 --> 00:03:47.096 A:middle
+So you can actually
+use this part
+
+00:03:47.126 --> 00:03:49.296 A:middle
+of the technology on the Store.
+
+00:03:49.506 --> 00:03:51.766 A:middle
+But if you have a Gatekeeper
+app or you're a sysadmin,
+
+00:03:51.996 --> 00:03:53.276 A:middle
+it's still useful for you.
+
+00:03:54.406 --> 00:03:57.856 A:middle
+So all of this means a little
+more boilerplate code for you
+
+00:03:57.856 --> 00:04:00.336 A:middle
+to write, but you do get
+additional capabilities.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:57.856 --> 00:04:00.336 A:middle
+to write, but you do get
+additional capabilities.
+
+00:04:00.376 --> 00:04:02.256 A:middle
+You can run as root for one,
+
+00:04:02.256 --> 00:04:04.146 A:middle
+which is not allowed
+for App Store apps.
+
+00:04:04.566 --> 00:04:06.736 A:middle
+And you can also run
+your code independent
+
+00:04:06.736 --> 00:04:08.916 A:middle
+of the lifecycle
+of an application.
+
+00:04:09.196 --> 00:04:11.116 A:middle
+So if you just have some
+background piece of work
+
+00:04:11.456 --> 00:04:16.116 A:middle
+that needs to happen every so
+often, you can use XPC to talk
+
+00:04:16.116 --> 00:04:17.636 A:middle
+to it, initiate it,
+and get it running.
+
+00:04:18.206 --> 00:04:21.896 A:middle
+So here's what we provide today.
+
+00:04:22.276 --> 00:04:25.176 A:middle
+All of this is built
+on top of libobjc
+
+00:04:25.176 --> 00:04:26.996 A:middle
+which is the Objective
+C runtime.
+
+00:04:27.246 --> 00:04:31.616 A:middle
+So-- and XPC is very
+heavily built on libdispatch,
+
+00:04:31.616 --> 00:04:32.806 A:middle
+and both of those kinds
+
+00:04:32.806 --> 00:04:37.186 A:middle
+of objects are actually objc
+objects in Mountain Lion
+
+00:04:37.186 --> 00:04:40.576 A:middle
+and later so they can
+participate in ARC.
+
+00:04:40.896 --> 00:04:46.496 A:middle
+And then way up in a space
+somewhere is NSXPC connection
+
+00:04:46.496 --> 00:04:47.916 A:middle
+which was introduced
+in Mountain Lion.
+
+00:04:47.916 --> 00:04:52.896 A:middle
+And that's a really nice set of
+Cocoa APIs that aren't just kind
+
+00:04:52.896 --> 00:04:54.766 A:middle
+of like square bracket
+wrappers for XPC.
+
+00:04:54.856 --> 00:04:59.186 A:middle
+They enable a lot of very
+powerful Cocoa programing idioms
+
+00:04:59.426 --> 00:05:02.366 A:middle
+that we just really can't do
+down at the libSystem Layer
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:59.426 --> 00:05:02.366 A:middle
+that we just really can't do
+down at the libSystem Layer
+
+00:05:02.366 --> 00:05:04.086 A:middle
+where the C Library exits.
+
+00:05:04.186 --> 00:05:08.486 A:middle
+So let's get started by
+talking about architecture.
+
+00:05:09.756 --> 00:05:12.776 A:middle
+So here are our architectural
+goals with XPC.
+
+00:05:12.986 --> 00:05:16.226 A:middle
+The first one we want is to
+avoid long running processes.
+
+00:05:16.456 --> 00:05:17.656 A:middle
+These are things
+that just kind of sit
+
+00:05:17.656 --> 00:05:19.056 A:middle
+around on the system forever.
+
+00:05:19.556 --> 00:05:20.996 A:middle
+They might be listening
+for an event.
+
+00:05:20.996 --> 00:05:22.366 A:middle
+They might be doing
+periodic work.
+
+00:05:22.366 --> 00:05:25.066 A:middle
+But we would much rather that
+they launch on-demand and exit
+
+00:05:25.066 --> 00:05:28.106 A:middle
+when they're not needed so that
+there's no risk of them, say,
+
+00:05:28.106 --> 00:05:29.326 A:middle
+going crazy and starting
+
+00:05:29.326 --> 00:05:31.086 A:middle
+to consume resources
+in the background.
+
+00:05:32.226 --> 00:05:35.256 A:middle
+We also want to be able to
+adapt to changes on the system.
+
+00:05:35.576 --> 00:05:38.226 A:middle
+So, the system's resource
+availability is changing all the
+
+00:05:38.226 --> 00:05:42.496 A:middle
+time when the user opens an app,
+new sets of services come up.
+
+00:05:42.496 --> 00:05:44.956 A:middle
+The user might log in,
+more users log out.
+
+00:05:44.956 --> 00:05:48.866 A:middle
+This means that memory, CPU
+and Joules are all things
+
+00:05:48.866 --> 00:05:52.006 A:middle
+that are being shared across the
+system and we want to be able
+
+00:05:52.006 --> 00:05:55.196 A:middle
+to say you-- you know,
+you're part of a--
+
+00:05:55.556 --> 00:05:57.806 A:middle
+you're part of a collective
+and we need to divvy
+
+00:05:57.806 --> 00:05:58.946 A:middle
+out these resources fairly.
+
+00:05:59.076 --> 00:06:02.246 A:middle
+And finally, we want
+things to initialize lazily.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:59.076 --> 00:06:02.246 A:middle
+And finally, we want
+things to initialize lazily.
+
+00:06:02.246 --> 00:06:04.526 A:middle
+So this goes with
+the on-demand theme.
+
+00:06:04.716 --> 00:06:08.586 A:middle
+In other words, don't do work
+unless the user has actually
+
+00:06:08.696 --> 00:06:12.176 A:middle
+done something where you need
+to initialize all of that.
+
+00:06:12.276 --> 00:06:15.316 A:middle
+So, you know, be as
+on-demand as possible.
+
+00:06:15.906 --> 00:06:19.886 A:middle
+So the support list in Lion,
+
+00:06:19.886 --> 00:06:24.066 A:middle
+we have the technology called
+XPC Events and this is kind
+
+00:06:24.066 --> 00:06:27.776 A:middle
+of a-- it's using XPC but
+without actually having,
+
+00:06:27.776 --> 00:06:29.486 A:middle
+say, an app messaging you.
+
+00:06:29.486 --> 00:06:32.066 A:middle
+It's more like the system
+is a source of demand.
+
+00:06:32.206 --> 00:06:35.476 A:middle
+And some of those demand
+sources are IOKit events.
+
+00:06:35.526 --> 00:06:37.316 A:middle
+So, you can have a launchd job
+
+00:06:37.316 --> 00:06:39.046 A:middle
+that will kick off
+whenever changes
+
+00:06:39.046 --> 00:06:40.896 A:middle
+in the IO Registry happen.
+
+00:06:41.966 --> 00:06:43.996 A:middle
+And we support BSD
+Notifications.
+
+00:06:43.996 --> 00:06:47.146 A:middle
+So if you're familiar with
+Notify APIs in libSystem,
+
+00:06:47.396 --> 00:06:50.566 A:middle
+you can just post a notification
+and a launchd job kicks off.
+
+00:06:50.716 --> 00:06:53.756 A:middle
+In Mountain Lion, we
+all-- sorry, in Sea Lion--
+
+00:06:53.756 --> 00:06:57.526 A:middle
+sorry, in [laughter] Mavericks,
+
+00:06:58.396 --> 00:07:01.206 A:middle
+we also introduced CF
+Distributed Notifications.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:58.396 --> 00:07:01.206 A:middle
+we also introduced CF
+Distributed Notifications.
+
+00:07:01.356 --> 00:07:04.096 A:middle
+So if that's your preferred
+way to post a notification
+
+00:07:04.096 --> 00:07:05.366 A:middle
+and kick a job off on-demand,
+
+00:07:05.736 --> 00:07:08.126 A:middle
+that is now supported
+by XPC Events.
+
+00:07:09.506 --> 00:07:12.526 A:middle
+And-- so, this technology
+is really only available
+
+00:07:12.526 --> 00:07:14.586 A:middle
+to launchd services
+because you need
+
+00:07:14.586 --> 00:07:16.266 A:middle
+to specify it in your plist.
+
+00:07:16.426 --> 00:07:17.506 A:middle
+So here's how that works.
+
+00:07:18.036 --> 00:07:20.676 A:middle
+So in your launchd plist, you
+have this Launch Events Key
+
+00:07:21.046 --> 00:07:23.626 A:middle
+and you're going to specify
+"These are the kinds of events
+
+00:07:23.626 --> 00:07:24.976 A:middle
+that I want launch
+be on-demand."
+
+00:07:25.056 --> 00:07:28.356 A:middle
+In this case, we're going to
+talk about IOKit Matching.
+
+00:07:28.916 --> 00:07:30.696 A:middle
+So here we have a dictionary
+
+00:07:30.696 --> 00:07:32.676 A:middle
+of all the IOKit
+Events that I want.
+
+00:07:32.816 --> 00:07:33.996 A:middle
+In this case, it's just the one.
+
+00:07:34.326 --> 00:07:37.826 A:middle
+And this is, you know, my
+company's device was attached.
+
+00:07:37.826 --> 00:07:40.166 A:middle
+And in this case, it's
+just a matching dictionary.
+
+00:07:40.646 --> 00:07:43.526 A:middle
+So you're going to have the
+product ID, the vendor ID
+
+00:07:43.896 --> 00:07:46.816 A:middle
+and the provider class all
+in that matching dictionary
+
+00:07:47.176 --> 00:07:50.796 A:middle
+and XPC will implicitly install
+this matching dictionary,
+
+00:07:50.796 --> 00:07:52.076 A:middle
+listen for it on your behalf,
+
+00:07:52.386 --> 00:07:55.316 A:middle
+and kick you off
+when this happens.
+
+00:07:55.806 --> 00:07:57.576 A:middle
+And for Legacy reasons, you have
+
+00:07:57.576 --> 00:08:01.216 A:middle
+to add this IOMatchLaunchStream
+key and set it to true,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:57.576 --> 00:08:01.216 A:middle
+to add this IOMatchLaunchStream
+key and set it to true,
+
+00:08:01.606 --> 00:08:04.486 A:middle
+just do that, I won't
+explain why.
+
+00:08:05.956 --> 00:08:07.676 A:middle
+And once these events
+are posted,
+
+00:08:07.676 --> 00:08:08.826 A:middle
+they need to be consumed.
+
+00:08:08.826 --> 00:08:12.456 A:middle
+And you consume them by setting
+a handler and this is a lot
+
+00:08:12.456 --> 00:08:14.736 A:middle
+like a handler on
+an XPC Connection.
+
+00:08:15.126 --> 00:08:18.126 A:middle
+So you just call this XPC set
+of Event Stream Handler API.
+
+00:08:18.836 --> 00:08:22.976 A:middle
+And the first argument is that
+com.apple.iokit.matching name
+
+00:08:22.976 --> 00:08:25.826 A:middle
+which says, "This is the
+handler for the IOKit Events."
+
+00:08:26.176 --> 00:08:28.756 A:middle
+And then it takes a
+dispatch queue and a block.
+
+00:08:28.926 --> 00:08:31.266 A:middle
+And the block gets
+invoked on that queue.
+
+00:08:31.766 --> 00:08:33.785 A:middle
+And then once that
+block has been invoked,
+
+00:08:33.785 --> 00:08:35.106 A:middle
+the event has been consumed.
+
+00:08:35.556 --> 00:08:38.546 A:middle
+And this event is treated
+like an IPC message.
+
+00:08:38.546 --> 00:08:41.086 A:middle
+So if you don't consume
+the event, say,
+
+00:08:41.086 --> 00:08:43.576 A:middle
+by not setting a handler,
+after you'll exit,
+
+00:08:43.576 --> 00:08:45.796 A:middle
+you'll be relaunched
+to process it.
+
+00:08:46.036 --> 00:08:49.766 A:middle
+In the case of the IOKit
+Notification system,
+
+00:08:50.486 --> 00:08:54.956 A:middle
+each notification has a
+payload that allows you
+
+00:08:54.956 --> 00:08:59.296 A:middle
+to extract the registry ID of
+the thing of the node that fired
+
+00:08:59.526 --> 00:09:00.916 A:middle
+and then you can reconstruct it
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:59.526 --> 00:09:00.916 A:middle
+and then you can reconstruct it
+
+00:09:00.916 --> 00:09:04.966 A:middle
+and turn it into
+an IO service T.
+
+00:09:06.026 --> 00:09:09.136 A:middle
+So we've taken this
+idea of things
+
+00:09:09.136 --> 00:09:11.306 A:middle
+that can launch you
+on-demand and extended it
+
+00:09:11.306 --> 00:09:13.306 A:middle
+to Centralized Task Scheduling.
+
+00:09:13.596 --> 00:09:15.836 A:middle
+And you interact
+with this technology
+
+00:09:15.836 --> 00:09:18.446 A:middle
+through the XPC Activity APIs.
+
+00:09:18.786 --> 00:09:21.066 A:middle
+And what this let's you
+do is schedule things kind
+
+00:09:21.066 --> 00:09:22.786 A:middle
+of on an opportunistic basis.
+
+00:09:23.536 --> 00:09:26.616 A:middle
+If you have some piece of work,
+let's say it's a network fetch
+
+00:09:26.676 --> 00:09:29.406 A:middle
+or doing some random
+housekeeping, you might not want
+
+00:09:29.406 --> 00:09:30.606 A:middle
+to have it happen now.
+
+00:09:30.606 --> 00:09:32.586 A:middle
+You just want it to
+happen at some point.
+
+00:09:32.586 --> 00:09:33.996 A:middle
+You don't really care when.
+
+00:09:34.556 --> 00:09:36.756 A:middle
+And you'd rather
+just the system--
+
+00:09:37.036 --> 00:09:38.226 A:middle
+leave it up to the system
+
+00:09:38.226 --> 00:09:40.356 A:middle
+and let the system
+determine when a good time is.
+
+00:09:40.956 --> 00:09:44.786 A:middle
+And the idea here is to minimize
+the disruption of this work
+
+00:09:44.856 --> 00:09:46.366 A:middle
+to the user experience.
+
+00:09:46.736 --> 00:09:49.026 A:middle
+So if the user is not
+using the machine,
+
+00:09:49.026 --> 00:09:51.856 A:middle
+that might be a good
+time to do some activity
+
+00:09:51.856 --> 00:09:54.826 A:middle
+that synchronizes a bunch
+IO to disk for example.
+
+00:09:55.176 --> 00:09:58.536 A:middle
+And this allows us to more
+efficiently utilize the battery
+
+00:09:58.776 --> 00:10:00.786 A:middle
+because we can take
+certain tasks
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:58.776 --> 00:10:00.786 A:middle
+because we can take
+certain tasks
+
+00:10:00.786 --> 00:10:02.766 A:middle
+that have similar
+characteristics like, say,
+
+00:10:02.766 --> 00:10:06.056 A:middle
+run every 15 minutes, and
+run all of those tasks
+
+00:10:06.546 --> 00:10:09.766 A:middle
+on the same 15-minute interval
+rather than letting them run
+
+00:10:09.766 --> 00:10:12.966 A:middle
+on their own kind of
+15-minute intervals.
+
+00:10:13.046 --> 00:10:14.916 A:middle
+And this is new in Mavericks.
+
+00:10:14.916 --> 00:10:17.176 A:middle
+So we have two basic
+activity types.
+
+00:10:17.176 --> 00:10:18.686 A:middle
+There's maintenance and utility.
+
+00:10:19.066 --> 00:10:20.766 A:middle
+Maintenance and stuff
+like garbage collection.
+
+00:10:20.766 --> 00:10:23.346 A:middle
+Let's say, you periodically
+write some files out to disk
+
+00:10:23.346 --> 00:10:25.946 A:middle
+and you don't really need
+to keep track of them.
+
+00:10:26.246 --> 00:10:28.286 A:middle
+These tasks are going
+to be interrupted
+
+00:10:28.596 --> 00:10:30.606 A:middle
+when the user starts
+using the machine.
+
+00:10:30.606 --> 00:10:31.846 A:middle
+And they're going
+to be kicked off
+
+00:10:31.846 --> 00:10:33.696 A:middle
+when the user is basically idle.
+
+00:10:34.116 --> 00:10:36.896 A:middle
+We also have a utility
+type which is stuff
+
+00:10:36.896 --> 00:10:38.116 A:middle
+like fetching network data.
+
+00:10:38.526 --> 00:10:41.626 A:middle
+So this task is more directly
+important to the user.
+
+00:10:41.626 --> 00:10:45.176 A:middle
+So we're only going to interrupt
+it when resources become scarce.
+
+00:10:46.236 --> 00:10:50.806 A:middle
+So the criteria by which
+you can specify an activity
+
+00:10:50.806 --> 00:10:54.786 A:middle
+to kick off are things like
+being on or off AC power.
+
+00:10:55.066 --> 00:10:57.026 A:middle
+Whether the battery level
+is at a certain percentage,
+
+00:10:57.026 --> 00:10:58.556 A:middle
+whether the hard
+disk is spinning
+
+00:10:58.886 --> 00:11:00.116 A:middle
+and whether the screen
+is asleep.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:58.886 --> 00:11:00.116 A:middle
+and whether the screen
+is asleep.
+
+00:11:00.116 --> 00:11:03.086 A:middle
+So we can actually do your
+work while the user is, say,
+
+00:11:03.086 --> 00:11:06.246 A:middle
+not using the machine but
+it's plugged in to AC power.
+
+00:11:06.246 --> 00:11:08.196 A:middle
+That might be a great
+time to do some--
+
+00:11:08.246 --> 00:11:11.246 A:middle
+any kind of indexing task that
+your app might need to do.
+
+00:11:11.246 --> 00:11:16.016 A:middle
+And this is available to
+launchd and XPC services.
+
+00:11:17.986 --> 00:11:19.426 A:middle
+And what's really neat here is
+
+00:11:19.426 --> 00:11:21.546 A:middle
+that it'll persist
+across launches.
+
+00:11:21.896 --> 00:11:25.476 A:middle
+So, we can interrupt an
+ongoing activity that you have
+
+00:11:26.356 --> 00:11:28.766 A:middle
+and then exit your process
+
+00:11:28.766 --> 00:11:30.546 A:middle
+because it's not a good
+time to do the activity.
+
+00:11:30.816 --> 00:11:33.556 A:middle
+But then when a good time to do
+the activity does come along,
+
+00:11:33.556 --> 00:11:37.626 A:middle
+we'll launch you
+on-demand to keep going
+
+00:11:37.626 --> 00:11:39.506 A:middle
+and potentially complete
+that task.
+
+00:11:39.506 --> 00:11:41.566 A:middle
+And everything just kind of
+picks up where it left off.
+
+00:11:43.166 --> 00:11:46.266 A:middle
+So here's how you would just
+create a basic activity.
+
+00:11:46.266 --> 00:11:49.686 A:middle
+In this case, the activity
+criteria are specified
+
+00:11:49.686 --> 00:11:52.886 A:middle
+in an XPC dictionary and
+we're going to set a few keys.
+
+00:11:53.266 --> 00:11:54.846 A:middle
+In this case, we
+have an interval.
+
+00:11:54.846 --> 00:11:56.206 A:middle
+So we have a desired interval
+
+00:11:56.206 --> 00:11:58.106 A:middle
+of every five minutes
+this thing should go.
+
+00:11:58.566 --> 00:12:02.656 A:middle
+And the grace periods, you know,
+we have a 10-minute slack time.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:58.566 --> 00:12:02.656 A:middle
+And the grace periods, you know,
+we have a 10-minute slack time.
+
+00:12:02.656 --> 00:12:04.956 A:middle
+So it's like we'd like every
+five minutes but it's okay
+
+00:12:04.956 --> 00:12:07.626 A:middle
+to kind of play with
+that up to 10 minutes.
+
+00:12:07.986 --> 00:12:11.636 A:middle
+And then we're going to set
+this XPC Activity Handler.
+
+00:12:11.956 --> 00:12:15.146 A:middle
+So you just name your
+activity, give the criteria
+
+00:12:15.146 --> 00:12:16.236 A:middle
+and then a Handler Block.
+
+00:12:17.006 --> 00:12:22.396 A:middle
+And the Handler Block delivers
+the activity object that's being
+
+00:12:22.466 --> 00:12:24.966 A:middle
+invoked to you so
+that you can figure
+
+00:12:24.966 --> 00:12:27.786 A:middle
+out which activity you're
+dealing with, if you have many
+
+00:12:27.786 --> 00:12:30.876 A:middle
+of them, and where to pick
+up after you left off.
+
+00:12:31.306 --> 00:12:34.106 A:middle
+So right now, we've
+been invoked.
+
+00:12:34.476 --> 00:12:37.696 A:middle
+So we're going to get some
+piece of data from somewhere
+
+00:12:38.046 --> 00:12:40.576 A:middle
+and then we're going to set
+the activity state to continue.
+
+00:12:41.066 --> 00:12:43.146 A:middle
+And that just means that,
+you know, yes, we're going.
+
+00:12:44.186 --> 00:12:46.356 A:middle
+And then, as the
+activity is going,
+
+00:12:46.496 --> 00:12:51.216 A:middle
+we're going to dispatch Async to
+the main queue to update a view.
+
+00:12:51.516 --> 00:12:53.966 A:middle
+And then once that block
+completes, we say, "Hey,
+
+00:12:53.966 --> 00:12:55.286 A:middle
+now this activity is done
+
+00:12:55.286 --> 00:12:56.516 A:middle
+and you don't have
+to do it anymore."
+
+00:12:56.856 --> 00:12:59.456 A:middle
+But if that block never gets
+invoked for whatever reason,
+
+00:12:59.456 --> 00:13:03.346 A:middle
+let's-- and then let's say the
+app is killed before it can be
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:59.456 --> 00:13:03.346 A:middle
+let's-- and then let's say the
+app is killed before it can be
+
+00:13:03.346 --> 00:13:06.526 A:middle
+invoked, we'll bring you back
+and then you'll be invoked
+
+00:13:06.526 --> 00:13:07.646 A:middle
+with this Handler Block again
+
+00:13:07.646 --> 00:13:08.806 A:middle
+and you'll get another
+opportunity
+
+00:13:08.806 --> 00:13:10.146 A:middle
+to try completing that task.
+
+00:13:10.706 --> 00:13:13.946 A:middle
+So that's what we
+have architecturally.
+
+00:13:13.946 --> 00:13:17.436 A:middle
+This is how to-- this helps
+you design more efficient apps
+
+00:13:17.436 --> 00:13:18.696 A:middle
+that play better on the system.
+
+00:13:19.066 --> 00:13:23.306 A:middle
+So, let's dive into the actual
+ways you can use the APIs better
+
+00:13:23.566 --> 00:13:24.986 A:middle
+to get more efficient
+performance.
+
+00:13:24.986 --> 00:13:28.146 A:middle
+Let's start by covering what we
+have a service lifecycle now.
+
+00:13:28.466 --> 00:13:30.696 A:middle
+So right now, we have
+an app and we have one
+
+00:13:30.696 --> 00:13:32.786 A:middle
+of its services there
+on the right.
+
+00:13:33.246 --> 00:13:36.666 A:middle
+The app is going to send some
+messages to that service.
+
+00:13:36.906 --> 00:13:38.426 A:middle
+The service gets
+launched on-demand
+
+00:13:38.426 --> 00:13:39.976 A:middle
+and it starts doing stuff.
+
+00:13:40.296 --> 00:13:42.936 A:middle
+While it's doing this
+stuff, it's protected
+
+00:13:42.936 --> 00:13:45.936 A:middle
+from sudden termination
+which means that the system
+
+00:13:46.006 --> 00:13:49.726 A:middle
+under Memory Refresher won't
+see that this is something
+
+00:13:49.726 --> 00:13:50.616 A:middle
+that can be reclaimed.
+
+00:13:51.136 --> 00:13:54.416 A:middle
+But, as the replies for all
+those message got sent back,
+
+00:13:54.416 --> 00:13:57.656 A:middle
+you saw that that green
+bubble kind of faded away
+
+00:13:58.126 --> 00:14:01.006 A:middle
+and that means that as soon
+as the last one goes away
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:58.126 --> 00:14:01.006 A:middle
+and that means that as soon
+as the last one goes away
+
+00:14:01.136 --> 00:14:03.436 A:middle
+or as soon as the last reply is
+delivered, the system is free
+
+00:14:03.436 --> 00:14:04.816 A:middle
+to reclaim that service again.
+
+00:14:07.066 --> 00:14:09.176 A:middle
+So we have the service
+launched on-demand.
+
+00:14:09.386 --> 00:14:11.976 A:middle
+The system stops it as needed.
+
+00:14:12.466 --> 00:14:14.336 A:middle
+These conditions can
+be Memory Refresher
+
+00:14:14.386 --> 00:14:17.696 A:middle
+or idleness and lack of use.
+
+00:14:18.106 --> 00:14:23.156 A:middle
+And we will also tear everything
+down when the app quits.
+
+00:14:23.256 --> 00:14:25.726 A:middle
+So, Sudden Termination
+as it applies
+
+00:14:25.726 --> 00:14:28.796 A:middle
+to XPC is automatically handled.
+
+00:14:29.106 --> 00:14:32.426 A:middle
+So since XPC knows when
+you're receiving a message
+
+00:14:32.426 --> 00:14:35.006 A:middle
+or sending a reply to a
+message, we can disable
+
+00:14:35.236 --> 00:14:36.746 A:middle
+and enable Sudden Termination
+
+00:14:37.026 --> 00:14:38.996 A:middle
+as we see those events
+coming and going.
+
+00:14:39.316 --> 00:14:41.366 A:middle
+So in this case,
+we get a message
+
+00:14:41.366 --> 00:14:43.976 A:middle
+and then we immediately disable
+Sudden Termination for you.
+
+00:14:43.976 --> 00:14:45.566 A:middle
+And then when we see
+that you've replied
+
+00:14:45.566 --> 00:14:47.566 A:middle
+to that message,
+we'll re-enable it.
+
+00:14:47.566 --> 00:14:49.696 A:middle
+And as soon as all your
+replies have been sent,
+
+00:14:49.916 --> 00:14:51.256 A:middle
+you're killable by
+the system again.
+
+00:14:51.366 --> 00:14:53.916 A:middle
+So we've taken the same
+idea and applied it
+
+00:14:53.986 --> 00:14:55.786 A:middle
+to something called
+Importance Boosting
+
+00:14:55.786 --> 00:14:57.156 A:middle
+which is new to Mavericks.
+
+00:14:57.686 --> 00:15:01.086 A:middle
+And this is the default behavior
+now for bundled services.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:57.686 --> 00:15:01.086 A:middle
+And this is the default behavior
+now for bundled services.
+
+00:15:01.276 --> 00:15:03.646 A:middle
+And what happens is that they
+are background by default.
+
+00:15:03.886 --> 00:15:07.246 A:middle
+So whatever the service does
+will by default not interfere
+
+00:15:07.246 --> 00:15:09.496 A:middle
+with any UI applications
+that might be running.
+
+00:15:10.046 --> 00:15:12.866 A:middle
+But, if the UI application
+does message that service,
+
+00:15:13.076 --> 00:15:15.596 A:middle
+the service's priority
+gets promoted temporarily
+
+00:15:15.596 --> 00:15:16.816 A:middle
+to handle that request.
+
+00:15:17.216 --> 00:15:19.166 A:middle
+And the idea here is
+with everything else is
+
+00:15:19.166 --> 00:15:22.446 A:middle
+to minimize the disruption of
+your work to the user experience
+
+00:15:22.496 --> 00:15:25.016 A:middle
+if it's not directly aiding it.
+
+00:15:25.076 --> 00:15:26.556 A:middle
+So here's how that
+lifecycle works.
+
+00:15:26.886 --> 00:15:30.166 A:middle
+It's very similar to how the
+transactional lifecycle was
+
+00:15:30.166 --> 00:15:30.946 A:middle
+managed before.
+
+00:15:31.476 --> 00:15:34.836 A:middle
+So the app comes up, sends
+some messages to the service,
+
+00:15:35.466 --> 00:15:37.526 A:middle
+and then the service
+gets launched on-demand,
+
+00:15:37.526 --> 00:15:40.886 A:middle
+and now it's protected but now
+it's boosted for that entire--
+
+00:15:41.176 --> 00:15:42.556 A:middle
+for all three of those messages.
+
+00:15:42.896 --> 00:15:46.306 A:middle
+And then once those messages get
+sent, then the boost goes away.
+
+00:15:46.306 --> 00:15:50.096 A:middle
+And then any work after that
+point, any work the service does
+
+00:15:50.146 --> 00:15:53.216 A:middle
+on its own behalf like, say,
+from a timer or something
+
+00:15:53.216 --> 00:15:56.146 A:middle
+like that does not
+interfere with the app.
+
+00:15:56.206 --> 00:15:58.436 A:middle
+The app will win any
+resource contention fights.
+
+00:15:58.996 --> 00:16:03.366 A:middle
+So that's bundled XPC
+services by default.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:58.996 --> 00:16:03.366 A:middle
+So that's bundled XPC
+services by default.
+
+00:16:03.366 --> 00:16:06.436 A:middle
+But if you have a launchd job,
+you can also opt into this.
+
+00:16:06.436 --> 00:16:11.856 A:middle
+And we have a new plist key
+called Process Type in Mavericks
+
+00:16:11.856 --> 00:16:15.406 A:middle
+that you can use on your launchd
+job to opt into this behavior.
+
+00:16:15.656 --> 00:16:16.666 A:middle
+And once you've opted in,
+
+00:16:16.986 --> 00:16:20.446 A:middle
+it all just works
+basically transparently
+
+00:16:21.606 --> 00:16:23.836 A:middle
+because through the same
+mechanisms that we use
+
+00:16:23.836 --> 00:16:25.796 A:middle
+for tracking, sudden
+termination.
+
+00:16:26.866 --> 00:16:29.856 A:middle
+We also have some other values
+for that Process Type key.
+
+00:16:30.006 --> 00:16:32.906 A:middle
+Adaptive is the one we
+would prefer that you use
+
+00:16:32.906 --> 00:16:35.166 A:middle
+because it means that you'll
+only contend with apps
+
+00:16:35.426 --> 00:16:36.926 A:middle
+when you're doing
+work on their behalf.
+
+00:16:37.246 --> 00:16:39.696 A:middle
+And this is useful when
+you have a launchd job
+
+00:16:39.696 --> 00:16:40.746 A:middle
+that your app communicates with.
+
+00:16:42.216 --> 00:16:46.656 A:middle
+If the launchd job never really
+needs to steal resources away
+
+00:16:46.656 --> 00:16:49.216 A:middle
+from apps on the system, you
+can set it to background.
+
+00:16:49.596 --> 00:16:52.606 A:middle
+And this is useful if you
+have a launchd job that's part
+
+00:16:52.606 --> 00:16:55.986 A:middle
+of the app but doesn't-- the app
+doesn't really have a dependency
+
+00:16:55.986 --> 00:16:57.356 A:middle
+on anything that the job does.
+
+00:16:57.356 --> 00:17:01.226 A:middle
+So it's not supposed to update
+its UI in response to something
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:57.356 --> 00:17:01.226 A:middle
+So it's not supposed to update
+its UI in response to something
+
+00:17:01.226 --> 00:17:02.566 A:middle
+that that launchd job is doing.
+
+00:17:02.936 --> 00:17:04.455 A:middle
+We also have this
+Interactive key.
+
+00:17:04.606 --> 00:17:08.846 A:middle
+We'd rather that you simply
+not use it because it will mean
+
+00:17:08.846 --> 00:17:10.415 A:middle
+that your service,
+whatever it does,
+
+00:17:10.415 --> 00:17:12.626 A:middle
+can always potentially
+steal resources away
+
+00:17:12.626 --> 00:17:13.626 A:middle
+from an application
+
+00:17:13.996 --> 00:17:16.486 A:middle
+and potentially results
+in a stuttering UI.
+
+00:17:16.685 --> 00:17:18.925 A:middle
+And then there's a
+Standard which is the same
+
+00:17:18.925 --> 00:17:20.476 A:middle
+as just not specifying
+something.
+
+00:17:20.476 --> 00:17:22.306 A:middle
+So if you really just
+want to have this key
+
+00:17:22.306 --> 00:17:28.465 A:middle
+in your plist, use that value.
+
+00:17:28.465 --> 00:17:31.706 A:middle
+So, we do a manner of
+Automated Boost Tracking,
+
+00:17:31.826 --> 00:17:33.446 A:middle
+but you might want to
+persist your boosts.
+
+00:17:33.446 --> 00:17:36.966 A:middle
+So you might have a work that
+is going on outside the scope
+
+00:17:36.966 --> 00:17:39.086 A:middle
+of what XPC can know about.
+
+00:17:40.116 --> 00:17:42.926 A:middle
+So when you get a message,
+
+00:17:42.996 --> 00:17:45.396 A:middle
+by the time you've gotten
+the boosting message,
+
+00:17:45.426 --> 00:17:47.096 A:middle
+we've already applied
+this boost to you.
+
+00:17:47.566 --> 00:17:50.676 A:middle
+And-- so if you want to persist
+it, the first thing you're going
+
+00:17:50.676 --> 00:17:52.226 A:middle
+to do is create a
+reply of that message.
+
+00:17:52.266 --> 00:17:55.316 A:middle
+And that means that the boost's
+lifetime goes from the message
+
+00:17:55.316 --> 00:17:57.676 A:middle
+that you received into
+that reply object.
+
+00:17:58.646 --> 00:18:01.206 A:middle
+And then we're going to do
+some work asynchronously.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:58.646 --> 00:18:01.206 A:middle
+And then we're going to do
+some work asynchronously.
+
+00:18:01.466 --> 00:18:03.296 A:middle
+Since we're using
+ARC in this example,
+
+00:18:03.576 --> 00:18:06.906 A:middle
+the reply object is
+captured and retained.
+
+00:18:06.906 --> 00:18:08.706 A:middle
+And therefore, the
+boost stays alive
+
+00:18:09.196 --> 00:18:12.756 A:middle
+until that reply object
+goes out of scope at the end
+
+00:18:12.756 --> 00:18:15.626 A:middle
+of this block and then
+the message gets dropped--
+
+00:18:15.626 --> 00:18:19.656 A:middle
+sorry, and then you
+send the reply
+
+00:18:19.656 --> 00:18:21.556 A:middle
+with XPC Connection
+Send Message,
+
+00:18:21.646 --> 00:18:24.926 A:middle
+and then the runtime
+asynchronously sends the reply
+
+00:18:24.926 --> 00:18:25.746 A:middle
+behind the scenes.
+
+00:18:25.746 --> 00:18:28.636 A:middle
+And then when its final
+reference gets dropped,
+
+00:18:28.696 --> 00:18:31.126 A:middle
+the reply-- when the reply
+message gets de-allocated,
+
+00:18:31.696 --> 00:18:33.046 A:middle
+you'll end up dropping
+your boost.
+
+00:18:34.006 --> 00:18:36.076 A:middle
+There's another pattern
+where you might want
+
+00:18:36.106 --> 00:18:40.806 A:middle
+to say send multiple
+replies to a single request
+
+00:18:41.606 --> 00:18:44.436 A:middle
+and also maintain the
+boost for that duration
+
+00:18:44.556 --> 00:18:46.506 A:middle
+but the API only
+directly allows you
+
+00:18:46.506 --> 00:18:47.956 A:middle
+to send one reply to a message.
+
+00:18:48.286 --> 00:18:50.056 A:middle
+Well we've got a--
+there's a usage pattern
+
+00:18:50.056 --> 00:18:53.666 A:middle
+where you can actually do
+this using multiple replies.
+
+00:18:53.776 --> 00:18:56.306 A:middle
+And you do that by having
+an anonymous connection.
+
+00:18:56.786 --> 00:19:00.346 A:middle
+And to create that
+connection, you just give Null
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:56.786 --> 00:19:00.346 A:middle
+And to create that
+connection, you just give Null
+
+00:19:00.346 --> 00:19:02.556 A:middle
+as the first parameter
+to XPC Connection Create.
+
+00:19:03.616 --> 00:19:06.406 A:middle
+So once we've created this,
+we're going to send it
+
+00:19:06.406 --> 00:19:09.146 A:middle
+to the other side to the
+service in a message.
+
+00:19:09.496 --> 00:19:11.886 A:middle
+And it's just like sending
+any other key or value.
+
+00:19:12.156 --> 00:19:14.376 A:middle
+We're just going to send
+the anonymous connection
+
+00:19:15.026 --> 00:19:17.666 A:middle
+in a message key to
+the key back channel.
+
+00:19:18.146 --> 00:19:21.246 A:middle
+And-- so once we've sent the
+message, the other side gets it.
+
+00:19:22.716 --> 00:19:26.936 A:middle
+And then we're going
+to setup our end points
+
+00:19:27.016 --> 00:19:29.436 A:middle
+to receive the replies
+from that other side.
+
+00:19:30.276 --> 00:19:32.206 A:middle
+So once we've created
+the connection,
+
+00:19:32.406 --> 00:19:34.836 A:middle
+we're going to set an event
+handler on it and this is going
+
+00:19:34.836 --> 00:19:37.996 A:middle
+to be a similar kind of
+event handler to the one
+
+00:19:37.996 --> 00:19:41.056 A:middle
+that you will set
+for launchd's job
+
+00:19:41.386 --> 00:19:44.046 A:middle
+when you use XPC Connection
+Create with MockService.
+
+00:19:44.426 --> 00:19:47.666 A:middle
+In this case, we're going
+to say expect five replies
+
+00:19:48.076 --> 00:19:50.736 A:middle
+and we're going to expect--
+
+00:19:50.926 --> 00:19:53.756 A:middle
+or each invocation of this
+event handler is going
+
+00:19:53.756 --> 00:19:55.216 A:middle
+to deliver a connection to me.
+
+00:19:55.466 --> 00:19:57.096 A:middle
+In this case, I'm only
+ever going to get one
+
+00:19:57.386 --> 00:19:59.196 A:middle
+because I've only ever
+sent it to one person.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:00.676 --> 00:20:03.766 A:middle
+So, once I get the new
+connection in that handler,
+
+00:20:04.026 --> 00:20:05.976 A:middle
+then I set the message
+handler on that connection.
+
+00:20:06.366 --> 00:20:10.256 A:middle
+And that handler gets invoked
+whenever there's a new reply
+
+00:20:10.736 --> 00:20:14.546 A:middle
+to send to-- to be given to me
+and I'm just going to do stuff
+
+00:20:14.546 --> 00:20:15.816 A:middle
+with that message and then
+
+00:20:16.366 --> 00:20:18.926 A:middle
+that function will tell
+me, "Yes, I'm done now."
+
+00:20:18.926 --> 00:20:21.406 A:middle
+And if that's the case, we
+just cancel the connection.
+
+00:20:23.616 --> 00:20:27.216 A:middle
+So on the other side, when it
+receives the message containing
+
+00:20:27.216 --> 00:20:30.386 A:middle
+that anonymous connection,
+it's going to extract it
+
+00:20:30.386 --> 00:20:32.406 A:middle
+with XPC Dictionary
+Create Connection.
+
+00:20:32.406 --> 00:20:35.806 A:middle
+And then it just sets an event
+handler on it and resumes it.
+
+00:20:36.016 --> 00:20:38.536 A:middle
+So this is only-- it's
+only ever going to be used
+
+00:20:38.536 --> 00:20:39.636 A:middle
+for sending a message.
+
+00:20:39.996 --> 00:20:42.066 A:middle
+So we have an event handler
+
+00:20:42.066 --> 00:20:45.496 A:middle
+that all it does is just
+cancel the connect ion.
+
+00:20:45.496 --> 00:20:47.496 A:middle
+And we need to have
+some sort of reference
+
+00:20:47.496 --> 00:20:49.206 A:middle
+to the connection in that block.
+
+00:20:49.206 --> 00:20:52.196 A:middle
+Otherwise, there will be
+an implicit cancellation
+
+00:20:52.406 --> 00:20:55.336 A:middle
+of the connection
+because ARC will see
+
+00:20:55.336 --> 00:20:56.956 A:middle
+that the variable
+has gone out of scope
+
+00:20:56.956 --> 00:20:58.266 A:middle
+in not referenced from anywhere.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:01.716 --> 00:21:04.966 A:middle
+So here's the interesting
+part where the server is going
+
+00:21:04.966 --> 00:21:08.796 A:middle
+to send back however many
+replies to the client it wants.
+
+00:21:09.066 --> 00:21:13.106 A:middle
+In this case, we're just going
+to dispatch apply five things
+
+00:21:13.106 --> 00:21:15.126 A:middle
+on a concurrent dispatch queue.
+
+00:21:15.606 --> 00:21:18.576 A:middle
+And then we're going to send
+them all to that connection
+
+00:21:18.576 --> 00:21:22.616 A:middle
+that we got out of the message
+the same way we would send
+
+00:21:22.676 --> 00:21:24.766 A:middle
+to any normal connection
+that we created with, say,
+
+00:21:24.826 --> 00:21:26.216 A:middle
+XPC Connection Create.
+
+00:21:26.306 --> 00:21:27.146 A:middle
+So we'll do stuff.
+
+00:21:27.146 --> 00:21:28.226 A:middle
+We'll populate the message.
+
+00:21:28.226 --> 00:21:34.136 A:middle
+And then we just send the
+reply or the iterate of reply
+
+00:21:34.136 --> 00:21:36.126 A:middle
+over to the backchannel
+connection.
+
+00:21:36.496 --> 00:21:39.376 A:middle
+And ARC will capture
+that reply--
+
+00:21:39.376 --> 00:21:41.826 A:middle
+sorry, ARC will capture
+that message object
+
+00:21:41.876 --> 00:21:43.416 A:middle
+in all five of these blocks.
+
+00:21:43.746 --> 00:21:45.626 A:middle
+So when the last of
+them runs and gets--
+
+00:21:45.936 --> 00:21:49.566 A:middle
+and goes away, the message will
+have its last reference released
+
+00:21:49.606 --> 00:21:50.796 A:middle
+and then your boost drops.
+
+00:21:51.366 --> 00:21:57.136 A:middle
+So we've also made some
+changes to how large chunks
+
+00:21:57.136 --> 00:21:58.356 A:middle
+of data are handled in XPC.
+
+00:21:58.486 --> 00:22:02.596 A:middle
+The runtime recognizes
+very large data objects.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:58.486 --> 00:22:02.596 A:middle
+The runtime recognizes
+very large data objects.
+
+00:22:02.686 --> 00:22:06.516 A:middle
+And when it sees one of these,
+it goes down a fast path
+
+00:22:06.516 --> 00:22:09.446 A:middle
+to avoid copying
+as much as it can.
+
+00:22:09.446 --> 00:22:11.676 A:middle
+So what this means to you is
+
+00:22:11.676 --> 00:22:15.566 A:middle
+that there is now a path
+you can take to make sure
+
+00:22:15.566 --> 00:22:18.286 A:middle
+that when you give XPC
+a large buffer of data
+
+00:22:18.286 --> 00:22:20.986 A:middle
+that it is never
+copied from the time
+
+00:22:20.986 --> 00:22:23.476 A:middle
+that you created data
+object out of it to the time
+
+00:22:23.476 --> 00:22:27.026 A:middle
+that the other guy receives it,
+and it's completely copyless.
+
+00:22:27.116 --> 00:22:32.396 A:middle
+So, how this works is that
+we deal with the VM Object
+
+00:22:32.426 --> 00:22:35.526 A:middle
+that backs your large buffer
+and then we just share it
+
+00:22:35.526 --> 00:22:37.976 A:middle
+as a copy-on-write
+shared memory.
+
+00:22:38.246 --> 00:22:40.726 A:middle
+And this is a page
+granular allocation.
+
+00:22:41.176 --> 00:22:45.826 A:middle
+So, you can't really share--
+since we use VM memory sharing
+
+00:22:45.826 --> 00:22:48.396 A:middle
+to do this, you can't really
+share less than a page
+
+00:22:48.566 --> 00:22:50.916 A:middle
+and you can't share, say,
+one and a half pages.
+
+00:22:50.916 --> 00:22:54.756 A:middle
+So it has to be a page-aligned
+allocation that you own.
+
+00:22:54.886 --> 00:22:59.006 A:middle
+So a VM allocation that you've
+actually taken ownership of
+
+00:22:59.006 --> 00:23:01.596 A:middle
+and created and know
+the characteristics of.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:59.006 --> 00:23:01.596 A:middle
+and created and know
+the characteristics of.
+
+00:23:01.676 --> 00:23:03.946 A:middle
+And here's why that
+part is important.
+
+00:23:04.266 --> 00:23:07.836 A:middle
+So let's say we have a process
+that wants to share some memory.
+
+00:23:07.836 --> 00:23:10.916 A:middle
+And let's say that this
+memory-- you got it from malloc.
+
+00:23:11.706 --> 00:23:15.426 A:middle
+Malloc might have taken this
+little chunk of memory denoted
+
+00:23:15.496 --> 00:23:19.346 A:middle
+by the green in that address
+range and put it on a page
+
+00:23:19.536 --> 00:23:21.366 A:middle
+and then it gives out
+that pointer to you.
+
+00:23:22.016 --> 00:23:24.806 A:middle
+Now, let's say that you
+take that pointer and put it
+
+00:23:24.806 --> 00:23:28.316 A:middle
+in an IPC message to share
+it to the other side.
+
+00:23:28.716 --> 00:23:32.456 A:middle
+The VM isn't going to just
+share that green region there.
+
+00:23:32.626 --> 00:23:35.716 A:middle
+The VM is going to share
+everything on that page.
+
+00:23:35.716 --> 00:23:37.806 A:middle
+And what this means is
+that if you do this,
+
+00:23:37.806 --> 00:23:41.816 A:middle
+it will end up leaking random
+heap data to the other side.
+
+00:23:42.086 --> 00:23:47.166 A:middle
+And since XPC-- one of
+XPC's primary advantages is
+
+00:23:47.516 --> 00:23:50.306 A:middle
+implementing a more secure
+architecture, this would kind
+
+00:23:50.986 --> 00:23:55.286 A:middle
+of defeat the purpose of that
+since arbitrary code executing
+
+00:23:55.286 --> 00:23:58.226 A:middle
+in the other process would
+have access to your heap data
+
+00:23:58.226 --> 00:23:59.636 A:middle
+or at least a part of it.
+
+00:23:59.696 --> 00:24:01.076 A:middle
+And there might be
+a password in there.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:59.696 --> 00:24:01.076 A:middle
+And there might be
+a password in there.
+
+00:24:01.076 --> 00:24:03.346 A:middle
+There could be any
+number of little gems
+
+00:24:03.346 --> 00:24:07.536 A:middle
+for a security attacker
+to take advantage of.
+
+00:24:08.206 --> 00:24:12.486 A:middle
+So, now that we've covered how
+you would safely share a piece
+
+00:24:12.486 --> 00:24:18.426 A:middle
+of data, let's dive into the
+nuts and bolts of how you do it
+
+00:24:18.426 --> 00:24:19.786 A:middle
+or how you this with XPC.
+
+00:24:20.226 --> 00:24:21.256 A:middle
+The first step you're going
+
+00:24:21.256 --> 00:24:23.346 A:middle
+to do is create a
+dispatch data object.
+
+00:24:23.846 --> 00:24:28.486 A:middle
+And there's a new destructor to
+dispatch data that you specify
+
+00:24:28.486 --> 00:24:30.046 A:middle
+which is the MUNMAP Destructor.
+
+00:24:30.396 --> 00:24:33.606 A:middle
+And, this tells dispatch
+that, "Hey, this was allocated
+
+00:24:33.606 --> 00:24:36.406 A:middle
+with either MMAP or
+MockVM Allocate."
+
+00:24:36.926 --> 00:24:40.856 A:middle
+So, you can use this-- you can
+use the appropriate destructor
+
+00:24:40.856 --> 00:24:41.406 A:middle
+to free it.
+
+00:24:41.826 --> 00:24:44.196 A:middle
+And, once you have that
+dispatch data object,
+
+00:24:44.326 --> 00:24:46.196 A:middle
+you wrap it in an XPC data.
+
+00:24:46.406 --> 00:24:48.986 A:middle
+And since we're dealing
+with objects in this case,
+
+00:24:49.226 --> 00:24:52.396 A:middle
+we're not copying
+that buffer locally.
+
+00:24:52.396 --> 00:24:54.676 A:middle
+So, you're transferring
+ownership of that large buffer
+
+00:24:54.706 --> 00:24:57.156 A:middle
+into the dispatch
+and XPC subsystems.
+
+00:24:58.456 --> 00:25:00.856 A:middle
+So here's how you do it in code.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:58.456 --> 00:25:00.856 A:middle
+So here's how you do it in code.
+
+00:25:00.856 --> 00:25:02.816 A:middle
+So we create that
+dispatch data object
+
+00:25:02.816 --> 00:25:04.806 A:middle
+with the MUNMAP Destructor.
+
+00:25:05.166 --> 00:25:09.906 A:middle
+And we give it a buffer
+that points to a large chunk
+
+00:25:09.906 --> 00:25:14.236 A:middle
+of memory that we've allocated
+using MMAP or MockVM Allocate,
+
+00:25:14.236 --> 00:25:15.166 A:middle
+the two are equivalent.
+
+00:25:15.766 --> 00:25:16.916 A:middle
+And we just tell it the size.
+
+00:25:17.476 --> 00:25:20.296 A:middle
+And the target queue for
+the destructor to run on.
+
+00:25:20.296 --> 00:25:21.526 A:middle
+In this case, it
+doesn't really matter.
+
+00:25:21.826 --> 00:25:25.026 A:middle
+So we just use Dispatch
+Target Queue Default.
+
+00:25:25.316 --> 00:25:26.656 A:middle
+Once we have that data object,
+
+00:25:26.656 --> 00:25:29.716 A:middle
+we give it to XPC Data
+Create with Dispatch Data.
+
+00:25:29.766 --> 00:25:32.676 A:middle
+And then we just send
+the XPC data object
+
+00:25:32.676 --> 00:25:36.096 A:middle
+in the message we've
+completely avoided any copies
+
+00:25:36.096 --> 00:25:38.356 A:middle
+of that really large
+memory region,
+
+00:25:38.596 --> 00:25:40.416 A:middle
+so it's been transferred
+much more efficiently.
+
+00:25:45.316 --> 00:25:50.216 A:middle
+So this isn't just available
+to the low level C APIs.
+
+00:25:50.216 --> 00:25:54.816 A:middle
+Also doable from the NSXPC
+data-- NSXPC connection layer.
+
+00:25:55.286 --> 00:25:58.716 A:middle
+And this is now because
+in Mavericks,
+
+00:25:58.986 --> 00:26:01.916 A:middle
+dispatch data is toll
+free bridge with NSData.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:58.986 --> 00:26:01.916 A:middle
+dispatch data is toll
+free bridge with NSData.
+
+00:26:02.206 --> 00:26:05.776 A:middle
+So you can create a dispatch
+data object and just cast it
+
+00:26:05.776 --> 00:26:08.996 A:middle
+to NSData safely to insert it
+
+00:26:08.996 --> 00:26:10.786 A:middle
+into whatever Cocoa
+object graph you want.
+
+00:26:11.126 --> 00:26:13.046 A:middle
+There are some constraints
+around this behavior
+
+00:26:13.336 --> 00:26:15.346 A:middle
+and that subclasses
+are not going
+
+00:26:15.346 --> 00:26:16.776 A:middle
+to be toll free bridged here.
+
+00:26:16.776 --> 00:26:18.366 A:middle
+So if you subclassed NSData,
+
+00:26:18.366 --> 00:26:21.066 A:middle
+that's not safely
+interchangeable with dispatch.
+
+00:26:21.506 --> 00:26:23.666 A:middle
+And you can't have
+created this data objects
+
+00:26:23.766 --> 00:26:25.296 A:middle
+with No Copy method.
+
+00:26:25.866 --> 00:26:27.636 A:middle
+And when you did
+create this object,
+
+00:26:27.756 --> 00:26:31.036 A:middle
+any of those following
+deallocators will work.
+
+00:26:31.036 --> 00:26:35.266 A:middle
+They just basically say it's a
+piece of-- it's a VM allocation.
+
+00:26:39.016 --> 00:26:43.496 A:middle
+So also new-ish in our
+last big cat release,
+
+00:26:43.766 --> 00:26:45.926 A:middle
+we implemented a
+message receive path
+
+00:26:45.926 --> 00:26:48.066 A:middle
+and since we didn't
+have a talk last year,
+
+00:26:48.066 --> 00:26:49.546 A:middle
+we'll talk about it now.
+
+00:26:49.546 --> 00:26:51.296 A:middle
+Basically, this is
+now a much faster.
+
+00:26:51.296 --> 00:26:54.336 A:middle
+When XPC receives a message,
+it doesn't actually have
+
+00:26:54.336 --> 00:26:56.666 A:middle
+to create an entire
+objects graph
+
+00:26:56.666 --> 00:26:57.906 A:middle
+out of that message upfront.
+
+00:26:58.276 --> 00:27:00.196 A:middle
+So the act of receiving
+a message
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:58.276 --> 00:27:00.196 A:middle
+So the act of receiving
+a message
+
+00:27:00.246 --> 00:27:03.376 A:middle
+in prior releases would end
+up creating this big storm
+
+00:27:03.376 --> 00:27:06.376 A:middle
+of allocations and copies while
+we unserialized everything.
+
+00:27:06.566 --> 00:27:08.586 A:middle
+Now, we just deal with
+the message directly
+
+00:27:08.586 --> 00:27:09.706 A:middle
+in a serialized form.
+
+00:27:10.026 --> 00:27:12.606 A:middle
+And this let's you drain
+messages really quickly,
+
+00:27:13.626 --> 00:27:16.626 A:middle
+you know, and just start
+processing stuff asynchronously
+
+00:27:16.626 --> 00:27:18.846 A:middle
+as fast as you can.
+
+00:27:19.806 --> 00:27:22.166 A:middle
+So there are certain kinds
+of messages that we do this--
+
+00:27:22.166 --> 00:27:23.456 A:middle
+that we don't do this for.
+
+00:27:23.576 --> 00:27:26.516 A:middle
+Mainly, those messages
+are things
+
+00:27:26.516 --> 00:27:28.036 A:middle
+that contain out-of-line types.
+
+00:27:28.446 --> 00:27:30.276 A:middle
+So if you have like
+a file descriptor
+
+00:27:30.276 --> 00:27:32.796 A:middle
+or a shared memory region
+inside of the message,
+
+00:27:33.126 --> 00:27:34.696 A:middle
+then we'll unpack
+it all upfront.
+
+00:27:34.976 --> 00:27:37.326 A:middle
+This isn't too bad
+because the assumption is
+
+00:27:37.326 --> 00:27:39.526 A:middle
+that if you're sending one of
+these objects in a message,
+
+00:27:39.766 --> 00:27:43.996 A:middle
+it's probably to avoid
+larger data transfers anyway.
+
+00:27:43.996 --> 00:27:46.586 A:middle
+So, the cost of unpacking,
+it is pretty trivial.
+
+00:27:46.586 --> 00:27:48.346 A:middle
+And you're not going to
+send a whole ton of them.
+
+00:27:48.346 --> 00:27:50.946 A:middle
+So, they won't be too
+damaging to your throughput.
+
+00:27:53.066 --> 00:27:55.546 A:middle
+You can also take-- there's also
+things you can do that will wind
+
+00:27:55.546 --> 00:27:57.636 A:middle
+up forcing the slow path.
+
+00:27:57.636 --> 00:28:00.136 A:middle
+So, for example, if you
+get one of these messages
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:57.636 --> 00:28:00.136 A:middle
+So, for example, if you
+get one of these messages
+
+00:28:00.246 --> 00:28:03.476 A:middle
+and then you start-- and then
+you say you want to copy it,
+
+00:28:03.786 --> 00:28:06.556 A:middle
+we have to actually unpack
+the entire thing in order
+
+00:28:06.556 --> 00:28:08.516 A:middle
+to create a copy of it.
+
+00:28:08.516 --> 00:28:12.426 A:middle
+Similarly, if you use the
+XPC Dictionary Apply Routine,
+
+00:28:12.666 --> 00:28:16.046 A:middle
+we have to unpack
+an XPC object T
+
+00:28:16.306 --> 00:28:19.396 A:middle
+for every key value
+pair in that dictionary.
+
+00:28:19.686 --> 00:28:26.516 A:middle
+So, that will wind up forcing
+a full unpack of everything.
+
+00:28:26.516 --> 00:28:29.756 A:middle
+And same thing there,
+XPC Dictionary Get Value,
+
+00:28:29.756 --> 00:28:33.956 A:middle
+it returns an XPC object that
+you can retain independently.
+
+00:28:33.956 --> 00:28:37.406 A:middle
+So that will actually unpack
+the entire value associated
+
+00:28:37.406 --> 00:28:38.136 A:middle
+with that key.
+
+00:28:38.486 --> 00:28:39.326 A:middle
+And so, what that means is
+
+00:28:39.326 --> 00:28:41.876 A:middle
+that if you have a
+nested container inside
+
+00:28:41.876 --> 00:28:43.756 A:middle
+of that message object,
+
+00:28:44.106 --> 00:28:47.166 A:middle
+then we'll unpack the
+entirety of that container.
+
+00:28:47.736 --> 00:28:51.706 A:middle
+And then finally, if you modify
+the dictionary, which is safe,
+
+00:28:51.706 --> 00:28:54.166 A:middle
+you're totally allowed to do
+that, but if you modify it,
+
+00:28:54.166 --> 00:28:56.836 A:middle
+we have to unpack everything
+to get it into a form
+
+00:28:57.076 --> 00:28:58.256 A:middle
+where it's safely mutable.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:01.356 --> 00:29:02.756 A:middle
+So that's we have
+new in the runtime.
+
+00:29:02.756 --> 00:29:08.016 A:middle
+I wanted to also cover
+the issue of timeouts
+
+00:29:08.016 --> 00:29:12.756 A:middle
+because there's a
+lot of disagreement
+
+00:29:12.756 --> 00:29:15.896 A:middle
+over the best policy here
+with local machine IPC.
+
+00:29:15.986 --> 00:29:20.496 A:middle
+You might have noticed that the
+XPC APIs don't actually have any
+
+00:29:20.496 --> 00:29:23.456 A:middle
+support for timeouts, and
+this is very intentional.
+
+00:29:24.456 --> 00:29:29.136 A:middle
+They're just really not needed
+in most cases of the API usage
+
+00:29:30.056 --> 00:29:32.686 A:middle
+because local machine--
+
+00:29:32.686 --> 00:29:34.746 A:middle
+so two processes talking
+on the same machine
+
+00:29:34.746 --> 00:29:36.076 A:middle
+and two processes talking
+
+00:29:36.076 --> 00:29:38.806 A:middle
+on two different machines
+are actually different.
+
+00:29:38.916 --> 00:29:42.226 A:middle
+So as software engineers
+and as computer scientists,
+
+00:29:42.836 --> 00:29:45.726 A:middle
+we all like to try and
+consolidate two problem spaces.
+
+00:29:46.066 --> 00:29:47.886 A:middle
+This is one area
+where they're separate
+
+00:29:47.886 --> 00:29:49.036 A:middle
+and they really should be.
+
+00:29:49.036 --> 00:29:52.706 A:middle
+And the key differentiator here
+is that the kernel is not flaky.
+
+00:29:52.956 --> 00:29:54.086 A:middle
+It's not like the network.
+
+00:29:54.086 --> 00:29:56.246 A:middle
+It doesn't just kind
+of like come and go.
+
+00:29:56.726 --> 00:29:58.056 A:middle
+It's your transport medium
+
+00:29:58.056 --> 00:30:01.396 A:middle
+and it can actually make a
+guarantee for message delivery.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:58.056 --> 00:30:01.396 A:middle
+and it can actually make a
+guarantee for message delivery.
+
+00:30:02.046 --> 00:30:05.276 A:middle
+So once you have this guarantee,
+there's really no reason
+
+00:30:05.606 --> 00:30:09.216 A:middle
+that the remote server process
+shouldn't always be responsive.
+
+00:30:09.536 --> 00:30:10.546 A:middle
+So here's an example.
+
+00:30:11.596 --> 00:30:16.386 A:middle
+Well, here's an example of
+kind of the bad side of, say,
+
+00:30:16.386 --> 00:30:19.466 A:middle
+using a timeout in one of
+the send and reply routines.
+
+00:30:19.806 --> 00:30:23.806 A:middle
+It will confuse the
+expectations of the client side.
+
+00:30:24.126 --> 00:30:28.136 A:middle
+So, for example, if the server
+end is doing a network operation
+
+00:30:28.136 --> 00:30:33.196 A:middle
+on your behalf, you might want
+to attach a timeout to the reply
+
+00:30:33.536 --> 00:30:36.006 A:middle
+on the client side so that
+the client says, "Well,
+
+00:30:36.006 --> 00:30:38.686 A:middle
+if I don't get a reply-- it
+is a networking operation,
+
+00:30:38.686 --> 00:30:41.466 A:middle
+so if I don't get a
+reply within 10 seconds,
+
+00:30:41.516 --> 00:30:42.906 A:middle
+then that's a timeout."
+
+00:30:43.296 --> 00:30:47.626 A:middle
+But what that does is it
+confuses the network operation
+
+00:30:47.626 --> 00:30:50.386 A:middle
+timing out and the server
+process having a bug.
+
+00:30:50.736 --> 00:30:54.736 A:middle
+So, it might be that the network
+operation would've succeeded
+
+00:30:54.936 --> 00:30:57.566 A:middle
+but there's a deadlock in your
+server or there are some sort--
+
+00:30:57.566 --> 00:31:00.016 A:middle
+or there's kind of
+mismanagement of resources
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:57.566 --> 00:31:00.016 A:middle
+or there's kind of
+mismanagement of resources
+
+00:31:00.016 --> 00:31:02.606 A:middle
+that prevented the server from
+sending the reply in time.
+
+00:31:02.996 --> 00:31:05.126 A:middle
+But those two conditions
+are going to be expressed
+
+00:31:05.126 --> 00:31:08.496 A:middle
+to the client identically and
+you as a developer might end
+
+00:31:08.496 --> 00:31:11.416 A:middle
+up shipping the app with a bug
+
+00:31:11.416 --> 00:31:12.806 A:middle
+that you didn't actually
+know existed.
+
+00:31:15.316 --> 00:31:18.766 A:middle
+So, how would we
+optimally handle this case?
+
+00:31:18.766 --> 00:31:21.536 A:middle
+Well, it's not that the network
+operations shouldn't have
+
+00:31:21.536 --> 00:31:22.186 A:middle
+the timeout.
+
+00:31:22.286 --> 00:31:25.216 A:middle
+That's just kind of a reality
+of network programming.
+
+00:31:25.666 --> 00:31:28.546 A:middle
+But you don't want the client
+side to manage that timeout.
+
+00:31:28.546 --> 00:31:29.776 A:middle
+You want it to be managed
+
+00:31:30.026 --> 00:31:32.506 A:middle
+on the thing that's actually
+doing the network operation.
+
+00:31:32.836 --> 00:31:36.516 A:middle
+So the server sets up
+whatever socket it needs to do
+
+00:31:36.516 --> 00:31:38.886 A:middle
+that operation, attaches
+the timeout
+
+00:31:38.886 --> 00:31:41.736 A:middle
+that it thinks is appropriate
+and then if that's--
+
+00:31:41.736 --> 00:31:45.406 A:middle
+if the server sees that the
+request has taken too long,
+
+00:31:45.656 --> 00:31:47.326 A:middle
+then that means it can return--
+
+00:31:47.326 --> 00:31:49.866 A:middle
+it will return a message
+to the client that just has
+
+00:31:49.866 --> 00:31:51.836 A:middle
+like an E-timed out
+error in there.
+
+00:31:52.156 --> 00:31:54.756 A:middle
+And so, the client
+knows that, you know,
+
+00:31:54.756 --> 00:31:56.476 A:middle
+the server should
+always be responsive
+
+00:31:56.806 --> 00:31:59.446 A:middle
+and if it didn't respond to me
+then that means I have a bug
+
+00:31:59.446 --> 00:32:00.436 A:middle
+and I should investigate.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:59.446 --> 00:32:00.436 A:middle
+and I should investigate.
+
+00:32:00.896 --> 00:32:06.046 A:middle
+That being said, there
+are cases where IPC--
+
+00:32:06.216 --> 00:32:09.596 A:middle
+local machine IPC timeouts
+are actually appropriate,
+
+00:32:09.906 --> 00:32:12.646 A:middle
+but they're not really
+terribly common.
+
+00:32:12.796 --> 00:32:16.276 A:middle
+Usually, those cases derive
+from, say, hard deadlines.
+
+00:32:16.576 --> 00:32:19.446 A:middle
+And this is also when transit
+time makes a difference.
+
+00:32:19.446 --> 00:32:22.786 A:middle
+So the time it takes to send
+the message to the other side
+
+00:32:22.786 --> 00:32:24.606 A:middle
+and for the other side
+to send the reply back,
+
+00:32:25.246 --> 00:32:27.616 A:middle
+if that actually
+matters in your use case,
+
+00:32:27.616 --> 00:32:29.706 A:middle
+you might have a legitimate need
+
+00:32:29.706 --> 00:32:31.536 A:middle
+for a timeout on
+the client side.
+
+00:32:31.986 --> 00:32:35.656 A:middle
+And usually, this will be some
+sort of realtime application
+
+00:32:35.896 --> 00:32:38.476 A:middle
+where your timeout isn't
+just completely arbitrary.
+
+00:32:38.476 --> 00:32:40.296 A:middle
+It's not, you know, 10 seconds
+
+00:32:40.296 --> 00:32:42.076 A:middle
+or my favorite number
+or whatever.
+
+00:32:42.326 --> 00:32:45.366 A:middle
+It's actually derived from
+a desired throughput rate.
+
+00:32:45.616 --> 00:32:48.306 A:middle
+So if you're measuring
+things like frames per second
+
+00:32:48.626 --> 00:32:54.186 A:middle
+or samples of audio process per
+second, then timeouts are needed
+
+00:32:54.366 --> 00:32:56.676 A:middle
+so that you can know that
+an operation won't complete.
+
+00:32:56.756 --> 00:32:59.646 A:middle
+And if it can't complete
+in that amount of time
+
+00:32:59.746 --> 00:33:02.406 A:middle
+that you've given it,
+there's really no need
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:59.746 --> 00:33:02.406 A:middle
+that you've given it,
+there's really no need
+
+00:33:02.566 --> 00:33:04.696 A:middle
+to keep waiting for it.
+
+00:33:04.696 --> 00:33:05.786 A:middle
+You can just move on.
+
+00:33:06.146 --> 00:33:10.456 A:middle
+But like I said, these are
+not exactly common use cases.
+
+00:33:10.766 --> 00:33:14.756 A:middle
+So we don't really have
+support in the API for timeouts.
+
+00:33:15.096 --> 00:33:18.436 A:middle
+You can also-- but using
+the asynchronous APIs,
+
+00:33:18.496 --> 00:33:19.676 A:middle
+you can implement your own.
+
+00:33:19.726 --> 00:33:24.766 A:middle
+And I'm sure a lot of you
+have figured that out.
+
+00:33:24.766 --> 00:33:28.116 A:middle
+So, let's also talk a
+little bit about debugging
+
+00:33:28.116 --> 00:33:33.096 A:middle
+and what we've got in
+Mavericks for debugger support.
+
+00:33:34.236 --> 00:33:39.706 A:middle
+The first big one is that Xcode
+now transparently supports
+
+00:33:39.756 --> 00:33:41.376 A:middle
+debugging XPC services.
+
+00:33:41.846 --> 00:33:45.466 A:middle
+So, you can just take a
+service, set a breakpoint
+
+00:33:45.466 --> 00:33:47.546 A:middle
+on the file that's associate--
+
+00:33:47.606 --> 00:33:49.916 A:middle
+in a source file that
+your service uses,
+
+00:33:50.036 --> 00:33:51.356 A:middle
+and then you can run your app.
+
+00:33:51.356 --> 00:33:54.216 A:middle
+And then if your app takes
+a code path where it talks
+
+00:33:54.216 --> 00:33:56.406 A:middle
+to the service and
+launches it on-demand,
+
+00:33:56.876 --> 00:33:59.956 A:middle
+then those breakpoints that
+you set will be honored.
+
+00:33:59.956 --> 00:34:03.056 A:middle
+You don't actually have
+to do any other work.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:59.956 --> 00:34:03.056 A:middle
+You don't actually have
+to do any other work.
+
+00:34:04.606 --> 00:34:04.976 A:middle
+[applause] Yeah.
+
+00:34:05.386 --> 00:34:10.516 A:middle
+So, it's important to note
+that this functionality relies
+
+00:34:10.996 --> 00:34:13.896 A:middle
+on enhancements to
+the host that we made.
+
+00:34:14.196 --> 00:34:19.096 A:middle
+So, it's only available
+on Mavericks or later.
+
+00:34:19.446 --> 00:34:20.426 A:middle
+So, yeah, it just works.
+
+00:34:20.755 --> 00:34:23.746 A:middle
+And also nice, there's a
+copy files destination now
+
+00:34:23.746 --> 00:34:27.005 A:middle
+for the XPC services
+subdirectory in your app.
+
+00:34:27.005 --> 00:34:29.076 A:middle
+So, you don't have to
+select wrapper directory
+
+00:34:29.076 --> 00:34:31.096 A:middle
+and then specify XPC
+services anymore.
+
+00:34:31.826 --> 00:34:37.446 A:middle
+We also have a tool for
+debugging, importance boosting,
+
+00:34:37.446 --> 00:34:38.686 A:middle
+and leaking of boosts.
+
+00:34:38.686 --> 00:34:41.755 A:middle
+So if you're running into leak
+boost, there's this iptrace tool
+
+00:34:41.755 --> 00:34:46.005 A:middle
+that will tell you why you were
+boosted and who boosted you.
+
+00:34:47.996 --> 00:34:51.866 A:middle
+So in terms of debugging,
+just debugging tips, a lot--
+
+00:34:51.946 --> 00:34:57.126 A:middle
+what a lot of people run into
+is they will set everything up
+
+00:34:57.126 --> 00:34:58.686 A:middle
+and they'll run their
+app the first time.
+
+00:34:58.686 --> 00:35:01.776 A:middle
+And then, immediately, when they
+try and talk to their service,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:58.686 --> 00:35:01.776 A:middle
+And then, immediately, when they
+try and talk to their service,
+
+00:35:01.776 --> 00:35:03.736 A:middle
+they get a connection
+invalid right away.
+
+00:35:03.736 --> 00:35:05.776 A:middle
+That almost always indicates
+
+00:35:05.856 --> 00:35:08.226 A:middle
+that there's been a
+configuration error.
+
+00:35:08.226 --> 00:35:10.536 A:middle
+You know, the service
+isn't in the right place
+
+00:35:10.536 --> 00:35:12.636 A:middle
+or the bundle isn't
+structured properly.
+
+00:35:12.986 --> 00:35:16.746 A:middle
+But when you see this, just a
+couple of things to make sure,
+
+00:35:16.746 --> 00:35:19.876 A:middle
+make sure that the service is
+a dependency of the app target.
+
+00:35:19.876 --> 00:35:22.596 A:middle
+So when the app gets
+run, the service should--
+
+00:35:22.596 --> 00:35:24.326 A:middle
+sorry, when the app gets built,
+
+00:35:24.616 --> 00:35:26.636 A:middle
+the service should also
+get built before it.
+
+00:35:26.636 --> 00:35:29.666 A:middle
+And then that service
+product should be
+
+00:35:29.666 --> 00:35:32.646 A:middle
+in the copy files build phase
+of your app so that it winds
+
+00:35:32.646 --> 00:35:37.386 A:middle
+up in Contents XPC
+services inside the app.
+
+00:35:37.386 --> 00:35:39.676 A:middle
+And then the other
+easy mistake to make is
+
+00:35:39.676 --> 00:35:42.856 A:middle
+that you might just be using
+the wrong service identifier.
+
+00:35:43.116 --> 00:35:45.966 A:middle
+So the one-- the name of the
+service that you want to connect
+
+00:35:45.966 --> 00:35:50.326 A:middle
+to is the CFBundleIdentifier
+for that service bundle.
+
+00:35:50.376 --> 00:35:53.016 A:middle
+And sometimes that's
+easy to confuse
+
+00:35:53.016 --> 00:35:57.036 A:middle
+because when you view
+the info plist in Xcode,
+
+00:35:57.036 --> 00:36:00.136 A:middle
+it will actually be-- it
+will have dollar, you know,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:57.036 --> 00:36:00.136 A:middle
+it will actually be-- it
+will have dollar, you know,
+
+00:36:00.176 --> 00:36:03.246 A:middle
+product identifier that gets
+filled in at build time.
+
+00:36:03.396 --> 00:36:06.066 A:middle
+So, you want to make
+sure that you're using--
+
+00:36:06.066 --> 00:36:08.236 A:middle
+you're identifying your
+service consistently.
+
+00:36:11.066 --> 00:36:13.466 A:middle
+XPC is also defensive.
+
+00:36:13.706 --> 00:36:14.956 A:middle
+It's really easily offended.
+
+00:36:15.316 --> 00:36:17.046 A:middle
+And this is also intentional.
+
+00:36:17.406 --> 00:36:23.346 A:middle
+So, we do our best to detect
+noticeable cases of API misuse
+
+00:36:23.416 --> 00:36:27.216 A:middle
+and then we abort the
+process with that back trace
+
+00:36:27.316 --> 00:36:31.426 A:middle
+so that you can fix the bug
+before actually deploying
+
+00:36:31.426 --> 00:36:31.796 A:middle
+your app.
+
+00:36:32.416 --> 00:36:37.016 A:middle
+And so, we'll do this when,
+you know, we detect conditions
+
+00:36:37.016 --> 00:36:39.406 A:middle
+that will almost certainly
+lead to data corruption
+
+00:36:39.406 --> 00:36:41.646 A:middle
+or where data corruption
+has clearly happened.
+
+00:36:42.376 --> 00:36:44.686 A:middle
+Things like underflowing
+the retain count,
+
+00:36:44.776 --> 00:36:48.566 A:middle
+if you're still using manual
+retain/release on XPC objects
+
+00:36:48.706 --> 00:36:52.426 A:middle
+and just other examples
+of obvious API misuse.
+
+00:36:52.806 --> 00:36:57.226 A:middle
+A lot of this is detailed
+in the XPC Abort Man Page
+
+00:36:57.226 --> 00:36:58.446 A:middle
+which is in section three.
+
+00:36:58.846 --> 00:37:01.036 A:middle
+And you'll-- the
+tell-tale sign for this is
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:58.846 --> 00:37:01.036 A:middle
+And you'll-- the
+tell-tale sign for this is
+
+00:37:01.036 --> 00:37:04.356 A:middle
+that you'll see an illegal
+instruction being issued
+
+00:37:04.356 --> 00:37:06.576 A:middle
+and you're process
+will terminate.
+
+00:37:11.206 --> 00:37:15.676 A:middle
+So, in the case where you
+got crash report that--
+
+00:37:16.276 --> 00:37:18.156 A:middle
+where this has happened,
+you'll see stuff
+
+00:37:18.156 --> 00:37:21.416 A:middle
+in the applications specific
+information telling you why
+
+00:37:21.416 --> 00:37:23.216 A:middle
+this-- why the process
+was aborted.
+
+00:37:24.516 --> 00:37:28.306 A:middle
+But you might be attached to the
+service or the app with LLDB.
+
+00:37:28.706 --> 00:37:30.756 A:middle
+In which case, you're not
+going to get a crash report.
+
+00:37:30.756 --> 00:37:31.116 A:middle
+You're not going
+
+00:37:31.116 --> 00:37:33.066 A:middle
+to get applications
+specific information.
+
+00:37:33.176 --> 00:37:39.116 A:middle
+But we provide a debugger
+specific API called xpc debugger
+
+00:37:39.116 --> 00:37:42.456 A:middle
+api misuse info that you can
+call from within the debugger
+
+00:37:42.456 --> 00:37:45.216 A:middle
+and that will-- the result
+of that will be a pointer
+
+00:37:45.216 --> 00:37:48.406 A:middle
+to the string that
+we would've printed
+
+00:37:48.406 --> 00:37:51.726 A:middle
+in the application specific
+information of the crash report.
+
+00:37:52.496 --> 00:37:54.646 A:middle
+So here's what it would
+look like in a crash report.
+
+00:37:54.746 --> 00:37:57.436 A:middle
+You just have the application,
+specific information
+
+00:37:57.436 --> 00:38:00.396 A:middle
+and it says API MISUSE:
+Over-release of an object.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:57.436 --> 00:38:00.396 A:middle
+and it says API MISUSE:
+Over-release of an object.
+
+00:38:00.466 --> 00:38:04.086 A:middle
+So in this case, we called
+XPC release more times
+
+00:38:04.086 --> 00:38:05.596 A:middle
+that we have references
+to the object.
+
+00:38:07.306 --> 00:38:10.386 A:middle
+In LLDB, you'll probably
+see something
+
+00:38:10.386 --> 00:38:13.266 A:middle
+like Program received
+EXC BAD INSTRUCTION
+
+00:38:13.266 --> 00:38:16.586 A:middle
+which is the Mock exception in
+this case but it maps to SIGILL.
+
+00:38:17.086 --> 00:38:21.376 A:middle
+And then from the LLDB
+command line, we just do a p
+
+00:38:21.656 --> 00:38:25.836 A:middle
+and then call that debugger
+API that I mentioned before
+
+00:38:25.836 --> 00:38:29.016 A:middle
+and then it will print the
+string that's associated
+
+00:38:29.116 --> 00:38:31.406 A:middle
+that that API would've returned.
+
+00:38:34.776 --> 00:38:38.306 A:middle
+And if you're hounding
+your syslog looking
+
+00:38:38.306 --> 00:38:40.146 A:middle
+for every little thing that's
+happening on the system,
+
+00:38:40.426 --> 00:38:42.046 A:middle
+you might have seen a
+message that looks like this.
+
+00:38:42.046 --> 00:38:44.996 A:middle
+This is what it looks
+like in Mavericks.
+
+00:38:45.596 --> 00:38:47.956 A:middle
+In previous releases, the part
+
+00:38:48.096 --> 00:38:50.846 A:middle
+where it says assertion
+failed says bug.
+
+00:38:52.916 --> 00:38:58.516 A:middle
+This is cryptic and--
+to file a bug
+
+00:38:58.636 --> 00:39:01.806 A:middle
+because we now how
+to make sense of it.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:58.636 --> 00:39:01.806 A:middle
+because we now how
+to make sense of it.
+
+00:39:02.136 --> 00:39:05.196 A:middle
+If you're curious, it's just
+the program counter offset
+
+00:39:05.536 --> 00:39:09.626 A:middle
+from the beginning of the
+libxpc image in the process
+
+00:39:10.066 --> 00:39:13.676 A:middle
+where we encountered some weird
+error that we didn't expect
+
+00:39:13.676 --> 00:39:16.566 A:middle
+and that last part is the
+error code that we encountered.
+
+00:39:16.946 --> 00:39:18.896 A:middle
+Like I said, we know
+how to make sense of it.
+
+00:39:18.896 --> 00:39:22.486 A:middle
+If you see of these, file
+a bug with that log line
+
+00:39:22.486 --> 00:39:24.366 A:middle
+and any other relevant
+contextual information
+
+00:39:24.366 --> 00:39:27.126 A:middle
+that you have and we'll look
+into it and hopefully fix it.
+
+00:39:27.206 --> 00:39:32.046 A:middle
+So, that's pretty much
+of what we've got.
+
+00:39:32.046 --> 00:39:34.956 A:middle
+So for more information on
+any of these technologies,
+
+00:39:34.986 --> 00:39:38.686 A:middle
+Paul Danbold is the Core
+OS Technology Evangelist.
+
+00:39:38.686 --> 00:39:41.976 A:middle
+The documentation for
+XPC, we have a full suite
+
+00:39:41.976 --> 00:39:43.716 A:middle
+of man pages in section three.
+
+00:39:44.166 --> 00:39:47.176 A:middle
+I'm sure there are some
+great man page viewer apps
+
+00:39:47.176 --> 00:39:49.386 A:middle
+on the store if you don't like
+viewing them in the terminal.
+
+00:39:49.566 --> 00:39:50.666 A:middle
+But I encourage you to read them
+
+00:39:50.666 --> 00:39:53.186 A:middle
+because they're very
+well put together.
+
+00:39:53.546 --> 00:39:54.736 A:middle
+And we also have a full set
+
+00:39:54.736 --> 00:39:58.436 A:middle
+of HeaderDoc inside the
+actual headers of XPC.
+
+00:39:58.436 --> 00:40:01.936 A:middle
+So, look in User
+Include XPC and then all
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:39:58.436 --> 00:40:01.936 A:middle
+So, look in User
+Include XPC and then all
+
+00:40:01.936 --> 00:40:05.186 A:middle
+of those public interfaces
+are documented with HeaderDoc.
+
+00:40:05.926 --> 00:40:08.546 A:middle
+And then the Daemons and
+Services Programming Guide
+
+00:40:08.546 --> 00:40:13.296 A:middle
+which is on the developer
+documentation website covers
+
+00:40:13.466 --> 00:40:16.596 A:middle
+when you would want to use a
+launch daemon and the lifecycle
+
+00:40:16.596 --> 00:40:18.766 A:middle
+of XPC services and
+all that fun stuff.
+
+00:40:18.946 --> 00:40:22.866 A:middle
+And if none of these resources
+can answer your specific
+
+00:40:22.866 --> 00:40:26.306 A:middle
+question or you still have
+questions about things
+
+00:40:26.306 --> 00:40:28.756 A:middle
+that aren't covered there,
+there's always the Dev Forums
+
+00:40:28.756 --> 00:40:29.906 A:middle
+where you can just ask us
+
+00:40:29.906 --> 00:40:33.566 A:middle
+and we occasionally check
+the Dev Forums as engineers
+
+00:40:33.566 --> 00:40:37.276 A:middle
+and if we can answer
+you, we will.
+
+00:40:38.136 --> 00:40:43.516 A:middle
+Relatedly, the debugging
+support for XPC and Xcode
+
+00:40:43.516 --> 00:40:46.856 A:middle
+that I mentioned is going to
+be demoed in the Debugging
+
+00:40:46.856 --> 00:40:51.136 A:middle
+with Xcode session and that's
+in Pac Heights tomorrow at 2:00.
+
+00:40:51.136 --> 00:40:54.436 A:middle
+There's also a session later
+today which also cover some
+
+00:40:54.436 --> 00:40:56.486 A:middle
+of the architectural
+things that we talked
+
+00:40:56.486 --> 00:40:59.646 A:middle
+about like XPC activities,
+centralized tasks scheduling,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:00.006 --> 00:41:02.446 A:middle
+and making more efficient apps.
+
+00:41:02.686 --> 00:41:04.546 A:middle
+And that's Building
+Efficient OS X Apps.
+
+00:41:04.546 --> 00:41:06.036 A:middle
+That's in Nob Hill later today.
+
+00:41:06.036 --> 00:41:07.126 A:middle
+And that's it.
+
+00:41:07.126 --> 00:41:08.486 A:middle
+Enjoy the rest of
+the conference.
+
+00:41:09.516 --> 00:41:15.730 A:middle
+[ Silence ]
+

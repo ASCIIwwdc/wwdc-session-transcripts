@@ -1,0 +1,3951 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:04.516 A:middle
+[ Silence ]
+
+00:00:05.016 --> 00:00:10.000 A:middle
+[ Applause ]
+
+00:00:11.846 --> 00:00:12.756 A:middle
+&gt;&gt; Good afternoon.
+
+00:00:14.176 --> 00:00:17.216 A:middle
+Optimizing Your Code Using LLVM.
+
+00:00:18.526 --> 00:00:21.826 A:middle
+I'm Jim Grosbach and today,
+we're going to talk a bit
+
+00:00:21.826 --> 00:00:25.986 A:middle
+about how you can help the
+compiler help you get the best
+
+00:00:25.986 --> 00:00:28.096 A:middle
+results for your app.
+
+00:00:28.906 --> 00:00:30.956 A:middle
+We're going to do
+that in three ways.
+
+00:00:31.596 --> 00:00:38.006 A:middle
+First, we're going to talk about
+how Xcode communicates to LLVM
+
+00:00:38.586 --> 00:00:41.256 A:middle
+about the appropriate
+optimization settings
+
+00:00:41.256 --> 00:00:44.766 A:middle
+for the kind of code
+that's in your app.
+
+00:00:45.336 --> 00:00:49.286 A:middle
+Then, we're going to talk about
+some specific LLVM optimizations
+
+00:00:49.596 --> 00:00:52.536 A:middle
+and dig in a little bit
+deeper about the kinds
+
+00:00:52.536 --> 00:00:56.096 A:middle
+of optimizations, those R
+and how you can write code
+
+00:00:56.096 --> 00:00:59.306 A:middle
+that will enable
+LLVM to do its best
+
+00:00:59.496 --> 00:01:00.886 A:middle
+to give you better performance.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.496 --> 00:01:00.886 A:middle
+to give you better performance.
+
+00:01:01.566 --> 00:01:04.885 A:middle
+And then finally, we're
+going to talk about some new
+
+00:01:04.885 --> 00:01:09.956 A:middle
+and improved optimizations
+available in LLVM with Xcode 5
+
+00:01:10.046 --> 00:01:12.386 A:middle
+and we think you're going
+to be just as excited
+
+00:01:12.386 --> 00:01:14.396 A:middle
+about these new improvements
+as we are.
+
+00:01:15.466 --> 00:01:19.796 A:middle
+So let's dig right in,
+build settings in Xcode
+
+00:01:19.796 --> 00:01:21.076 A:middle
+with the LLVM compiler.
+
+00:01:21.776 --> 00:01:24.936 A:middle
+We're going to be
+using the SciMark-2 set
+
+00:01:24.936 --> 00:01:28.216 A:middle
+of numerical computing
+code as an example
+
+00:01:28.216 --> 00:01:33.776 A:middle
+to show how carefully selecting
+your optimization settings
+
+00:01:34.016 --> 00:01:38.176 A:middle
+in Xcode can yield fantastic
+performance improvements
+
+00:01:38.776 --> 00:01:40.776 A:middle
+over just using the defaults.
+
+00:01:41.416 --> 00:01:43.946 A:middle
+From when we first
+create our project
+
+00:01:44.866 --> 00:01:49.156 A:middle
+to when we're done selecting
+the best optimization settings
+
+00:01:49.156 --> 00:01:54.806 A:middle
+available, we're going to see
+four times faster results all
+
+00:01:54.806 --> 00:01:58.066 A:middle
+without any changes to the
+application source code.
+
+00:01:59.246 --> 00:02:01.016 A:middle
+So let's have a look
+at how that's possible.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:59.246 --> 00:02:01.016 A:middle
+So let's have a look
+at how that's possible.
+
+00:02:01.846 --> 00:02:05.756 A:middle
+We use Xcode's build
+settings to do this.
+
+00:02:06.276 --> 00:02:09.476 A:middle
+Xcode collects all of the
+information about how to talk
+
+00:02:09.476 --> 00:02:12.546 A:middle
+to the compiler into
+build configurations.
+
+00:02:12.856 --> 00:02:15.156 A:middle
+So all the command line
+options that get passed
+
+00:02:15.156 --> 00:02:18.686 A:middle
+through to tell the compiler
+which optimizations to use
+
+00:02:19.266 --> 00:02:20.446 A:middle
+to optimize your code.
+
+00:02:21.946 --> 00:02:23.726 A:middle
+When we first create
+our project,
+
+00:02:23.726 --> 00:02:27.006 A:middle
+we have two configurations,
+the Debug configuration
+
+00:02:27.346 --> 00:02:30.896 A:middle
+which tells the compiler to
+optimize not per performance
+
+00:02:31.376 --> 00:02:35.736 A:middle
+but rather for very fast compile
+times per iterative development
+
+00:02:36.126 --> 00:02:39.086 A:middle
+and a vastly improved
+debugging experience,
+
+00:02:39.086 --> 00:02:40.786 A:middle
+really good debug information.
+
+00:02:41.846 --> 00:02:45.016 A:middle
+Then when it comes time to
+get ready to deploy our code
+
+00:02:45.016 --> 00:02:48.996 A:middle
+to the App Store and to
+measure and tune our application
+
+00:02:48.996 --> 00:02:52.126 A:middle
+for performance, we use
+the Release configuration
+
+00:02:52.586 --> 00:02:55.596 A:middle
+which by default uses
+a balanced approach
+
+00:02:55.926 --> 00:02:59.006 A:middle
+that we generate the
+fastest code we can
+
+00:02:59.276 --> 00:03:02.116 A:middle
+without compromising
+on code size.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:59.276 --> 00:03:02.116 A:middle
+without compromising
+on code size.
+
+00:03:02.606 --> 00:03:07.306 A:middle
+But for SciMark-2, we
+want more than that.
+
+00:03:07.966 --> 00:03:12.036 A:middle
+We want the compiler to be
+more aggressive and we're okay
+
+00:03:12.306 --> 00:03:15.776 A:middle
+if we use a bit more code
+size to get better performance
+
+00:03:16.346 --> 00:03:21.286 A:middle
+and to tell LLVM that, we
+use optimization setting O3
+
+00:03:21.286 --> 00:03:25.686 A:middle
+which we simply change for the
+Release configuration in Xcode
+
+00:03:26.436 --> 00:03:28.586 A:middle
+to tell the compiler
+that we're dealing
+
+00:03:29.036 --> 00:03:31.266 A:middle
+with very performance
+intensive code
+
+00:03:31.416 --> 00:03:33.916 A:middle
+and we want more
+aggressive optimization.
+
+00:03:35.096 --> 00:03:38.076 A:middle
+But as we all have experienced
+before, we don't know
+
+00:03:38.076 --> 00:03:41.026 A:middle
+for sure what the effect of
+optimizations are going to be
+
+00:03:41.396 --> 00:03:43.136 A:middle
+until we measure the results.
+
+00:03:43.596 --> 00:03:45.466 A:middle
+So let's have a look
+at what this does
+
+00:03:45.796 --> 00:03:48.096 A:middle
+for our SciMark-2 benchmark.
+
+00:03:49.416 --> 00:03:52.306 A:middle
+When we first start out,
+we normalize our results
+
+00:03:52.306 --> 00:03:53.886 A:middle
+so we have something
+to compare to.
+
+00:03:54.606 --> 00:03:56.286 A:middle
+Then we enabled Release mode
+
+00:03:56.636 --> 00:03:59.436 A:middle
+and we see we're already
+three times faster,
+
+00:03:59.436 --> 00:04:03.046 A:middle
+so the kind of performance that
+basic optimizations can provide
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:59.436 --> 00:04:03.046 A:middle
+so the kind of performance that
+basic optimizations can provide
+
+00:04:03.046 --> 00:04:07.226 A:middle
+and then we tell the compiler
+to be more aggressive with O3
+
+00:04:07.226 --> 00:04:10.756 A:middle
+and we see another 10
+percent or so improvements.
+
+00:04:11.016 --> 00:04:15.736 A:middle
+So we're on the right track,
+but we haven't gotten really all
+
+00:04:15.736 --> 00:04:17.446 A:middle
+that the compiler
+has to offer yet.
+
+00:04:17.446 --> 00:04:20.005 A:middle
+We want to bring
+more information
+
+00:04:20.276 --> 00:04:22.986 A:middle
+about the application
+to the compiler
+
+00:04:22.986 --> 00:04:26.166 A:middle
+so that it has more
+possibilities to work with,
+
+00:04:26.946 --> 00:04:30.096 A:middle
+and we do that with
+Link-Time Optimization.
+
+00:04:31.996 --> 00:04:32.786 A:middle
+Traditionally,
+
+00:04:32.786 --> 00:04:36.596 A:middle
+the compilerlooksat one
+source file at a time.
+
+00:04:37.806 --> 00:04:41.216 A:middle
+It builds each file into an
+intermediate representation
+
+00:04:41.216 --> 00:04:45.436 A:middle
+from whatever source language
+it comes from, optimizes that,
+
+00:04:46.136 --> 00:04:49.096 A:middle
+lowers the machine code,
+creates the object files
+
+00:04:49.096 --> 00:04:51.036 A:middle
+which the linker
+then pulls together
+
+00:04:51.486 --> 00:04:53.166 A:middle
+to create the final executable.
+
+00:04:54.456 --> 00:04:57.696 A:middle
+But that means that all of the
+information in each source file
+
+00:04:57.696 --> 00:05:01.426 A:middle
+that we've processed is no
+longer available to the compiler
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:57.696 --> 00:05:01.426 A:middle
+that we've processed is no
+longer available to the compiler
+
+00:05:01.426 --> 00:05:03.946 A:middle
+when we move on to
+the next source file.
+
+00:05:03.946 --> 00:05:08.296 A:middle
+That's a lot of information
+that is potentially very useful
+
+00:05:08.296 --> 00:05:10.806 A:middle
+and very valuable
+that's being thrown away.
+
+00:05:12.196 --> 00:05:16.816 A:middle
+Link-Time Optimization takes
+the intermediate representation,
+
+00:05:17.436 --> 00:05:22.256 A:middle
+puts that into the object
+files, moving the optimizations
+
+00:05:22.256 --> 00:05:27.646 A:middle
+into the linker which now
+allows us to see a whole program
+
+00:05:27.646 --> 00:05:29.806 A:middle
+at a time optimization.
+
+00:05:30.816 --> 00:05:32.626 A:middle
+So now, all of the information
+
+00:05:32.826 --> 00:05:34.656 A:middle
+for the whole program
+is available
+
+00:05:34.656 --> 00:05:38.476 A:middle
+to the compiler allowing
+significantly better results
+
+00:05:38.646 --> 00:05:40.316 A:middle
+because we have more
+information.
+
+00:05:40.716 --> 00:05:43.106 A:middle
+In particular, this
+is going to result
+
+00:05:43.106 --> 00:05:44.746 A:middle
+in much more effective in-lining
+
+00:05:44.926 --> 00:05:47.176 A:middle
+and other inter-procedural
+analyses.
+
+00:05:48.586 --> 00:05:54.476 A:middle
+In Xcode, to enable Link-Time
+Optimization, we tell it to do
+
+00:05:54.476 --> 00:05:56.926 A:middle
+so via the Link-Time
+Optimization setting
+
+00:05:57.196 --> 00:06:01.426 A:middle
+which passes the LTO flag
+to the compiler and then
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:57.196 --> 00:06:01.426 A:middle
+which passes the LTO flag
+to the compiler and then
+
+00:06:01.426 --> 00:06:03.986 A:middle
+on to the linker so
+that the compiler
+
+00:06:03.986 --> 00:06:08.126 A:middle
+and linker can cooperate to
+make sure that everything flows
+
+00:06:08.126 --> 00:06:10.876 A:middle
+through and all of the
+information is available
+
+00:06:11.916 --> 00:06:13.346 A:middle
+when optimizing your code.
+
+00:06:14.526 --> 00:06:18.136 A:middle
+So now let's have a look at
+what this does for SciMark.
+
+00:06:20.346 --> 00:06:25.466 A:middle
+Even beyond just O3, Link-Time
+Optimization has allowed the
+
+00:06:25.466 --> 00:06:27.486 A:middle
+compiler to utilize
+its information
+
+00:06:27.486 --> 00:06:32.576 A:middle
+about the entire program
+to gain an additional 25
+
+00:06:32.576 --> 00:06:38.186 A:middle
+to 30 percent improvement so
+we now have a 4x improvement
+
+00:06:38.246 --> 00:06:41.866 A:middle
+from where we started, all
+without changing a single line
+
+00:06:41.866 --> 00:06:45.646 A:middle
+of source code by simply
+recognizing that the kind
+
+00:06:45.646 --> 00:06:50.296 A:middle
+of code that we're working
+with is what will benefit
+
+00:06:50.996 --> 00:06:53.706 A:middle
+from specialized
+settings in Xcode.
+
+00:06:54.116 --> 00:06:57.266 A:middle
+So it's worth it for your
+application to experiment
+
+00:06:57.646 --> 00:07:00.716 A:middle
+with these settings and find
+out what is most effective
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:57.646 --> 00:07:00.716 A:middle
+with these settings and find
+out what is most effective
+
+00:07:00.776 --> 00:07:03.876 A:middle
+and what is right for your app.
+
+00:07:04.496 --> 00:07:07.146 A:middle
+Now, I'd love to promise
+that you're all going
+
+00:07:07.146 --> 00:07:10.176 A:middle
+to get 25 percent improvement
+in performance using LTO.
+
+00:07:10.176 --> 00:07:13.376 A:middle
+But that would be
+a little bit much.
+
+00:07:14.266 --> 00:07:17.726 A:middle
+SciMark is a very
+compute-intensive piece of code
+
+00:07:17.896 --> 00:07:19.856 A:middle
+so it really works very well.
+
+00:07:20.846 --> 00:07:24.966 A:middle
+That said, we have seen
+fantastic results using LTO
+
+00:07:25.456 --> 00:07:26.036 A:middle
+at Apple.
+
+00:07:26.346 --> 00:07:30.186 A:middle
+For example, the compiler
+itself is built using LTO
+
+00:07:30.406 --> 00:07:34.566 A:middle
+and we see approximately 6
+percent compile time improvement
+
+00:07:34.836 --> 00:07:35.686 A:middle
+as a result.
+
+00:07:35.686 --> 00:07:39.256 A:middle
+The iOS kernel is
+built with LTO and sees
+
+00:07:39.256 --> 00:07:43.596 A:middle
+up to a 20 percent improvement
+on important I/O benchmarks.
+
+00:07:44.466 --> 00:07:48.026 A:middle
+So this is real world and
+I encourage you to try it.
+
+00:07:49.036 --> 00:07:52.156 A:middle
+Do be aware however that
+moving all of this work
+
+00:07:52.156 --> 00:07:56.076 A:middle
+into the link stage can have
+impact on your build times.
+
+00:07:56.316 --> 00:07:59.306 A:middle
+The compiler is doing
+more and it's doing it all
+
+00:07:59.306 --> 00:08:02.556 A:middle
+at once instead of splitting
+it up into multiple chunks
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:59.306 --> 00:08:02.556 A:middle
+at once instead of splitting
+it up into multiple chunks
+
+00:08:02.656 --> 00:08:05.326 A:middle
+that will then be split into
+-- across multiple cores.
+
+00:08:06.496 --> 00:08:09.036 A:middle
+The impact is going
+to vary some apps.
+
+00:08:09.296 --> 00:08:13.066 A:middle
+It has a huge impact on build
+time, others not so much.
+
+00:08:13.236 --> 00:08:18.106 A:middle
+Again, try it, evaluate it and
+decide if it's right for you.
+
+00:08:19.826 --> 00:08:22.486 A:middle
+So now, let's look a
+little bit more deeply
+
+00:08:22.796 --> 00:08:27.776 A:middle
+into some specific optimizations
+that LLVM performs analyses,
+
+00:08:28.006 --> 00:08:32.996 A:middle
+how LLVMlooksat your code and
+how you can structure things
+
+00:08:33.206 --> 00:08:35.895 A:middle
+to enable LLVM to be
+even more effective.
+
+00:08:37.025 --> 00:08:41.265 A:middle
+Let's start with memory,
+in particular pointers.
+
+00:08:42.275 --> 00:08:46.386 A:middle
+Memory accesses on modern
+architectures are expensive
+
+00:08:46.676 --> 00:08:48.466 A:middle
+compared to most
+other operations.
+
+00:08:48.776 --> 00:08:54.116 A:middle
+The compiler tries very,
+very hard to hide that cost
+
+00:08:54.266 --> 00:08:56.586 A:middle
+by moving memory
+accesses around,
+
+00:08:56.826 --> 00:09:00.476 A:middle
+removing redundant
+operations, killing dead code,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:56.826 --> 00:09:00.476 A:middle
+removing redundant
+operations, killing dead code,
+
+00:09:01.116 --> 00:09:05.026 A:middle
+but to do that effectively,
+the compiler needs to be able
+
+00:09:05.026 --> 00:09:08.926 A:middle
+to analyze which pointers
+may possibly be referring
+
+00:09:09.186 --> 00:09:12.566 A:middle
+to the same memory
+locations, that is,
+
+00:09:12.566 --> 00:09:14.086 A:middle
+which pointers may alias.
+
+00:09:15.656 --> 00:09:17.706 A:middle
+Thankfully, the C family
+
+00:09:17.706 --> 00:09:21.426 A:middle
+of languages do provide us some
+information that we can use
+
+00:09:22.086 --> 00:09:24.966 A:middle
+to do this, specifically
+the type system.
+
+00:09:25.616 --> 00:09:28.096 A:middle
+We use what we call
+type-based alias analysis
+
+00:09:28.096 --> 00:09:31.786 A:middle
+or strict aliasing which is
+enabled via the strict aliasing
+
+00:09:31.786 --> 00:09:35.766 A:middle
+flag which has been on by
+default since Xcode 4.6.
+
+00:09:36.056 --> 00:09:39.286 A:middle
+So if you created an app since
+then, this is already working
+
+00:09:39.286 --> 00:09:41.206 A:middle
+and bringing its
+power to bear for you.
+
+00:09:41.206 --> 00:09:43.676 A:middle
+If you have an older
+app, I encourage you
+
+00:09:43.676 --> 00:09:46.896 A:middle
+to check the setting, make
+sure that it's enabled,
+
+00:09:47.596 --> 00:09:49.136 A:middle
+look carefully at your code
+
+00:09:49.136 --> 00:09:50.926 A:middle
+because there are
+some hidden tricks
+
+00:09:50.926 --> 00:09:54.386 A:middle
+that if you're using undefined
+behavior by typecasting
+
+00:09:54.386 --> 00:09:58.536 A:middle
+between pointer types, there may
+be some hidden problems there,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:58.536 --> 00:10:01.276 A:middle
+so be very careful,
+but do try it out,
+
+00:10:01.586 --> 00:10:03.906 A:middle
+it does bring real
+world benefits.
+
+00:10:05.136 --> 00:10:08.886 A:middle
+In our example here,
+we see three pointers.
+
+00:10:10.056 --> 00:10:13.396 A:middle
+Pointer C refers to an integer
+type which we're loading twice
+
+00:10:13.396 --> 00:10:15.476 A:middle
+and storing into two
+different locations
+
+00:10:15.476 --> 00:10:17.096 A:middle
+after converting
+to floating point.
+
+00:10:18.416 --> 00:10:22.966 A:middle
+When we pass this code to
+the compiler, it recognizes
+
+00:10:23.186 --> 00:10:27.686 A:middle
+that because pointer C refers
+to a different underlying type
+
+00:10:27.856 --> 00:10:31.206 A:middle
+than A or B, it doesn't
+need to load it twice.
+
+00:10:31.526 --> 00:10:34.116 A:middle
+So, it simply reuses the
+value from the first load
+
+00:10:34.346 --> 00:10:37.326 A:middle
+and stores the result
+back to both locations.
+
+00:10:37.866 --> 00:10:40.716 A:middle
+It would be great if
+this would take care
+
+00:10:40.716 --> 00:10:41.856 A:middle
+of all of our problems.
+
+00:10:42.656 --> 00:10:44.736 A:middle
+The real world isn't
+quite that simple
+
+00:10:45.226 --> 00:10:47.876 A:middle
+and type information
+isn't always enough.
+
+00:10:48.676 --> 00:10:50.146 A:middle
+So, let's make this
+a little bit harder
+
+00:10:50.146 --> 00:10:51.376 A:middle
+for the compiler to deal with.
+
+00:10:51.966 --> 00:10:54.226 A:middle
+Let's make all of our
+pointer types refer
+
+00:10:54.446 --> 00:10:56.606 A:middle
+to the same underlying type.
+
+00:10:56.906 --> 00:10:58.076 A:middle
+Everything is an integer now.
+
+00:10:59.556 --> 00:11:01.506 A:middle
+The compiler has
+to be conservative.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:59.556 --> 00:11:01.506 A:middle
+The compiler has
+to be conservative.
+
+00:11:02.696 --> 00:11:07.736 A:middle
+It has to believe that alias
+may exist between pointer C
+
+00:11:07.736 --> 00:11:11.096 A:middle
+and pointer A and thus
+it loads the value again
+
+00:11:11.356 --> 00:11:14.856 A:middle
+because it's not sure
+whether it's been changed
+
+00:11:15.106 --> 00:11:17.096 A:middle
+by the store via pointer A.
+
+00:11:17.096 --> 00:11:22.616 A:middle
+But as the author of this code,
+I know that I am never going
+
+00:11:22.616 --> 00:11:25.906 A:middle
+to invoke this function
+with pointers at alias.
+
+00:11:26.576 --> 00:11:30.686 A:middle
+So, I want to tell the
+compiler that to enable it
+
+00:11:30.686 --> 00:11:34.626 A:middle
+to be more effective and
+optimize a way what I know
+
+00:11:34.626 --> 00:11:35.956 A:middle
+to be a redundant load.
+
+00:11:35.956 --> 00:11:39.606 A:middle
+And we do this via
+restricted pointers.
+
+00:11:40.406 --> 00:11:45.836 A:middle
+This is via the restrict keyword
+in C and C++ and to Objective-C
+
+00:11:46.116 --> 00:11:48.646 A:middle
+which simply specifies
+to the compiler
+
+00:11:48.646 --> 00:11:51.236 A:middle
+that the object reference
+
+00:11:51.236 --> 00:11:56.546 A:middle
+by the restricted pointer cannot
+be aliased by any other pointer
+
+00:11:56.996 --> 00:11:59.676 A:middle
+in the scope of that
+restricted pointer.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:01.006 --> 00:12:03.746 A:middle
+So, let's look at how
+that impacts our example.
+
+00:12:05.016 --> 00:12:09.926 A:middle
+If we add the restrict
+keyword to the pointer C,
+
+00:12:10.436 --> 00:12:16.956 A:middle
+we see the compiler can now fold
+away the redundant load yielding
+
+00:12:16.986 --> 00:12:20.166 A:middle
+much more effective code
+and better performance.
+
+00:12:22.046 --> 00:12:24.196 A:middle
+That said, do not immediately go
+
+00:12:24.196 --> 00:12:26.606 A:middle
+and sprinkle restrict keywords
+everywhere in your app.
+
+00:12:26.966 --> 00:12:32.566 A:middle
+Be very careful because if
+you do have aliasing pointers
+
+00:12:32.566 --> 00:12:37.386 A:middle
+and use restrict, those
+bugs are I can promise you,
+
+00:12:37.666 --> 00:12:39.856 A:middle
+you're not going to
+want to debug that.
+
+00:12:40.326 --> 00:12:42.946 A:middle
+So be careful, it's
+very powerful.
+
+00:12:43.296 --> 00:12:47.536 A:middle
+It's very important, but it's a
+gun loaded right at your foot.
+
+00:12:47.536 --> 00:12:48.736 A:middle
+Don't pull the trigger.
+
+00:12:50.436 --> 00:12:52.256 A:middle
+So now, let's talk
+about another area
+
+00:12:52.256 --> 00:12:55.216 A:middle
+where the compiler really
+wants to be aggressive
+
+00:12:55.926 --> 00:12:58.906 A:middle
+and really wants to
+give good optimizations,
+
+00:12:59.316 --> 00:13:01.236 A:middle
+but there are complications
+based
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:59.316 --> 00:13:01.236 A:middle
+but there are complications
+based
+
+00:13:01.236 --> 00:13:04.376 A:middle
+on the underlying language,
+so about the floating point.
+
+00:13:05.576 --> 00:13:09.386 A:middle
+We all like to look at floating
+point as being an approximation
+
+00:13:10.206 --> 00:13:12.756 A:middle
+of the mathematics
+that we use every day.
+
+00:13:14.196 --> 00:13:18.866 A:middle
+But there are a few gotchas
+in the representation
+
+00:13:19.056 --> 00:13:21.526 A:middle
+that make things difficult
+for the compiler to do,
+
+00:13:21.526 --> 00:13:24.276 A:middle
+otherwise obvious
+transformations.
+
+00:13:24.616 --> 00:13:29.526 A:middle
+For example, floating point
+considers negative zero
+
+00:13:29.796 --> 00:13:32.306 A:middle
+to be a distinct value
+from positive zero.
+
+00:13:32.346 --> 00:13:36.436 A:middle
+And the result of this is the
+compiler has to be very careful
+
+00:13:36.906 --> 00:13:40.886 A:middle
+when folding away
+constants involving zero.
+
+00:13:41.336 --> 00:13:45.366 A:middle
+Adding zero to an unknown
+value cannot be optimized away
+
+00:13:45.546 --> 00:13:47.726 A:middle
+because if that input
+value were negative zero,
+
+00:13:47.906 --> 00:13:51.036 A:middle
+the result has now been
+changed by the optimization,
+
+00:13:51.356 --> 00:13:53.586 A:middle
+which means that we have
+now changed the semantics
+
+00:13:53.586 --> 00:13:54.536 A:middle
+of the source program.
+
+00:13:55.216 --> 00:13:56.256 A:middle
+So that's not allowed.
+
+00:13:57.316 --> 00:14:01.456 A:middle
+Likewise, there's the concept
+of a NaN or Not a Number,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:57.316 --> 00:14:01.456 A:middle
+Likewise, there's the concept
+of a NaN or Not a Number,
+
+00:14:02.216 --> 00:14:05.426 A:middle
+which means that a result of
+a previous operation has come
+
+00:14:05.426 --> 00:14:08.346 A:middle
+up in a way that is not
+representable in floating point.
+
+00:14:09.086 --> 00:14:10.996 A:middle
+This must be preserved
+through the rest
+
+00:14:10.996 --> 00:14:12.256 A:middle
+of the chain of operation.
+
+00:14:12.596 --> 00:14:16.576 A:middle
+So if we have a multiplication
+by zero, we can't fold that away
+
+00:14:16.866 --> 00:14:18.416 A:middle
+because the input
+might be a NaN.
+
+00:14:20.076 --> 00:14:21.906 A:middle
+Then there's reassociation.
+
+00:14:23.496 --> 00:14:26.516 A:middle
+We normally would expect
+that the order of operations
+
+00:14:26.516 --> 00:14:30.776 A:middle
+between adding multiple values
+together isn't going to matter.
+
+00:14:31.536 --> 00:14:36.076 A:middle
+For floating point, however,
+it does because the rounding
+
+00:14:36.276 --> 00:14:41.206 A:middle
+between the intermediate results
+can change the final value.
+
+00:14:42.376 --> 00:14:44.126 A:middle
+Let's take a little bit
+of a closer look to that
+
+00:14:44.126 --> 00:14:46.936 A:middle
+because this is subtle and very
+important to be careful with.
+
+00:14:48.536 --> 00:14:50.756 A:middle
+Here we have three
+floating point values.
+
+00:14:50.816 --> 00:14:54.346 A:middle
+None of them are extreme,
+nothing hugely large,
+
+00:14:54.346 --> 00:14:56.306 A:middle
+nothing incredibly small.
+
+00:14:56.596 --> 00:14:59.766 A:middle
+We add them together and we
+change nothing but the order
+
+00:14:59.766 --> 00:15:02.786 A:middle
+of evaluation and
+our result changes
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:59.766 --> 00:15:02.786 A:middle
+of evaluation and
+our result changes
+
+00:15:02.956 --> 00:15:04.316 A:middle
+in the least significant bits.
+
+00:15:06.076 --> 00:15:09.456 A:middle
+This is very important to
+some classes of applications.
+
+00:15:09.456 --> 00:15:12.686 A:middle
+Scientific computing for
+example cares very much
+
+00:15:13.306 --> 00:15:16.216 A:middle
+about these results
+being very reproducible,
+
+00:15:16.496 --> 00:15:19.386 A:middle
+always the same no matter
+what compiler optimizations
+
+00:15:19.386 --> 00:15:20.096 A:middle
+get applied.
+
+00:15:20.096 --> 00:15:25.366 A:middle
+Other sorts of applications are
+okay with these sorts of things,
+
+00:15:26.156 --> 00:15:28.546 A:middle
+changing very slightly as long
+
+00:15:28.546 --> 00:15:32.006 A:middle
+as the code is optimized
+aggressively and very quickly.
+
+00:15:33.356 --> 00:15:36.626 A:middle
+Basic simulations in games for
+example are a prime candidate
+
+00:15:36.856 --> 00:15:40.796 A:middle
+for very aggressive compiler
+optimizations of this nature.
+
+00:15:41.426 --> 00:15:45.956 A:middle
+So, as an opt-in, the
+compiler allows you to specify
+
+00:15:46.166 --> 00:15:49.586 A:middle
+that you want more aggressive
+floating point optimization.
+
+00:15:49.586 --> 00:15:51.346 A:middle
+And we call this Fast Math.
+
+00:15:52.396 --> 00:15:55.326 A:middle
+You tell this to the
+compiler via the Xcode setting
+
+00:15:55.326 --> 00:16:00.116 A:middle
+to relax IEEE compliance and now
+the compiler will be much more
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:55.326 --> 00:16:00.116 A:middle
+to relax IEEE compliance and now
+the compiler will be much more
+
+00:16:00.116 --> 00:16:03.346 A:middle
+aggressive about these
+particular representational
+
+00:16:03.346 --> 00:16:05.286 A:middle
+challenges and many others.
+
+00:16:05.286 --> 00:16:08.956 A:middle
+So, let's have a look
+at a brief example again
+
+00:16:08.956 --> 00:16:12.226 A:middle
+in arm assembly code
+about what this can mean.
+
+00:16:13.396 --> 00:16:15.666 A:middle
+Here, we're simply
+computing a dot product
+
+00:16:15.666 --> 00:16:17.706 A:middle
+between two three-dimensional
+vectors.
+
+00:16:18.626 --> 00:16:21.286 A:middle
+But our second vector
+is a constant value
+
+00:16:21.806 --> 00:16:24.496 A:middle
+where the Y value is zero.
+
+00:16:24.946 --> 00:16:27.736 A:middle
+Likewise, we initialize
+our product to zero.
+
+00:16:28.756 --> 00:16:30.976 A:middle
+We would like the
+compiler to take advantage
+
+00:16:30.976 --> 00:16:33.946 A:middle
+of this information
+and eliminate some
+
+00:16:33.946 --> 00:16:37.136 A:middle
+of the redundant
+calculations because we know
+
+00:16:37.136 --> 00:16:39.016 A:middle
+that they're going
+to involve a zero.
+
+00:16:39.016 --> 00:16:41.396 A:middle
+But because we don't
+know anything
+
+00:16:41.396 --> 00:16:46.316 A:middle
+about the other input value
+in vec1, we can't do that.
+
+00:16:46.606 --> 00:16:49.666 A:middle
+So, the compiler must be
+conservative to be correct
+
+00:16:50.406 --> 00:16:52.766 A:middle
+and generate the full
+calculation chain.
+
+00:16:54.146 --> 00:16:58.556 A:middle
+If we specify fast math however,
+the compiler is now able
+
+00:16:58.556 --> 00:17:03.716 A:middle
+to be more aggressive and fold
+away the extra calculations
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:58.556 --> 00:17:03.716 A:middle
+to be more aggressive and fold
+away the extra calculations
+
+00:17:04.066 --> 00:17:06.126 A:middle
+giving much faster results.
+
+00:17:07.286 --> 00:17:10.346 A:middle
+So we encourage you
+to think about this,
+
+00:17:10.616 --> 00:17:14.396 A:middle
+investigate the implications
+for your application and decide
+
+00:17:14.396 --> 00:17:18.586 A:middle
+if fast math is right for
+you, experiment with it,
+
+00:17:19.046 --> 00:17:21.175 A:middle
+find out if it gives
+you good results.
+
+00:17:21.705 --> 00:17:22.856 A:middle
+It's very powerful.
+
+00:17:23.646 --> 00:17:26.326 A:middle
+We want you to try
+it, but do be careful.
+
+00:17:26.646 --> 00:17:28.056 A:middle
+It has consequences.
+
+00:17:29.516 --> 00:17:33.026 A:middle
+So now, let's talk about
+a little bit deeper level.
+
+00:17:33.026 --> 00:17:35.516 A:middle
+Let's talk about vectorization.
+
+00:17:37.086 --> 00:17:41.926 A:middle
+Modern architectures offer
+vector instruction sets.
+
+00:17:42.716 --> 00:17:46.486 A:middle
+On OS X, we have SSE
+and all its variance.
+
+00:17:46.786 --> 00:17:50.906 A:middle
+We have AVX, now it has
+WellMax, we have AVX2
+
+00:17:50.996 --> 00:17:53.956 A:middle
+which bring even more
+powerful instructions to bear.
+
+00:17:54.796 --> 00:18:00.036 A:middle
+On iOS, we have ARM NEON
+and we want to use all
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:54.796 --> 00:18:00.036 A:middle
+On iOS, we have ARM NEON
+and we want to use all
+
+00:18:00.036 --> 00:18:04.126 A:middle
+of these instructions to get the
+best performance in our apps.
+
+00:18:04.876 --> 00:18:06.466 A:middle
+So, how do these work?
+
+00:18:06.466 --> 00:18:08.576 A:middle
+How do they give us
+better performance?
+
+00:18:09.756 --> 00:18:14.486 A:middle
+Well, many calculations are
+performing the same basic
+
+00:18:14.486 --> 00:18:18.996 A:middle
+operation on large quantities
+of data all in a row.
+
+00:18:19.616 --> 00:18:22.726 A:middle
+So a vector instruction simply
+pulls those things together
+
+00:18:22.726 --> 00:18:25.386 A:middle
+with a common operation
+and performs them all
+
+00:18:25.386 --> 00:18:27.736 A:middle
+at the same time with
+a single instruction.
+
+00:18:29.046 --> 00:18:30.796 A:middle
+This allows far fewer execute --
+
+00:18:30.796 --> 00:18:34.126 A:middle
+instructions to execute
+performing the same amount
+
+00:18:34.126 --> 00:18:38.076 A:middle
+of work, giving the result and
+speed up and better performance.
+
+00:18:38.866 --> 00:18:41.086 A:middle
+This is particularly
+valuable in loops.
+
+00:18:41.336 --> 00:18:43.256 A:middle
+Let's take a look here.
+
+00:18:43.256 --> 00:18:45.606 A:middle
+We're add -- simply
+adding the values
+
+00:18:45.676 --> 00:18:49.606 A:middle
+in two arrays storing the
+result back into a third array.
+
+00:18:50.716 --> 00:18:53.406 A:middle
+Normally, we would have to
+go through one at a time just
+
+00:18:53.406 --> 00:18:54.656 A:middle
+as the source code does.
+
+00:18:54.696 --> 00:18:57.216 A:middle
+But with vectors,
+we can do better.
+
+00:18:58.426 --> 00:19:03.196 A:middle
+We compile four elements
+at a time giving a very,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:58.426 --> 00:19:03.196 A:middle
+We compile four elements
+at a time giving a very,
+
+00:19:03.196 --> 00:19:07.316 A:middle
+very powerful improvement to
+our application's performance.
+
+00:19:08.396 --> 00:19:09.306 A:middle
+That's fantastic.
+
+00:19:09.806 --> 00:19:11.546 A:middle
+So, how do we write
+code that does this?
+
+00:19:12.176 --> 00:19:14.946 A:middle
+Well, the compiler
+provides several mechanisms
+
+00:19:15.756 --> 00:19:16.766 A:middle
+to get to this power.
+
+00:19:16.986 --> 00:19:19.256 A:middle
+The first being vector
+intrinsics.
+
+00:19:20.546 --> 00:19:23.276 A:middle
+Here we see some
+ARM NEON intrinsics,
+
+00:19:23.276 --> 00:19:26.196 A:middle
+specified arm neon dot h
+is a helper header file
+
+00:19:26.266 --> 00:19:28.866 A:middle
+that defines all of these
+intrinsics for the compiler.
+
+00:19:28.866 --> 00:19:31.936 A:middle
+And these basically
+represent the underlying
+
+00:19:31.936 --> 00:19:35.166 A:middle
+in CPU instructions that
+the compiler is going
+
+00:19:35.166 --> 00:19:36.556 A:middle
+to eventually generate.
+
+00:19:37.286 --> 00:19:39.536 A:middle
+So when we compile this code,
+
+00:19:40.226 --> 00:19:41.966 A:middle
+which simply doesn't
+multiply add
+
+00:19:42.586 --> 00:19:45.516 A:middle
+from three point values
+stores the result back out,
+
+00:19:46.776 --> 00:19:49.546 A:middle
+we get -- oop, there we go.
+
+00:19:50.046 --> 00:19:55.106 A:middle
+Now, we get ARM assembly
+which does the operation.
+
+00:19:55.636 --> 00:19:58.446 A:middle
+Now, you'll notice, the compiler
+is a little bit smart here.
+
+00:19:59.376 --> 00:20:01.936 A:middle
+It knows the semantics
+of these instructions.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:59.376 --> 00:20:01.936 A:middle
+It knows the semantics
+of these instructions.
+
+00:20:03.396 --> 00:20:08.296 A:middle
+So, it notices that we're doing
+a multiply and then accumulate,
+
+00:20:08.296 --> 00:20:11.696 A:middle
+and it knows the ARM
+NEON has an instruction
+
+00:20:11.696 --> 00:20:13.206 A:middle
+that does exactly that.
+
+00:20:13.516 --> 00:20:15.516 A:middle
+So, it brings those
+operations together
+
+00:20:15.816 --> 00:20:18.536 A:middle
+and uses the VMLA instruction.
+
+00:20:19.586 --> 00:20:22.386 A:middle
+But this code has
+a few problems.
+
+00:20:22.766 --> 00:20:26.106 A:middle
+First, it's totally
+target specific.
+
+00:20:26.786 --> 00:20:30.586 A:middle
+We want to be able to write code
+that will bring vectorization
+
+00:20:31.046 --> 00:20:37.056 A:middle
+to the app for OS X and for iOS
+all at the same source code.
+
+00:20:38.016 --> 00:20:39.956 A:middle
+And this is not going
+to do that.
+
+00:20:40.866 --> 00:20:43.746 A:middle
+Second, I don't know
+about you guys,
+
+00:20:43.746 --> 00:20:45.456 A:middle
+but that's really
+hard for me to read.
+
+00:20:46.156 --> 00:20:50.696 A:middle
+That's not very expressive, it's
+effective, but I have to look
+
+00:20:50.696 --> 00:20:52.056 A:middle
+at that for a minute
+before I figure
+
+00:20:52.056 --> 00:20:53.206 A:middle
+out really what it's doing.
+
+00:20:53.896 --> 00:20:55.326 A:middle
+I'm used to reading C code,
+
+00:20:56.216 --> 00:21:02.626 A:middle
+so LLVM provides target
+independent vector extensions
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:56.216 --> 00:21:02.626 A:middle
+so LLVM provides target
+independent vector extensions
+
+00:21:03.056 --> 00:21:06.926 A:middle
+that allow us to put the vector
+information into the type.
+
+00:21:07.896 --> 00:21:10.746 A:middle
+Now, we can use ordinary
+C operators
+
+00:21:11.056 --> 00:21:13.486 A:middle
+to express the exact
+same semantics
+
+00:21:13.746 --> 00:21:17.626 A:middle
+as our previous intrinsics and
+tell the compiler that we want
+
+00:21:17.626 --> 00:21:21.996 A:middle
+to perform these operations
+four at a time using vectors.
+
+00:21:23.916 --> 00:21:27.326 A:middle
+So then when we compile
+this down to ARM assembly,
+
+00:21:27.556 --> 00:21:30.996 A:middle
+we see we get the exact
+same generated code.
+
+00:21:31.116 --> 00:21:33.606 A:middle
+We still fold the
+multiply and we add
+
+00:21:33.606 --> 00:21:35.706 A:middle
+into a multiply accumulate
+instruction
+
+00:21:36.476 --> 00:21:38.556 A:middle
+and we get good results.
+
+00:21:39.046 --> 00:21:42.876 A:middle
+We're a lot closer,
+but there's still a few
+
+00:21:42.876 --> 00:21:43.916 A:middle
+challenges remaining.
+
+00:21:45.596 --> 00:21:49.036 A:middle
+While the code itself is
+now target independent,
+
+00:21:49.036 --> 00:21:52.116 A:middle
+some of the underlying
+assumptions are not.
+
+00:21:53.686 --> 00:21:57.426 A:middle
+This code assumes that it knows
+which operations are going
+
+00:21:57.426 --> 00:22:01.036 A:middle
+to be efficiently
+performed as vectors.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:57.426 --> 00:22:01.036 A:middle
+to be efficiently
+performed as vectors.
+
+00:22:02.496 --> 00:22:06.336 A:middle
+It assumes that it knows
+the underlying vector width
+
+00:22:06.336 --> 00:22:07.906 A:middle
+of the target architecture.
+
+00:22:09.486 --> 00:22:15.606 A:middle
+AVX and NEON have different
+vector widths, 256 bit, 128 bit.
+
+00:22:16.096 --> 00:22:18.516 A:middle
+So, which should we
+use in our source code?
+
+00:22:19.076 --> 00:22:21.706 A:middle
+We now have target
+dependencies again.
+
+00:22:22.196 --> 00:22:26.506 A:middle
+But the compiler knows
+how big the vectors are
+
+00:22:26.506 --> 00:22:28.746 A:middle
+on the target architecture
+that we're working with.
+
+00:22:29.756 --> 00:22:30.746 A:middle
+The compiler knows
+
+00:22:31.416 --> 00:22:33.746 A:middle
+which instructions are
+available and what they do.
+
+00:22:34.406 --> 00:22:36.506 A:middle
+So surely, we can do more here.
+
+00:22:37.706 --> 00:22:41.236 A:middle
+And now, with LLVM
+and Xcode 5, we can.
+
+00:22:41.236 --> 00:22:45.516 A:middle
+And now here to tell you about
+auto-vectorization in LLVM.
+
+00:22:46.006 --> 00:22:47.516 A:middle
+Please welcome Nadav Rotem.
+
+00:22:49.416 --> 00:22:55.226 A:middle
+&gt;&gt; Hi, so Jim told you how you
+can accelerate your code using
+
+00:22:55.226 --> 00:22:57.926 A:middle
+intrinsics and using the
+extended vector syntax.
+
+00:22:58.716 --> 00:23:00.186 A:middle
+But he also talked
+to you about some
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:58.716 --> 00:23:00.186 A:middle
+But he also talked
+to you about some
+
+00:23:00.186 --> 00:23:02.046 A:middle
+of the disadvantages
+of this method.
+
+00:23:02.046 --> 00:23:05.566 A:middle
+I mean, who wants to maintain
+multiple versions of their code
+
+00:23:05.566 --> 00:23:06.566 A:middle
+for different processors?
+
+00:23:06.996 --> 00:23:08.126 A:middle
+It's difficult.
+
+00:23:09.086 --> 00:23:12.886 A:middle
+Well, I'm excited to tell you
+about our new feature in LLVM 5,
+
+00:23:13.676 --> 00:23:14.946 A:middle
+it is the auto-vectorizer.
+
+00:23:15.686 --> 00:23:18.876 A:middle
+The auto-vectorizer will
+analyze your code and look
+
+00:23:18.876 --> 00:23:21.466 A:middle
+for opportunities for
+using vectors in your code.
+
+00:23:21.466 --> 00:23:23.786 A:middle
+And when it finds it,
+it'll accelerate your code.
+
+00:23:24.596 --> 00:23:28.876 A:middle
+The auto-vectorizer supports
+both ARM and Intel processors
+
+00:23:29.106 --> 00:23:33.666 A:middle
+and it even supports Haswell so
+that you can target and optimize
+
+00:23:33.666 --> 00:23:35.756 A:middle
+for the products that we
+announced earlier this week.
+
+00:23:37.416 --> 00:23:41.416 A:middle
+And if you have compute
+intensive code with a lot
+
+00:23:41.416 --> 00:23:45.846 A:middle
+of tight loops, then when you
+enable the loop vectorizer then
+
+00:23:45.846 --> 00:23:48.266 A:middle
+you should expect to see
+massive performance increases.
+
+00:23:49.696 --> 00:23:52.866 A:middle
+Not everybody can enjoy the
+benefits of vectorization.
+
+00:23:52.866 --> 00:23:55.796 A:middle
+Not all applications can
+benefit from vectorization.
+
+00:23:56.306 --> 00:24:03.066 A:middle
+So, only applications that have
+compute-intensive loops can
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:56.306 --> 00:24:03.066 A:middle
+So, only applications that have
+compute-intensive loops can
+
+00:24:03.066 --> 00:24:04.236 A:middle
+benefit from vectorization.
+
+00:24:04.876 --> 00:24:07.646 A:middle
+And you can find these
+loops in different domains.
+
+00:24:07.646 --> 00:24:11.616 A:middle
+So for example, in linear
+algebra, in physics simulations,
+
+00:24:11.926 --> 00:24:14.246 A:middle
+in image processing
+applications,
+
+00:24:14.246 --> 00:24:15.166 A:middle
+you can find these loops.
+
+00:24:15.546 --> 00:24:19.036 A:middle
+And from our experience, you can
+really find these loops in games
+
+00:24:19.036 --> 00:24:22.926 A:middle
+and games really benefit
+from auto-vectorization.
+
+00:24:23.366 --> 00:24:25.396 A:middle
+But not all programs,
+for example,
+
+00:24:25.396 --> 00:24:28.296 A:middle
+your user interface is
+not very likely to benefit
+
+00:24:28.296 --> 00:24:31.596 A:middle
+from vectorization because it's
+not very compute-intensive.
+
+00:24:32.056 --> 00:24:34.856 A:middle
+Also, if you're sending
+a packet over a network
+
+00:24:34.856 --> 00:24:37.906 A:middle
+or if you're accessing a
+database, you're not very likely
+
+00:24:37.906 --> 00:24:39.516 A:middle
+to benefit from vectorization.
+
+00:24:40.526 --> 00:24:43.596 A:middle
+So, let's look at some
+performance numbers and see
+
+00:24:43.596 --> 00:24:45.336 A:middle
+who may benefit from
+vectorizations.
+
+00:24:45.866 --> 00:24:48.696 A:middle
+So, all the way to the
+left, you see gzip.
+
+00:24:49.426 --> 00:24:53.366 A:middle
+This is the famous command-line
+utility for compressing files.
+
+00:24:53.856 --> 00:24:57.356 A:middle
+We see even from gzip which is
+not a very likely candidate,
+
+00:24:57.736 --> 00:25:02.226 A:middle
+you see nice or very
+minor improvements due
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:57.736 --> 00:25:02.226 A:middle
+you see nice or very
+minor improvements due
+
+00:25:02.226 --> 00:25:03.036 A:middle
+to vectorization.
+
+00:25:03.616 --> 00:25:06.556 A:middle
+Moving on the next one is
+-- to the right is RC4,
+
+00:25:06.556 --> 00:25:08.866 A:middle
+that's the stream cipher
+
+00:25:08.866 --> 00:25:11.286 A:middle
+and we see nice games
+due to vectorization.
+
+00:25:11.826 --> 00:25:15.946 A:middle
+After that, we have
+compression utility
+
+00:25:15.946 --> 00:25:17.486 A:middle
+which benefits from
+vectorization.
+
+00:25:17.856 --> 00:25:19.126 A:middle
+And all the way to the right,
+
+00:25:19.476 --> 00:25:22.986 A:middle
+you can see two linear algebra
+programs that's a nice --
+
+00:25:22.986 --> 00:25:25.796 A:middle
+very nice speedups
+due to vectorization,
+
+00:25:26.106 --> 00:25:31.126 A:middle
+2.6 and 2.9x only
+due to vectorization,
+
+00:25:31.126 --> 00:25:32.736 A:middle
+just by enabling vectorization.
+
+00:25:33.726 --> 00:25:36.996 A:middle
+But you're probably
+thinking to yourself, "Well,
+
+00:25:37.766 --> 00:25:40.206 A:middle
+I don't have a lot of
+linear algebra in my app."
+
+00:25:40.866 --> 00:25:48.036 A:middle
+I write apps and even though
+I like linear algebra,
+
+00:25:48.576 --> 00:25:51.596 A:middle
+I want to make sure that I'll
+benefit from vectorization.
+
+00:25:51.816 --> 00:25:54.136 A:middle
+So, I'm here to tell
+you about one app.
+
+00:25:54.956 --> 00:25:57.486 A:middle
+So this app is very popular.
+
+00:25:57.986 --> 00:25:59.466 A:middle
+You can find it on
+the Apple App Store.
+
+00:25:59.576 --> 00:26:02.056 A:middle
+It is the Facetune app.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:59.576 --> 00:26:02.056 A:middle
+It is the Facetune app.
+
+00:26:02.526 --> 00:26:06.496 A:middle
+And a few weeks ago, we've
+given them a copy of LLVM 5
+
+00:26:07.126 --> 00:26:10.466 A:middle
+and Xcode 5 and we let
+them -- we let them try it.
+
+00:26:10.626 --> 00:26:15.066 A:middle
+So, Facetune is an
+application which allows you
+
+00:26:15.416 --> 00:26:17.776 A:middle
+to beautify your portrait photo.
+
+00:26:19.246 --> 00:26:22.766 A:middle
+So, it's a very
+compute-intensive application,
+
+00:26:22.766 --> 00:26:23.876 A:middle
+have a lot of filters.
+
+00:26:24.396 --> 00:26:26.406 A:middle
+And when they enabled
+vectorization,
+
+00:26:26.546 --> 00:26:30.776 A:middle
+they saw a 30 percent drop
+in the execution time --
+
+00:26:30.776 --> 00:26:34.566 A:middle
+in the runtime of one of their
+computer-intensive filters
+
+00:26:34.816 --> 00:26:38.046 A:middle
+which is great because now their
+filters are running faster.
+
+00:26:38.316 --> 00:26:41.346 A:middle
+Their app is more responsive
+and at the end of the day,
+
+00:26:41.686 --> 00:26:43.566 A:middle
+their users get a
+better product.
+
+00:26:43.796 --> 00:26:46.586 A:middle
+So they're very excited about
+vectorization and I hope
+
+00:26:46.586 --> 00:26:48.926 A:middle
+that once you enable
+vectorization, you'll get --
+
+00:26:48.926 --> 00:26:51.106 A:middle
+you'll experience
+similar results.
+
+00:26:52.156 --> 00:26:53.816 A:middle
+So, how do you enable
+vectorization?
+
+00:26:54.276 --> 00:26:54.996 A:middle
+Well, that's simply.
+
+00:26:55.446 --> 00:26:59.086 A:middle
+What you got to do is go to
+the Xcode 5 build setting,
+
+00:26:59.266 --> 00:27:01.986 A:middle
+search for vectorization
+and turn the switch.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:59.266 --> 00:27:01.986 A:middle
+search for vectorization
+and turn the switch.
+
+00:27:03.026 --> 00:27:04.726 A:middle
+And once you enable
+vectorization,
+
+00:27:05.156 --> 00:27:08.166 A:middle
+the compiler will start
+analyzing your loops,
+
+00:27:08.496 --> 00:27:11.096 A:middle
+find these loops that can
+benefit from vectorization
+
+00:27:11.486 --> 00:27:14.936 A:middle
+and start accelerating
+your code.
+
+00:27:15.076 --> 00:27:17.446 A:middle
+Now, earlier this
+week, we also told you
+
+00:27:17.716 --> 00:27:20.876 A:middle
+about the command-line
+options that Xcode 5 has.
+
+00:27:21.086 --> 00:27:22.866 A:middle
+So if you're using
+a command-line,
+
+00:27:23.096 --> 00:27:24.546 A:middle
+you can also use
+a vectorization.
+
+00:27:25.136 --> 00:27:29.716 A:middle
+What you need to do is simply
+add the flag, -fvectorize
+
+00:27:29.716 --> 00:27:34.916 A:middle
+and the compiler will
+vectorize your loops.
+
+00:27:34.916 --> 00:27:39.056 A:middle
+Now, I want to talk to you, I
+want to take the next couple
+
+00:27:39.056 --> 00:27:42.176 A:middle
+of minutes to talk about the
+way that you can write your code
+
+00:27:42.236 --> 00:27:44.916 A:middle
+to affect vectorization
+and the way
+
+00:27:44.916 --> 00:27:47.666 A:middle
+that vectorization
+affects your binary,
+
+00:27:47.746 --> 00:27:49.056 A:middle
+the one that you
+submit to the store.
+
+00:27:50.396 --> 00:27:53.126 A:middle
+So, this is the loop that
+Jim showed you earlier.
+
+00:27:53.566 --> 00:27:54.596 A:middle
+It's a very simple loop.
+
+00:27:55.046 --> 00:27:58.366 A:middle
+All we do in this code
+is load from two arrays,
+
+00:27:58.796 --> 00:28:01.416 A:middle
+add the numbers together and
+save them to a third array.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:58.796 --> 00:28:01.416 A:middle
+add the numbers together and
+save them to a third array.
+
+00:28:01.506 --> 00:28:03.656 A:middle
+That's a very basic loop, right?
+
+00:28:04.076 --> 00:28:07.376 A:middle
+And this is the code that
+you get when you vectorize,
+
+00:28:07.506 --> 00:28:09.506 A:middle
+when you compile for the iPhone.
+
+00:28:10.336 --> 00:28:13.676 A:middle
+So, in the yellow, you can
+see vector instructions.
+
+00:28:14.076 --> 00:28:16.046 A:middle
+On top, you see two
+vector loads.
+
+00:28:16.186 --> 00:28:19.186 A:middle
+And at the bottom, you see a
+vector add and a vector store.
+
+00:28:19.776 --> 00:28:23.946 A:middle
+And if you look closely in the
+red, you'll see the number four.
+
+00:28:24.976 --> 00:28:26.076 A:middle
+In this instruction,
+
+00:28:26.776 --> 00:28:29.856 A:middle
+we're incrementing the
+loop counter by four.
+
+00:28:30.186 --> 00:28:33.286 A:middle
+This means that we're
+processing four elements at once
+
+00:28:33.566 --> 00:28:36.036 A:middle
+which is great because when
+you process four elements
+
+00:28:36.036 --> 00:28:37.166 A:middle
+at once, we go faster.
+
+00:28:39.286 --> 00:28:41.236 A:middle
+And when you compile
+your code for a Mac,
+
+00:28:41.716 --> 00:28:42.966 A:middle
+this is the assembly
+that you get.
+
+00:28:44.336 --> 00:28:46.876 A:middle
+Again, in the yellow, you can
+see the vector instructions.
+
+00:28:47.196 --> 00:28:48.426 A:middle
+But this time, if
+you look closely,
+
+00:28:48.426 --> 00:28:50.096 A:middle
+you see the number eight in red.
+
+00:28:50.776 --> 00:28:54.006 A:middle
+This means that we're processing
+eight elements at once.
+
+00:28:54.596 --> 00:29:00.066 A:middle
+Because Haswell processors can
+process eight elements using the
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:54.596 --> 00:29:00.066 A:middle
+Because Haswell processors can
+process eight elements using the
+
+00:29:00.066 --> 00:29:05.696 A:middle
+AVX 2 instruction set and we
+support this instruction set.
+
+00:29:06.326 --> 00:29:09.006 A:middle
+But this loop may look simple
+
+00:29:09.006 --> 00:29:11.996 A:middle
+but it's actually pretty
+challenging to vectorize.
+
+00:29:12.916 --> 00:29:15.196 A:middle
+Can you think why this is
+challenging to vectorize?
+
+00:29:16.576 --> 00:29:18.956 A:middle
+Well, we have two problems
+that we need to overcome.
+
+00:29:20.066 --> 00:29:21.066 A:middle
+This is the first one.
+
+00:29:21.726 --> 00:29:26.456 A:middle
+So if we have this array, we're
+processing the array in chunks
+
+00:29:26.456 --> 00:29:30.996 A:middle
+of four or chunks of eight,
+but when we get to the end
+
+00:29:30.996 --> 00:29:33.286 A:middle
+of the array, we have a
+few remaining interactions,
+
+00:29:33.286 --> 00:29:35.646 A:middle
+we have a few remaining
+elements that don't fit
+
+00:29:35.646 --> 00:29:38.686 A:middle
+in a vector so what do we do.
+
+00:29:38.686 --> 00:29:40.576 A:middle
+How do we handle these
+last few iterations?
+
+00:29:41.266 --> 00:29:46.006 A:middle
+We have to handle them and
+this is a serious problem
+
+00:29:46.006 --> 00:29:50.636 A:middle
+because actually, most
+loops are not a multiply
+
+00:29:50.636 --> 00:29:51.526 A:middle
+of the vector width.
+
+00:29:52.196 --> 00:29:54.886 A:middle
+They're not a power of
+two and in many cases,
+
+00:29:54.886 --> 00:29:58.106 A:middle
+we don't even know the number
+of iterations at compile time.
+
+00:29:58.826 --> 00:30:03.756 A:middle
+The compiler only sees some
+variable or some argument
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:58.826 --> 00:30:03.756 A:middle
+The compiler only sees some
+variable or some argument
+
+00:30:03.756 --> 00:30:06.826 A:middle
+for function and it could be
+anything from a user input
+
+00:30:06.826 --> 00:30:08.976 A:middle
+or a number that it
+reads from the disc.
+
+00:30:09.786 --> 00:30:13.246 A:middle
+So, this is a real
+problem and we do want
+
+00:30:13.246 --> 00:30:14.526 A:middle
+to vectorize all of these loops.
+
+00:30:15.016 --> 00:30:15.826 A:middle
+So what do we do?
+
+00:30:15.876 --> 00:30:17.756 A:middle
+What does the compiler do
+to vectorize these loops?
+
+00:30:18.886 --> 00:30:19.556 A:middle
+This is what we do.
+
+00:30:20.606 --> 00:30:23.746 A:middle
+So before we only had one
+loop, this is the original loop
+
+00:30:23.746 --> 00:30:25.346 A:middle
+that handled all of the array.
+
+00:30:26.156 --> 00:30:29.136 A:middle
+The first thing that the
+compiler does is modify the
+
+00:30:29.136 --> 00:30:32.656 A:middle
+original loop to only handle
+the last few iterations.
+
+00:30:33.586 --> 00:30:35.376 A:middle
+Then, we add the new loop.
+
+00:30:36.066 --> 00:30:37.016 A:middle
+This is the vector loop.
+
+00:30:37.016 --> 00:30:40.526 A:middle
+This is the fast vector
+loop to handle most
+
+00:30:40.526 --> 00:30:43.666 A:middle
+of the iterations except
+for last few iterations.
+
+00:30:43.996 --> 00:30:45.606 A:middle
+So we're processing all
+
+00:30:45.606 --> 00:30:48.416 A:middle
+of the array really quickly
+using the vector instructions,
+
+00:30:48.736 --> 00:30:50.586 A:middle
+and then when we get to the
+end or almost to the end
+
+00:30:50.586 --> 00:30:53.586 A:middle
+of the array, we start
+using the original loop
+
+00:30:53.636 --> 00:30:55.036 A:middle
+to handle the last
+few iterations.
+
+00:30:56.256 --> 00:30:57.986 A:middle
+Okay, so problem solved.
+
+00:30:58.686 --> 00:31:00.116 A:middle
+But I say that there
+are two problems.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:58.686 --> 00:31:00.116 A:middle
+But I say that there
+are two problems.
+
+00:31:00.816 --> 00:31:03.596 A:middle
+And this is the second problems
+-- this is the second problem.
+
+00:31:04.596 --> 00:31:06.896 A:middle
+Pointers. So let's
+take a look at the code
+
+00:31:06.896 --> 00:31:07.656 A:middle
+that we have right here.
+
+00:31:08.206 --> 00:31:10.696 A:middle
+This is a very simple
+loop, right?
+
+00:31:10.876 --> 00:31:12.736 A:middle
+It's a four loop and
+we're copying memory
+
+00:31:12.736 --> 00:31:14.356 A:middle
+from source to destination.
+
+00:31:14.786 --> 00:31:17.606 A:middle
+So this is a memcpy, right?
+
+00:31:17.696 --> 00:31:19.596 A:middle
+All we do is copy from
+source to destination.
+
+00:31:19.936 --> 00:31:21.506 A:middle
+We should be able to
+vectorize it, right?
+
+00:31:22.046 --> 00:31:25.956 A:middle
+I mean, we should be able to
+load the vector from source
+
+00:31:25.956 --> 00:31:27.146 A:middle
+and save it to destination.
+
+00:31:27.186 --> 00:31:27.686 A:middle
+It should work.
+
+00:31:28.426 --> 00:31:31.176 A:middle
+Well, it works except
+for one interesting case.
+
+00:31:31.716 --> 00:31:35.426 A:middle
+What if source and destination
+were adjacent, were pointing
+
+00:31:35.426 --> 00:31:36.876 A:middle
+to adjacent memory locations?
+
+00:31:37.356 --> 00:31:38.756 A:middle
+Let's see what happens.
+
+00:31:39.036 --> 00:31:41.696 A:middle
+So, we're loading
+from source storing
+
+00:31:41.696 --> 00:31:44.296 A:middle
+to destination then moving on.
+
+00:31:45.426 --> 00:31:49.216 A:middle
+Hey, we just loaded the
+value that we stored.
+
+00:31:50.476 --> 00:31:54.856 A:middle
+So, at the end of this,
+the whole array is filled
+
+00:31:54.856 --> 00:31:55.726 A:middle
+with the first element.
+
+00:31:56.596 --> 00:31:58.316 A:middle
+So it's not memcpy, it's memset.
+
+00:31:59.086 --> 00:32:00.296 A:middle
+It's counterintuitive.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:59.086 --> 00:32:00.296 A:middle
+It's counterintuitive.
+
+00:32:00.296 --> 00:32:01.726 A:middle
+I didn't think it would happen.
+
+00:32:02.456 --> 00:32:04.466 A:middle
+All right, let's see what
+happens when we use vectors.
+
+00:32:04.876 --> 00:32:11.886 A:middle
+So, let's load a vector, push
+it back, load another vector
+
+00:32:12.676 --> 00:32:13.976 A:middle
+and we have a problem.
+
+00:32:14.746 --> 00:32:16.086 A:middle
+We skipped a few
+elements, right?
+
+00:32:16.836 --> 00:32:18.766 A:middle
+It's not the memset
+that we expected.
+
+00:32:19.146 --> 00:32:20.146 A:middle
+We got a different result.
+
+00:32:20.676 --> 00:32:21.736 A:middle
+So what is the problem?
+
+00:32:22.286 --> 00:32:26.636 A:middle
+The problem is that we changed
+the order in which we read
+
+00:32:27.076 --> 00:32:30.016 A:middle
+and write for memory and we
+can't do that, it's illegal.
+
+00:32:30.626 --> 00:32:36.276 A:middle
+We can only do it -- we can only
+vectorize the code if source
+
+00:32:36.276 --> 00:32:39.536 A:middle
+and destination point to
+separate memory locations,
+
+00:32:39.866 --> 00:32:41.526 A:middle
+only then we can vectorize.
+
+00:32:42.366 --> 00:32:46.066 A:middle
+But just like with the first
+problem, we don't know a lot
+
+00:32:46.066 --> 00:32:49.636 A:middle
+of times at compile time where
+the pointers point to, right?
+
+00:32:49.926 --> 00:32:52.316 A:middle
+I mean, who knows we get
+two pointers that can point
+
+00:32:52.316 --> 00:32:53.916 A:middle
+to the same memory
+location, they can point
+
+00:32:53.916 --> 00:32:55.166 A:middle
+to separate memory locations.
+
+00:32:55.516 --> 00:32:56.736 A:middle
+So how do we handle that?
+
+00:32:57.606 --> 00:32:58.546 A:middle
+This is what we do.
+
+00:32:59.476 --> 00:33:05.436 A:middle
+Before every loop, we add some
+code to check if the pointers
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:59.476 --> 00:33:05.436 A:middle
+Before every loop, we add some
+code to check if the pointers
+
+00:33:05.436 --> 00:33:07.136 A:middle
+that we're using overlap.
+
+00:33:07.656 --> 00:33:10.496 A:middle
+And if they do, then
+we fall back
+
+00:33:10.496 --> 00:33:13.006 A:middle
+and use the original
+loop, the slow loop.
+
+00:33:13.866 --> 00:33:17.786 A:middle
+But if they don't, and
+this is the common case,
+
+00:33:17.786 --> 00:33:19.246 A:middle
+this is what happens
+in most cases.
+
+00:33:20.056 --> 00:33:23.096 A:middle
+If they don't, then we can use
+the vector, the fast vector loop
+
+00:33:23.476 --> 00:33:25.436 A:middle
+to process all of
+the elements except
+
+00:33:25.436 --> 00:33:26.396 A:middle
+for the last few iterations.
+
+00:33:27.356 --> 00:33:28.856 A:middle
+So, problem solved.
+
+00:33:29.346 --> 00:33:32.706 A:middle
+But there is an overhead, right?
+
+00:33:33.026 --> 00:33:36.686 A:middle
+So before -- this is annoying
+because before every time
+
+00:33:37.386 --> 00:33:40.296 A:middle
+that we vectorize -- that
+we execute vectorize code,
+
+00:33:40.586 --> 00:33:42.146 A:middle
+we have to run these
+few instructions
+
+00:33:42.146 --> 00:33:43.306 A:middle
+that check our pointers, right?
+
+00:33:44.506 --> 00:33:48.056 A:middle
+And this can be --
+it's not a big problem,
+
+00:33:48.056 --> 00:33:50.126 A:middle
+but it's still inefficient
+and we also have
+
+00:33:50.126 --> 00:33:53.956 A:middle
+to keep the original loop around
+so it increases our code size
+
+00:33:54.686 --> 00:33:57.746 A:middle
+and we'd like to get
+rid of it, and we can.
+
+00:33:58.846 --> 00:34:00.376 A:middle
+Remember how we tell
+the compiler
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:58.846 --> 00:34:00.376 A:middle
+Remember how we tell
+the compiler
+
+00:34:01.506 --> 00:34:03.876 A:middle
+that pointers don't point
+to the same memory location,
+
+00:34:03.876 --> 00:34:06.096 A:middle
+we use the restrict keyword.
+
+00:34:07.176 --> 00:34:11.116 A:middle
+And when we do, the compiler
+understands that source
+
+00:34:11.116 --> 00:34:13.835 A:middle
+and destination or in
+and out don't point
+
+00:34:13.835 --> 00:34:14.746 A:middle
+to the same memory location.
+
+00:34:14.926 --> 00:34:17.235 A:middle
+So it can get rid of
+the runtime checks.
+
+00:34:17.786 --> 00:34:21.196 A:middle
+But we also want to get
+rid of the original loop.
+
+00:34:21.795 --> 00:34:23.306 A:middle
+How can we get rid
+of the original loop?
+
+00:34:24.056 --> 00:34:28.446 A:middle
+Well, if we specify the
+exact number of iterations,
+
+00:34:29.706 --> 00:34:32.896 A:middle
+then the compiler knows that
+it can process the entire array
+
+00:34:33.255 --> 00:34:34.246 A:middle
+using the vector loop.
+
+00:34:34.775 --> 00:34:35.485 A:middle
+So this is great.
+
+00:34:35.755 --> 00:34:41.396 A:middle
+Now, it's probably not a
+good idea to go and mark all
+
+00:34:41.396 --> 00:34:45.916 A:middle
+of your pointers with
+restrict and after all,
+
+00:34:45.956 --> 00:34:48.696 A:middle
+it's not a big deal to have
+all these few instructions
+
+00:34:48.696 --> 00:34:51.366 A:middle
+out before we execute
+the fast vectorize loop.
+
+00:34:52.176 --> 00:34:56.315 A:middle
+So, my recommendation is
+don't add restrict everywhere
+
+00:34:56.315 --> 00:34:58.826 A:middle
+but just be aware that
+this is one of your tools
+
+00:34:58.826 --> 00:35:04.846 A:middle
+that you can use in some cases.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:58.826 --> 00:35:04.846 A:middle
+that you can use in some cases.
+
+00:35:04.846 --> 00:35:09.286 A:middle
+And there is also another
+thing that you can do.
+
+00:35:09.286 --> 00:35:12.226 A:middle
+So, Jim talked to you about
+LTO, Link-Time Optimizations.
+
+00:35:12.726 --> 00:35:15.916 A:middle
+And Link-Time Optimizations
+can improve vectorization.
+
+00:35:16.236 --> 00:35:17.586 A:middle
+How? That's simple.
+
+00:35:17.796 --> 00:35:21.046 A:middle
+When we do LTO, when we
+perform Link-Time Optimizations,
+
+00:35:21.626 --> 00:35:24.736 A:middle
+the compiler is able to look
+at the entire program together.
+
+00:35:24.846 --> 00:35:27.436 A:middle
+And when it can look at the
+entire program together,
+
+00:35:27.436 --> 00:35:31.066 A:middle
+it has more information and
+it can make better decisions,
+
+00:35:31.146 --> 00:35:34.486 A:middle
+better optimizations
+based on this information.
+
+00:35:35.066 --> 00:35:39.506 A:middle
+Let's see how LTO
+helps vectorization.
+
+00:35:40.426 --> 00:35:44.226 A:middle
+So the interesting loop is the
+one at the top left corner.
+
+00:35:44.626 --> 00:35:48.846 A:middle
+And unfortunately, this
+loop is not vectorizable.
+
+00:35:49.186 --> 00:35:50.186 A:middle
+We can't vectorize it.
+
+00:35:51.126 --> 00:35:53.766 A:middle
+We can't vectorize it because
+there's a function call
+
+00:35:53.766 --> 00:35:54.816 A:middle
+in the middle of the loop
+
+00:35:55.346 --> 00:36:00.166 A:middle
+and we don't have any
+information unless we inline the
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:55.346 --> 00:36:00.166 A:middle
+and we don't have any
+information unless we inline the
+
+00:36:00.166 --> 00:36:02.236 A:middle
+function call, and then
+let's see what happens.
+
+00:36:02.426 --> 00:36:07.846 A:middle
+Now, we have all the
+information that we need.
+
+00:36:08.156 --> 00:36:09.656 A:middle
+We know that we can
+vectorize this loop.
+
+00:36:10.226 --> 00:36:10.836 A:middle
+This is great.
+
+00:36:12.276 --> 00:36:15.966 A:middle
+But we're still going to
+have these few instructions
+
+00:36:15.966 --> 00:36:17.486 A:middle
+that check our pointers
+and we're still going
+
+00:36:17.486 --> 00:36:19.046 A:middle
+to have the scalar
+loop at the end
+
+00:36:19.046 --> 00:36:20.806 A:middle
+because we don't know how
+many iterations we have,
+
+00:36:20.806 --> 00:36:22.876 A:middle
+and we don't know where
+the pointers come from,
+
+00:36:23.956 --> 00:36:29.046 A:middle
+unless we inline the loop
+into the main of our function.
+
+00:36:29.806 --> 00:36:32.076 A:middle
+And after we do, we have
+a lot more information.
+
+00:36:32.706 --> 00:36:35.346 A:middle
+Now, we know exactly how
+many iterations we have
+
+00:36:35.726 --> 00:36:39.866 A:middle
+and we also know that in and out
+are actually pointers A and B
+
+00:36:39.866 --> 00:36:42.326 A:middle
+and we allocate them here
+locally, so of course
+
+00:36:42.326 --> 00:36:44.746 A:middle
+that they point to
+separate memory locations.
+
+00:36:44.886 --> 00:36:45.646 A:middle
+So this is great.
+
+00:36:46.336 --> 00:36:51.786 A:middle
+So LTO helped us in getting
+rid of all the runtime checks
+
+00:36:52.186 --> 00:36:53.796 A:middle
+and getting rid of
+the original loop.
+
+00:36:54.396 --> 00:36:55.166 A:middle
+So this is good.
+
+00:36:55.786 --> 00:36:59.846 A:middle
+But there is something
+I want to talk to you
+
+00:36:59.846 --> 00:37:01.086 A:middle
+about in this context.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:59.846 --> 00:37:01.086 A:middle
+about in this context.
+
+00:37:01.136 --> 00:37:07.256 A:middle
+So, the vectorizer in order to
+vectorize a lot of loops has
+
+00:37:07.256 --> 00:37:11.336 A:middle
+to have runtime checks and keep
+the original loop around because
+
+00:37:11.596 --> 00:37:14.756 A:middle
+for most loops, LTO is not
+going to be able to save us,
+
+00:37:15.276 --> 00:37:17.926 A:middle
+and you're not going to write
+the restrict keyword all
+
+00:37:17.926 --> 00:37:19.216 A:middle
+over your loops.
+
+00:37:21.176 --> 00:37:26.896 A:middle
+But when the compiler chooses
+to add the runtime checks
+
+00:37:26.896 --> 00:37:28.156 A:middle
+and keep the original
+loop around,
+
+00:37:29.156 --> 00:37:30.166 A:middle
+it's not the end of the world.
+
+00:37:30.466 --> 00:37:34.386 A:middle
+The code growth is less than
+1 percent which is okay.
+
+00:37:35.056 --> 00:37:38.346 A:middle
+You probably don't mind
+a 1 percent increase
+
+00:37:38.626 --> 00:37:39.446 A:middle
+in the code size.
+
+00:37:42.106 --> 00:37:44.486 A:middle
+But if you listened
+carefully earlier,
+
+00:37:44.826 --> 00:37:48.276 A:middle
+Jim said that the
+default Build Setting
+
+00:37:48.276 --> 00:37:52.906 A:middle
+for Xcode 5 is optimized
+for speed and size.
+
+00:37:54.436 --> 00:37:58.846 A:middle
+This means that Xcode
+tells the compiler,
+
+00:37:59.536 --> 00:38:02.176 A:middle
+"You cannot add runtime checks
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:59.536 --> 00:38:02.176 A:middle
+"You cannot add runtime checks
+
+00:38:02.176 --> 00:38:04.616 A:middle
+and you cannot keep the
+original loop around.
+
+00:38:04.616 --> 00:38:06.476 A:middle
+You have to choose
+either vector or scalar.
+
+00:38:06.476 --> 00:38:07.406 A:middle
+You can't have both.
+
+00:38:07.626 --> 00:38:08.716 A:middle
+It'll increase code size."
+
+00:38:09.826 --> 00:38:13.376 A:middle
+Well, the vectorizer can't
+work under these conditions.
+
+00:38:13.376 --> 00:38:16.466 A:middle
+It says, "I can't do that.
+
+00:38:16.466 --> 00:38:20.096 A:middle
+I can only vectorize a
+small number of loops."
+
+00:38:20.096 --> 00:38:23.726 A:middle
+So, if you want to be able
+to vectorize a lot of loops,
+
+00:38:24.106 --> 00:38:26.616 A:middle
+what you need to do is
+go to the Build Setting
+
+00:38:26.616 --> 00:38:29.376 A:middle
+and change it from OS to O3.
+
+00:38:29.916 --> 00:38:33.636 A:middle
+And when you do, Xcode
+will tell the compiler,
+
+00:38:34.446 --> 00:38:36.876 A:middle
+"It's okay to increase
+code size a little bit
+
+00:38:36.876 --> 00:38:38.226 A:middle
+if you can vectorize
+more loops."
+
+00:38:39.076 --> 00:38:40.486 A:middle
+So if you want to
+use the vectorizer,
+
+00:38:40.486 --> 00:38:45.216 A:middle
+it'll probably be a good idea to
+enable O3 in your Build Setting.
+
+00:38:47.116 --> 00:38:50.456 A:middle
+Now, I want to talk to you
+
+00:38:50.456 --> 00:38:54.596 A:middle
+about one interesting
+example of vectorization.
+
+00:38:54.596 --> 00:38:56.746 A:middle
+I want to talk to you
+about reduction loops.
+
+00:38:56.976 --> 00:38:59.456 A:middle
+And reduction loops are
+very, very interesting.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:39:00.556 --> 00:39:04.056 A:middle
+Reduction loops are loops in
+which we scan the entire array,
+
+00:39:05.116 --> 00:39:07.076 A:middle
+and at the end, we come
+back with one number.
+
+00:39:08.536 --> 00:39:11.426 A:middle
+For example, we can add all
+the numbers in the array
+
+00:39:12.436 --> 00:39:14.486 A:middle
+or we can search for the
+highest number in the array.
+
+00:39:14.936 --> 00:39:17.686 A:middle
+And we have an example
+right here.
+
+00:39:18.226 --> 00:39:22.676 A:middle
+And LLVM has two powerful
+optimizations that come together
+
+00:39:23.176 --> 00:39:24.556 A:middle
+to optimize these loops.
+
+00:39:25.326 --> 00:39:26.036 A:middle
+Let's take a look.
+
+00:39:26.646 --> 00:39:29.816 A:middle
+The first example
+is vectorization.
+
+00:39:30.386 --> 00:39:34.346 A:middle
+So how do we vectorize
+this code?
+
+00:39:34.636 --> 00:39:35.736 A:middle
+How do we vectorize the code
+
+00:39:35.736 --> 00:39:37.076 A:middle
+that adds all the
+numbers together?
+
+00:39:37.796 --> 00:39:40.886 A:middle
+We do it by adding the
+temporary variable,
+
+00:39:41.006 --> 00:39:43.346 A:middle
+the temporary vector variable.
+
+00:39:44.316 --> 00:39:48.226 A:middle
+We vectorize this code by
+taking chunks of the array
+
+00:39:48.616 --> 00:39:51.626 A:middle
+and adding them into
+temp or vector variable.
+
+00:39:52.576 --> 00:39:54.246 A:middle
+So throughout the
+loop, temp is going
+
+00:39:54.246 --> 00:39:57.626 A:middle
+to hold the partial
+sums of the array.
+
+00:39:58.546 --> 00:40:01.726 A:middle
+So we're processing all
+million elements in the array
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:39:58.546 --> 00:40:01.726 A:middle
+So we're processing all
+million elements in the array
+
+00:40:02.776 --> 00:40:03.966 A:middle
+into this temp variable.
+
+00:40:04.546 --> 00:40:09.256 A:middle
+And at the end, all we got to
+do is take the numbers that are
+
+00:40:09.256 --> 00:40:10.826 A:middle
+in this vector and
+add them together,
+
+00:40:10.826 --> 00:40:11.956 A:middle
+and that's it, we're done.
+
+00:40:12.566 --> 00:40:16.146 A:middle
+This is how we vectorize
+reduction loops.
+
+00:40:16.526 --> 00:40:18.066 A:middle
+And this is pretty good.
+
+00:40:18.066 --> 00:40:19.686 A:middle
+This is a very powerful
+optimization,
+
+00:40:20.776 --> 00:40:22.246 A:middle
+but we can actually do better.
+
+00:40:22.246 --> 00:40:23.936 A:middle
+Let's see what we can do.
+
+00:40:25.496 --> 00:40:30.556 A:middle
+So, modern processors are
+called "out-of-order" processors
+
+00:40:30.936 --> 00:40:34.166 A:middle
+because they can execute
+multiple independent
+
+00:40:34.366 --> 00:40:36.276 A:middle
+calculations in parallel
+
+00:40:36.796 --> 00:40:39.036 A:middle
+and they also have the
+resources to do it.
+
+00:40:39.556 --> 00:40:42.356 A:middle
+So modern processors have
+multiple execution units
+
+00:40:42.906 --> 00:40:45.686 A:middle
+to handle parallel computations.
+
+00:40:47.426 --> 00:40:51.936 A:middle
+And, you know, your iPhones have
+them and your Macs have them,
+
+00:40:51.936 --> 00:40:52.976 A:middle
+so they are very popular.
+
+00:40:54.176 --> 00:40:56.886 A:middle
+Every modern processor is
+an "out-of-order" processor.
+
+00:40:58.526 --> 00:41:02.376 A:middle
+And the compiler optimizes
+for these processors.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:58.526 --> 00:41:02.376 A:middle
+And the compiler optimizes
+for these processors.
+
+00:41:04.926 --> 00:41:09.706 A:middle
+So, the compiler looks at the
+code that we have right here.
+
+00:41:09.706 --> 00:41:14.446 A:middle
+This is the sum loop,
+and it compiles it
+
+00:41:14.446 --> 00:41:17.076 A:middle
+and then the CPU executes it.
+
+00:41:17.806 --> 00:41:22.106 A:middle
+And this is a smart CPU, it's a
+smart processor, the processor
+
+00:41:22.106 --> 00:41:25.456 A:middle
+that we're talking about
+and it looks ahead.
+
+00:41:25.456 --> 00:41:27.716 A:middle
+It knows that we're inside
+of loop and it looks ahead
+
+00:41:27.996 --> 00:41:30.166 A:middle
+and it sees that we
+have another addition
+
+00:41:30.166 --> 00:41:32.046 A:middle
+and then another one,
+the loop after that.
+
+00:41:32.046 --> 00:41:34.636 A:middle
+And it really wants to
+execute these additions
+
+00:41:34.636 --> 00:41:35.866 A:middle
+in parallel, right?
+
+00:41:35.866 --> 00:41:38.696 A:middle
+It has all these resources and
+it really wants to optimize,
+
+00:41:38.696 --> 00:41:41.626 A:middle
+you know, execute them in
+parallel but the processor can't
+
+00:41:42.206 --> 00:41:44.676 A:middle
+because the adds
+depend on one another.
+
+00:41:45.246 --> 00:41:47.456 A:middle
+So with all the resources
+that the processor has,
+
+00:41:48.156 --> 00:41:51.766 A:middle
+it can't execute these
+instructions in parallel.
+
+00:41:52.096 --> 00:41:53.776 A:middle
+So, what do we do?
+
+00:41:55.336 --> 00:41:56.366 A:middle
+This is what we do.
+
+00:41:56.746 --> 00:42:01.226 A:middle
+The compiler optimizes the code
+by unrolling it a little bit.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:56.746 --> 00:42:01.226 A:middle
+The compiler optimizes the code
+by unrolling it a little bit.
+
+00:42:01.826 --> 00:42:04.846 A:middle
+And the compiler
+should do it, not you.
+
+00:42:05.006 --> 00:42:09.596 A:middle
+Because the compiler knows
+exactly how many execution units
+
+00:42:09.856 --> 00:42:12.876 A:middle
+the processor has and what is
+the level of the parallelism
+
+00:42:12.876 --> 00:42:15.816 A:middle
+and it has a lot of
+information on the processors.
+
+00:42:16.466 --> 00:42:18.226 A:middle
+So the compiler should do it.
+
+00:42:18.276 --> 00:42:19.756 A:middle
+And after the compiler does it,
+
+00:42:19.756 --> 00:42:21.476 A:middle
+after the compiler
+unrolls your loops,
+
+00:42:21.476 --> 00:42:26.566 A:middle
+you'll see that we have
+two independent chains
+
+00:42:26.566 --> 00:42:27.486 A:middle
+of calculations.
+
+00:42:27.776 --> 00:42:30.046 A:middle
+The adds don't depend
+on one another anymore.
+
+00:42:30.956 --> 00:42:33.086 A:middle
+So, if we take a
+look at Iteration 1,
+
+00:42:33.156 --> 00:42:34.636 A:middle
+we have two adds and two loads.
+
+00:42:35.126 --> 00:42:38.196 A:middle
+These two adds and two loads
+can be executed in parallel.
+
+00:42:38.916 --> 00:42:41.676 A:middle
+So this is great.
+
+00:42:42.036 --> 00:42:44.716 A:middle
+So, let's put these two
+optimizations together,
+
+00:42:45.216 --> 00:42:46.756 A:middle
+unrolling and vectorization.
+
+00:42:47.446 --> 00:42:48.696 A:middle
+So this is the array
+that we have.
+
+00:42:49.716 --> 00:42:50.976 A:middle
+We need to partition it.
+
+00:42:52.146 --> 00:42:54.386 A:middle
+We need to break
+it into two groups.
+
+00:42:56.156 --> 00:43:00.716 A:middle
+So we have the greens
+that one independent --
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:42:56.156 --> 00:43:00.716 A:middle
+So we have the greens
+that one independent --
+
+00:43:01.066 --> 00:43:03.266 A:middle
+that's one chain of calculation
+and we have the purples.
+
+00:43:04.036 --> 00:43:07.436 A:middle
+And the size of each
+chunk is a vector width.
+
+00:43:08.326 --> 00:43:13.626 A:middle
+And when we add them together,
+this is the code that we get.
+
+00:43:13.626 --> 00:43:17.096 A:middle
+So on top, in the purple, you
+can see the instructions load
+
+00:43:17.096 --> 00:43:18.926 A:middle
+and add, and then the green
+
+00:43:18.926 --> 00:43:21.256 A:middle
+at the bottom, you
+see load and add.
+
+00:43:22.066 --> 00:43:26.096 A:middle
+And these two loads and adds
+can be executed in parallel
+
+00:43:26.096 --> 00:43:28.226 A:middle
+because they're independent
+of one another.
+
+00:43:28.906 --> 00:43:30.456 A:middle
+And this is the code
+that you get
+
+00:43:30.456 --> 00:43:33.296 A:middle
+when you compile our
+loop to iPhone 5.
+
+00:43:34.726 --> 00:43:36.586 A:middle
+So let's look at -- take
+a look at some numbers.
+
+00:43:37.736 --> 00:43:39.766 A:middle
+On the left, you
+see the sum loop
+
+00:43:39.946 --> 00:43:41.326 A:middle
+when compiled to an iPhone 5.
+
+00:43:41.486 --> 00:43:46.536 A:middle
+All the way to the
+left, you see 1X.
+
+00:43:47.036 --> 00:43:50.056 A:middle
+We normalized our score to 1X.
+
+00:43:50.716 --> 00:43:54.726 A:middle
+And when we vectorize our loop,
+we get a three and a half,
+
+00:43:54.726 --> 00:43:58.426 A:middle
+almost 4X boost in
+performance which is great.
+
+00:43:58.906 --> 00:44:00.206 A:middle
+The vectorizer did a good job.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:43:58.906 --> 00:44:00.206 A:middle
+The vectorizer did a good job.
+
+00:44:01.106 --> 00:44:03.006 A:middle
+But when we enable unrolling,
+
+00:44:03.496 --> 00:44:07.206 A:middle
+we get almost 4.5X boosting
+performance which is great.
+
+00:44:07.266 --> 00:44:08.776 A:middle
+It's a very good optimization.
+
+00:44:09.426 --> 00:44:14.056 A:middle
+And when we take the same
+code and compile it to a Mac,
+
+00:44:15.396 --> 00:44:16.436 A:middle
+we get something similar.
+
+00:44:17.086 --> 00:44:18.966 A:middle
+Again, we normalize
+that into 1X.
+
+00:44:19.316 --> 00:44:23.756 A:middle
+When we vectorize, we get
+almost 8X, almost 8X boost
+
+00:44:23.756 --> 00:44:28.296 A:middle
+in performance because Intel
+processors can process eight
+
+00:44:28.296 --> 00:44:29.276 A:middle
+elements at once.
+
+00:44:29.676 --> 00:44:31.676 A:middle
+But when we unroll,
+we get almost --
+
+00:44:31.956 --> 00:44:34.096 A:middle
+an almost 10X boost
+
+00:44:34.096 --> 00:44:36.266 A:middle
+in performance which
+is really nice.
+
+00:44:36.266 --> 00:44:38.416 A:middle
+You got to admit it's a good --
+
+00:44:39.516 --> 00:44:43.536 A:middle
+[ Applause ]
+
+00:44:44.036 --> 00:44:45.636 A:middle
+Thank you.
+
+00:44:46.266 --> 00:44:48.376 A:middle
+Okay, but I got to
+warn you on one thing.
+
+00:44:50.976 --> 00:44:54.156 A:middle
+If you look carefully, when
+we added all these numbers
+
+00:44:54.156 --> 00:44:57.686 A:middle
+together, we changed the
+order in which we add in them.
+
+00:44:57.766 --> 00:45:01.006 A:middle
+And this is okay for
+integers, but it's not okay
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:44:57.766 --> 00:45:01.006 A:middle
+And this is okay for
+integers, but it's not okay
+
+00:45:01.186 --> 00:45:03.706 A:middle
+for floating point numbers
+because we have to deal
+
+00:45:03.706 --> 00:45:06.406 A:middle
+with NaNs and negative
+zeros and all these things.
+
+00:45:06.886 --> 00:45:11.176 A:middle
+So, if you really care about
+the accuracy of your numbers,
+
+00:45:11.676 --> 00:45:13.796 A:middle
+then you shouldn't
+enable fast math.
+
+00:45:14.346 --> 00:45:16.676 A:middle
+But if you do want the
+vectorizer to vectorize a lot
+
+00:45:16.676 --> 00:45:20.386 A:middle
+of loops then you should
+probably enable fast math.
+
+00:45:21.426 --> 00:45:24.746 A:middle
+Now, I also want to talk
+to you about something else
+
+00:45:24.746 --> 00:45:27.596 A:middle
+that you can do to
+help vectorization,
+
+00:45:28.146 --> 00:45:29.166 A:middle
+and this is data layout.
+
+00:45:30.176 --> 00:45:33.836 A:middle
+So on top, you can see a
+pixel, red, green, and blue.
+
+00:45:34.656 --> 00:45:36.756 A:middle
+And pixels are usually
+more interesting
+
+00:45:36.756 --> 00:45:38.426 A:middle
+when they come together
+in groups.
+
+00:45:39.406 --> 00:45:41.516 A:middle
+They can create pictures and
+other interesting things.
+
+00:45:42.116 --> 00:45:44.486 A:middle
+And there are really two ways
+
+00:45:44.486 --> 00:45:46.936 A:middle
+in which you can organize
+your pixels together.
+
+00:45:47.646 --> 00:45:49.786 A:middle
+One way is to take these pixels
+
+00:45:49.786 --> 00:45:53.236 A:middle
+and each pixel is really is
+a struct that has red, green,
+
+00:45:53.236 --> 00:45:56.776 A:middle
+blue, and we can all put
+them together in one array.
+
+00:45:58.686 --> 00:46:00.256 A:middle
+And this array will
+look like this,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:45:58.686 --> 00:46:00.256 A:middle
+And this array will
+look like this,
+
+00:46:00.256 --> 00:46:02.676 A:middle
+will look like red green blue,
+red green blue, red green blue.
+
+00:46:03.796 --> 00:46:06.356 A:middle
+And the other way in which you
+can organize your pixels is
+
+00:46:06.666 --> 00:46:10.626 A:middle
+to take all of the reds and put
+them in one array, then take all
+
+00:46:10.626 --> 00:46:12.646 A:middle
+of the greens and put them
+in one array, and take all
+
+00:46:12.646 --> 00:46:14.346 A:middle
+of the blues and put
+them in another array.
+
+00:46:14.636 --> 00:46:17.866 A:middle
+Then take these three arrays
+and put them in a struct.
+
+00:46:18.666 --> 00:46:22.026 A:middle
+So the first method is
+called Array of Struct,
+
+00:46:22.026 --> 00:46:27.036 A:middle
+AoS and the second one is
+called a Struct of Arrays, SoA.
+
+00:46:27.036 --> 00:46:32.706 A:middle
+And these two ways really
+have a significant effect
+
+00:46:32.706 --> 00:46:34.266 A:middle
+on the performance
+of your application.
+
+00:46:34.886 --> 00:46:35.586 A:middle
+So let's take a look.
+
+00:46:36.236 --> 00:46:39.976 A:middle
+In the code that
+we have right here,
+
+00:46:40.046 --> 00:46:44.156 A:middle
+you can see that we're doing a
+very simple filter in graphics.
+
+00:46:44.226 --> 00:46:46.786 A:middle
+We're taking the greens and
+we're adding them to the reds.
+
+00:46:47.406 --> 00:46:48.246 A:middle
+That's pretty simple.
+
+00:46:49.146 --> 00:46:53.066 A:middle
+Let's see how it works for
+AoS, for Array of Structs.
+
+00:46:53.996 --> 00:46:57.776 A:middle
+So, to add the greens to
+the reds, the first thing
+
+00:46:57.776 --> 00:47:00.706 A:middle
+that we need to do is
+gather all of the greens.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:46:57.776 --> 00:47:00.706 A:middle
+that we need to do is
+gather all of the greens.
+
+00:47:01.756 --> 00:47:03.766 A:middle
+Now this is a pretty
+expensive operation
+
+00:47:04.406 --> 00:47:08.406 A:middle
+because the greens are
+not consecutive in memory,
+
+00:47:08.406 --> 00:47:09.786 A:middle
+you have to collect
+them together.
+
+00:47:10.366 --> 00:47:13.446 A:middle
+And you need to do the
+same thing with the reds.
+
+00:47:14.486 --> 00:47:15.636 A:middle
+And this is very expensive.
+
+00:47:15.636 --> 00:47:17.746 A:middle
+I lost track of how
+many loads we had.
+
+00:47:17.746 --> 00:47:18.446 A:middle
+I think it's eight.
+
+00:47:19.076 --> 00:47:22.656 A:middle
+And then we add them
+together, that's pretty simple
+
+00:47:22.656 --> 00:47:24.016 A:middle
+and that's very efficient
+
+00:47:24.016 --> 00:47:26.116 A:middle
+because we have the
+vector instructions
+
+00:47:26.116 --> 00:47:27.186 A:middle
+to form this addition.
+
+00:47:27.226 --> 00:47:29.876 A:middle
+And then we need to put
+the reds back in place,
+
+00:47:29.876 --> 00:47:31.886 A:middle
+and this is very inefficient.
+
+00:47:31.886 --> 00:47:33.796 A:middle
+And the compiler
+will recognize that
+
+00:47:33.876 --> 00:47:35.856 A:middle
+and it will not vectorize
+your code.
+
+00:47:36.056 --> 00:47:37.126 A:middle
+It's smart enough to know
+
+00:47:37.126 --> 00:47:38.796 A:middle
+that we shouldn't
+mess with this code.
+
+00:47:40.676 --> 00:47:45.066 A:middle
+But what if we were to organize
+our data slightly different?
+
+00:47:45.066 --> 00:47:47.856 A:middle
+This is the SoA.
+
+00:47:47.966 --> 00:47:52.396 A:middle
+So, this time all of the reds
+are consecutive in memory
+
+00:47:52.796 --> 00:47:54.686 A:middle
+and all of the greens are
+consecutive in memory.
+
+00:47:55.336 --> 00:47:57.936 A:middle
+So, it's pretty simple
+to vectorize this code.
+
+00:47:58.346 --> 00:48:01.226 A:middle
+We just load the
+greens, load the reds.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:47:58.346 --> 00:48:01.226 A:middle
+We just load the
+greens, load the reds.
+
+00:48:02.226 --> 00:48:02.906 A:middle
+That's very cheap.
+
+00:48:03.466 --> 00:48:08.326 A:middle
+Add them together and save
+them back, pretty easy.
+
+00:48:08.566 --> 00:48:10.626 A:middle
+So now this code is
+beautifully vectorized.
+
+00:48:10.626 --> 00:48:16.316 A:middle
+But I want to tell you
+that the compiler is going
+
+00:48:16.316 --> 00:48:18.476 A:middle
+to vectorize your code,
+but it's not going
+
+00:48:18.476 --> 00:48:20.176 A:middle
+to change the data
+layout for you.
+
+00:48:20.536 --> 00:48:25.106 A:middle
+If you decided to go with Array
+of Structs rather than Structs
+
+00:48:25.106 --> 00:48:29.706 A:middle
+of Array, then the compiler is
+not going to optimize your code.
+
+00:48:30.036 --> 00:48:33.606 A:middle
+So you need to decide on
+what is the right data layout
+
+00:48:33.816 --> 00:48:34.496 A:middle
+for your program.
+
+00:48:35.796 --> 00:48:38.536 A:middle
+Now, I also want to talk
+about something else.
+
+00:48:38.756 --> 00:48:40.796 A:middle
+I want to talk about the
+C programming language.
+
+00:48:41.786 --> 00:48:44.726 A:middle
+The C programming
+language has a few details
+
+00:48:44.726 --> 00:48:46.426 A:middle
+that can affect vectorization
+
+00:48:46.486 --> 00:48:48.246 A:middle
+and can affect the
+performance of your code.
+
+00:48:48.766 --> 00:48:49.666 A:middle
+So let's take a look.
+
+00:48:50.066 --> 00:48:52.666 A:middle
+Right here we have two loops
+that are almost identical.
+
+00:48:53.436 --> 00:48:56.656 A:middle
+The one on top gets
+vectorized but the one
+
+00:48:56.656 --> 00:48:57.686 A:middle
+at the bottom does not.
+
+00:48:58.706 --> 00:49:01.196 A:middle
+Now, what is the big difference
+between these two loops?
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:48:58.706 --> 00:49:01.196 A:middle
+Now, what is the big difference
+between these two loops?
+
+00:49:01.436 --> 00:49:06.896 A:middle
+The only difference is that the
+one on top uses signed indices
+
+00:49:07.406 --> 00:49:12.736 A:middle
+and the one at the bottom
+uses unsigned indices.
+
+00:49:12.916 --> 00:49:15.256 A:middle
+Well, let's go the spec
+and see what it says.
+
+00:49:16.356 --> 00:49:21.846 A:middle
+The C spec says that unsigned
+indices are allowed to wrap
+
+00:49:22.746 --> 00:49:24.376 A:middle
+but signed indices are not
+
+00:49:24.906 --> 00:49:27.276 A:middle
+because that's undefined
+behavior.
+
+00:49:28.236 --> 00:49:34.036 A:middle
+And someone may decide to scan
+their array in this funky way,
+
+00:49:34.036 --> 00:49:36.736 A:middle
+they can start towards the end
+of the array, get to the end
+
+00:49:36.736 --> 00:49:39.776 A:middle
+of the array, wrap around
+and end at the beginning
+
+00:49:39.776 --> 00:49:42.866 A:middle
+and the vectors can't do
+that, they just don't do that,
+
+00:49:43.176 --> 00:49:43.926 A:middle
+they can't wrap around.
+
+00:49:44.606 --> 00:49:46.646 A:middle
+So, vectorizer will detect that
+
+00:49:46.646 --> 00:49:48.326 A:middle
+and it will not vectorize
+your code.
+
+00:49:49.646 --> 00:49:50.736 A:middle
+So what do you do?
+
+00:49:50.736 --> 00:49:51.746 A:middle
+What is your recommendation?
+
+00:49:52.456 --> 00:49:56.436 A:middle
+Well, if you were to write
+your code using size t
+
+00:49:56.586 --> 00:50:00.696 A:middle
+or signed indices, then
+the vectorizer will be able
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:49:56.586 --> 00:50:00.696 A:middle
+or signed indices, then
+the vectorizer will be able
+
+00:50:00.696 --> 00:50:01.556 A:middle
+to vectorize your code.
+
+00:50:03.456 --> 00:50:10.776 A:middle
+So, to summarize, we talked
+about a couple of things today.
+
+00:50:11.646 --> 00:50:15.696 A:middle
+And the main conclusion is that,
+if you want to get the most
+
+00:50:15.696 --> 00:50:16.946 A:middle
+out of -- out of LLVM,
+
+00:50:17.336 --> 00:50:20.496 A:middle
+it's better to write
+simple maintainable code
+
+00:50:20.936 --> 00:50:25.806 A:middle
+that the compiler can
+optimize and you need
+
+00:50:25.806 --> 00:50:27.556 A:middle
+to choose the right
+optimization flags.
+
+00:50:28.126 --> 00:50:32.546 A:middle
+And we talked about a lot of
+different optimization flags,
+
+00:50:32.546 --> 00:50:33.926 A:middle
+let's see if I can
+remember all of them.
+
+00:50:34.206 --> 00:50:35.076 A:middle
+We talked about O3.
+
+00:50:35.226 --> 00:50:36.816 A:middle
+We talked about fast math.
+
+00:50:36.816 --> 00:50:37.766 A:middle
+We talked about the vectorizer.
+
+00:50:37.766 --> 00:50:38.736 A:middle
+We talked about strict-aliasing.
+
+00:50:38.736 --> 00:50:39.896 A:middle
+We talked about LTO.
+
+00:50:39.896 --> 00:50:42.736 A:middle
+There are so many of
+them, I can't remember.
+
+00:50:43.456 --> 00:50:45.616 A:middle
+It's -- did you write this down?
+
+00:50:45.616 --> 00:50:46.696 A:middle
+I can't repeat this.
+
+00:50:46.696 --> 00:50:48.896 A:middle
+We talked about O3,
+fast math, vectorizer,
+
+00:50:48.896 --> 00:50:50.006 A:middle
+strict-aliasing, and LTO.
+
+00:50:50.546 --> 00:50:53.676 A:middle
+No one can remember that,
+really and that's why we decided
+
+00:50:53.676 --> 00:50:55.706 A:middle
+to bring some of these
+optimizations together
+
+00:50:56.046 --> 00:50:57.036 A:middle
+into a new mode.
+
+00:50:57.176 --> 00:50:58.496 A:middle
+We call it -Ofast.
+
+00:50:58.686 --> 00:51:00.976 A:middle
+And now, there are
+only two things
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:50:58.686 --> 00:51:00.976 A:middle
+And now, there are
+only two things
+
+00:51:00.976 --> 00:51:01.766 A:middle
+that you need to remember.
+
+00:51:03.296 --> 00:51:06.786 A:middle
+LTO will look at your
+entire program together.
+
+00:51:08.176 --> 00:51:11.976 A:middle
+-Ofast tells a compiler
+to enable a lot
+
+00:51:11.976 --> 00:51:14.976 A:middle
+of aggressive optimizations
+including vectorization.
+
+00:51:15.746 --> 00:51:18.356 A:middle
+That's what you need to
+remember, -Ofast and LTO.
+
+00:51:19.716 --> 00:51:23.486 A:middle
+So, -Ofast enables
+O3, vectorization,
+
+00:51:23.486 --> 00:51:25.216 A:middle
+strict-aliasing, and fast math.
+
+00:51:25.706 --> 00:51:27.966 A:middle
+And do you remember the
+warning about fast math?
+
+00:51:28.146 --> 00:51:28.726 A:middle
+It's important.
+
+00:51:28.906 --> 00:51:30.846 A:middle
+If you care about the
+accuracy of your calculations,
+
+00:51:31.806 --> 00:51:34.126 A:middle
+don't enable -Ofast
+and fast math.
+
+00:51:35.506 --> 00:51:41.246 A:middle
+But for most people, most people
+should be able to use -Ofast.
+
+00:51:41.246 --> 00:51:42.366 A:middle
+And how do you enable -Ofast?
+
+00:51:42.736 --> 00:51:43.286 A:middle
+That's simple.
+
+00:51:43.486 --> 00:51:44.786 A:middle
+You go to the Build Setting
+
+00:51:44.786 --> 00:51:47.336 A:middle
+and your select fast
+math and then you use it.
+
+00:51:48.356 --> 00:51:51.576 A:middle
+Now, I'm glad to have
+the opportunity to talk
+
+00:51:51.576 --> 00:51:53.216 A:middle
+to your today about
+vectorization
+
+00:51:53.696 --> 00:51:57.026 A:middle
+and the performance of
+LLVM, and we'd be happy
+
+00:51:57.026 --> 00:51:58.476 A:middle
+to answer more of
+your questions.
+
+00:51:59.086 --> 00:52:02.446 A:middle
+So you can always contact us
+and we'll answer your questions.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:51:59.086 --> 00:52:02.446 A:middle
+So you can always contact us
+and we'll answer your questions.
+
+00:52:02.986 --> 00:52:05.976 A:middle
+So, thank you very much
+and enjoy the rest of WWDC.
+
+00:52:06.131 --> 00:52:08.131 A:middle
+[ Applause ]
+
+00:52:08.246 --> 00:52:08.526 A:middle
+Thank you.
+
+00:52:09.516 --> 00:52:12.090 A:middle
+[ Applause ]
+

@@ -1,0 +1,5119 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:10.396 A:middle
+[ Silence ]
+
+00:00:10.896 --> 00:00:11.686 A:middle
+&gt;&gt; Good afternoon.
+
+00:00:12.336 --> 00:00:13.356 A:middle
+My name is Anthony Chivetta.
+
+00:00:13.356 --> 00:00:15.626 A:middle
+And I'm an engineer in
+the OS X performance team.
+
+00:00:16.096 --> 00:00:17.036 A:middle
+And I'd like to talk to you
+
+00:00:17.036 --> 00:00:19.056 A:middle
+about building efficient
+OS X apps
+
+00:00:19.426 --> 00:00:21.996 A:middle
+and cover some advanced
+topics in resource management.
+
+00:00:21.996 --> 00:00:24.206 A:middle
+Now most of you are
+probably familiar
+
+00:00:24.206 --> 00:00:25.956 A:middle
+with performance
+testing in some form,
+
+00:00:26.376 --> 00:00:29.246 A:middle
+whereby you evaluate how long
+it takes your application
+
+00:00:29.246 --> 00:00:30.426 A:middle
+to perform a specific action.
+
+00:00:31.246 --> 00:00:32.555 A:middle
+What I want to talk
+to you today is not
+
+00:00:32.555 --> 00:00:35.916 A:middle
+about performance optimization,
+but about resource optimization.
+
+00:00:36.476 --> 00:00:39.256 A:middle
+Looking at-- whether looking
+at latency of an action,
+
+00:00:39.506 --> 00:00:42.816 A:middle
+how much resources it
+consumes to achieve its goal.
+
+00:00:45.636 --> 00:00:51.156 A:middle
+Now, one of the problems that
+we face in resource management
+
+00:00:51.156 --> 00:00:53.556 A:middle
+in OS X is that it's
+fundamentally a multitasking
+
+00:00:53.556 --> 00:00:54.356 A:middle
+operating system.
+
+00:00:54.796 --> 00:00:57.056 A:middle
+If you're coming over
+from iOS, you're coming
+
+00:00:57.056 --> 00:00:59.456 A:middle
+from an environment where
+there's one application
+
+00:00:59.456 --> 00:01:01.486 A:middle
+that a user is actively
+using at a time.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.456 --> 00:01:01.486 A:middle
+that a user is actively
+using at a time.
+
+00:01:01.486 --> 00:01:05.486 A:middle
+And so, that application
+can be provided the full use
+
+00:01:05.486 --> 00:01:06.716 A:middle
+of the system's resources.
+
+00:01:06.906 --> 00:01:10.076 A:middle
+On OS X, however, a user
+may be running multiple
+
+00:01:10.076 --> 00:01:11.066 A:middle
+apps simultaneously.
+
+00:01:11.286 --> 00:01:13.486 A:middle
+And so, those apps, consumption
+
+00:01:13.486 --> 00:01:16.176 A:middle
+of system resources can affect
+each other's performance.
+
+00:01:16.766 --> 00:01:18.836 A:middle
+As a result, it's very important
+
+00:01:19.146 --> 00:01:22.586 A:middle
+that your app uses system
+resources efficiently in order
+
+00:01:22.586 --> 00:01:24.636 A:middle
+to help create a
+great user experience.
+
+00:01:25.056 --> 00:01:27.996 A:middle
+So today, we'll cover
+a couple of topics
+
+00:01:27.996 --> 00:01:31.126 A:middle
+about resource efficiency
+including how to profile
+
+00:01:31.126 --> 00:01:32.646 A:middle
+and reduce your app's
+memory footprint,
+
+00:01:33.196 --> 00:01:38.506 A:middle
+how to optimize your access
+of a disk, and how to do work
+
+00:01:38.506 --> 00:01:41.756 A:middle
+in the background without
+impacting system responsiveness.
+
+00:01:42.276 --> 00:01:46.296 A:middle
+So I want to talk
+first about memory.
+
+00:01:47.186 --> 00:01:49.816 A:middle
+And let's take a look at a
+simplified view of a system.
+
+00:01:50.066 --> 00:01:53.446 A:middle
+So we have a OS X system with
+a number of apps running,
+
+00:01:54.156 --> 00:01:56.486 A:middle
+and some of those apps have
+been provided in memory.
+
+00:01:57.146 --> 00:01:59.636 A:middle
+There's also memory that
+is currently unused.
+
+00:01:59.926 --> 00:02:02.116 A:middle
+And this isn't really providing
+any value to the system,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:59.926 --> 00:02:02.116 A:middle
+And this isn't really providing
+any value to the system,
+
+00:02:02.116 --> 00:02:02.866 A:middle
+it's just sitting there.
+
+00:02:03.676 --> 00:02:05.686 A:middle
+And some memory has been devoted
+
+00:02:05.686 --> 00:02:08.515 A:middle
+to caching the contents
+of files on disk.
+
+00:02:09.556 --> 00:02:11.896 A:middle
+Now, as apps request
+more memory,
+
+00:02:13.106 --> 00:02:17.176 A:middle
+we'll first provide the unused
+memory to those applications.
+
+00:02:18.386 --> 00:02:23.726 A:middle
+Now, apps can continue to
+request memory and will continue
+
+00:02:23.726 --> 00:02:25.216 A:middle
+to provide the unused memory
+
+00:02:25.516 --> 00:02:28.376 A:middle
+until there's no more unused
+memory available on the system.
+
+00:02:28.516 --> 00:02:29.936 A:middle
+And this isn't a problem.
+
+00:02:30.326 --> 00:02:33.156 A:middle
+Unused memory wasn't providing
+us any value in the past.
+
+00:02:33.546 --> 00:02:36.276 A:middle
+But if apps continue
+to consume more memory,
+
+00:02:36.686 --> 00:02:39.186 A:middle
+we'll eventually need to start
+providing them the contents the
+
+00:02:39.186 --> 00:02:39.936 A:middle
+disk cache.
+
+00:02:40.046 --> 00:02:42.046 A:middle
+And this is relatively efficient
+
+00:02:42.476 --> 00:02:45.226 A:middle
+because the disk cache is just
+holding data that's already
+
+00:02:45.226 --> 00:02:46.036 A:middle
+stored on disk.
+
+00:02:46.396 --> 00:02:49.696 A:middle
+So it can simply discard it,
+turn it into unused memory
+
+00:02:49.766 --> 00:02:51.576 A:middle
+which is then provided
+to an application.
+
+00:02:52.196 --> 00:02:55.946 A:middle
+But we now no longer have
+that cache data in memory
+
+00:02:56.366 --> 00:02:59.136 A:middle
+which means access to
+disk by application
+
+00:02:59.136 --> 00:03:01.096 A:middle
+to the system may take longer.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:59.136 --> 00:03:01.096 A:middle
+to the system may take longer.
+
+00:03:01.096 --> 00:03:03.646 A:middle
+This is where we'll begin
+to see the responsiveness
+
+00:03:03.646 --> 00:03:05.006 A:middle
+of the user system decrease.
+
+00:03:05.776 --> 00:03:07.976 A:middle
+Now, where things
+get really bad is
+
+00:03:07.976 --> 00:03:09.986 A:middle
+when apps continue
+to request memory.
+
+00:03:10.256 --> 00:03:13.326 A:middle
+In this case, we'll need to
+do something called swapping.
+
+00:03:13.806 --> 00:03:16.686 A:middle
+We'll take the contents of
+memory from one app and save it
+
+00:03:16.686 --> 00:03:20.846 A:middle
+to disk, and then provide that
+memory to a different app.
+
+00:03:20.846 --> 00:03:24.586 A:middle
+Now, the problem is this takes
+a long time because we have
+
+00:03:24.586 --> 00:03:26.506 A:middle
+to write out the contents
+of memory to disk.
+
+00:03:27.036 --> 00:03:30.256 A:middle
+And if the original app tries
+to access that memory again,
+
+00:03:30.566 --> 00:03:32.586 A:middle
+we'll have to pull that
+memory and back off disk.
+
+00:03:33.146 --> 00:03:36.276 A:middle
+And both of these actions
+can introduce large latencies
+
+00:03:36.536 --> 00:03:38.636 A:middle
+and cause responsiveness
+problems for users.
+
+00:03:39.996 --> 00:03:41.536 A:middle
+But let's take a
+look under the hood
+
+00:03:41.536 --> 00:03:43.086 A:middle
+at how this works in practice.
+
+00:03:43.086 --> 00:03:46.266 A:middle
+So every app on a system or a
+process has an address space.
+
+00:03:46.556 --> 00:03:49.126 A:middle
+If you're a 64-bit app,
+this is the 64-bit range
+
+00:03:49.126 --> 00:03:50.126 A:middle
+that your pointers use.
+
+00:03:51.016 --> 00:03:54.366 A:middle
+And that address space is
+broken into 4 kilobyte pages.
+
+00:03:54.656 --> 00:03:56.816 A:middle
+And of course, the system
+also has some amount
+
+00:03:56.816 --> 00:03:58.146 A:middle
+of actual physical memory.
+
+00:03:58.936 --> 00:04:01.416 A:middle
+And virtual memory allows
+us to establish a mapping
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:58.936 --> 00:04:01.416 A:middle
+And virtual memory allows
+us to establish a mapping
+
+00:04:01.416 --> 00:04:04.536 A:middle
+from that address space
+to a physical memory.
+
+00:04:05.436 --> 00:04:08.456 A:middle
+Now, when we need to swap,
+what virtual memory allows us
+
+00:04:08.456 --> 00:04:11.966 A:middle
+to do is disconnect one
+of those physical pages
+
+00:04:12.136 --> 00:04:15.126 A:middle
+from the virtual page that
+it's currently backing.
+
+00:04:15.636 --> 00:04:17.636 A:middle
+And then we can use that
+memory somewhere else.
+
+00:04:19.096 --> 00:04:22.166 A:middle
+But if the app wants to access
+that location memory again,
+
+00:04:22.166 --> 00:04:23.836 A:middle
+it will cause what's
+called a page fault.
+
+00:04:24.506 --> 00:04:26.046 A:middle
+The operating system
+will then be able
+
+00:04:26.046 --> 00:04:28.976 A:middle
+to pull the data back off
+disk, place it somewhere else
+
+00:04:28.976 --> 00:04:31.026 A:middle
+in the RAM, and reconnect
+that page
+
+00:04:31.026 --> 00:04:32.316 A:middle
+in the virtual memory mapping.
+
+00:04:32.606 --> 00:04:35.126 A:middle
+Now, what's important
+to understand here is
+
+00:04:35.126 --> 00:04:37.836 A:middle
+that this happens as soon as
+the application tries to access
+
+00:04:37.836 --> 00:04:39.336 A:middle
+that memory which means
+
+00:04:39.336 --> 00:04:42.226 A:middle
+that executing any code could
+potentially cause a page fault.
+
+00:04:42.226 --> 00:04:44.496 A:middle
+And this is what makes
+swapping so dangerous.
+
+00:04:44.566 --> 00:04:47.506 A:middle
+The application has no control
+over when these accesses
+
+00:04:47.506 --> 00:04:49.786 A:middle
+to disk happen or what
+thread they happen on.
+
+00:04:49.786 --> 00:04:52.906 A:middle
+And as a result, it's
+very important to try
+
+00:04:52.906 --> 00:04:54.706 A:middle
+to lower the memory
+footprint of your app.
+
+00:04:55.326 --> 00:04:58.176 A:middle
+This can help reduce the chance
+that your memory will be swapped
+
+00:04:58.516 --> 00:05:00.716 A:middle
+when the system is under
+low memory situations.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:58.516 --> 00:05:00.716 A:middle
+when the system is under
+low memory situations.
+
+00:05:01.246 --> 00:05:03.866 A:middle
+It means that more memory will
+be available to you quickly
+
+00:05:03.906 --> 00:05:05.386 A:middle
+when you need it,
+
+00:05:05.386 --> 00:05:07.946 A:middle
+and it improves overall
+system performance.
+
+00:05:08.866 --> 00:05:12.506 A:middle
+Now, the first step in this is
+going to simply be to profile
+
+00:05:12.506 --> 00:05:14.106 A:middle
+and reduce your app's
+memory use.
+
+00:05:14.846 --> 00:05:16.746 A:middle
+And instruments come
+with two templates
+
+00:05:16.746 --> 00:05:18.376 A:middle
+that can be of great help here.
+
+00:05:18.896 --> 00:05:20.606 A:middle
+The first is the
+allocations template.
+
+00:05:20.606 --> 00:05:23.966 A:middle
+And this can profile the
+objects that your app allocates
+
+00:05:23.966 --> 00:05:26.266 A:middle
+so that you can find
+targets for optimization.
+
+00:05:26.376 --> 00:05:29.426 A:middle
+This might include large objects
+that you want to make smaller,
+
+00:05:29.736 --> 00:05:33.356 A:middle
+or objects that are allocated
+frequently which you can try
+
+00:05:33.356 --> 00:05:35.476 A:middle
+to reduce the quantity
+of their allocations.
+
+00:05:36.226 --> 00:05:39.176 A:middle
+There's also the leaks template,
+and this helps you look
+
+00:05:39.176 --> 00:05:40.166 A:middle
+for objects that are leaked.
+
+00:05:40.476 --> 00:05:43.196 A:middle
+Leaked objects, objects to
+which there's no longer any
+
+00:05:43.196 --> 00:05:46.116 A:middle
+references, and so you
+cannot release them anymore.
+
+00:05:46.176 --> 00:05:47.766 A:middle
+They're simply going
+to stay in memory
+
+00:05:47.766 --> 00:05:49.066 A:middle
+until your app is terminated.
+
+00:05:49.426 --> 00:05:50.516 A:middle
+If your app is not running,
+
+00:05:50.806 --> 00:05:52.846 A:middle
+this can cause unconstrained
+memory growth.
+
+00:05:53.456 --> 00:05:56.166 A:middle
+And so, the Leaks tool
+can help you find leaks
+
+00:05:56.166 --> 00:05:59.076 A:middle
+in your application and
+then analyze those leaks
+
+00:05:59.076 --> 00:06:00.916 A:middle
+to understand their
+cause and fix them.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:59.076 --> 00:06:00.916 A:middle
+to understand their
+cause and fix them.
+
+00:06:01.566 --> 00:06:04.046 A:middle
+Now, both these tools will
+be covered in much more depth
+
+00:06:04.416 --> 00:06:06.086 A:middle
+in the Fixing Memory Issues talk
+
+00:06:06.246 --> 00:06:07.796 A:middle
+and I highly recommend
+you attend.
+
+00:06:08.076 --> 00:06:11.236 A:middle
+What I want to discuss are
+some more advanced tools
+
+00:06:11.236 --> 00:06:14.676 A:middle
+and techniques you can use
+that helps keep your memory--
+
+00:06:14.676 --> 00:06:18.446 A:middle
+your application's memory
+usage small and continue
+
+00:06:18.446 --> 00:06:20.186 A:middle
+to have efficient
+applications over time.
+
+00:06:20.706 --> 00:06:24.446 A:middle
+And the first thing you should
+consider doing is automating
+
+00:06:24.446 --> 00:06:25.966 A:middle
+memory testing of
+your application.
+
+00:06:26.356 --> 00:06:29.146 A:middle
+Hopefully, you do some
+sort of regular testing,
+
+00:06:29.576 --> 00:06:32.586 A:middle
+whether that's a nightly
+test suite, unit tests,
+
+00:06:32.866 --> 00:06:34.746 A:middle
+functional tests,
+continuous integration,
+
+00:06:34.966 --> 00:06:38.026 A:middle
+or simply just a set of
+actions you confirm continue
+
+00:06:38.026 --> 00:06:39.356 A:middle
+to work before you
+ship your app.
+
+00:06:39.986 --> 00:06:42.296 A:middle
+Whatever it may be,
+integrating memory testing
+
+00:06:42.296 --> 00:06:44.536 A:middle
+into that can give
+you a quick barometer
+
+00:06:44.536 --> 00:06:46.326 A:middle
+as to whether a particular
+change
+
+00:06:46.326 --> 00:06:48.906 A:middle
+in your app has introduced
+any memory regressions.
+
+00:06:49.156 --> 00:06:50.636 A:middle
+And you really want to
+look for two things.
+
+00:06:51.086 --> 00:06:53.436 A:middle
+You want to look for
+increases in memory consumption
+
+00:06:53.436 --> 00:06:57.376 A:middle
+that you don't expect, and any
+new leaks in your application.
+
+00:06:57.786 --> 00:07:00.206 A:middle
+And you want to consider
+any leaks that you find
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:57.786 --> 00:07:00.206 A:middle
+And you want to consider
+any leaks that you find
+
+00:07:00.606 --> 00:07:02.816 A:middle
+to be a bug you should
+immediately fix
+
+00:07:02.926 --> 00:07:05.546 A:middle
+because this is important to
+reducing engineering debt.
+
+00:07:06.436 --> 00:07:09.866 A:middle
+Fixing leaks in old code that
+you don't maintain familiarity
+
+00:07:09.866 --> 00:07:11.786 A:middle
+with can be incredibly
+difficult.
+
+00:07:12.806 --> 00:07:15.146 A:middle
+But, if you're able to find
+and fix leaks immediately,
+
+00:07:15.456 --> 00:07:18.356 A:middle
+you can help prevent incurring
+an engineering debt over time.
+
+00:07:19.256 --> 00:07:21.126 A:middle
+There's a couple
+of tools we provide
+
+00:07:21.336 --> 00:07:23.146 A:middle
+that can help you
+automate this process.
+
+00:07:23.356 --> 00:07:25.436 A:middle
+And the first I want to
+talk about is the Heap tool.
+
+00:07:26.156 --> 00:07:28.186 A:middle
+This is similar to the
+allocations instrument.
+
+00:07:28.776 --> 00:07:30.636 A:middle
+But you can run it in
+an automated fashion
+
+00:07:30.636 --> 00:07:31.466 A:middle
+from the command-line.
+
+00:07:32.106 --> 00:07:34.186 A:middle
+So the first thing you want
+to do is simply run your app
+
+00:07:34.186 --> 00:07:38.036 A:middle
+and put it through its paces
+and then run the Heap tool
+
+00:07:38.036 --> 00:07:39.876 A:middle
+and provide the name
+of your application.
+
+00:07:40.606 --> 00:07:43.596 A:middle
+The tool will then analyze the
+running application in memory
+
+00:07:43.956 --> 00:07:46.806 A:middle
+and provide you a list
+of all the objects
+
+00:07:46.806 --> 00:07:50.676 A:middle
+that that application has
+allocated including how many
+
+00:07:50.676 --> 00:07:52.536 A:middle
+times a particular
+object has been allocated,
+
+00:07:52.536 --> 00:07:55.726 A:middle
+and the total amount of memory
+used by that type of object.
+
+00:07:56.306 --> 00:07:58.656 A:middle
+Now, you can compare this
+between multiple releases
+
+00:07:58.656 --> 00:08:01.496 A:middle
+of your app to understand
+whether you've caused memory
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:58.656 --> 00:08:01.496 A:middle
+of your app to understand
+whether you've caused memory
+
+00:08:01.496 --> 00:08:03.816 A:middle
+regressions and look for changes
+
+00:08:03.816 --> 00:08:05.246 A:middle
+in the memory use of
+your applications.
+
+00:08:05.246 --> 00:08:07.686 A:middle
+If you look at the [inaudible],
+there are also a number
+
+00:08:07.686 --> 00:08:09.376 A:middle
+of other options that
+can help you dive deeper.
+
+00:08:09.646 --> 00:08:11.126 A:middle
+Now, on the leaks
+side of things,
+
+00:08:11.356 --> 00:08:13.216 A:middle
+we also provide a
+leaks command-line tool
+
+00:08:13.306 --> 00:08:13.936 A:middle
+which you can use
+
+00:08:13.936 --> 00:08:16.006 A:middle
+to automatically detect
+leaks in your application.
+
+00:08:16.976 --> 00:08:19.186 A:middle
+And when you run it, the first
+thing you want to do is turn
+
+00:08:19.186 --> 00:08:20.566 A:middle
+on MallocStackLogging.
+
+00:08:21.076 --> 00:08:23.216 A:middle
+You can do this with the
+scheme editor in Xcode
+
+00:08:23.766 --> 00:08:25.746 A:middle
+by checking the stack
+logging box
+
+00:08:26.466 --> 00:08:29.346 A:middle
+or setting the
+MallocStackLogging equals 1
+
+00:08:29.346 --> 00:08:30.336 A:middle
+environment variable.
+
+00:08:31.196 --> 00:08:34.246 A:middle
+Then, run your app as you
+might when running heap.
+
+00:08:34.246 --> 00:08:36.895 A:middle
+But instead, we'll
+now use the Leaks tool
+
+00:08:37.046 --> 00:08:39.206 A:middle
+and leaks will then provide us
+a couple of pieces of output.
+
+00:08:39.576 --> 00:08:42.676 A:middle
+The first is how many objects
+were leaked by your application
+
+00:08:42.676 --> 00:08:44.706 A:middle
+and what size and
+memory they consume.
+
+00:08:44.706 --> 00:08:49.566 A:middle
+And then for each leak,
+the address of the object
+
+00:08:49.566 --> 00:08:50.536 A:middle
+and the type of object.
+
+00:08:50.846 --> 00:08:52.976 A:middle
+In this case, we
+leaked MyLeakedClass,
+
+00:08:52.976 --> 00:08:54.556 A:middle
+an Objective-C object
+from MyApp.
+
+00:08:54.556 --> 00:08:57.276 A:middle
+And then because we're
+using MallocStackLogging,
+
+00:08:57.546 --> 00:09:00.776 A:middle
+we'll also get the full call
+stack that allocated the object
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:57.546 --> 00:09:00.776 A:middle
+we'll also get the full call
+stack that allocated the object
+
+00:09:01.256 --> 00:09:03.656 A:middle
+which can help you narrow down
+where the object came from
+
+00:09:04.046 --> 00:09:07.116 A:middle
+and then provides you a starting
+point for future analysis,
+
+00:09:07.156 --> 00:09:11.146 A:middle
+perhaps interactively an
+instrument with the Leaks tool.
+
+00:09:11.356 --> 00:09:13.706 A:middle
+Now, you may have already
+eliminated the leaks
+
+00:09:13.706 --> 00:09:16.816 A:middle
+in your app, ensured that you
+don't see any unbound heap
+
+00:09:16.816 --> 00:09:18.306 A:middle
+growth and optimized there.
+
+00:09:18.306 --> 00:09:22.936 A:middle
+But one other place you can
+look for additional memory use
+
+00:09:22.936 --> 00:09:25.456 A:middle
+that you can slim is
+duplicated objects.
+
+00:09:26.036 --> 00:09:28.816 A:middle
+Your application probably
+pulls in data from the network,
+
+00:09:28.816 --> 00:09:32.816 A:middle
+or the files on disk, or accepts
+information from the user.
+
+00:09:33.176 --> 00:09:35.986 A:middle
+And it's easy to accidentally
+produce extra copies
+
+00:09:35.986 --> 00:09:36.716 A:middle
+of that data.
+
+00:09:37.266 --> 00:09:40.236 A:middle
+The stringdups tool can
+analyze your application
+
+00:09:40.466 --> 00:09:44.056 A:middle
+and let you know when you have
+duplicated C strings, NSStrings,
+
+00:09:44.056 --> 00:09:45.296 A:middle
+and other types of objects.
+
+00:09:45.756 --> 00:09:48.376 A:middle
+To run it, you'll
+simply go on stringdups
+
+00:09:48.376 --> 00:09:50.116 A:middle
+and provide the process
+ID of your app.
+
+00:09:50.116 --> 00:09:52.556 A:middle
+And there are two modes that
+you might want to consider.
+
+00:09:52.556 --> 00:09:54.626 A:middle
+The first is the No Stacks Mode.
+
+00:09:54.906 --> 00:09:56.336 A:middle
+It simply gives you a listing
+
+00:09:56.336 --> 00:09:58.886 A:middle
+of all the duplicated
+objects in your application.
+
+00:09:58.886 --> 00:10:01.606 A:middle
+This is really helpful for
+deciding what things you want
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:58.886 --> 00:10:01.606 A:middle
+This is really helpful for
+deciding what things you want
+
+00:10:01.606 --> 00:10:02.976 A:middle
+to target to as far
+as slim down.
+
+00:10:03.126 --> 00:10:05.906 A:middle
+Now notice when you do this,
+you'll see that there's a lot
+
+00:10:05.906 --> 00:10:08.066 A:middle
+of strings from localization
+and frameworks
+
+00:10:08.066 --> 00:10:09.086 A:middle
+that you'll find duplicated.
+
+00:10:09.476 --> 00:10:12.166 A:middle
+And those are simply result
+of how those frameworks work.
+
+00:10:12.716 --> 00:10:15.346 A:middle
+What you want to look for are
+large numbers of duplicates
+
+00:10:15.346 --> 00:10:17.406 A:middle
+and strings that your
+application has created
+
+00:10:17.646 --> 00:10:20.136 A:middle
+that contain for example
+content specific to your app.
+
+00:10:20.916 --> 00:10:23.626 A:middle
+Then once you've picked
+a duplicated object,
+
+00:10:23.916 --> 00:10:27.416 A:middle
+if you want to dive deeper into,
+you can use the call stacks view
+
+00:10:27.966 --> 00:10:30.346 A:middle
+and this will show you all
+of the locations in your app,
+
+00:10:30.656 --> 00:10:32.886 A:middle
+where that particular
+object was allocated.
+
+00:10:35.076 --> 00:10:36.706 A:middle
+Now, you may have done
+all these things to try
+
+00:10:36.706 --> 00:10:37.846 A:middle
+to slim down your app.
+
+00:10:38.286 --> 00:10:39.756 A:middle
+But sometimes you're
+still going to get
+
+00:10:39.756 --> 00:10:41.656 A:middle
+into a low memory situation.
+
+00:10:42.166 --> 00:10:44.196 A:middle
+We refer this as being
+under memory pressure.
+
+00:10:44.196 --> 00:10:45.716 A:middle
+I want to talk about
+what the system--
+
+00:10:45.716 --> 00:10:47.736 A:middle
+what you can do to help
+the system behave better
+
+00:10:47.736 --> 00:10:48.416 A:middle
+in this case.
+
+00:10:49.086 --> 00:10:51.206 A:middle
+So let's look at
+just a single app.
+
+00:10:53.516 --> 00:10:55.726 A:middle
+Now, the first thing that
+we want to be aware is
+
+00:10:55.726 --> 00:10:58.076 A:middle
+that the system internally
+has a gauge memory pressure.
+
+00:10:58.936 --> 00:11:01.366 A:middle
+This is roughly,
+an approximation
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:58.936 --> 00:11:01.366 A:middle
+This is roughly,
+an approximation
+
+00:11:01.366 --> 00:11:04.996 A:middle
+of how difficult it is for the
+system to create new free memory
+
+00:11:05.326 --> 00:11:06.816 A:middle
+when it's requested
+by an application.
+
+00:11:07.076 --> 00:11:09.656 A:middle
+And there are two
+tools you can use
+
+00:11:09.716 --> 00:11:11.696 A:middle
+to help the system
+alleviate memory pressure
+
+00:11:12.406 --> 00:11:14.596 A:middle
+and restore the system
+to full responsiveness.
+
+00:11:15.136 --> 00:11:16.376 A:middle
+The first is NSCache.
+
+00:11:16.746 --> 00:11:18.576 A:middle
+This is like a container
+for objects
+
+00:11:18.796 --> 00:11:20.956 A:middle
+that the system can
+automatically evict
+
+00:11:20.956 --> 00:11:22.726 A:middle
+and allow to be reclaimed.
+
+00:11:23.296 --> 00:11:26.346 A:middle
+And, purgeable memory
+which are regions of memory
+
+00:11:26.346 --> 00:11:29.596 A:middle
+that the system can reclaim
+automatically without having
+
+00:11:29.596 --> 00:11:31.176 A:middle
+to interact with your app.
+
+00:11:31.516 --> 00:11:35.926 A:middle
+So in this case, if our app
+requests memory, the system can,
+
+00:11:35.926 --> 00:11:39.656 A:middle
+rather than swapping, acquire
+memory from the NSCache
+
+00:11:39.726 --> 00:11:40.976 A:middle
+in a purgeable memory region.
+
+00:11:41.516 --> 00:11:45.396 A:middle
+[ Pause ]
+
+00:11:45.896 --> 00:11:47.426 A:middle
+So let's dive into this
+a little more deeply.
+
+00:11:49.316 --> 00:11:52.116 A:middle
+The first thing I want to
+talk about is NSPurgeableData.
+
+00:11:52.266 --> 00:11:55.146 A:middle
+This is how we expose purgeable
+memory through the Cocoa APIs.
+
+00:11:55.146 --> 00:11:58.326 A:middle
+And as purgeable data,
+it's similar to NSData
+
+00:11:58.736 --> 00:12:01.296 A:middle
+but it has the property that
+its contents can be discarded
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:58.736 --> 00:12:01.296 A:middle
+but it has the property that
+its contents can be discarded
+
+00:12:01.296 --> 00:12:03.826 A:middle
+automatically when the system
+is under memory pressure.
+
+00:12:04.576 --> 00:12:06.796 A:middle
+So in this case, we have
+NSPurgeableData object
+
+00:12:07.136 --> 00:12:09.716 A:middle
+that points to a
+purgeable memory region.
+
+00:12:10.406 --> 00:12:11.776 A:middle
+When a system gets
+under memory pressure,
+
+00:12:12.266 --> 00:12:14.566 A:middle
+the purgeable memory region
+is reclaimed by the system.
+
+00:12:14.946 --> 00:12:17.226 A:middle
+But the NSPurgeableData
+object stays around.
+
+00:12:17.226 --> 00:12:20.176 A:middle
+So this can query for the status
+of that memory region later.
+
+00:12:20.946 --> 00:12:22.726 A:middle
+Let's look at an example
+of how this works.
+
+00:12:22.806 --> 00:12:29.566 A:middle
+So in this case, first create an
+NSPurgeableData using some array
+
+00:12:29.566 --> 00:12:31.526 A:middle
+of bytes we have in
+our code already.
+
+00:12:32.306 --> 00:12:34.276 A:middle
+And then we indicate
+that we're done using it
+
+00:12:34.276 --> 00:12:36.126 A:middle
+by calling endContentAccess.
+
+00:12:36.666 --> 00:12:39.206 A:middle
+Sometime later, if we want
+to access that data again,
+
+00:12:39.466 --> 00:12:42.326 A:middle
+we call beginContentAccess
+and look at the return value.
+
+00:12:43.436 --> 00:12:46.606 A:middle
+If the return value is No,
+then the data has been purged
+
+00:12:46.606 --> 00:12:48.876 A:middle
+from memory and we'll need
+to regenerate that data.
+
+00:12:48.876 --> 00:12:51.966 A:middle
+For example, by reparsing
+a file or redownloading it
+
+00:12:51.966 --> 00:12:54.556 A:middle
+from network depending on where
+the original data came from.
+
+00:12:55.376 --> 00:12:58.476 A:middle
+If the answer is Yes, then we
+can continue to use the data.
+
+00:12:58.576 --> 00:13:01.376 A:middle
+And eventually we'll want to
+call endContentAccess again
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:58.576 --> 00:13:01.376 A:middle
+And eventually we'll want to
+call endContentAccess again
+
+00:13:01.686 --> 00:13:03.816 A:middle
+to indicate to the system
+that we're no longer using it.
+
+00:13:04.296 --> 00:13:08.036 A:middle
+By bracketing your use of
+the purgeable data with begin
+
+00:13:08.036 --> 00:13:11.026 A:middle
+and endContentAccess, you ensure
+the system will never remove it
+
+00:13:11.026 --> 00:13:11.736 A:middle
+from underneath you.
+
+00:13:12.256 --> 00:13:16.466 A:middle
+Now, the other approach
+I mentioned is NSCache.
+
+00:13:16.896 --> 00:13:20.376 A:middle
+NSCache is a key value store
+like an NSMutableDictionary.
+
+00:13:20.966 --> 00:13:23.636 A:middle
+But it also has the advantage
+that it's thread-safe, meaning,
+
+00:13:23.636 --> 00:13:25.656 A:middle
+you can use it from any
+thread in your application
+
+00:13:25.656 --> 00:13:27.766 A:middle
+without requiring
+additional synchronization.
+
+00:13:28.736 --> 00:13:31.756 A:middle
+But the special property of
+NSCache is that it's capable
+
+00:13:31.756 --> 00:13:34.566 A:middle
+of automatically evicting
+objects on memory pressure.
+
+00:13:34.966 --> 00:13:37.356 A:middle
+This means that you can put
+as much data into the NSCache
+
+00:13:37.356 --> 00:13:40.036 A:middle
+as you'd like and it will
+automatically size itself
+
+00:13:40.446 --> 00:13:43.786 A:middle
+to an appropriate size given
+the current system conditions.
+
+00:13:44.836 --> 00:13:48.686 A:middle
+It does this by simply
+releasing its strong reference
+
+00:13:49.106 --> 00:13:51.196 A:middle
+to your objects upon eviction.
+
+00:13:51.646 --> 00:13:53.956 A:middle
+So once you have
+another reference to any
+
+00:13:53.956 --> 00:13:55.756 A:middle
+of your objects, you can be
+sure they won't disappear
+
+00:13:55.756 --> 00:13:56.466 A:middle
+from behind you.
+
+00:13:57.236 --> 00:14:00.986 A:middle
+And it uses a version of
+least recently used eviction.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:57.236 --> 00:14:00.986 A:middle
+And it uses a version of
+least recently used eviction.
+
+00:14:00.986 --> 00:14:02.666 A:middle
+Should expect the contents
+
+00:14:02.666 --> 00:14:05.346 A:middle
+of an NSCache will eventually
+be evicted if not accessed.
+
+00:14:05.556 --> 00:14:08.996 A:middle
+Now, you can actually combine
+NSPurgeableData and NSCache.
+
+00:14:09.066 --> 00:14:11.236 A:middle
+And this can make working
+purgeable data objects a little
+
+00:14:11.236 --> 00:14:11.816 A:middle
+bit easier.
+
+00:14:12.566 --> 00:14:16.216 A:middle
+NSCache gives aware of when
+NSPurgeableData objects have
+
+00:14:16.216 --> 00:14:17.656 A:middle
+been purged from memory.
+
+00:14:18.286 --> 00:14:21.556 A:middle
+And so, in this case, we placed
+an NSPurgeableData object
+
+00:14:21.736 --> 00:14:22.786 A:middle
+in our NSCache.
+
+00:14:22.946 --> 00:14:26.686 A:middle
+The system reclaims the
+purgeable memory region.
+
+00:14:27.376 --> 00:14:30.596 A:middle
+And then the NSCache will evict
+the NSPurgeableData object.
+
+00:14:30.866 --> 00:14:34.756 A:middle
+So future look ups for its key
+will not return any object.
+
+00:14:35.366 --> 00:14:36.896 A:middle
+So I mentioned memory regions.
+
+00:14:37.376 --> 00:14:39.436 A:middle
+Well, what exactly
+is a memory region?
+
+00:14:39.716 --> 00:14:41.226 A:middle
+Purgeable memory
+regions are one type.
+
+00:14:41.226 --> 00:14:43.896 A:middle
+But there's a variety of types
+of memory regions on a system.
+
+00:14:44.076 --> 00:14:46.556 A:middle
+Let's go back to our
+view of virtual memory.
+
+00:14:47.076 --> 00:14:49.316 A:middle
+I mentioned that a process
+address space is divided
+
+00:14:49.316 --> 00:14:50.666 A:middle
+into 4 kilobyte pages.
+
+00:14:51.376 --> 00:14:53.476 A:middle
+Well, there's actually one
+more level of obstruction here.
+
+00:14:53.686 --> 00:14:55.826 A:middle
+The process of address
+space will first be divided
+
+00:14:55.826 --> 00:14:56.976 A:middle
+into a number of regions.
+
+00:14:57.606 --> 00:15:00.736 A:middle
+These regions, each
+are then subdivided
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:57.606 --> 00:15:00.736 A:middle
+These regions, each
+are then subdivided
+
+00:15:00.736 --> 00:15:04.846 A:middle
+into 4 kilobyte pages, and
+those pages inherit a variety
+
+00:15:04.846 --> 00:15:06.166 A:middle
+of properties from the region.
+
+00:15:06.556 --> 00:15:09.876 A:middle
+For example, the region
+can be read-only or read
+
+00:15:09.876 --> 00:15:13.776 A:middle
+and rewritable, it may be backed
+by a file, might be shared
+
+00:15:13.776 --> 00:15:15.806 A:middle
+between processes, and
+these things are all defined
+
+00:15:15.806 --> 00:15:16.656 A:middle
+at their region level.
+
+00:15:16.656 --> 00:15:19.346 A:middle
+And then of course, these
+individual pages may
+
+00:15:19.346 --> 00:15:20.856 A:middle
+or may not be backed
+with physical memory.
+
+00:15:21.406 --> 00:15:24.826 A:middle
+And we've been talking mostly
+so far about objects that exist
+
+00:15:24.826 --> 00:15:26.126 A:middle
+in your process' heap.
+
+00:15:26.826 --> 00:15:29.516 A:middle
+But there are a variety
+of other types of regions
+
+00:15:29.596 --> 00:15:31.566 A:middle
+that consume memory
+inside of your process.
+
+00:15:31.746 --> 00:15:33.576 A:middle
+Now, I want to talk a
+little bit about those.
+
+00:15:35.226 --> 00:15:37.936 A:middle
+So first of all, is this
+actually an important thing
+
+00:15:37.936 --> 00:15:38.586 A:middle
+to be aware of?
+
+00:15:39.186 --> 00:15:42.136 A:middle
+Well, I did some analysis of a
+couple of example applications.
+
+00:15:42.506 --> 00:15:43.946 A:middle
+The first was a media
+player app.
+
+00:15:44.226 --> 00:15:47.966 A:middle
+And in this case, only 34
+percent of the memory consumed
+
+00:15:47.966 --> 00:15:51.926 A:middle
+by the media player application
+was actually due to heap memory,
+
+00:15:52.246 --> 00:15:54.096 A:middle
+the rest came from
+other types of regions.
+
+00:15:54.936 --> 00:15:58.276 A:middle
+Now, graphics memory is
+often not part of the heap.
+
+00:15:58.506 --> 00:16:01.716 A:middle
+And so, a simple game might
+have less than 10 percent
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:58.506 --> 00:16:01.716 A:middle
+And so, a simple game might
+have less than 10 percent
+
+00:16:01.716 --> 00:16:04.876 A:middle
+of its memory actually
+allocated in its heap.
+
+00:16:04.926 --> 00:16:07.976 A:middle
+So what are these other
+non-heap memory regions?
+
+00:16:08.706 --> 00:16:12.096 A:middle
+Well, the first thing is going
+to be anonymous memory regions.
+
+00:16:12.096 --> 00:16:15.106 A:middle
+Now, these are things like
+the heap that store data just
+
+00:16:15.106 --> 00:16:16.506 A:middle
+for the lifetime
+of your process.
+
+00:16:16.746 --> 00:16:18.756 A:middle
+They're private to your process,
+
+00:16:19.946 --> 00:16:22.576 A:middle
+and our tools have the
+ability to name them.
+
+00:16:22.576 --> 00:16:25.936 A:middle
+So as you're looking through
+the anonymous memory regions,
+
+00:16:25.936 --> 00:16:27.466 A:middle
+these are some examples
+that you might see.
+
+00:16:28.416 --> 00:16:32.836 A:middle
+Malloc size, they're like
+Malloc tiny, Malloc large,
+
+00:16:33.146 --> 00:16:34.956 A:middle
+those are going to
+be used for the heap.
+
+00:16:35.666 --> 00:16:38.226 A:middle
+You'll also find Image IO
+regions in your process.
+
+00:16:38.226 --> 00:16:40.296 A:middle
+And these are used to store
+or decode an image data.
+
+00:16:40.826 --> 00:16:44.076 A:middle
+What makes these interesting
+is that the actual object
+
+00:16:44.076 --> 00:16:47.196 A:middle
+in your heap might be very small
+but it will contain a reference
+
+00:16:47.196 --> 00:16:48.966 A:middle
+to an Image IO region in memory.
+
+00:16:49.496 --> 00:16:51.736 A:middle
+So leaking that object
+will, from the perspective
+
+00:16:51.736 --> 00:16:54.016 A:middle
+of the Leaks tool, show
+only a very small leak.
+
+00:16:54.416 --> 00:16:56.316 A:middle
+But because you've also
+leaked the reference
+
+00:16:56.316 --> 00:16:59.596 A:middle
+to a memory region, your app
+has leaked much more memory
+
+00:16:59.596 --> 00:17:00.326 A:middle
+in practice.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:59.596 --> 00:17:00.326 A:middle
+in practice.
+
+00:17:01.016 --> 00:17:04.066 A:middle
+There's also CA layers,
+restore the contents
+
+00:17:04.316 --> 00:17:06.556 A:middle
+of rasterized layer-backed
+views.
+
+00:17:07.406 --> 00:17:10.776 A:middle
+And these will actually have
+annotations giving you the name
+
+00:17:10.776 --> 00:17:12.126 A:middle
+of the delegate of that layer.
+
+00:17:12.126 --> 00:17:15.486 A:middle
+And to learn more about this,
+you should see the optimizing,
+
+00:17:15.486 --> 00:17:18.016 A:middle
+drawing, and scrolling on OS
+X talk which we'll go in-depth
+
+00:17:18.016 --> 00:17:19.606 A:middle
+in the layer backing
+of your views.
+
+00:17:20.656 --> 00:17:22.276 A:middle
+There's also file-backed memory.
+
+00:17:22.665 --> 00:17:24.836 A:middle
+And these are regions
+whose contents are backed
+
+00:17:24.836 --> 00:17:25.945 A:middle
+by a file on disk.
+
+00:17:26.116 --> 00:17:28.205 A:middle
+And what's interesting
+about these regions is
+
+00:17:28.205 --> 00:17:31.346 A:middle
+that we will populate them with
+the contents of that file only
+
+00:17:31.346 --> 00:17:33.306 A:middle
+when you access the
+region for the first time
+
+00:17:33.306 --> 00:17:34.376 A:middle
+and cause a page fault.
+
+00:17:35.186 --> 00:17:38.086 A:middle
+This means that the data
+will only be resident
+
+00:17:38.086 --> 00:17:39.006 A:middle
+if it's been accessed.
+
+00:17:39.146 --> 00:17:42.036 A:middle
+And so, you might have a
+very large file backed region
+
+00:17:42.286 --> 00:17:44.246 A:middle
+with only a very small
+amount of data resident.
+
+00:17:44.796 --> 00:17:46.206 A:middle
+And these are commonly
+used for things
+
+00:17:46.206 --> 00:17:49.856 A:middle
+like decoding your application
+or data files that you want
+
+00:17:49.976 --> 00:17:51.126 A:middle
+to randomly reference.
+
+00:17:51.486 --> 00:17:54.896 A:middle
+And so, in this case, our app
+has file-backed memory region
+
+00:17:54.896 --> 00:17:55.636 A:middle
+for each of these.
+
+00:17:56.036 --> 00:17:59.086 A:middle
+And as it begins to execute
+its code, it will fault
+
+00:17:59.086 --> 00:18:00.086 A:middle
+that code in from disk.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:59.086 --> 00:18:00.086 A:middle
+that code in from disk.
+
+00:18:00.476 --> 00:18:02.706 A:middle
+And then, as it accesses
+a data file,
+
+00:18:02.706 --> 00:18:04.736 A:middle
+will pull that data file
+in from disk as well.
+
+00:18:05.736 --> 00:18:08.486 A:middle
+So let's zoom in on
+that data file region.
+
+00:18:09.526 --> 00:18:13.246 A:middle
+So imagine this is our data
+file region and it's writable.
+
+00:18:13.556 --> 00:18:16.586 A:middle
+When we created that region, we
+specified we wanted to be able
+
+00:18:16.586 --> 00:18:18.276 A:middle
+to write to it, and
+we set it shared,
+
+00:18:18.276 --> 00:18:21.016 A:middle
+meaning that the changes we
+make should be written back
+
+00:18:21.016 --> 00:18:21.656 A:middle
+up to disk.
+
+00:18:21.656 --> 00:18:24.956 A:middle
+Now, in this case, our region
+isn't entirely resident
+
+00:18:24.956 --> 00:18:27.086 A:middle
+in memory because we haven't
+accessed all the data.
+
+00:18:27.616 --> 00:18:28.876 A:middle
+And you can see here some
+
+00:18:28.876 --> 00:18:30.856 A:middle
+of the pages just
+simply aren't populated.
+
+00:18:31.786 --> 00:18:33.656 A:middle
+Now, if we go and try
+to modify that memory,
+
+00:18:34.136 --> 00:18:34.996 A:middle
+we're going to dirty it.
+
+00:18:35.216 --> 00:18:40.946 A:middle
+We refer to clean memory as
+memory that whose contents match
+
+00:18:40.946 --> 00:18:43.326 A:middle
+that on disk and
+dirty memory as memory
+
+00:18:43.446 --> 00:18:44.816 A:middle
+where we have made changes.
+
+00:18:49.136 --> 00:18:51.426 A:middle
+So now, we have dirty
+memory in our app.
+
+00:18:51.426 --> 00:18:53.976 A:middle
+And if the system would
+like to turn that back
+
+00:18:53.976 --> 00:18:55.426 A:middle
+into clean memory, it will have
+
+00:18:55.426 --> 00:18:57.396 A:middle
+to write those pages
+back out to disk.
+
+00:18:58.266 --> 00:19:00.556 A:middle
+Now, what makes a dirty
+memory interesting is
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:58.266 --> 00:19:00.556 A:middle
+Now, what makes a dirty
+memory interesting is
+
+00:19:00.556 --> 00:19:03.186 A:middle
+that it's much more expensive
+to reclaim the clean memory.
+
+00:19:03.576 --> 00:19:05.646 A:middle
+If we need to reclaim
+clean memory to provide it
+
+00:19:05.646 --> 00:19:08.456 A:middle
+to another app, we could
+simply throw that memory away
+
+00:19:08.456 --> 00:19:10.006 A:middle
+and use it for a
+different purpose.
+
+00:19:10.236 --> 00:19:12.496 A:middle
+On the other hand, dirty
+memory needs to be written back
+
+00:19:12.496 --> 00:19:15.766 A:middle
+out to disk so it's more kind
+of swapping in that sense.
+
+00:19:17.506 --> 00:19:18.876 A:middle
+Now, given all these types
+
+00:19:18.876 --> 00:19:22.176 A:middle
+of memory regions your app might
+have, how do you get inside
+
+00:19:22.176 --> 00:19:24.226 A:middle
+into what your app
+is actually doing?
+
+00:19:25.156 --> 00:19:29.266 A:middle
+Well, as of OS 10.9 in iOS 7,
+
+00:19:29.746 --> 00:19:32.236 A:middle
+the allocations instrument
+is capable
+
+00:19:32.236 --> 00:19:34.176 A:middle
+of showing the memory
+regions used by your app.
+
+00:19:34.176 --> 00:19:35.616 A:middle
+But what you'll notice is
+
+00:19:35.616 --> 00:19:38.416 A:middle
+that there's a new
+allocation type selector
+
+00:19:38.676 --> 00:19:39.996 A:middle
+in the allocations instrument
+
+00:19:40.206 --> 00:19:43.376 A:middle
+that you can choose whether you
+want to see all allocations,
+
+00:19:43.896 --> 00:19:46.576 A:middle
+just heap allocations which
+is what you would have seen
+
+00:19:46.576 --> 00:19:50.636 A:middle
+in previous versions, or
+just the new VM regions
+
+00:19:50.636 --> 00:19:51.536 A:middle
+that are being tracked.
+
+00:19:51.826 --> 00:19:55.446 A:middle
+So in this case, we're
+looking at all allocations.
+
+00:19:55.446 --> 00:19:57.176 A:middle
+And you can see that some
+of these allocations start
+
+00:19:57.176 --> 00:19:59.666 A:middle
+with a VM con and
+then provide the name
+
+00:19:59.666 --> 00:20:02.406 A:middle
+of that allocation,
+when it's known.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:59.666 --> 00:20:02.406 A:middle
+of that allocation,
+when it's known.
+
+00:20:03.056 --> 00:20:04.686 A:middle
+And you can then drill
+down to understand
+
+00:20:04.686 --> 00:20:06.126 A:middle
+where these allocations
+come from.
+
+00:20:06.226 --> 00:20:09.216 A:middle
+And in many cases, see a
+stack trace of the code
+
+00:20:09.216 --> 00:20:10.526 A:middle
+that created that object.
+
+00:20:11.206 --> 00:20:13.866 A:middle
+This can then help you
+understand why does this exist.
+
+00:20:13.866 --> 00:20:16.626 A:middle
+And there's the only thing
+I can do to change its size
+
+00:20:16.626 --> 00:20:18.016 A:middle
+or prevent it from
+being created.
+
+00:20:18.576 --> 00:20:21.146 A:middle
+Now, there's also
+the VM Tracker tool.
+
+00:20:21.796 --> 00:20:24.676 A:middle
+And this tool will-- it can take
+a snapshot at a regular interval
+
+00:20:24.676 --> 00:20:27.216 A:middle
+of all of the virtual
+interval regions in your app.
+
+00:20:27.706 --> 00:20:29.866 A:middle
+It can then determine
+a residency information
+
+00:20:30.286 --> 00:20:33.026 A:middle
+and how much of that
+data is dirty or clean.
+
+00:20:33.416 --> 00:20:38.576 A:middle
+You can also look at
+the region MapView.
+
+00:20:38.976 --> 00:20:41.316 A:middle
+And the region map will
+show you simply a listing
+
+00:20:41.316 --> 00:20:45.206 A:middle
+of all the regions of your
+application and you can drill
+
+00:20:45.206 --> 00:20:49.376 A:middle
+down to get per page data
+about residency status
+
+00:20:49.436 --> 00:20:50.636 A:middle
+and whether it's clean or dirty.
+
+00:20:51.686 --> 00:20:54.226 A:middle
+Now, given all of
+these types of memory,
+
+00:20:54.226 --> 00:20:55.556 A:middle
+you're probably asking yourself,
+
+00:20:55.796 --> 00:20:58.136 A:middle
+"How do I just get a
+simple number for the amount
+
+00:20:58.136 --> 00:20:59.656 A:middle
+of memory my application
+is using?"
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:00.426 --> 00:21:03.286 A:middle
+Well, this is something we've
+tried to address in Mavericks.
+
+00:21:03.646 --> 00:21:05.526 A:middle
+We've run a new tool
+called Footprint.
+
+00:21:05.976 --> 00:21:08.816 A:middle
+To run Footprint,
+simply specify the name
+
+00:21:08.816 --> 00:21:10.786 A:middle
+of the process you
+would like to analyze.
+
+00:21:11.106 --> 00:21:13.846 A:middle
+And in this case, we're also
+going to run it the -swapped
+
+00:21:13.846 --> 00:21:15.586 A:middle
+and -categories flags.
+
+00:21:15.916 --> 00:21:17.206 A:middle
+This will provide some of--
+
+00:21:17.206 --> 00:21:19.316 A:middle
+just additional information
+about our application.
+
+00:21:19.436 --> 00:21:21.436 A:middle
+It link it out for the
+look something like this.
+
+00:21:22.166 --> 00:21:23.216 A:middle
+And what we can see here is
+
+00:21:23.216 --> 00:21:26.386 A:middle
+that our application has
+a 12-megabyte footprint.
+
+00:21:26.836 --> 00:21:29.286 A:middle
+This is our estimate of
+what the impact of having
+
+00:21:29.286 --> 00:21:31.386 A:middle
+that application
+running is on the system.
+
+00:21:32.136 --> 00:21:34.736 A:middle
+We can then see a
+breakdown of what types
+
+00:21:34.736 --> 00:21:36.546 A:middle
+of memory are contributed
+to that footprint.
+
+00:21:37.046 --> 00:21:39.926 A:middle
+So in this case, we can see
+we have over 5 megabytes
+
+00:21:39.926 --> 00:21:41.596 A:middle
+of private, dirty memory.
+
+00:21:42.086 --> 00:21:45.166 A:middle
+For example, heap memory
+in our application.
+
+00:21:45.306 --> 00:21:47.726 A:middle
+And 2 megabytes of that
+has been swapped already.
+
+00:21:48.146 --> 00:21:49.976 A:middle
+This is probably an
+indication that the system was
+
+00:21:49.976 --> 00:21:51.836 A:middle
+under memory pressure
+at some point.
+
+00:21:52.636 --> 00:21:55.546 A:middle
+Now, one wrinkle in
+this is shared memory.
+
+00:21:56.376 --> 00:21:58.896 A:middle
+Memory regions can be shared
+between multiple processes.
+
+00:21:59.416 --> 00:22:01.426 A:middle
+You'll most commonly see
+this for graphics memory
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:59.416 --> 00:22:01.426 A:middle
+You'll most commonly see
+this for graphics memory
+
+00:22:01.826 --> 00:22:03.766 A:middle
+or in multi-process
+applications.
+
+00:22:03.766 --> 00:22:06.796 A:middle
+For example, an application
+in a bundled XPC Service.
+
+00:22:08.546 --> 00:22:11.426 A:middle
+And these shared regions
+may not be visible
+
+00:22:11.426 --> 00:22:12.936 A:middle
+in the allocations
+instrument depending
+
+00:22:12.936 --> 00:22:13.816 A:middle
+on how they're created.
+
+00:22:15.176 --> 00:22:18.146 A:middle
+But we have a tool that can
+help you understand the amount
+
+00:22:18.146 --> 00:22:20.086 A:middle
+of memory shared by
+multiple processes.
+
+00:22:20.636 --> 00:22:22.206 A:middle
+And this is once again,
+the footprint tool.
+
+00:22:22.646 --> 00:22:26.426 A:middle
+But instead, we're going to
+run it with 2 proc arguments
+
+00:22:26.476 --> 00:22:28.956 A:middle
+and specify both processes
+that we want to analyze.
+
+00:22:28.956 --> 00:22:33.816 A:middle
+And here we can see that
+we have memory shared
+
+00:22:33.816 --> 00:22:36.526 A:middle
+with the Windows server, and
+at the bottom of the output,
+
+00:22:36.526 --> 00:22:39.496 A:middle
+we get a total footprint of
+all the processes we specified.
+
+00:22:40.146 --> 00:22:42.696 A:middle
+If you're developing an app
+that is a bundled XPC Service,
+
+00:22:42.696 --> 00:22:44.436 A:middle
+you can use this to
+get a footprint number
+
+00:22:44.726 --> 00:22:47.506 A:middle
+for both your app and
+that XPC Service together.
+
+00:22:47.976 --> 00:22:50.606 A:middle
+All right.
+
+00:22:50.606 --> 00:22:53.546 A:middle
+So now, given all of this new
+test memory, what is our picture
+
+00:22:53.546 --> 00:22:55.516 A:middle
+of a system under memory
+pressure look like?
+
+00:22:55.886 --> 00:23:00.636 A:middle
+So I want to walk through what a
+system will do to satisfy demand
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:55.886 --> 00:23:00.636 A:middle
+So I want to walk through what a
+system will do to satisfy demand
+
+00:23:00.636 --> 00:23:03.626 A:middle
+for new memory given these
+different types of memory?
+
+00:23:03.626 --> 00:23:06.316 A:middle
+Now of course, the first thing
+the system will do when it's
+
+00:23:06.316 --> 00:23:09.726 A:middle
+under memory pressure is start
+evicting objects from NSCaches
+
+00:23:10.136 --> 00:23:14.366 A:middle
+and reclaiming the contents
+of purgeable memory regions.
+
+00:23:14.806 --> 00:23:16.556 A:middle
+Well, this is important
+because these are the things
+
+00:23:16.556 --> 00:23:19.226 A:middle
+that applications on a system
+have said that they want
+
+00:23:19.226 --> 00:23:21.486 A:middle
+to be reclaimed first when
+under memory pressure.
+
+00:23:21.816 --> 00:23:23.286 A:middle
+And so, it's the
+tool that you'll use
+
+00:23:23.506 --> 00:23:25.346 A:middle
+to help make sure your
+application is well-behaved
+
+00:23:25.346 --> 00:23:28.166 A:middle
+and that you control which user
+memory will be taken from you.
+
+00:23:29.606 --> 00:23:31.966 A:middle
+Now, once that memory
+has been reclaimed,
+
+00:23:32.396 --> 00:23:35.166 A:middle
+the system will start
+aggressively writing the
+
+00:23:35.166 --> 00:23:37.996 A:middle
+contents of dirty
+memory to disk so that
+
+00:23:37.996 --> 00:23:39.436 A:middle
+that memory can become
+clean again
+
+00:23:39.436 --> 00:23:41.106 A:middle
+and can be easily
+reclaimed when needed.
+
+00:23:41.966 --> 00:23:45.266 A:middle
+Then, we'll start taking the
+contents of file-backed memory.
+
+00:23:46.406 --> 00:23:47.246 A:middle
+And once the amount
+
+00:23:47.246 --> 00:23:48.856 A:middle
+of file-backed memory
+has decreased,
+
+00:23:49.036 --> 00:23:52.516 A:middle
+we'll begin also taking memory
+from anonymous VM regions
+
+00:23:52.976 --> 00:23:55.336 A:middle
+and from the heap
+of applications.
+
+00:23:55.586 --> 00:23:58.716 A:middle
+And this is the point at
+which you'll see the system
+
+00:23:58.716 --> 00:24:00.896 A:middle
+performance really
+begin to decline.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:58.716 --> 00:24:00.896 A:middle
+performance really
+begin to decline.
+
+00:24:03.976 --> 00:24:06.616 A:middle
+Now, in Mavericks, there's
+one more part of this.
+
+00:24:06.616 --> 00:24:07.876 A:middle
+And that's compressed memory.
+
+00:24:08.746 --> 00:24:12.186 A:middle
+Compressed memory allows us
+to, before swapping memory
+
+00:24:12.186 --> 00:24:15.086 A:middle
+out to disk, first,
+compress it in RAM.
+
+00:24:15.546 --> 00:24:17.776 A:middle
+And because compressed memory
+consumes a lot of space,
+
+00:24:18.046 --> 00:24:20.356 A:middle
+as we compress memory,
+we free up pages
+
+00:24:20.356 --> 00:24:21.836 A:middle
+which can then be
+put to another use.
+
+00:24:22.246 --> 00:24:26.056 A:middle
+Now of course, once we-- at some
+point, we may still need to swap
+
+00:24:26.056 --> 00:24:27.176 A:middle
+out that memory to disk.
+
+00:24:27.426 --> 00:24:30.576 A:middle
+And then we'll have
+reclaimed the full contents
+
+00:24:30.576 --> 00:24:31.186 A:middle
+of that memory.
+
+00:24:31.606 --> 00:24:35.916 A:middle
+Now, given that all these
+behaviors a system can do
+
+00:24:35.916 --> 00:24:38.546 A:middle
+to create new memory,
+sometimes it's hard
+
+00:24:38.546 --> 00:24:41.616 A:middle
+to get a good system-wide
+picture of what's going on.
+
+00:24:42.106 --> 00:24:45.066 A:middle
+And so, in Mavericks, we've
+improved activity monitor,
+
+00:24:45.856 --> 00:24:49.626 A:middle
+and now have a few more high
+level numbers that you can use
+
+00:24:49.626 --> 00:24:52.266 A:middle
+to understand where memory
+is being used on your system.
+
+00:24:52.616 --> 00:24:54.026 A:middle
+We will look at the bottom
+
+00:24:54.026 --> 00:24:55.956 A:middle
+of activity monitor
+in the memory tab.
+
+00:24:56.166 --> 00:24:59.236 A:middle
+On the right side, you
+can see a breakdown
+
+00:24:59.236 --> 00:25:01.186 A:middle
+of where memory is being
+used in your system.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:59.236 --> 00:25:01.186 A:middle
+of where memory is being
+used in your system.
+
+00:25:01.796 --> 00:25:05.266 A:middle
+App memory refers to anonymous
+memory regions like heap
+
+00:25:05.476 --> 00:25:07.456 A:middle
+and the framework
+allocate memory regions.
+
+00:25:08.206 --> 00:25:12.316 A:middle
+The file cache refers to
+any file-backed region.
+
+00:25:14.906 --> 00:25:18.166 A:middle
+Wire memory is memory that the
+operating system has wired down,
+
+00:25:18.166 --> 00:25:20.986 A:middle
+consumed for its own purposes
+and can't easily be reclaimed.
+
+00:25:21.296 --> 00:25:24.216 A:middle
+And then finally, compressed
+memory is the memory being used
+
+00:25:24.216 --> 00:25:27.076 A:middle
+to store other anonymous
+compressed pages.
+
+00:25:28.116 --> 00:25:29.776 A:middle
+Now, if you want to
+dive even deeper,
+
+00:25:30.246 --> 00:25:34.356 A:middle
+the VMStat tool has also
+been improved in Mavericks.
+
+00:25:35.056 --> 00:25:36.386 A:middle
+And this is just a subset
+
+00:25:36.386 --> 00:25:38.246 A:middle
+of the output you'll
+get from running VMStat.
+
+00:25:38.246 --> 00:25:39.536 A:middle
+For this case, we're
+going to run it
+
+00:25:39.536 --> 00:25:41.016 A:middle
+with a single argument, 1.
+
+00:25:41.016 --> 00:25:42.346 A:middle
+And that specifies the interval
+
+00:25:42.346 --> 00:25:43.776 A:middle
+at which we wanted
+to report data.
+
+00:25:43.776 --> 00:25:45.976 A:middle
+Here, we're seeing
+data every one second.
+
+00:25:46.946 --> 00:25:50.036 A:middle
+Now, some of these column
+headers are a little cryptic.
+
+00:25:50.396 --> 00:25:53.336 A:middle
+But if you run VMStat
+without any arguments,
+
+00:25:53.506 --> 00:25:56.546 A:middle
+you'll get longer titles
+for each of those headers.
+
+00:25:57.186 --> 00:26:00.856 A:middle
+And so, we can see here, we have
+a couple statistics that cover
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:57.186 --> 00:26:00.856 A:middle
+And so, we can see here, we have
+a couple statistics that cover
+
+00:26:00.896 --> 00:26:02.786 A:middle
+where a memory is
+currently being allocated
+
+00:26:02.956 --> 00:26:05.736 A:middle
+and this match roughly what
+you're seeing activity monitor.
+
+00:26:05.876 --> 00:26:08.526 A:middle
+In this case, we can see
+how much memory is used
+
+00:26:08.526 --> 00:26:10.146 A:middle
+for file-backed or
+anonymous memory.
+
+00:26:10.606 --> 00:26:13.076 A:middle
+And then how much
+memory we've compressed
+
+00:26:13.076 --> 00:26:15.966 A:middle
+and how much memory is being
+used to store compressed pages.
+
+00:26:16.536 --> 00:26:19.636 A:middle
+And then we can also
+look at, over time,
+
+00:26:19.636 --> 00:26:21.366 A:middle
+the change in memory
+use on a system.
+
+00:26:22.056 --> 00:26:24.836 A:middle
+So these values represent when
+pages are moving in and out
+
+00:26:24.836 --> 00:26:28.326 A:middle
+of the compressor, to and from
+file-backed memory regions,
+
+00:26:28.946 --> 00:26:32.806 A:middle
+and from the compressor
+to disk and back.
+
+00:26:34.066 --> 00:26:36.276 A:middle
+Now, one question you might
+have is, how do I know
+
+00:26:36.276 --> 00:26:39.556 A:middle
+if my app is being
+affected by swapping
+
+00:26:39.836 --> 00:26:41.716 A:middle
+or other memory pressure
+activity?
+
+00:26:42.616 --> 00:26:45.726 A:middle
+Well, we can do this with
+the time profiler instrument.
+
+00:26:45.896 --> 00:26:48.106 A:middle
+You're going to want to
+run it with two options.
+
+00:26:48.446 --> 00:26:51.286 A:middle
+The first is to record
+waiting threads.
+
+00:26:51.376 --> 00:26:53.796 A:middle
+And this will record threads
+even if they're blocked trying
+
+00:26:53.796 --> 00:26:55.396 A:middle
+to swap data in from disk.
+
+00:26:55.746 --> 00:26:58.756 A:middle
+And then, you want to record
+both user and kernel stacks.
+
+00:26:58.786 --> 00:27:00.476 A:middle
+So you can see what
+the kernel is doing
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:58.786 --> 00:27:00.476 A:middle
+So you can see what
+the kernel is doing
+
+00:27:00.476 --> 00:27:01.776 A:middle
+in response to a page fault.
+
+00:27:03.166 --> 00:27:05.766 A:middle
+Then, runtime profilers, you
+normally would against your app.
+
+00:27:06.286 --> 00:27:08.716 A:middle
+And you want to look
+for the VM Fault Frame.
+
+00:27:09.306 --> 00:27:10.976 A:middle
+This is the frame
+that you'll see
+
+00:27:10.976 --> 00:27:13.746 A:middle
+in the kernel anytime it
+takes a page fault as a result
+
+00:27:13.746 --> 00:27:15.706 A:middle
+of memory access your app does.
+
+00:27:16.136 --> 00:27:17.906 A:middle
+You can then dive
+even deeper than that
+
+00:27:17.956 --> 00:27:19.636 A:middle
+to understand whether
+it's hitting disk
+
+00:27:19.636 --> 00:27:20.796 A:middle
+or decompressing data.
+
+00:27:21.366 --> 00:27:24.486 A:middle
+And in this case, you can
+see we're spending 2 percent
+
+00:27:24.486 --> 00:27:27.836 A:middle
+of our time in VM Fault,
+that's actually a lot of time.
+
+00:27:28.226 --> 00:27:31.146 A:middle
+Really, any more than
+a few samples you find
+
+00:27:31.146 --> 00:27:33.306 A:middle
+at VM Fault should be
+taken as in occasion
+
+00:27:33.546 --> 00:27:37.066 A:middle
+that your app is seeing the
+effects of memory pressure.
+
+00:27:37.066 --> 00:27:39.936 A:middle
+And it means that you
+should begin to look
+
+00:27:39.936 --> 00:27:43.316 A:middle
+at your apps memory use and
+how you can improve your app's
+
+00:27:43.316 --> 00:27:45.036 A:middle
+performance under
+memory pressure.
+
+00:27:45.496 --> 00:27:48.306 A:middle
+Now, one problem with
+this technique is
+
+00:27:48.306 --> 00:27:50.686 A:middle
+that it requires you to be
+able to reproduce the problem.
+
+00:27:50.686 --> 00:27:52.096 A:middle
+And unfortunately,
+
+00:27:52.526 --> 00:27:55.996 A:middle
+memory pressure-related problems
+typically depend on what's going
+
+00:27:55.996 --> 00:27:57.806 A:middle
+on in the system, what
+other apps are running,
+
+00:27:57.806 --> 00:27:59.796 A:middle
+and could be very
+difficult to reproduce.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:01.036 --> 00:28:03.656 A:middle
+So we provided something
+called sysdiagnose.
+
+00:28:04.176 --> 00:28:06.766 A:middle
+This is a tool that can
+automatically collect a wide
+
+00:28:06.766 --> 00:28:09.386 A:middle
+variety of performance
+diagnostic information
+
+00:28:09.386 --> 00:28:10.426 A:middle
+from the system.
+
+00:28:10.906 --> 00:28:12.466 A:middle
+You could simply run it
+from the command-line,
+
+00:28:12.506 --> 00:28:15.466 A:middle
+pseudo sysdiagnose, and then
+provide an app name that you
+
+00:28:15.466 --> 00:28:16.866 A:middle
+like to target for
+data collection.
+
+00:28:17.246 --> 00:28:20.436 A:middle
+It will then run a bunch
+of diagnostic commands
+
+00:28:20.636 --> 00:28:22.766 A:middle
+and archive the output
+under VAR/TMP
+
+00:28:22.766 --> 00:28:25.316 A:middle
+and a sysdiagnose archive
+including a timestamp.
+
+00:28:25.626 --> 00:28:29.426 A:middle
+And this includes things like
+a spindump which is a sample
+
+00:28:29.426 --> 00:28:34.516 A:middle
+or time profiler like profiling
+of all apps on a system, heap,
+
+00:28:34.516 --> 00:28:37.756 A:middle
+leaks, footprint,
+VMStat, and FS usage
+
+00:28:37.756 --> 00:28:40.286 A:middle
+which I'll cover
+in a little bit.
+
+00:28:40.496 --> 00:28:41.516 A:middle
+You can also trigger this
+
+00:28:41.516 --> 00:28:45.036 A:middle
+with the Shift Control option
+command period key chord,
+
+00:28:46.146 --> 00:28:48.876 A:middle
+if you can manage to
+mash those keys in time.
+
+00:28:49.546 --> 00:28:52.326 A:middle
+But this isn't going to collect
+as much detailed information
+
+00:28:52.326 --> 00:28:54.346 A:middle
+about your specific application.
+
+00:28:54.666 --> 00:28:56.846 A:middle
+And so anytime you can
+use the command-line form,
+
+00:28:57.086 --> 00:28:59.176 A:middle
+it will provide more
+actionable data
+
+00:28:59.176 --> 00:29:00.646 A:middle
+about what your app was doing.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:59.176 --> 00:29:00.646 A:middle
+about what your app was doing.
+
+00:29:00.646 --> 00:29:01.186 A:middle
+All right.
+
+00:29:02.556 --> 00:29:04.766 A:middle
+So just a recap, we'll
+be talking about memory.
+
+00:29:05.176 --> 00:29:06.846 A:middle
+You want to make sure
+that when you're looking
+
+00:29:06.846 --> 00:29:08.306 A:middle
+at the memory usage
+of your application,
+
+00:29:08.626 --> 00:29:11.036 A:middle
+you're paying attention to the
+entire footprint of your app,
+
+00:29:11.276 --> 00:29:13.336 A:middle
+not just the usage of your heap.
+
+00:29:14.096 --> 00:29:16.276 A:middle
+When trying to reduce your
+memory usage, consider things
+
+00:29:16.276 --> 00:29:17.816 A:middle
+like leaks and heap growth.
+
+00:29:18.626 --> 00:29:22.116 A:middle
+Look for unnecessary
+VM regions and check
+
+00:29:22.116 --> 00:29:23.716 A:middle
+for instances of
+duplicate memory.
+
+00:29:24.686 --> 00:29:28.506 A:middle
+Consider adopting purgeable
+memory or NSCache for anything
+
+00:29:28.506 --> 00:29:31.126 A:middle
+which you can easily regenerate
+as this will allow you
+
+00:29:31.126 --> 00:29:34.626 A:middle
+to direct the system as
+to how best take memory
+
+00:29:34.626 --> 00:29:37.476 A:middle
+from your application in
+low memory situations.
+
+00:29:37.476 --> 00:29:41.176 A:middle
+And remember, the larger
+memory footprint your app has,
+
+00:29:41.226 --> 00:29:43.936 A:middle
+the more likely it's to slow
+down when under memory pressure.
+
+00:29:44.516 --> 00:29:50.916 A:middle
+[ Pause ]
+
+00:29:51.416 --> 00:29:53.396 A:middle
+So I want to talk
+about disk access.
+
+00:29:54.406 --> 00:29:56.526 A:middle
+Well, why is disk
+access important?
+
+00:29:57.366 --> 00:29:59.566 A:middle
+Well, I did some testing
+with two scenarios
+
+00:29:59.566 --> 00:30:01.556 A:middle
+that you probably care
+about in your app.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:59.566 --> 00:30:01.556 A:middle
+that you probably care
+about in your app.
+
+00:30:01.876 --> 00:30:04.076 A:middle
+And what that app launch
+and the time it takes
+
+00:30:04.076 --> 00:30:04.976 A:middle
+to open a document.
+
+00:30:05.486 --> 00:30:09.296 A:middle
+And we'll look at these in cases
+where a system was totally idle
+
+00:30:10.186 --> 00:30:12.556 A:middle
+and a case where there
+was another app on system
+
+00:30:12.556 --> 00:30:13.926 A:middle
+that was trying to do IO.
+
+00:30:14.656 --> 00:30:18.196 A:middle
+And when you have multiple apps
+contending to use the disk,
+
+00:30:18.636 --> 00:30:21.456 A:middle
+AppLaunch easily
+regressed 70 percent.
+
+00:30:21.726 --> 00:30:23.846 A:middle
+And this is a huge increase
+
+00:30:23.846 --> 00:30:25.766 A:middle
+in time that's really
+going to impact your users.
+
+00:30:26.616 --> 00:30:29.926 A:middle
+Open document, increased
+55 percent.
+
+00:30:30.296 --> 00:30:33.146 A:middle
+And so, it's important
+that you do IO
+
+00:30:33.146 --> 00:30:35.526 A:middle
+in the most efficient
+way possible to make sure
+
+00:30:35.526 --> 00:30:37.806 A:middle
+that you're-- that one,
+you're being performant.
+
+00:30:38.176 --> 00:30:41.166 A:middle
+And two, that you're not going
+to be affected by other process
+
+00:30:41.166 --> 00:30:43.016 A:middle
+on the system that want
+to compete with you
+
+00:30:43.016 --> 00:30:44.936 A:middle
+for bandwidth to devices.
+
+00:30:45.116 --> 00:30:48.066 A:middle
+Well what exactly are we
+talking about with IO.
+
+00:30:48.566 --> 00:30:50.706 A:middle
+Well, there's a variety of
+layers at the storage stack
+
+00:30:50.706 --> 00:30:53.536 A:middle
+that all interact together to
+help you load data from disk.
+
+00:30:54.066 --> 00:30:56.936 A:middle
+Of course, we have
+your app but in--
+
+00:30:56.936 --> 00:30:58.796 A:middle
+your app is going to use
+some set of frameworks
+
+00:30:58.796 --> 00:31:01.426 A:middle
+to help it do IO,
+but ultimately,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:58.796 --> 00:31:01.426 A:middle
+to help it do IO,
+but ultimately,
+
+00:31:01.806 --> 00:31:04.216 A:middle
+all access to the disk are
+going to fall through one
+
+00:31:04.216 --> 00:31:05.576 A:middle
+of two interfaces in the kernel.
+
+00:31:05.976 --> 00:31:08.966 A:middle
+Either Memory Mapped IO, and
+these are file-backed regions
+
+00:31:08.966 --> 00:31:10.066 A:middle
+like we talked about earlier,
+
+00:31:10.586 --> 00:31:13.026 A:middle
+or the virtual file
+system interfaces.
+
+00:31:13.026 --> 00:31:15.886 A:middle
+And these are the open, read,
+write and close system calls
+
+00:31:15.886 --> 00:31:17.036 A:middle
+of which you might be familiar.
+
+00:31:17.786 --> 00:31:20.136 A:middle
+And then on the other
+end, the kernel is going
+
+00:31:20.136 --> 00:31:23.166 A:middle
+to use a file system to
+organize data on disk.
+
+00:31:23.946 --> 00:31:26.406 A:middle
+Now, of course, we have to have
+some sort of device driver.
+
+00:31:27.086 --> 00:31:31.086 A:middle
+But then at the end, you'll have
+either a spinning magnetic hard
+
+00:31:31.086 --> 00:31:33.956 A:middle
+disk drive or solid-state
+flash storage
+
+00:31:34.286 --> 00:31:36.536 A:middle
+to which your data is actually
+going to be persisted to.
+
+00:31:37.036 --> 00:31:40.976 A:middle
+Now, it's interesting that today
+we see customers with both kinds
+
+00:31:40.976 --> 00:31:43.156 A:middle
+of storage, hard drives
+and flash storage.
+
+00:31:43.476 --> 00:31:46.776 A:middle
+And so, it's important that you
+consider both types of storage
+
+00:31:47.616 --> 00:31:49.196 A:middle
+when you're profiling
+
+00:31:49.196 --> 00:31:50.996 A:middle
+and performance testing
+your application.
+
+00:31:50.996 --> 00:31:54.086 A:middle
+And the reasons that they have
+incredibly different performance
+
+00:31:54.086 --> 00:31:56.636 A:middle
+characteristics, for example,
+
+00:31:57.046 --> 00:31:59.006 A:middle
+the solid-state drive
+has no seek penalty.
+
+00:31:59.456 --> 00:32:02.856 A:middle
+On the other hand, a hard drive,
+because it uses rotating media
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:59.456 --> 00:32:02.856 A:middle
+On the other hand, a hard drive,
+because it uses rotating media
+
+00:32:02.856 --> 00:32:05.316 A:middle
+and must first seek to
+the correct location
+
+00:32:05.316 --> 00:32:08.616 A:middle
+on disk before it can read
+or write data, can experience
+
+00:32:08.616 --> 00:32:11.876 A:middle
+up to 10 milliseconds of latency
+every time you access a new
+
+00:32:11.876 --> 00:32:12.886 A:middle
+location on disk.
+
+00:32:13.626 --> 00:32:17.206 A:middle
+This thing is that while an
+SSD might be capable between 3
+
+00:32:17.206 --> 00:32:19.846 A:middle
+and 30,000 IO operations
+per second,
+
+00:32:20.276 --> 00:32:24.056 A:middle
+a hard drive is only going to
+be capable of maybe 80 to 100.
+
+00:32:24.746 --> 00:32:27.376 A:middle
+Solid-state drives also have
+better sequential speed.
+
+00:32:27.736 --> 00:32:29.586 A:middle
+But the difference there
+is much less pronounced.
+
+00:32:30.136 --> 00:32:31.626 A:middle
+But there's other
+differences too.
+
+00:32:31.946 --> 00:32:34.966 A:middle
+An SSD is capable of some
+limited degree of parallelism.
+
+00:32:35.396 --> 00:32:38.146 A:middle
+This means it's important
+to provide multiple IOs
+
+00:32:38.286 --> 00:32:39.846 A:middle
+to the SSD's queue at a time
+
+00:32:40.136 --> 00:32:41.836 A:middle
+to take advantage
+of that parallelism.
+
+00:32:42.026 --> 00:32:44.296 A:middle
+On the other hand, a hard drive
+is only ever going to be able
+
+00:32:44.296 --> 00:32:46.316 A:middle
+to do one IO request at a time.
+
+00:32:46.786 --> 00:32:49.296 A:middle
+And so, it's not as
+important to keep the queue
+
+00:32:49.296 --> 00:32:50.416 A:middle
+on a hard drive field.
+
+00:32:51.246 --> 00:32:53.176 A:middle
+Finally, on a solid-state drive,
+
+00:32:53.456 --> 00:32:56.286 A:middle
+writes are significantly
+more expensive than reads.
+
+00:32:56.636 --> 00:32:59.256 A:middle
+Wherein a hard drive, those
+had relatively symmetric costs.
+
+00:32:59.666 --> 00:33:01.606 A:middle
+This meant in the past you
+might mostly have focused
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:59.666 --> 00:33:01.606 A:middle
+This meant in the past you
+might mostly have focused
+
+00:33:01.606 --> 00:33:03.296 A:middle
+on what reads your
+application was doing.
+
+00:33:03.606 --> 00:33:05.056 A:middle
+So these tend to be more likely
+
+00:33:05.056 --> 00:33:08.746 A:middle
+to block what the user's
+experience of your application.
+
+00:33:09.456 --> 00:33:11.186 A:middle
+On the other hand, with
+a solid-state drive,
+
+00:33:11.416 --> 00:33:14.246 A:middle
+writes become a lot more
+important as these compete
+
+00:33:14.246 --> 00:33:17.006 A:middle
+with reads much more
+heavily for disk bandwidth.
+
+00:33:17.396 --> 00:33:19.616 A:middle
+Now, what I really want you
+to take away from this is
+
+00:33:19.616 --> 00:33:22.626 A:middle
+that the difference--
+different performance profile
+
+00:33:22.626 --> 00:33:25.056 A:middle
+of these devices mean that
+you should be testing your
+
+00:33:25.176 --> 00:33:26.396 A:middle
+application on both.
+
+00:33:26.696 --> 00:33:28.796 A:middle
+If you're developing
+on a new machine
+
+00:33:28.796 --> 00:33:31.636 A:middle
+with a solid-state drive,
+your customers are going
+
+00:33:31.636 --> 00:33:33.286 A:middle
+to have a very different
+experience
+
+00:33:33.396 --> 00:33:34.506 A:middle
+when running on a hard drive.
+
+00:33:34.976 --> 00:33:38.996 A:middle
+And also, high performance
+IO is difficult to do well.
+
+00:33:39.406 --> 00:33:41.686 A:middle
+You need to avoid causing
+trash in your hard drives,
+
+00:33:41.956 --> 00:33:45.396 A:middle
+keep the queue field for SSDs,
+use appropriate buffer sizes,
+
+00:33:45.396 --> 00:33:47.386 A:middle
+compute on data concurrently
+with IO,
+
+00:33:47.726 --> 00:33:49.816 A:middle
+and avoid making extra
+copies of the data.
+
+00:33:50.756 --> 00:33:54.476 A:middle
+So, we provided an API
+to help encapsulate some
+
+00:33:54.476 --> 00:33:56.576 A:middle
+of these best practices
+for doing IO.
+
+00:33:56.576 --> 00:33:58.886 A:middle
+And that comes in the
+form of dispatch IO.
+
+00:33:59.646 --> 00:34:02.646 A:middle
+Dispatch IO is an API that's
+part of Grand Central Dispatch.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:59.646 --> 00:34:02.646 A:middle
+Dispatch IO is an API that's
+part of Grand Central Dispatch.
+
+00:34:03.236 --> 00:34:04.906 A:middle
+It's been available since 10.7.
+
+00:34:04.906 --> 00:34:08.206 A:middle
+And it provides a declarative
+API for file access.
+
+00:34:08.525 --> 00:34:10.716 A:middle
+What this means is that rather
+than telling a system how
+
+00:34:10.716 --> 00:34:13.856 A:middle
+to access data, you tell it
+what data it should access.
+
+00:34:14.556 --> 00:34:17.666 A:middle
+This allows it to automatically
+encapsulate best practices
+
+00:34:17.976 --> 00:34:19.876 A:middle
+and do things in the most
+performant way possible.
+
+00:34:19.876 --> 00:34:23.326 A:middle
+Now, I want to talk through two
+examples of how to use this API
+
+00:34:24.456 --> 00:34:26.076 A:middle
+that where doing these things
+
+00:34:26.076 --> 00:34:28.856 A:middle
+with the file system calls
+directly would be significantly
+
+00:34:28.856 --> 00:34:29.456 A:middle
+more difficult.
+
+00:34:30.126 --> 00:34:33.246 A:middle
+The first is processing a large
+file in a streaming manner.
+
+00:34:33.496 --> 00:34:37.326 A:middle
+This might be a transcoding
+media searching for a string
+
+00:34:37.326 --> 00:34:40.485 A:middle
+in a file or anything where you
+want to do a sequential read
+
+00:34:40.766 --> 00:34:43.025 A:middle
+and do computation
+concurrently with IO.
+
+00:34:43.936 --> 00:34:45.106 A:middle
+So let's take a look
+at that example.
+
+00:34:45.106 --> 00:34:46.775 A:middle
+And the first thing we're going
+
+00:34:46.775 --> 00:34:49.226 A:middle
+to do is create a
+serial dispatch queue
+
+00:34:49.226 --> 00:34:51.485 A:middle
+that we want our
+computation to run on.
+
+00:34:52.356 --> 00:34:58.116 A:middle
+We'll then create a dispatch
+IO object by providing a path
+
+00:34:59.156 --> 00:35:04.636 A:middle
+and informing dispatch IO that
+we want to read this data.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:59.156 --> 00:35:04.636 A:middle
+and informing dispatch IO that
+we want to read this data.
+
+00:35:04.636 --> 00:35:06.326 A:middle
+We can then set a
+high watermark.
+
+00:35:06.606 --> 00:35:07.766 A:middle
+And what this means
+is that we would
+
+00:35:07.766 --> 00:35:10.686 A:middle
+like to be provided
+opportunity to compute
+
+00:35:10.686 --> 00:35:13.156 A:middle
+on data no larger
+than this size.
+
+00:35:13.156 --> 00:35:16.786 A:middle
+So in this example, we want to
+see data every 32 kilobytes.
+
+00:35:17.136 --> 00:35:19.586 A:middle
+And so, the block we provided
+dispatch will be called
+
+00:35:19.586 --> 00:35:21.166 A:middle
+with data smaller
+than this amount.
+
+00:35:21.416 --> 00:35:23.846 A:middle
+And then finally,
+we issue the read.
+
+00:35:24.496 --> 00:35:26.556 A:middle
+And the read, we
+will provide a block
+
+00:35:26.556 --> 00:35:28.386 A:middle
+to call every time
+data is available.
+
+00:35:28.386 --> 00:35:32.136 A:middle
+In this case, we can simply
+use especially to apply
+
+00:35:32.136 --> 00:35:33.966 A:middle
+to operate on those buffers.
+
+00:35:34.416 --> 00:35:37.936 A:middle
+And this will do the appropriate
+thing involving non-blocking IO
+
+00:35:38.336 --> 00:35:40.416 A:middle
+to ensure that you can have
+as little data and memory
+
+00:35:40.416 --> 00:35:43.576 A:middle
+as possible while still
+concurrently computing on data
+
+00:35:43.696 --> 00:35:45.486 A:middle
+and bringing in more
+data from the drive.
+
+00:35:46.056 --> 00:35:48.106 A:middle
+If you never tried to
+use FileDescriptors
+
+00:35:48.136 --> 00:35:50.566 A:middle
+with the O NONBLOCK option
+to this, you understand
+
+00:35:50.566 --> 00:35:52.526 A:middle
+that it can be a little
+harried to implement yourself.
+
+00:35:53.486 --> 00:35:54.656 A:middle
+Now, this is what
+you might want to do
+
+00:35:54.656 --> 00:35:56.096 A:middle
+if you're reading
+one large file.
+
+00:35:56.096 --> 00:35:58.476 A:middle
+But what if you have
+a lot of small files?
+
+00:35:58.756 --> 00:36:00.576 A:middle
+Let's say for example you
+want to read in a couple
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:58.756 --> 00:36:00.576 A:middle
+Let's say for example you
+want to read in a couple
+
+00:36:00.576 --> 00:36:02.096 A:middle
+of hundred thumbnails
+from a disk?
+
+00:36:02.816 --> 00:36:05.266 A:middle
+Well, dispatch IO can help
+you do that correctly too.
+
+00:36:05.836 --> 00:36:11.026 A:middle
+In this case, rather than
+using a single serial queue
+
+00:36:11.156 --> 00:36:12.766 A:middle
+to call our blocks on,
+
+00:36:12.766 --> 00:36:15.506 A:middle
+we're going to provide a
+global concurrent queue.
+
+00:36:15.506 --> 00:36:19.156 A:middle
+And then for every image whose
+thumbnail we want to read in,
+
+00:36:19.676 --> 00:36:22.056 A:middle
+we're going to again,
+create a dispatch IO object.
+
+00:36:22.056 --> 00:36:24.346 A:middle
+But instead of setting
+a high watermark,
+
+00:36:24.346 --> 00:36:25.696 A:middle
+we're going to use
+low watermark.
+
+00:36:25.696 --> 00:36:27.586 A:middle
+And we're going to
+set it to size max.
+
+00:36:27.976 --> 00:36:31.376 A:middle
+This informs dispatch IO that
+we want the entire file contents
+
+00:36:31.476 --> 00:36:32.216 A:middle
+all at once.
+
+00:36:32.966 --> 00:36:35.576 A:middle
+Then, we issue the read
+and in our callback,
+
+00:36:35.866 --> 00:36:38.876 A:middle
+we can use the dispatch
+data provided
+
+00:36:39.096 --> 00:36:41.066 A:middle
+to instantiate for
+example NSImage.
+
+00:36:41.576 --> 00:36:46.226 A:middle
+Now, as of Mavericks, dispatch
+data is bridged automatically
+
+00:36:46.676 --> 00:36:47.226 A:middle
+to NSData.
+
+00:36:47.226 --> 00:36:48.586 A:middle
+On older systems, you'll need
+
+00:36:48.586 --> 00:36:51.626 A:middle
+to use some other dispatch data
+APIs to extract those contents.
+
+00:36:52.046 --> 00:36:55.626 A:middle
+Now, what's important
+about this is
+
+00:36:55.626 --> 00:36:57.266 A:middle
+that if you were trying
+implement it yourself,
+
+00:36:57.516 --> 00:36:58.866 A:middle
+you have to answer
+questions like,
+
+00:36:59.006 --> 00:37:00.986 A:middle
+how many of these
+operations should I have
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:59.006 --> 00:37:00.986 A:middle
+how many of these
+operations should I have
+
+00:37:00.986 --> 00:37:01.846 A:middle
+running concurrently?
+
+00:37:02.386 --> 00:37:03.416 A:middle
+Simply putting them all
+
+00:37:03.416 --> 00:37:05.706 A:middle
+on a concurrent queue would
+probably run out of threads
+
+00:37:06.076 --> 00:37:07.986 A:middle
+and trying to do it
+yourself means you have
+
+00:37:08.026 --> 00:37:11.306 A:middle
+to understand the performance
+of the underlying hardware.
+
+00:37:11.756 --> 00:37:14.176 A:middle
+Using dispatch data lets
+the system make choices
+
+00:37:14.176 --> 00:37:14.916 A:middle
+like that for you.
+
+00:37:15.426 --> 00:37:19.626 A:middle
+And regardless of
+how you're doing IO.
+
+00:37:20.006 --> 00:37:21.906 A:middle
+You need to organize
+data on disk.
+
+00:37:22.186 --> 00:37:25.066 A:middle
+And what's important
+to understand is
+
+00:37:25.336 --> 00:37:26.976 A:middle
+that using large numbers
+
+00:37:26.976 --> 00:37:28.986 A:middle
+of small files can
+be very expensive.
+
+00:37:30.066 --> 00:37:32.286 A:middle
+And you should consider
+using Core Data
+
+00:37:32.326 --> 00:37:34.366 A:middle
+or SQLite any time you
+have a large number
+
+00:37:34.366 --> 00:37:35.316 A:middle
+of objects to store.
+
+00:37:36.316 --> 00:37:37.556 A:middle
+Now, just how expensive is it?
+
+00:37:37.796 --> 00:37:40.756 A:middle
+Well, imagine we want to
+insert 100,000 objects.
+
+00:37:41.056 --> 00:37:44.336 A:middle
+Storing each of those objects as
+a small file on disk, say, 100--
+
+00:37:44.336 --> 00:37:47.876 A:middle
+couple of 100 bytes would
+take almost 25 seconds,
+
+00:37:48.176 --> 00:37:49.096 A:middle
+whereas inserting them
+
+00:37:49.096 --> 00:37:51.856 A:middle
+to an SQLite database takes
+just about half a second.
+
+00:37:52.556 --> 00:37:55.426 A:middle
+This can be a huge performance
+difference and ensures
+
+00:37:55.426 --> 00:37:56.856 A:middle
+that they're going to
+be less susceptible
+
+00:37:56.856 --> 00:37:58.456 A:middle
+to contention from
+other processes.
+
+00:37:59.016 --> 00:38:01.746 A:middle
+Of course, using a database
+provides other benefits
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:59.016 --> 00:38:01.746 A:middle
+Of course, using a database
+provides other benefits
+
+00:38:02.026 --> 00:38:05.896 A:middle
+like control over atomicity so
+you can put multiple operations
+
+00:38:05.896 --> 00:38:06.896 A:middle
+in a single transaction.
+
+00:38:07.486 --> 00:38:08.546 A:middle
+It's more space efficient
+
+00:38:08.866 --> 00:38:10.896 A:middle
+and gives you better
+querying capabilities.
+
+00:38:11.306 --> 00:38:12.486 A:middle
+Now, one thing you need to think
+
+00:38:12.486 --> 00:38:14.426 A:middle
+about as you're doing
+IO is write buffering.
+
+00:38:15.286 --> 00:38:19.406 A:middle
+This is our typical open,
+write, and close set
+
+00:38:19.406 --> 00:38:21.736 A:middle
+of system calls we might do if
+we want to write it into a file.
+
+00:38:22.436 --> 00:38:24.486 A:middle
+But what might surprise
+some of you is
+
+00:38:24.486 --> 00:38:28.216 A:middle
+that data is actually issued
+when we close the file.
+
+00:38:29.056 --> 00:38:30.946 A:middle
+For smaller [inaudible],
+the system isn't going
+
+00:38:30.946 --> 00:38:32.586 A:middle
+to actually flash
+the data to disk
+
+00:38:32.736 --> 00:38:34.526 A:middle
+until the FileDescriptor
+is closed.
+
+00:38:34.906 --> 00:38:37.436 A:middle
+And there's a couple of system
+calls that can cause this kind
+
+00:38:37.436 --> 00:38:38.706 A:middle
+of write flushing to happen.
+
+00:38:39.216 --> 00:38:41.016 A:middle
+If you're using the
+VFS interfaces,
+
+00:38:41.206 --> 00:38:44.076 A:middle
+it's anytime you close or
+fsync a file descriptor.
+
+00:38:44.076 --> 00:38:45.766 A:middle
+And if you have Memory
+Mapped IO,
+
+00:38:45.766 --> 00:38:47.626 A:middle
+it's going to be
+anytime you use msync.
+
+00:38:48.826 --> 00:38:50.906 A:middle
+And what's important to think
+
+00:38:50.906 --> 00:38:53.916 A:middle
+about here is how often am
+I pushing data app to disk,
+
+00:38:53.916 --> 00:38:55.526 A:middle
+and am I going to
+be pushing data app
+
+00:38:55.526 --> 00:38:57.686 A:middle
+to disk more often
+than necessary?
+
+00:38:58.166 --> 00:39:03.306 A:middle
+If you can combine multiple
+writes into a single flushing
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:58.166 --> 00:39:03.306 A:middle
+If you can combine multiple
+writes into a single flushing
+
+00:39:03.306 --> 00:39:05.776 A:middle
+of data, that can help
+improve the IO performance
+
+00:39:05.776 --> 00:39:08.516 A:middle
+of your application and make you
+less susceptible to contention.
+
+00:39:09.626 --> 00:39:12.496 A:middle
+Now, of course, if you
+have consistency guarantees
+
+00:39:12.496 --> 00:39:14.986 A:middle
+that you need, for example,
+you want to make sure
+
+00:39:14.986 --> 00:39:17.906 A:middle
+that a file is completely
+on disk in a stable storage,
+
+00:39:18.306 --> 00:39:20.036 A:middle
+these APIs won't
+solve that problem.
+
+00:39:20.126 --> 00:39:22.846 A:middle
+And instead, you should
+be considering a database
+
+00:39:22.846 --> 00:39:26.316 A:middle
+like Core Data or
+SQLite which can help--
+
+00:39:26.316 --> 00:39:28.716 A:middle
+which can automatically
+journal your changes and ensure
+
+00:39:28.716 --> 00:39:32.276 A:middle
+that data is consistent on disk.
+
+00:39:32.406 --> 00:39:34.206 A:middle
+Now I mentioned before
+the file cache,
+
+00:39:34.816 --> 00:39:36.186 A:middle
+some amount of memory is devoted
+
+00:39:36.186 --> 00:39:38.066 A:middle
+to caching the contents
+of files on disk.
+
+00:39:38.546 --> 00:39:40.396 A:middle
+And accessing from
+the file cache can be
+
+00:39:40.396 --> 00:39:44.856 A:middle
+over 100 times faster than even
+the fastest solid-state drives.
+
+00:39:45.706 --> 00:39:49.136 A:middle
+But the file cache
+competes with--
+
+00:39:49.136 --> 00:39:50.596 A:middle
+for memory with the
+rest of the system.
+
+00:39:51.186 --> 00:39:54.726 A:middle
+This means that as
+applications memory usage grows,
+
+00:39:55.406 --> 00:39:57.236 A:middle
+less will be available
+for the file cache.
+
+00:39:57.456 --> 00:40:00.416 A:middle
+And any time you pull new
+data into the file cache,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:39:57.456 --> 00:40:00.416 A:middle
+And any time you pull new
+data into the file cache,
+
+00:40:00.756 --> 00:40:02.936 A:middle
+other data is going
+to need to be evicted.
+
+00:40:04.006 --> 00:40:05.716 A:middle
+You can control whether
+this happens
+
+00:40:05.716 --> 00:40:08.726 A:middle
+for a particular IO you
+do by using non-cached IO.
+
+00:40:09.176 --> 00:40:11.836 A:middle
+This tells the system, "Please
+don't hold on to this data
+
+00:40:11.836 --> 00:40:14.276 A:middle
+and throw it away as soon
+as you're done doing the IO
+
+00:40:14.276 --> 00:40:16.736 A:middle
+so that you can keep more
+important data on memory."
+
+00:40:17.336 --> 00:40:19.006 A:middle
+You might want to do this
+if you're, for example,
+
+00:40:19.286 --> 00:40:20.816 A:middle
+reading an archive to extract it
+
+00:40:20.816 --> 00:40:23.006 A:middle
+or streaming a large
+multimedia file.
+
+00:40:23.436 --> 00:40:25.006 A:middle
+And you don't want
+to impact the rest
+
+00:40:25.006 --> 00:40:26.416 A:middle
+of the file cache
+on the process.
+
+00:40:26.726 --> 00:40:29.546 A:middle
+Now, there are a couple of
+different APIs you can use
+
+00:40:29.546 --> 00:40:32.026 A:middle
+to indicate to the system that
+you want to do non-cached IO.
+
+00:40:32.846 --> 00:40:34.866 A:middle
+If you're using NSData,
+you can use the
+
+00:40:34.866 --> 00:40:36.996 A:middle
+NSDataReadingUncached option.
+
+00:40:36.996 --> 00:40:39.276 A:middle
+And that will automatically
+use non-cached IO.
+
+00:40:39.276 --> 00:40:42.036 A:middle
+On the other hand, if you're
+using the virtual file system
+
+00:40:42.036 --> 00:40:46.836 A:middle
+interfaces, the f-- no cache
+f control can indicate any IO
+
+00:40:46.836 --> 00:40:49.846 A:middle
+on a particular FileDescriptor
+should be done without caching.
+
+00:40:50.156 --> 00:40:53.096 A:middle
+Now of course, you can still
+use that with dispatch IO
+
+00:40:53.426 --> 00:40:55.376 A:middle
+by then providing
+such a FileDescriptor
+
+00:40:55.376 --> 00:40:56.566 A:middle
+to dispatch IO create.
+
+00:40:57.206 --> 00:41:00.436 A:middle
+Now I also mentioned
+in the memory section,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:57.206 --> 00:41:00.436 A:middle
+Now I also mentioned
+in the memory section,
+
+00:41:00.436 --> 00:41:02.536 A:middle
+file-backed memory regions.
+
+00:41:02.856 --> 00:41:05.356 A:middle
+And this is-- this can be
+used to do Memory Mapped IO.
+
+00:41:06.066 --> 00:41:07.526 A:middle
+What's great about
+Memory Mapped IO is
+
+00:41:07.526 --> 00:41:11.416 A:middle
+that it avoids creating any
+additional copy of the data.
+
+00:41:11.416 --> 00:41:15.126 A:middle
+If you're using traditional Read
+commands, you'll have to first,
+
+00:41:15.256 --> 00:41:18.296 A:middle
+pull data into the file
+cache and then copy it
+
+00:41:18.296 --> 00:41:19.536 A:middle
+into a buffer in
+your application.
+
+00:41:19.536 --> 00:41:21.536 A:middle
+And for small IO, this is fine.
+
+00:41:21.766 --> 00:41:24.336 A:middle
+But if you're doing random
+accesses to a large file,
+
+00:41:24.776 --> 00:41:27.466 A:middle
+Memory Mapped IO can avoid
+that extra copy of data.
+
+00:41:28.316 --> 00:41:30.246 A:middle
+It's ideal for random accesses
+
+00:41:30.246 --> 00:41:32.586 A:middle
+because it lets the
+system control whether
+
+00:41:32.586 --> 00:41:34.846 A:middle
+or not a particular piece
+of data is kept in memory
+
+00:41:35.106 --> 00:41:37.286 A:middle
+or can be evicted automatically
+under memory pressure.
+
+00:41:37.906 --> 00:41:39.726 A:middle
+And when doing Memory Mapped IO,
+
+00:41:40.056 --> 00:41:42.406 A:middle
+you can use the madvice
+system call
+
+00:41:42.966 --> 00:41:45.666 A:middle
+to indicate future needs
+allowing prefetching
+
+00:41:45.906 --> 00:41:47.576 A:middle
+or eviction of data
+as necessary.
+
+00:41:48.596 --> 00:41:49.996 A:middle
+Now if you're using
+the NSData APIs,
+
+00:41:49.996 --> 00:41:53.986 A:middle
+you can use the NSData
+reading map to a safe option
+
+00:41:54.296 --> 00:41:56.176 A:middle
+to automatically
+use Memory Mapped IO
+
+00:41:56.816 --> 00:42:00.936 A:middle
+or you can use the mmap system
+call to map a file into memory.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:56.816 --> 00:42:00.936 A:middle
+or you can use the mmap system
+call to map a file into memory.
+
+00:42:01.946 --> 00:42:05.366 A:middle
+Now, regardless of how you do
+IO and what data you're writing
+
+00:42:05.366 --> 00:42:08.486 A:middle
+to where, there's one
+very, very important thing
+
+00:42:08.486 --> 00:42:10.706 A:middle
+that you should remember
+and that is
+
+00:42:10.706 --> 00:42:12.996 A:middle
+to never do IO on
+the main thread.
+
+00:42:13.766 --> 00:42:17.866 A:middle
+And hopefully, you've all heard
+this before but it's important
+
+00:42:17.866 --> 00:42:19.886 A:middle
+to keep in mind as you're
+running your applications
+
+00:42:19.886 --> 00:42:22.556 A:middle
+that a wide variety of our
+frameworks are going to need
+
+00:42:22.556 --> 00:42:26.436 A:middle
+to do some IO to accomplish
+the work you've asked of them.
+
+00:42:26.436 --> 00:42:28.216 A:middle
+And in low memory situations,
+
+00:42:28.596 --> 00:42:31.616 A:middle
+any memory access can
+potentially involve a page fault
+
+00:42:31.666 --> 00:42:32.896 A:middle
+and access to the disk.
+
+00:42:33.516 --> 00:42:35.086 A:middle
+Now, this is all very important
+
+00:42:35.086 --> 00:42:38.436 A:middle
+because any time your main
+thread has to block waiting
+
+00:42:38.436 --> 00:42:41.556 A:middle
+on IO, the IO could take a
+very long time to complete.
+
+00:42:42.086 --> 00:42:44.886 A:middle
+And this will result in
+a spinning application
+
+00:42:44.886 --> 00:42:47.166 A:middle
+which is a very poor
+experience for your users.
+
+00:42:47.556 --> 00:42:51.336 A:middle
+So you should aggressively
+consider moving work off
+
+00:42:51.336 --> 00:42:53.996 A:middle
+of a main thread of your
+app and on to for example,
+
+00:42:53.996 --> 00:42:55.526 A:middle
+a dispatch queue
+whenever possible.
+
+00:42:55.526 --> 00:43:01.136 A:middle
+Now, of course, it's-- none
+of these things are important
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:42:55.526 --> 00:43:01.136 A:middle
+Now, of course, it's-- none
+of these things are important
+
+00:43:01.136 --> 00:43:03.806 A:middle
+until you understand what IO
+your application is actually
+
+00:43:03.806 --> 00:43:06.726 A:middle
+doing, so you can target
+the biggest offenders
+
+00:43:07.016 --> 00:43:08.916 A:middle
+in your application
+for improvement.
+
+00:43:09.336 --> 00:43:11.986 A:middle
+And the FS usage command-line
+tool can help you do this.
+
+00:43:12.636 --> 00:43:14.936 A:middle
+It provides a listing
+of system call
+
+00:43:14.936 --> 00:43:16.436 A:middle
+and IO operations on a system.
+
+00:43:17.256 --> 00:43:19.006 A:middle
+It provides a couple of
+options for filtering.
+
+00:43:19.086 --> 00:43:22.376 A:middle
+For example, you can use the
+-f files as option to filter
+
+00:43:22.376 --> 00:43:24.836 A:middle
+to just files as
+events or disk IO
+
+00:43:24.836 --> 00:43:26.386 A:middle
+to get just access to the disk.
+
+00:43:26.976 --> 00:43:29.486 A:middle
+And you also want to
+consider the -wflag to get
+
+00:43:29.486 --> 00:43:30.796 A:middle
+as much data as possible.
+
+00:43:31.526 --> 00:43:34.196 A:middle
+Let's take a look at what FS
+usage looks like in practice.
+
+00:43:34.696 --> 00:43:38.116 A:middle
+In this case, we're going to
+filter just file system events.
+
+00:43:38.376 --> 00:43:42.496 A:middle
+And this is just a couple
+events from my system
+
+00:43:42.496 --> 00:43:43.996 A:middle
+when I was sitting here
+writing these slides.
+
+00:43:44.706 --> 00:43:45.916 A:middle
+And we can see a
+couple of things.
+
+00:43:46.536 --> 00:43:48.436 A:middle
+The first thing we
+can create is the time
+
+00:43:48.436 --> 00:43:49.926 A:middle
+that a particular
+event completed.
+
+00:43:50.336 --> 00:43:51.036 A:middle
+But, this is important.
+
+00:43:51.036 --> 00:43:54.246 A:middle
+These are ordered by when the
+events completed, not issued.
+
+00:43:54.626 --> 00:43:58.716 A:middle
+We then see what the event
+itself is, have some data
+
+00:43:58.716 --> 00:44:02.376 A:middle
+about the event, the
+duration the event lasted for,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:43:58.716 --> 00:44:02.376 A:middle
+about the event, the
+duration the event lasted for,
+
+00:44:03.156 --> 00:44:05.296 A:middle
+and finally, the
+process and thread ID
+
+00:44:05.296 --> 00:44:06.526 A:middle
+that performed the operation.
+
+00:44:07.596 --> 00:44:10.526 A:middle
+Now, because these are
+ordered by completion time,
+
+00:44:11.246 --> 00:44:15.276 A:middle
+you can use that fact
+to find matching events.
+
+00:44:15.436 --> 00:44:18.746 A:middle
+So in this case, we have a read
+data command and that indicates
+
+00:44:18.746 --> 00:44:22.306 A:middle
+that we actually pulled data
+from the device into memory.
+
+00:44:23.276 --> 00:44:26.016 A:middle
+And then we see a pread system
+call that completed immediately
+
+00:44:26.016 --> 00:44:27.236 A:middle
+after on the same thread.
+
+00:44:27.776 --> 00:44:28.806 A:middle
+This is a good indication
+
+00:44:28.806 --> 00:44:31.996 A:middle
+that that read data was a
+result of the pread command.
+
+00:44:32.076 --> 00:44:34.946 A:middle
+And to help you see these when
+you're looking at FS' output,
+
+00:44:34.946 --> 00:44:38.086 A:middle
+we'll indent commands like
+read data automatically.
+
+00:44:38.596 --> 00:44:40.446 A:middle
+Now I want to talk
+a little bit more
+
+00:44:40.446 --> 00:44:43.276 A:middle
+about that read data command
+because that's the actual IO
+
+00:44:43.276 --> 00:44:45.476 A:middle
+to a storage device
+that you want
+
+00:44:45.476 --> 00:44:46.726 A:middle
+to be focusing on optimizing.
+
+00:44:47.176 --> 00:44:52.116 A:middle
+And so, if we look at
+just the disk IO commands,
+
+00:44:52.116 --> 00:44:55.586 A:middle
+by using the -f disk IO
+option, we can get a sense
+
+00:44:55.586 --> 00:44:57.056 A:middle
+of what type of IO we're doing.
+
+00:44:57.406 --> 00:45:00.216 A:middle
+So the command name will include
+things like whether it's a write
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:44:57.406 --> 00:45:00.216 A:middle
+So the command name will include
+things like whether it's a write
+
+00:45:00.216 --> 00:45:02.766 A:middle
+or a read, whether
+it's file system data,
+
+00:45:03.116 --> 00:45:08.366 A:middle
+or metadata about files on disk,
+whether it's a page in or page
+
+00:45:08.366 --> 00:45:11.586 A:middle
+out from a file-backed region,
+and whether it's non-cached.
+
+00:45:11.776 --> 00:45:13.966 A:middle
+If you see an N inside
+brackets that indicates
+
+00:45:13.966 --> 00:45:16.736 A:middle
+that the IO was done non-cached.
+
+00:45:17.196 --> 00:45:21.766 A:middle
+You'll then get the file offset
+on disk, the size of the IO,
+
+00:45:22.806 --> 00:45:26.906 A:middle
+the device it was to, and
+in some cases, a file name.
+
+00:45:28.106 --> 00:45:30.286 A:middle
+Now, given this data,
+you then want to try
+
+00:45:30.286 --> 00:45:33.606 A:middle
+to find ways you can improve
+the performance of your app.
+
+00:45:34.596 --> 00:45:38.916 A:middle
+This includes things like simply
+don't do any IOs unnecessary.
+
+00:45:39.206 --> 00:45:41.856 A:middle
+And looking at what IOs
+your application is doing
+
+00:45:41.856 --> 00:45:43.446 A:middle
+with FS users can
+be a great place
+
+00:45:43.446 --> 00:45:46.276 A:middle
+to find this or do it less.
+
+00:45:46.586 --> 00:45:48.686 A:middle
+Could you potentially
+read or write less data
+
+00:45:48.686 --> 00:45:49.866 A:middle
+for a particular operation?
+
+00:45:51.236 --> 00:45:51.866 A:middle
+Do it later.
+
+00:45:52.406 --> 00:45:53.926 A:middle
+If you're looking at
+something like AppLaunch,
+
+00:45:53.986 --> 00:45:56.316 A:middle
+any IO that you do during
+AppLaunch is potentially
+
+00:45:56.316 --> 00:45:58.036 A:middle
+something that could
+increase the AppLaunch time
+
+00:45:58.036 --> 00:45:59.096 A:middle
+of your app significantly.
+
+00:45:59.496 --> 00:46:02.426 A:middle
+Try to defer those to a less
+critical time especially
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:45:59.496 --> 00:46:02.426 A:middle
+Try to defer those to a less
+critical time especially
+
+00:46:02.426 --> 00:46:03.796 A:middle
+if it's the time
+that won't contend
+
+00:46:03.796 --> 00:46:06.096 A:middle
+with other operations
+your user might be doing.
+
+00:46:07.396 --> 00:46:10.366 A:middle
+And for your hard
+drive-based users,
+
+00:46:10.546 --> 00:46:11.896 A:middle
+try to do IO sequentially.
+
+00:46:11.996 --> 00:46:13.336 A:middle
+Avoid accessing lots
+
+00:46:13.336 --> 00:46:15.396 A:middle
+of different files
+in a random order.
+
+00:46:15.836 --> 00:46:18.376 A:middle
+Now, one thing that
+you want to think
+
+00:46:18.376 --> 00:46:22.596 A:middle
+about when using FS usage is
+what impact the disk cache is
+
+00:46:22.596 --> 00:46:24.656 A:middle
+going to have on the
+app that you see.
+
+00:46:24.806 --> 00:46:27.916 A:middle
+If you're doing at the -f disk
+IO option, you're only going
+
+00:46:27.916 --> 00:46:31.056 A:middle
+to see accesses that go to
+the actual hard drive itself.
+
+00:46:31.476 --> 00:46:33.206 A:middle
+Anything that has the disk
+cache won't be printed.
+
+00:46:33.866 --> 00:46:37.406 A:middle
+So, for example, this is a
+case of a warm AppLaunch.
+
+00:46:40.796 --> 00:46:43.006 A:middle
+There we go.
+
+00:46:43.166 --> 00:46:44.896 A:middle
+And by warm, I mean
+that the things
+
+00:46:44.896 --> 00:46:47.136 A:middle
+that this application needs
+are already in memory.
+
+00:46:47.726 --> 00:46:49.946 A:middle
+If I haven't run
+the app recently,
+
+00:46:49.946 --> 00:46:51.266 A:middle
+and instead I get
+a cold AppLaunch,
+
+00:46:51.266 --> 00:46:52.486 A:middle
+it looks a little
+more like this.
+
+00:46:52.826 --> 00:46:54.066 A:middle
+And this doesn't
+quite fit in the slide
+
+00:46:54.066 --> 00:46:55.536 A:middle
+so let me scroll
+through it for you.
+
+00:46:56.516 --> 00:47:01.536 A:middle
+[ Pause ]
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:46:56.516 --> 00:47:01.536 A:middle
+[ Pause ]
+
+00:47:02.036 --> 00:47:05.026 A:middle
+Now this is potentially a little
+bit of an extreme example.
+
+00:47:05.706 --> 00:47:07.986 A:middle
+But I expect that if you
+were to go home and try this
+
+00:47:07.986 --> 00:47:09.606 A:middle
+on your app, you'll
+see something similar.
+
+00:47:09.996 --> 00:47:11.916 A:middle
+Launching your app for
+the first time when it's--
+
+00:47:11.916 --> 00:47:13.886 A:middle
+the files it needs
+aren't cached,
+
+00:47:14.176 --> 00:47:15.506 A:middle
+it's significantly
+more expensive
+
+00:47:15.506 --> 00:47:18.256 A:middle
+than subsequent launches
+but it is already cached.
+
+00:47:19.286 --> 00:47:21.946 A:middle
+Now, as a result, it's
+important to profile
+
+00:47:21.946 --> 00:47:24.956 A:middle
+in different warm
+states for your app.
+
+00:47:25.226 --> 00:47:27.206 A:middle
+This means you want
+to run your app once
+
+00:47:27.206 --> 00:47:29.866 A:middle
+and then use the purge
+command to evict caches
+
+00:47:29.866 --> 00:47:30.906 A:middle
+and try running it again.
+
+00:47:32.666 --> 00:47:36.076 A:middle
+Now, remember that some data
+might be automatically cached
+
+00:47:36.076 --> 00:47:37.366 A:middle
+by the operating system at boot.
+
+00:47:37.486 --> 00:47:40.376 A:middle
+So you'll need to do at least
+one cycle of running your app
+
+00:47:40.376 --> 00:47:42.876 A:middle
+and then using purge to
+throw away the contents
+
+00:47:42.876 --> 00:47:44.976 A:middle
+of the disk cache before
+you'll get good data.
+
+00:47:45.516 --> 00:47:50.476 A:middle
+[ Pause ]
+
+00:47:50.976 --> 00:47:54.686 A:middle
+So just to recap some points
+about disk IO, the best practice
+
+00:47:54.686 --> 00:47:57.806 A:middle
+for doing especially IO to
+large files or large number
+
+00:47:57.806 --> 00:48:01.156 A:middle
+of files is to usually
+dispatch IO APIs.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:47:57.806 --> 00:48:01.156 A:middle
+of files is to usually
+dispatch IO APIs.
+
+00:48:01.236 --> 00:48:03.936 A:middle
+When profiling your disk
+accesses, make sure to do it
+
+00:48:03.936 --> 00:48:05.136 A:middle
+in different warm states.
+
+00:48:05.956 --> 00:48:09.796 A:middle
+Consider adopting non-cached
+IO for any large file access
+
+00:48:09.796 --> 00:48:12.046 A:middle
+where you don't want to evict
+other data from the cache.
+
+00:48:12.906 --> 00:48:15.706 A:middle
+Pay attention to when your
+data is flushed to disk,
+
+00:48:16.106 --> 00:48:18.656 A:middle
+and never ever do IO
+on the main thread.
+
+00:48:18.656 --> 00:48:24.166 A:middle
+Now last I'd like to talk about
+working in the background.
+
+00:48:28.586 --> 00:48:30.386 A:middle
+Your app may do some
+sort of work
+
+00:48:30.706 --> 00:48:33.926 A:middle
+that isn't directly required by
+the user at the time it's done.
+
+00:48:34.176 --> 00:48:37.946 A:middle
+This can include refreshing
+data from the network,
+
+00:48:37.946 --> 00:48:40.756 A:middle
+syncing a user's data with
+some sort of server, indexing
+
+00:48:40.756 --> 00:48:43.706 A:middle
+or backing up a user's files,
+making extra copies of data,
+
+00:48:44.296 --> 00:48:46.406 A:middle
+whatever it might be,
+anything that you do
+
+00:48:46.406 --> 00:48:47.966 A:middle
+that isn't directly relevant
+
+00:48:47.966 --> 00:48:51.056 A:middle
+to what the user has currently
+requested has the potential
+
+00:48:51.056 --> 00:48:53.496 A:middle
+to hurt system responsiveness
+by contending
+
+00:48:53.496 --> 00:48:56.466 A:middle
+with other operations the
+user is doing on the system.
+
+00:48:57.356 --> 00:48:59.136 A:middle
+Backgrounding is a
+technique that you can use
+
+00:48:59.136 --> 00:49:01.056 A:middle
+to limit the resource
+use of your app
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:48:59.136 --> 00:49:01.056 A:middle
+to limit the resource
+use of your app
+
+00:49:01.376 --> 00:49:02.736 A:middle
+when performing these
+operations.
+
+00:49:03.736 --> 00:49:06.346 A:middle
+Now, the keynote, you
+heard about App Nap.
+
+00:49:06.466 --> 00:49:10.186 A:middle
+And this is a kind of similar
+technique whereas App Nap is
+
+00:49:10.186 --> 00:49:13.446 A:middle
+designed to automatically
+put your apps in a nap state
+
+00:49:13.446 --> 00:49:14.506 A:middle
+when they're not being used.
+
+00:49:14.796 --> 00:49:17.056 A:middle
+Backgrounding is a way
+you can explicitly specify
+
+00:49:17.056 --> 00:49:19.436 A:middle
+that a particular piece
+of work is background.
+
+00:49:20.126 --> 00:49:23.296 A:middle
+These things work together
+and so you may still need
+
+00:49:23.296 --> 00:49:25.786 A:middle
+to adopt APIs about App
+Nap at the same time
+
+00:49:25.786 --> 00:49:26.596 A:middle
+as using backgrounding.
+
+00:49:28.436 --> 00:49:29.906 A:middle
+But what exactly does
+backgrounding do?
+
+00:49:29.906 --> 00:49:32.286 A:middle
+Well, the first thing
+it's going to do is hint
+
+00:49:32.286 --> 00:49:34.356 A:middle
+to the entire system that
+this work is backgrounded,
+
+00:49:34.686 --> 00:49:36.996 A:middle
+and whenever possible
+do it more efficiently.
+
+00:49:37.386 --> 00:49:39.646 A:middle
+It will be used by a variety
+of places in the system
+
+00:49:39.646 --> 00:49:42.146 A:middle
+to make choices on about
+how to do your work.
+
+00:49:43.016 --> 00:49:45.776 A:middle
+It will lower your CPU's
+scheduling priority ensuring
+
+00:49:45.776 --> 00:49:47.796 A:middle
+that other things can
+run first on the system.
+
+00:49:48.486 --> 00:49:51.046 A:middle
+And finally, it will apply
+something called IO throttling
+
+00:49:51.046 --> 00:49:53.106 A:middle
+to any accesses that you
+try to make to the disk.
+
+00:49:53.916 --> 00:49:55.446 A:middle
+Now, let's look at that
+in a little more detail.
+
+00:49:56.416 --> 00:49:58.766 A:middle
+Imagine we have an application
+the user is actively using.
+
+00:49:58.766 --> 00:49:59.976 A:middle
+And some sort of
+background task.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:50:01.016 --> 00:50:03.656 A:middle
+The background task wants
+to let's say, copy a file.
+
+00:50:03.656 --> 00:50:05.006 A:middle
+And so, it's doing lots of IO.
+
+00:50:05.376 --> 00:50:08.486 A:middle
+Then the application
+tries to do an IO itself.
+
+00:50:09.546 --> 00:50:13.716 A:middle
+IO throttling will automatically
+hold off the background task
+
+00:50:14.116 --> 00:50:16.656 A:middle
+giving the application
+full access to the disk
+
+00:50:17.056 --> 00:50:18.776 A:middle
+to allow its IO to
+complete quickly.
+
+00:50:19.216 --> 00:50:23.356 A:middle
+If the application
+tries to do more IOs,
+
+00:50:24.276 --> 00:50:27.796 A:middle
+then IO throttling
+helps base out the IOs
+
+00:50:27.796 --> 00:50:30.116 A:middle
+of the background task
+in order to continue
+
+00:50:30.116 --> 00:50:32.586 A:middle
+to give the application as
+much bandwidth as possible.
+
+00:50:33.126 --> 00:50:34.816 A:middle
+All right.
+
+00:50:34.816 --> 00:50:36.646 A:middle
+So how do we actually
+accomplish this?
+
+00:50:37.046 --> 00:50:40.016 A:middle
+Let's imagine you just
+have one block of code
+
+00:50:40.016 --> 00:50:41.536 A:middle
+in your application
+you like to background.
+
+00:50:41.536 --> 00:50:43.116 A:middle
+This is probably
+the easiest case.
+
+00:50:43.116 --> 00:50:45.576 A:middle
+And you can simply background
+that block by dispatching it
+
+00:50:45.576 --> 00:50:47.246 A:middle
+to the background
+priority queue.
+
+00:50:47.926 --> 00:50:49.886 A:middle
+Anything you dispatch
+there will run backgrounded
+
+00:50:50.296 --> 00:50:53.246 A:middle
+but it's important to run where
+that code shouldn't take locks
+
+00:50:53.246 --> 00:50:56.246 A:middle
+or any way block any code
+that you need to execute
+
+00:50:56.246 --> 00:50:58.076 A:middle
+in response to UI operations.
+
+00:50:58.836 --> 00:51:00.116 A:middle
+Things that you run
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:50:58.836 --> 00:51:00.116 A:middle
+Things that you run
+
+00:51:00.116 --> 00:51:03.716 A:middle
+in the background may take
+an unbounded amount of time
+
+00:51:03.716 --> 00:51:05.166 A:middle
+to complete and will try
+
+00:51:05.166 --> 00:51:06.566 A:middle
+to complete them as
+fast as possible.
+
+00:51:06.856 --> 00:51:09.406 A:middle
+You don't want them to
+cause a priority inversion
+
+00:51:09.406 --> 00:51:10.536 A:middle
+with your user interface.
+
+00:51:11.026 --> 00:51:15.826 A:middle
+Now, you can also use XPC
+to background larger tasks.
+
+00:51:16.266 --> 00:51:17.906 A:middle
+There's a new XPC activity API
+
+00:51:17.906 --> 00:51:21.016 A:middle
+that was discussed a few hours
+ago on the efficient design
+
+00:51:21.016 --> 00:51:24.516 A:middle
+with XPC Talk that you can use
+to allow the system to tell you
+
+00:51:24.516 --> 00:51:26.586 A:middle
+when to perform your
+background activities.
+
+00:51:27.306 --> 00:51:28.676 A:middle
+Any blocks you provide
+
+00:51:28.676 --> 00:51:31.686 A:middle
+to the XPC activity
+API will also get run
+
+00:51:31.686 --> 00:51:33.006 A:middle
+on the background
+priority queue.
+
+00:51:33.536 --> 00:51:38.026 A:middle
+You can also use an XPC
+Service as an adaptive Daemon.
+
+00:51:38.026 --> 00:51:42.496 A:middle
+So an XPC Service as of 10.9
+will be backgrounded by default
+
+00:51:43.076 --> 00:51:46.936 A:middle
+and then it will be taken out of
+the background only in response
+
+00:51:46.936 --> 00:51:48.796 A:middle
+to requests from an application.
+
+00:51:49.436 --> 00:51:52.496 A:middle
+This is an easy way to
+do things that might need
+
+00:51:52.496 --> 00:51:54.456 A:middle
+to take locks required
+by an application.
+
+00:51:54.976 --> 00:51:56.776 A:middle
+If you separate that
+out from other process,
+
+00:51:57.116 --> 00:52:00.456 A:middle
+you can use this boosting
+mechanism to unbackground tasks
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:51:57.116 --> 00:52:00.456 A:middle
+you can use this boosting
+mechanism to unbackground tasks
+
+00:52:00.716 --> 00:52:03.536 A:middle
+so that they complete quickly
+and service the user interface.
+
+00:52:03.996 --> 00:52:06.146 A:middle
+And again, these are
+discussed in more depth
+
+00:52:06.436 --> 00:52:07.876 A:middle
+in efficient design with XPC.
+
+00:52:09.046 --> 00:52:12.286 A:middle
+Finally, if you have a
+legacy service, for example,
+
+00:52:12.286 --> 00:52:13.576 A:middle
+a Launch Daemon or Launch Agent,
+
+00:52:14.006 --> 00:52:18.086 A:middle
+you can use the new process type
+launched plist key to specify
+
+00:52:18.086 --> 00:52:20.516 A:middle
+that that process should
+always run backgrounded
+
+00:52:21.656 --> 00:52:24.076 A:middle
+or you can use the set
+priority system call
+
+00:52:24.326 --> 00:52:26.666 A:middle
+to background a particular
+process or thread.
+
+00:52:28.596 --> 00:52:31.396 A:middle
+There were rules of how
+you adapt backgrounding.
+
+00:52:31.626 --> 00:52:33.336 A:middle
+There are a couple of
+tools you can use to debug
+
+00:52:33.336 --> 00:52:35.566 A:middle
+to make sure your backgrounding
+is working as expected.
+
+00:52:36.306 --> 00:52:39.246 A:middle
+The first is PS which
+is normally list process
+
+00:52:39.246 --> 00:52:39.776 A:middle
+on the system.
+
+00:52:40.446 --> 00:52:43.546 A:middle
+But if you provide
+the aMX options,
+
+00:52:43.866 --> 00:52:46.466 A:middle
+you can see the scheduling
+priority of every thread.
+
+00:52:47.216 --> 00:52:49.746 A:middle
+And in this case,
+backgrounded things are running
+
+00:52:49.746 --> 00:52:50.846 A:middle
+in a priority of four.
+
+00:52:50.846 --> 00:52:53.136 A:middle
+And that-- So that
+indicates that all the threads
+
+00:52:53.136 --> 00:52:55.746 A:middle
+in this particular process have
+been appropriately backgrounded.
+
+00:52:56.146 --> 00:52:59.236 A:middle
+You can also use
+the spindump tool.
+
+00:52:59.586 --> 00:53:02.606 A:middle
+This is similar to
+time profiler sample.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:52:59.586 --> 00:53:02.606 A:middle
+This is similar to
+time profiler sample.
+
+00:53:03.426 --> 00:53:07.436 A:middle
+But it has the advantage that it
+will also show you the priority
+
+00:53:07.796 --> 00:53:09.416 A:middle
+of a particular process.
+
+00:53:09.446 --> 00:53:11.926 A:middle
+So in this case, we can
+see that our accounts--
+
+00:53:11.926 --> 00:53:13.876 A:middle
+the process is running at
+the background priority.
+
+00:53:13.876 --> 00:53:18.666 A:middle
+Now, you also want to look for
+the throttle low pry IO frame.
+
+00:53:19.266 --> 00:53:21.556 A:middle
+This frame is where
+you'll see a process sit
+
+00:53:21.556 --> 00:53:22.896 A:middle
+if its IO is being throttled.
+
+00:53:23.226 --> 00:53:25.066 A:middle
+And you can see that
+in the kernel stacks
+
+00:53:25.066 --> 00:53:27.696 A:middle
+in the time profiler,
+or using spindump.
+
+00:53:29.396 --> 00:53:32.196 A:middle
+There's a new task policy
+command which is similar
+
+00:53:32.196 --> 00:53:33.306 A:middle
+to the Unix nice command.
+
+00:53:33.306 --> 00:53:35.896 A:middle
+And it can allow you to
+run a particular process
+
+00:53:35.896 --> 00:53:36.686 A:middle
+as backgrounded.
+
+00:53:36.686 --> 00:53:39.046 A:middle
+This is great if you
+want to test what happens
+
+00:53:39.046 --> 00:53:41.446 A:middle
+when you background a
+process or application.
+
+00:53:41.726 --> 00:53:46.106 A:middle
+And finally, FS users can
+show you which IOs were issued
+
+00:53:46.456 --> 00:53:49.746 A:middle
+by a backgrounded
+process or a thread.
+
+00:53:50.186 --> 00:53:52.266 A:middle
+And you'll see this
+with the capital T
+
+00:53:52.626 --> 00:53:54.546 A:middle
+after disk IO commands.
+
+00:53:57.406 --> 00:53:59.676 A:middle
+Now, one of the things that's
+been a constant theme here is
+
+00:53:59.716 --> 00:54:02.936 A:middle
+that your users will experience
+different performance based
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:53:59.716 --> 00:54:02.936 A:middle
+that your users will experience
+different performance based
+
+00:54:02.936 --> 00:54:04.696 A:middle
+on what type of system
+they're working on.
+
+00:54:05.206 --> 00:54:07.316 A:middle
+And so, as you're
+testing your application,
+
+00:54:07.746 --> 00:54:10.816 A:middle
+you should consider using
+multiple types of systems.
+
+00:54:11.686 --> 00:54:15.416 A:middle
+But for most of us,
+setting up an entire QA lab
+
+00:54:15.416 --> 00:54:17.676 A:middle
+with different systems
+is a very big task.
+
+00:54:17.676 --> 00:54:19.876 A:middle
+And so, you can at
+least as a first start,
+
+00:54:19.876 --> 00:54:23.156 A:middle
+simulate resource constraints
+system in a variety of ways.
+
+00:54:23.786 --> 00:54:25.406 A:middle
+If you want a test
+running with less memory,
+
+00:54:25.886 --> 00:54:27.776 A:middle
+you can use the maxmem boot-arg
+
+00:54:28.006 --> 00:54:30.236 A:middle
+to specify how much memory
+your system should have.
+
+00:54:30.766 --> 00:54:33.536 A:middle
+In this case, we're eliminating
+a system that had 2 gigabytes.
+
+00:54:34.166 --> 00:54:36.506 A:middle
+Now, to revert this, you'll want
+to run the [inaudible] command
+
+00:54:36.916 --> 00:54:40.246 A:middle
+but remove the maxmem
+equals 2048 part.
+
+00:54:40.996 --> 00:54:43.116 A:middle
+You can also use an
+external Thunderbolt drive
+
+00:54:43.336 --> 00:54:44.986 A:middle
+to simulate different
+drive speeds.
+
+00:54:45.416 --> 00:54:47.076 A:middle
+A Thunderbolt-attached
+hard drive is going
+
+00:54:47.076 --> 00:54:49.456 A:middle
+to have similar performance
+to an internal hard drive.
+
+00:54:49.866 --> 00:54:52.266 A:middle
+And so, if you're running
+on an SSD configuration,
+
+00:54:52.566 --> 00:54:54.756 A:middle
+this is a great way to
+experience what it's
+
+00:54:54.756 --> 00:54:55.916 A:middle
+like for a hard drive user.
+
+00:54:56.386 --> 00:54:59.346 A:middle
+Simply run the OS installer
+and install a separate OS
+
+00:54:59.346 --> 00:55:01.576 A:middle
+to your external hard drive
+and then you can boot off
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:54:59.346 --> 00:55:01.576 A:middle
+to your external hard drive
+and then you can boot off
+
+00:55:01.576 --> 00:55:03.886 A:middle
+that by holding option at
+boot to get the BootPicker.
+
+00:55:04.736 --> 00:55:07.846 A:middle
+Finally, you can use the
+instruments preferences,
+
+00:55:08.036 --> 00:55:10.736 A:middle
+just limit the number of
+CPUs in use by the system.
+
+00:55:10.916 --> 00:55:13.996 A:middle
+And this will be-- this
+will automatically go back
+
+00:55:13.996 --> 00:55:15.876 A:middle
+to all CPUs whenever
+you restart.
+
+00:55:16.836 --> 00:55:18.736 A:middle
+Now, if you have questions,
+
+00:55:18.736 --> 00:55:21.806 A:middle
+you can contact our developer
+evangelists, Paul Danbold
+
+00:55:21.806 --> 00:55:24.276 A:middle
+or David Delong, or see
+our Apple Developer Forums.
+
+00:55:24.856 --> 00:55:25.826 A:middle
+There's also a variety
+
+00:55:25.826 --> 00:55:27.856 A:middle
+of related sessions you
+might want to check out.
+
+00:55:28.786 --> 00:55:32.786 A:middle
+This morning, we had
+Maximizing Battery Life on OS X
+
+00:55:32.786 --> 00:55:34.246 A:middle
+and Efficient Design with XPC.
+
+00:55:34.776 --> 00:55:37.586 A:middle
+But you should also look at
+Improving Power Efficiency
+
+00:55:37.586 --> 00:55:39.846 A:middle
+with App Nap to learn how
+App Nap will affect your app
+
+00:55:39.846 --> 00:55:42.146 A:middle
+and how you can work
+best with it.
+
+00:55:42.146 --> 00:55:44.266 A:middle
+Optimizing Drawing
+and Scrolling on OS X
+
+00:55:44.266 --> 00:55:45.466 A:middle
+to learn about layerbacking.
+
+00:55:46.286 --> 00:55:48.786 A:middle
+Energy Best Practices
+will talk about how
+
+00:55:48.786 --> 00:55:50.466 A:middle
+to use the CPU most efficiently
+
+00:55:50.466 --> 00:55:52.856 A:middle
+and give the CPU
+form of this talk.
+
+00:55:53.386 --> 00:55:56.096 A:middle
+And finally, Fixing Memory
+Issues can show you how to dive
+
+00:55:56.096 --> 00:55:57.866 A:middle
+in with instruments
+
+00:55:57.866 --> 00:55:59.736 A:middle
+to understand the memory
+uses of your application.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:56:00.686 --> 00:56:02.956 A:middle
+So just to summarize
+some key takeaways,
+
+00:56:03.586 --> 00:56:05.786 A:middle
+remember to regularly
+profile and optimize your app,
+
+00:56:06.016 --> 00:56:07.586 A:middle
+not just the performance
+of your app,
+
+00:56:07.586 --> 00:56:10.536 A:middle
+but also the resources it
+consumes while carrying
+
+00:56:10.536 --> 00:56:11.356 A:middle
+out its actions.
+
+00:56:12.956 --> 00:56:14.966 A:middle
+Remember that your
+users may have a variety
+
+00:56:14.966 --> 00:56:15.896 A:middle
+of different systems.
+
+00:56:16.156 --> 00:56:18.676 A:middle
+And so, just because a
+particular operation works well
+
+00:56:18.676 --> 00:56:21.906 A:middle
+on your well-equipped
+developed machine doesn't mean
+
+00:56:21.906 --> 00:56:23.716 A:middle
+that the users will
+have a good experience.
+
+00:56:23.946 --> 00:56:25.826 A:middle
+And ensure your app
+is a good citizen
+
+00:56:25.826 --> 00:56:30.046 A:middle
+with shared system resources so
+that users enjoy using your app
+
+00:56:30.046 --> 00:56:31.986 A:middle
+and don't feel they
+need to quit.
+
+00:56:33.056 --> 00:56:33.786 A:middle
+Thanks.
+
+00:56:35.516 --> 00:56:39.516 A:middle
+[ Applause ]
+
+00:56:40.016 --> 00:56:49.616 A:middle
+[ Silence ]
+
