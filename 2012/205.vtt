@@ -1,0 +1,1744 @@
+WEBVTT
+
+00:00:10.519 --> 00:00:14.800
+Hi. Welcome to this WWDC session on Collection Views.
+
+00:00:14.800 --> 00:00:20.289
+My name is Olivier Gutknecht and I'm an iOS engineer in the UIKit team.
+
+00:00:20.289 --> 00:00:24.808
+And today we have a great new addition to UIKit.
+
+00:00:24.808 --> 00:00:32.168
+Sometimes developing application on iOS is about pushing the limits on UI design,
+
+00:00:33.416 --> 00:00:43.055
+and maybe finding new ways to visualize information. And we think Collection View will be an amazing tool for that.
+
+00:00:43.656 --> 00:00:47.396
+So, what we're going to talk about today?
+
+00:00:48.088 --> 00:00:56.200
+First, Collection View! Surprise! And we'll see the basics of Collection View.
+
+00:00:56.800 --> 00:01:00.848
+The view architecture. How you can actually provide that app and interact with it.
+
+00:01:00.848 --> 00:01:11.384
+And then, we're going to talk about Flow Layout. And Flow Layout is a standard layout we ship on iOS6 for Collection View.
+
+00:01:11.384 --> 00:01:16.896
+And you will see how you can tune and tweak flow layout for your application's needs.
+
+00:01:16.896 --> 00:01:21.843
+So, what can Collection View do for you.
+
+00:01:23.290 --> 00:01:29.320
+Right. Rows and columns, lines of items.
+
+00:01:31.735 --> 00:01:38.617
+Something that wasn't that easy to do or elegant in UIKit, so we're improving that.
+
+00:01:38.617 --> 00:01:44.673
+And actually we already use Collection View on iOS 6.
+
+00:01:45.965 --> 00:01:47.972
+This brand new clocks app on iPad.
+
+00:01:48.972 --> 00:01:52.256
+This stub view is just a very simple Collection View.
+
+00:01:52.256 --> 00:01:58.569
+We use also Collection View in Maps in this new info pane in this photo stub.
+
+00:01:58.569 --> 00:02:06.152
+We use Collection View in some GameKit UI's. And this thing is going to be a great tool for your applications too.
+
+00:02:06.152 --> 00:02:09.789
+So, let's get started
+
+00:02:10.329 --> 00:02:21.193
+But first, a small comparison. We already have tools to manage collection of data on all platforms.
+
+00:02:21.193 --> 00:02:31.304
+On OS X we have NSCollectionView. NSCollectionView, UICollectionView - same name, not exactly the same model.
+
+00:02:31.304 --> 00:02:39.818
+In AppKit on OS X NSCollectionView is about managing a grid of NSViewControllers.
+
+00:02:39.818 --> 00:02:47.697
+And the model we use for UICollectionView is actually closer to UITableView.
+
+00:02:47.697 --> 00:02:52.641
+We have the same common principles.
+
+00:02:52.641 --> 00:03:03.552
+But let me say that Collection View is not a replacement for UITableView.
+
+00:03:03.552 --> 00:03:09.104
+We have lots of built in behaviors in Table Views.
+
+00:03:09.104 --> 00:03:15.729
+That's really one of the measure building blocks we use for iOS application on iPad and iPhone.
+
+00:03:15.729 --> 00:03:18.200
+And we're not changing that.
+
+00:03:18.200 --> 00:03:22.433
+We have things like headers, footers and we have edit mode.
+
+00:03:22.433 --> 00:03:31.617
+We have row animations. Many of these don't really make sense in UICollectionView world.
+
+00:03:31.617 --> 00:03:36.664
+Because Collection View is more abstract and generic than UITableView.
+
+00:03:36.664 --> 00:03:52.585
+So, why did we build Collection View? We wanted to give you an extremely flexible way to represent data, content in your applications.
+
+00:03:52.585 --> 00:04:02.163
+And we wanted to do that while keeping our usual patterns we use all of the place in UIKit.
+
+00:04:02.163 --> 00:04:09.609
+So Collection View is data source based, it's delegate based.
+
+00:04:09.609 --> 00:04:16.777
+We use cells and if you use Table View before it should be at home with Collection View.
+
+00:04:16.777 --> 00:04:22.769
+And we wanted to do that and keep high performance in Collection View.
+
+00:04:22.769 --> 00:04:26.880
+Even with very large data sets in your app.
+
+00:04:26.880 --> 00:04:33.456
+So, let's check a quick example.
+
+00:04:33.456 --> 00:04:40.168
+Let's play that my data set is actually my vacation pictures.
+
+00:04:40.168 --> 00:04:46.208
+Pictures, some albums and I want to have an app for that.
+
+00:04:46.208 --> 00:04:51.835
+And what my designer gave me is this.
+
+00:04:51.835 --> 00:04:53.864
+OK
+
+00:04:53.864 --> 00:04:57.160
+How can I built that with Collection View
+
+00:04:57.160 --> 00:05:03.865
+We actually have 3 important concepts in Collection View.
+
+00:05:03.865 --> 00:05:07.344
+First - cells.
+
+00:05:07.344 --> 00:05:14.616
+A cell is really a representation for one item in your data set.
+
+00:05:14.616 --> 00:05:21.136
+So you might have one picture in that library and you want one cell to represent that.
+
+00:05:21.136 --> 00:05:28.362
+And in that case you're going to use some UIImageView , set the image.
+
+00:05:28.362 --> 00:05:34.250
+The important thing here is - cells are really data driven.
+
+00:05:34.250 --> 00:05:41.944
+It's your data model that drive what is in Collection View for the cell's part, it's based on the data source.
+
+00:05:41.944 --> 00:05:51.649
+The single concept we use in Collection View is actually a new name for an old id.
+
+00:05:51.649 --> 00:05:55.776
+It's what we call supplementary views.
+
+00:05:55.776 --> 00:05:58.560
+And what are supplementary views?
+
+00:05:58.560 --> 00:06:11.381
+It's when you want to us some views,album titles that already metadata about section. Could be an album title,
+
+00:06:11.381 --> 00:06:17.305
+could be album index, could be a block of text, so story of that album
+
+00:06:17.305 --> 00:06:25.859
+The important thing is it is applied to a section. And like cells is data driven
+
+00:06:26.644 --> 00:06:33.801
+And the reason we don't call that headers and footers is that really the same concept that we used before in Table View.
+
+00:06:35.908 --> 00:06:40.321
+Collection view is not exactly table-based,right?
+
+00:06:40.321 --> 00:06:47.641
+So if that small thing a footer maybe, but again it is more generic than that.
+
+00:06:47.641 --> 00:06:54.656
+So, we decided supplementary views to describe these additional things.
+
+00:06:57.194 --> 00:07:05.952
+The third concept we use in Collection View and that's new is what we call Decoration Views.
+
+00:07:05.952 --> 00:07:13.936
+And Decoration Views is not like cells and supplementary views.
+
+00:07:13.936 --> 00:07:18.640
+It's not thing that is going to be data driven.
+
+00:07:18.640 --> 00:07:23.241
+It's going to be a view side of the world.
+
+00:07:23.241 --> 00:07:28.216
+So it's more about the layout of the Collection View.
+
+00:07:28.216 --> 00:07:32.688
+When you want to add some embellishment to some part.
+
+00:07:32.688 --> 00:07:39.517
+And here is basically two kinds of views. We have this top part.
+
+00:07:40.287 --> 00:07:44.584
+Shelf element that will repeat three times.
+
+00:07:44.584 --> 00:07:52.872
+And Decoration Views are really useful to add, for instance, a background scrolling with your content.
+
+00:07:52.872 --> 00:07:58.506
+Which again was something that wasn't that easy to do before in Table Views.
+
+00:07:58.506 --> 00:08:06.281
+And with these three elements I can actually implement the design.
+
+00:08:06.281 --> 00:08:14.968
+So the view architecture in Collection View: cells, supplementary views on the data side.
+
+00:08:14.968 --> 00:08:22.552
+Decoration View on the visual/layout side.
+
+00:08:22.552 --> 00:08:29.785
+Then how do you provide content to a Collection View.
+
+00:08:30.385 --> 00:08:44.320
+Well we have this Objective-C protocol called UICollectionViewDataSource and that is something that one of your class in your application must implement.
+
+00:08:44.320 --> 00:08:50.257
+And when we are about to display things on screen we have to call that data source.
+
+00:08:50.257 --> 00:08:58.720
+A few methods so we can know how many sections do we have, how many items in a given section.
+
+00:08:58.720 --> 00:09:09.864
+And how should we actually configure our cells or headers - supplementary views - more generic.
+
+00:09:09.864 --> 00:09:12.992
+So let's see how that works.
+
+00:09:12.992 --> 00:09:24.259
+The first thing is we call from the Collection View one method on your data source in number of sections in a Collection View.
+
+00:09:24.459 --> 00:09:34.720
+Actualy you don't have to implement that one. If you don't we assume that we have just one section.
+
+00:09:34.720 --> 00:09:37.328
+How many sections - 2.
+
+00:09:37.328 --> 00:09:47.788
+Next step: we're going to ask for each section, how many items do you have in your data source for that section.
+
+00:09:48.330 --> 00:09:52.785
+Well section 0 - 4 items, section 1 - 5 items.
+
+00:09:53.416 --> 00:10:05.412
+And then when we are ready to display things on screen, we're going to call on your data source and you must implement that one if you want do display something.
+
+00:10:06.473 --> 00:10:15.313
+CollectionView cellForItem:atIndexPath and then you should actually fetch what you need in your data set.
+
+00:10:15.313 --> 00:10:19.760
+And configure the cell we're going to give you.
+
+00:10:19.760 --> 00:10:32.220
+it's important to note that in this case we will only ask you about these cells for what is actually on screen.
+
+00:10:32.220 --> 00:10:38.505
+We don't want to allocate cells for every single item in your data set.
+
+00:10:38.859 --> 00:10:44.061
+That would be a quiet bad idea on memory limited device.
+
+00:10:44.784 --> 00:10:51.865
+We have another trick for performance. Again it's technique we used before.
+
+00:10:52.126 --> 00:10:57.627
+It's cell and view reuse. What does that mean?
+
+00:10:57.627 --> 00:11:06.296
+in this case when we scroll Collection View, that might cause a few cells or views to go off screen, right?
+
+00:11:06.296 --> 00:11:15.147
+And in that case, we don't want to deallocate these cells. We just are going to move these into a reuse queue.
+
+00:11:15.931 --> 00:11:26.530
+And when the user is about to scroll again, we need new cells, so we are just going to grab what we have in the reuse queue.
+
+00:11:27.576 --> 00:11:35.793
+Prepare that by asking you with your data source methods and then we can actually scroll up.
+
+00:11:37.337 --> 00:11:42.744
+So with that we minimize the number of allocations we need to do.
+
+00:11:42.744 --> 00:11:47.913
+That works quite well for large data sets.
+
+00:11:47.913 --> 00:11:52.793
+But we actually improved that.
+
+00:11:53.209 --> 00:11:56.800
+We were using that technique in Table View before.
+
+00:11:56.800 --> 00:12:00.988
+And we tweaked that. How?
+
+00:12:01.665 --> 00:12:09.984
+When you setup a Collection View and that's usually in this viewDidLoad method in your UIViewController.
+
+00:12:09.984 --> 00:12:17.028
+We ask you to register the class you're going to use for a cell for a reuse identifier.
+
+00:12:17.228 --> 00:12:21.320
+That is the kind of data, the kind of cell you want.
+
+00:12:21.320 --> 00:12:26.104
+And after that in your data source method
+
+00:12:26.104 --> 00:12:32.592
+we're going to call you with Collection View index path you want to display.
+
+00:12:32.592 --> 00:12:44.320
+And what we will need to do is to actually call on the Collection View dequeueReusableCellWithReuseIdentifier.
+
+00:12:44.320 --> 00:12:49.320
+And then you can actually configure that cell by setting the image
+
+00:12:49.320 --> 00:12:56.928
+But what if we don't have any cell available in reuse queue.
+
+00:12:56.928 --> 00:13:01.100
+Before we have to check for that.
+
+00:13:01.100 --> 00:13:03.208
+Not anymore!
+
+00:13:03.208 --> 00:13:05.369
+Why?
+
+00:13:05.369 --> 00:13:09.665
+Because you did alert us by registering that class.
+
+00:13:09.665 --> 00:13:12.225
+So we know the class for that cell.
+
+00:13:12.225 --> 00:13:15.856
+So even if we don't have a cell available in the reuse queue.
+
+00:13:15.856 --> 00:13:18.809
+We can instancing that for you.
+
+00:13:18.809 --> 00:13:23.469
+That code just goes away.
+
+00:13:29.208 --> 00:13:31.717
+And we like that so much.
+
+00:13:32.471 --> 00:13:36.456
+We added the same technique to UITableView.
+
+00:13:42.272 --> 00:13:46.361
+So, let's summarize.
+
+00:13:46.361 --> 00:13:51.336
+We always instantiate a cell or supplementary view for you.
+
+00:13:51.336 --> 00:14:00.392
+You just need to register the class for that cell or that supplementary view of kind, header, footer, anything.
+
+00:14:00.392 --> 00:14:07.201
+You can also set that cell in Interface Builder and just register the nib.
+
+00:14:07.201 --> 00:14:10.313
+Something we add before in Table Views.
+
+00:14:10.313 --> 00:14:13.810
+And then in data source
+
+00:14:13.810 --> 00:14:15.240
+just dequeue.
+
+00:14:15.240 --> 00:14:16.154
+We have two methods:
+
+00:14:16.154 --> 00:14:23.473
+one for cells and one for supplementary views. So quiet nice and easy.
+
+00:14:23.473 --> 00:14:28.600
+Then, how do we interact with content.
+
+00:14:29.476 --> 00:14:32.656
+It's time for yet another Objective-C protocol for you.
+
+00:14:32.656 --> 00:14:34.545
+UICollectionViewDelegate
+
+00:14:34.545 --> 00:14:42.698
+and that delegate will control how cells are actually highlighted when you tap.
+
+00:14:42.698 --> 00:14:54.232
+Selected and also we have support for these nice menu actions when you long tap a cell.
+
+00:14:54.232 --> 00:14:58.758
+And that something we actually improved too.
+
+00:14:59.804 --> 00:15:06.846
+So, just to be clear on the vocabulary. That cell on the left
+
+00:15:06.846 --> 00:15:11.256
+is highlighted. It's when I touch the screen
+
+00:15:11.256 --> 00:15:14.411
+but before touch up, right?
+
+00:15:14.411 --> 00:15:18.530
+And on touch up what happens is cell might be selected
+
+00:15:18.699 --> 00:15:22.153
+which is a case for these three other cells.
+
+00:15:23.999 --> 00:15:27.416
+How did we improve that?
+
+00:15:27.416 --> 00:15:33.330
+First, on each cell we have two properties:
+
+00:15:33.330 --> 00:15:36.113
+selected and highlighted.
+
+00:15:36.113 --> 00:15:43.220
+And we define a very precise flow for highlighting and selection in Collection View.
+
+00:15:43.491 --> 00:15:44.953
+How do that work?
+
+00:15:46.400 --> 00:15:51.171
+First step is when the finger touch the screen.
+
+00:15:52.433 --> 00:15:58.407
+Here we call on your delegate if you actually implement that method:
+
+00:15:58.715 --> 00:16:02.441
+collectionView:shouldHighlightItemAtIndexPath:
+
+00:16:02.441 --> 00:16:04.973
+And that's new
+
+00:16:06.481 --> 00:16:11.653
+In Table View you can't control selection.
+
+00:16:12.083 --> 00:16:19.401
+But even if you don't want cell to be selected you would get that highlighting feedback.
+
+00:16:19.401 --> 00:16:24.896
+Which is not that good from user experience front of view.
+
+00:16:24.896 --> 00:16:32.169
+So in Collection View we first ask, should we actually highlight the cell.
+
+00:16:32.169 --> 00:16:36.977
+And if you return NO to that method we don't highlight.
+
+00:16:36.977 --> 00:16:42.192
+But we completely bypass the selection process.
+
+00:16:42.192 --> 00:16:44.413
+Stops here.
+
+00:16:44.720 --> 00:16:46.241
+If you return YES
+
+00:16:46.241 --> 00:16:51.432
+than we switch that highlighted property to YES
+
+00:16:51.432 --> 00:16:57.035
+and we call on your delegate didHighlightItemAtIndexPath.
+
+00:16:58.528 --> 00:17:05.496
+The next step is on touch up. Should we actually select that cell.
+
+00:17:05.496 --> 00:17:13.345
+So again if you choose to implement that method collectionView:shouldSelectItemAtIndexPath:
+
+00:17:13.345 --> 00:17:18.960
+and if you return YES - OK we do a bunch of things.
+
+00:17:18.960 --> 00:17:24.792
+We switch selected to TRUE. We switch back highlighted to FALSE and the same time we call
+
+00:17:24.792 --> 00:17:28.666
+collectionView:didUnhighlightItemAtIndexPath:
+
+00:17:28.666 --> 00:17:32.240
+and collectionView:didSelectItemAtIndexPath:
+
+00:17:32.240 --> 00:17:39.104
+so you can hook whatever you want on the actual end of the selection process.
+
+00:17:39.104 --> 00:17:52.527
+Whats next - unselect. When you tap again on cell and in that case we call shouldDeselectItemAtIndexPath:
+
+00:17:52.850 --> 00:17:57.760
+returning YES mean that you deny unselect.
+
+00:17:58.314 --> 00:18:00.931
+So the cell would stay selected.
+
+00:18:01.069 --> 00:18:07.969
+If you return YES than we call didDeselectItemAtIndexPath.
+
+00:18:07.969 --> 00:18:10.730
+and we switch back this selected property to FALSE.
+
+00:18:11.161 --> 00:18:19.724
+So that's very precise flow for selection and highlight in Collection View.
+
+00:18:19.724 --> 00:18:27.872
+And of course you can also setup on Collection View if you want selection or multiple selection
+
+00:18:27.872 --> 00:18:31.728
+or non selection after all. And we do the right thing.
+
+00:18:31.728 --> 00:18:38.899
+Then. Bringing actual content on screen.
+
+00:18:39.592 --> 00:18:42.816
+We have two interesting things here:
+
+00:18:42.816 --> 00:18:45.833
+cells and layout.
+
+00:18:46.049 --> 00:18:48.360
+first - cells.
+
+00:18:49.697 --> 00:18:51.692
+There is one thing you need to know:
+
+00:18:52.092 --> 00:18:55.868
+The Collection View is not in the content business.
+
+00:18:56.038 --> 00:19:01.388
+It's your content. We do not define any style in Collection View.
+
+00:19:02.481 --> 00:19:05.249
+So you don't have like Table View things like
+
+00:19:05.249 --> 00:19:10.712
+give me that cell with one image, one label, two labels - no styles at all.
+
+00:19:18.185 --> 00:19:21.586
+And we do actually a bit more than that.
+
+00:19:22.032 --> 00:19:27.587
+When we call setHighlighted or setSelected on a cell
+
+00:19:28.480 --> 00:19:34.320
+What we actually do is we walk the entire view subtree for that cell.
+
+00:19:35.107 --> 00:19:41.208
+And if any view here actually implemented setSelected or setHighlighted
+
+00:19:41.208 --> 00:19:43.686
+we going to call that.
+
+00:19:43.947 --> 00:19:45.848
+What does that mean?
+
+00:19:45.848 --> 00:19:53.049
+It mean that if in a Collection View Cell you actually use any standard UIKit control,
+
+00:19:53.291 --> 00:19:56.567
+you will get selection and highlight for free.
+
+00:19:56.809 --> 00:20:01.144
+Because we’re going to call that on UIKit controls.
+
+00:20:01.144 --> 00:20:04.200
+The next thing we do and you can do that for your custom views of course
+
+00:20:06.125 --> 00:20:13.932
+the next thing we do is we give you two additional properties in cells.
+
+00:20:13.932 --> 00:20:16.433
+You can configure backgroundView
+
+00:20:16.433 --> 00:20:19.201
+and selectedBackgroundView.
+
+00:20:19.201 --> 00:20:26.980
+And if you do that we … to switch when we track selection on backgroundView and selectedBackgroundView
+
+00:20:26.980 --> 00:20:30.680
+So its easy to implement these styles.
+
+00:20:30.680 --> 00:20:37.506
+So we know what the UICollectionViewCell view hierarchy looks like.
+
+00:20:37.506 --> 00:20:43.114
+We have UICollectionViewCell and we’re going to supply that.
+
+00:20:43.114 --> 00:20:47.929
+The first subview is backgroundView.
+
+00:20:47.929 --> 00:20:53.289
+If you did provide one such view to CollectionViewCell.
+
+00:20:53.289 --> 00:20:58.436
+The next view is selectedBackgroundView if you did prepare that.
+
+00:20:58.436 --> 00:21:04.194
+And on top of that is a content view that we setup for you.
+
+00:21:04.194 --> 00:21:09.130
+And you should really add you own content to that content view
+
+00:21:09.130 --> 00:21:13.532
+not to the main CollectionViewCell view
+
+00:21:13.532 --> 00:21:16.603
+Because that would mean that your views
+
+00:21:16.603 --> 00:21:20.697
+would be behind background and selectedBackgroundView
+
+00:21:20.697 --> 00:21:23.673
+Which wouldn't be a good idea.
+
+00:21:23.673 --> 00:21:32.419
+OK, now thats what we know about UICollectionView.
+
+00:21:32.419 --> 00:21:35.160
+It is actually a Scroll View subclass
+
+00:21:35.160 --> 00:21:42.474
+It corporates with UICollectionViewDelegate and UICollectionViewDataSource which are in your application.
+
+00:21:42.474 --> 00:21:46.864
+And it manages a bunch of cells.
+
+00:21:46.864 --> 00:21:49.601
+We have something else.
+
+00:21:49.601 --> 00:21:53.768
+UICollectionViewLayout
+
+00:21:53.768 --> 00:22:05.256
+and UICollectionView doesn’t know anything about how to setup cells on screen
+
+00:22:05.256 --> 00:22:10.842
+It corporates with UICollectionViewLayout instance to do that
+
+00:22:10.842 --> 00:22:19.560
+and maybe just a subclass of that Flow Layout we ship in iOS 6.
+
+00:22:19.560 --> 00:22:25.360
+But you can actually subclass UICollectionViewLayout
+
+00:22:25.360 --> 00:22:27.434
+What does that mean?
+
+00:22:27.434 --> 00:22:30.241
+It means that you can bring your own layout
+
+00:22:30.241 --> 00:22:32.128
+to the party
+
+00:22:32.128 --> 00:22:39.621
+A layout responsibility is to compute generate layout information for each cell,
+
+00:22:39.621 --> 00:22:45.177
+supplementary views or decoration views that would be in a Collection View.
+
+00:22:45.177 --> 00:22:59.226
+and these layout attributes is a few things that you might want to set eventually on a cell
+
+00:22:59.226 --> 00:23:04.820
+like position for a cell,
+
+00:23:04.820 --> 00:23:07.817
+actual size for each cell,
+
+00:23:07.817 --> 00:23:12.168
+but you can also set opacity
+
+00:23:12.168 --> 00:23:18.697
+and even the zIndex if you have overlapping cells
+
+00:23:18.697 --> 00:23:23.959
+with zIndex you can control which cell is going to be above the other
+
+00:23:23.959 --> 00:23:32.998
+you can even setup a simple transform on cells you can scale cell relative to others
+
+00:23:32.998 --> 00:23:36.910
+Because UICollectionViewLayout is actually a class,
+
+00:23:36.910 --> 00:23:44.619
+you can subclass that and add other information that going to give your view to your cell class
+
+00:23:44.619 --> 00:23:47.528
+So what does that mean?
+
+00:23:47.528 --> 00:23:53.772
+Well that’s a layout that UICollectionViewFlowLayout might generate.
+
+00:23:53.772 --> 00:23:55.348
+Perfectly fine layout:
+
+00:23:55.348 --> 00:23:56.863
+two sections
+
+00:23:56.863 --> 00:24:01.640
+two supplementary views for either like things
+
+00:24:01.640 --> 00:24:03.879
+and a bunch of cells.
+
+00:24:03.879 --> 00:24:09.672
+But that is a perfectly fine layout.
+
+00:24:09.672 --> 00:24:13.489
+It is not generated by flow layout but we have two sections
+
+00:24:13.489 --> 00:24:17.998
+two supplementary views bunch of cells
+
+00:24:17.998 --> 00:24:26.374
+and one of your class subclassing UICollectionViewLayout might actually generate.
+
+00:24:26.374 --> 00:24:32.647
+So now let’s talk about Flow Layout.
+
+00:24:32.647 --> 00:24:39.800
+Flow Layout is an interesting class.
+
+00:24:39.800 --> 00:24:46.584
+Something we wanted to ship to give you some basic behavior for Collection View.
+
+00:24:46.584 --> 00:24:51.193
+And what we can with CollectionView Flow Layout?
+
+00:24:51.193 --> 00:24:54.200
+We can go from these simple things
+
+00:24:54.200 --> 00:24:58.500
+something you ask us to do before
+
+00:24:58.500 --> 00:24:59.438
+just grids
+
+00:24:59.438 --> 00:25:01.896
+all items of the same size
+
+00:25:01.896 --> 00:25:10.976
+more complex setup with cells having different sizes
+
+00:25:10.976 --> 00:25:12.801
+headers and footers
+
+00:25:12.801 --> 00:25:15.741
+again different sizes
+
+00:25:15.741 --> 00:25:20.162
+and CollectionView Flow Layout make that easy to do.
+
+00:25:20.162 --> 00:25:34.895
+So what I one to do know to give you a very short demo of Collection View Flow Layout
+
+00:25:34.895 --> 00:25:44.932
+So this is an extremely simple Collection View with Flow Layout.
+
+00:25:44.932 --> 00:25:50.272
+and here my cell are just a small label with just one letter
+
+00:25:50.272 --> 00:26:04.612
+and that section is just showing these cells and if we have another section like
+
+00:26:04.612 --> 00:26:07.120
+that I want to display Helvetica.
+
+00:26:07.120 --> 00:26:14.500
+notice that my cells are now with different size
+
+00:26:14.500 --> 00:26:17.240
+and that is built in UICollectionViewFlowLayout.
+
+00:26:17.240 --> 00:26:23.221
+Another thing we built in is when you actually rotate your device with a Flow Layout
+
+00:26:23.221 --> 00:26:30.520
+We nicely cross-fade cells we need to.
+
+00:26:30.520 --> 00:26:35.377
+We actually detect if it’s going to look to good look or not
+
+00:26:35.377 --> 00:26:39.610
+If it doesn't - we cross-fade them
+
+00:26:39.610 --> 00:26:45.300
+for free not have any sync to do here
+
+00:26:45.300 --> 00:26:50.892
+Next demo I want to do is a small gallery
+
+00:26:50.892 --> 00:26:59.979
+app. And I think that something you also requested before
+
+00:26:59.979 --> 00:27:06.585
+a reason to extrording
+
+00:27:06.585 --> 00:27:11.180
+so it much better that just Table View in horizontal mode.
+
+00:27:11.180 --> 00:27:17.119
+Thats a Collection View and here we have a custom header on the side
+
+00:27:17.119 --> 00:27:22.508
+If your items in that section I go to another section with different
+
+00:27:22.508 --> 00:27:24.729
+insets
+
+00:27:24.729 --> 00:27:27.570
+and yet another section
+
+00:27:27.570 --> 00:27:39.481
+and here i just customize the internal item space between my cells
+
+00:27:39.481 --> 00:27:50.745
+and again we support rotation out of the box.
+
+00:27:50.745 --> 00:27:58.459
+So that was Flow Layout. The demo of Flow Layout.
+
+00:27:58.459 --> 00:28:04.675
+And Flow Layout is a line-oriented layout, not grids.
+
+00:28:04.675 --> 00:28:07.507
+You can configure them as grids but you don't have to.
+
+00:28:07.507 --> 00:28:14.785
+And because that’s really useful in Flow Layout we do include support for headers and footers.
+
+00:28:14.785 --> 00:28:22.949
+And to talk about the Flow Layout I’d like to introduce you Luk.
+
+00:28:22.949 --> 00:28:36.200
+You can bring all kinds of arbitrary layouts to Collection View.
+
+00:28:36.200 --> 00:28:42.290
+But we built in a tremendous layout that we think is really awesome.
+
+00:28:42.290 --> 00:28:48.750
+That we shipping in iOS 6 that you guys can use to produce some really great UIs already today.
+
+00:28:48.750 --> 00:28:53.734
+So I’m gonna talk about UICollectionViewFlowLayout which is built in layout
+
+00:28:53.734 --> 00:28:57.158
+which you just saw on screen during demo.
+
+00:28:57.158 --> 00:29:01.560
+And all of the different bells&whistles we have for you to tweak in that layout
+
+00:29:01.560 --> 00:29:04.877
+to develop interesting things right out of the box.
+
+00:29:04.877 --> 00:29:09.100
+So to start out let’s define what’s Flow Layout mean
+
+00:29:09.100 --> 00:29:12.161
+Which is a sort of interesting term to some of us
+
+00:29:12.161 --> 00:29:16.883
+Well we think this is really line-oriented layout
+
+00:29:16.883 --> 00:29:19.880
+We said right upfront you'd be able to do grids
+
+00:29:19.880 --> 00:29:28.139
+and absolutely grids are the generic case of line-oriented layout when the items of the same size.
+
+00:29:28.139 --> 00:29:33.207
+We end up laying them up in something that looks like grid.
+
+00:29:33.207 --> 00:29:38.252
+But this could be a grouping line of things that are not of like size.
+
+00:29:38.252 --> 00:29:46.755
+If you have different sizes we will lay them out sort of on the line until we hit end of the screen we lay on another line.
+
+00:29:46.755 --> 00:29:52.341
+And we start laying things out again. It’s sort of text system in that sense.
+
+00:29:52.341 --> 00:29:58.150
+And we have support for headers and footers which you've seen.
+
+00:29:58.150 --> 00:30:02.199
+We have a bunch of ways to customize the Flow Layout.
+
+00:30:02.199 --> 00:30:04.384
+And this include everything you’ve seen here.
+
+00:30:04.384 --> 00:30:07.639
+You can change the item size number one.
+
+00:30:07.639 --> 00:30:10.128
+You can change the spacing between the lines.
+
+00:30:10.128 --> 00:30:13.133
+And you can change the spacing between the cells.
+
+00:30:13.133 --> 00:30:15.140
+You can change the scroll direction.
+
+00:30:15.140 --> 00:30:19.511
+You know we all familiar with horizontal and vertical scroll when we done the Table View.
+
+00:30:19.511 --> 00:30:26.352
+And one of the biggest request people had was hey I want something like a Table View that can scroll horizontally.
+
+00:30:26.352 --> 00:30:30.993
+Well we have given you a horizontally Table View but we give you something better.
+
+00:30:30.993 --> 00:30:37.296
+We have given you something that can scroll horizontally and display content in whatever way make sense.
+
+00:30:37.296 --> 00:30:43.343
+The little paining demo Olivier had showed you
+
+00:30:43.343 --> 00:30:46.467
+acted similarly to what horizontal Table View should be
+
+00:30:46.467 --> 00:30:51.602
+in the sense that we only had one cell per row there
+
+00:30:51.602 --> 00:30:58.808
+per column. But we accomplished that by using insets around the section which one to the things
+
+00:30:58.808 --> 00:31:01.127
+one of the bells and whistles that we’ll talk about here.
+
+00:31:01.127 --> 00:31:04.968
+And you can also specify the sizes that you want to use for your headers and footers.
+
+00:31:04.968 --> 00:31:09.176
+This is all is built in Flow Layout right now.
+
+00:31:09.176 --> 00:31:13.580
+So the item size for any particular thing can be
+
+00:31:13.580 --> 00:31:17.894
+configured globally based on a property on the actual Flow Layout
+
+00:31:17.894 --> 00:31:22.872
+and you can just say hey, I want to make my item size 100x100 or whatever it is.
+
+00:31:22.872 --> 00:31:26.746
+But if you want to be more dynamic than that,
+
+00:31:26.746 --> 00:31:30.942
+you can specify these values through the delegate.
+
+00:31:30.942 --> 00:31:37.257
+And you'll be able to just say ok per item I want to be maybe item number one is 50x60,
+
+00:31:37.257 --> 00:31:41.365
+item number two is 80x100 that sort of thing.
+
+00:31:41.365 --> 00:31:45.375
+And your dynamic sizing that way.
+
+00:31:45.375 --> 00:31:52.861
+Additionally you can specify the spacing between the items.
+
+00:31:52.861 --> 00:31:59.637
+And we’re specifying it in a minimum because what we actually show in screen
+
+00:31:59.637 --> 00:32:04.553
+might not be exactly be the value that you specify.
+
+00:32:04.553 --> 00:32:09.958
+You see here if we have this particular layout and you've specified the minimum
+
+00:32:09.958 --> 00:32:13.234
+inter item spacing 20 points
+
+00:32:13.234 --> 00:32:17.771
+OK, everything we have here is 20 points between the items
+
+00:32:17.771 --> 00:32:21.143
+but you might get actually something like this.
+
+00:32:21.143 --> 00:32:24.222
+You specified 20 points as the minimum
+
+00:32:24.222 --> 00:32:32.921
+but due to the width of the actual collection view to layout everything evenly we expand that gap between the items
+
+00:32:32.921 --> 00:32:36.843
+and so we end up actually in 60 points between the items.
+
+00:32:36.843 --> 00:32:43.934
+But we guarantee that the spacing between the items be at least a minimum that you provided.
+
+00:32:43.934 --> 00:32:46.941
+We also provide line spacing.
+
+00:32:46.941 --> 00:32:49.521
+This is different from the inter item spacing
+
+00:32:49.521 --> 00:32:52.900
+If you have say a vertically scrolling grid
+
+00:32:52.900 --> 00:32:57.679
+then spacing between the items is that horizontal space
+
+00:32:57.679 --> 00:33:01.323
+that you saw on the previous slide but the line spacing
+
+00:33:01.323 --> 00:33:04.896
+also provided as a minimum gives us the ability to provide
+
+00:33:04.896 --> 00:33:09.745
+the definition of how much space is between the individual lines
+
+00:33:09.745 --> 00:33:16.291
+and that’s pretty straightforward if all items are all of the same heights
+
+00:33:16.291 --> 00:33:18.672
+in vertically scrolling layout.
+
+00:33:18.672 --> 00:33:21.391
+But if you have something that looks like this
+
+00:33:21.391 --> 00:33:26.230
+then maybe this is little less obvious right of the box.
+
+00:33:26.230 --> 00:33:27.718
+What that actually means,
+
+00:33:27.718 --> 00:33:36.783
+well since that’s a minimum what we mean, what we guarantee is the distance from the bottom furthest down item
+
+00:33:36.783 --> 00:33:43.500
+is to the top of the furthest up item on the following line.
+
+00:33:43.500 --> 00:33:48.168
+That is the least minimum value that you have specified
+
+00:33:48.168 --> 00:33:52.348
+so thats what minimum line spacing.
+
+00:33:52.348 --> 00:33:56.549
+So spacing something both of these properties can be configured globally.
+
+00:33:56.549 --> 00:33:58.605
+We have properties directly on the layout
+
+00:33:58.605 --> 00:34:01.670
+you can say my minimum spacing for the line
+
+00:34:01.670 --> 00:34:06.374
+my minimum spacing for the item is tho match and you done.
+
+00:34:06.374 --> 00:34:08.505
+For a lot of us this is going to be the way to go.
+
+00:34:08.505 --> 00:34:11.610
+We set it up when we configure the layout and we’re done.
+
+00:34:11.610 --> 00:34:14.710
+But just like with item sizing we have delegate methods.
+
+00:34:14.710 --> 00:34:17.293
+So we can specify this dynamically.
+
+00:34:17.293 --> 00:34:21.337
+Some sections may have different spacing between the items
+
+00:34:21.337 --> 00:34:24.507
+and between the lines than other sections.
+
+00:34:24.507 --> 00:34:27.952
+You saw this in Olivier's demo before
+
+00:34:27.952 --> 00:34:33.578
+where different sections had different spacings between the items.
+
+00:34:33.578 --> 00:34:40.344
+So between these three properties that you talked about you may have started to pick up a pattern
+
+00:34:40.344 --> 00:34:44.304
+that we introducing here in Flow Layout that is
+
+00:34:44.304 --> 00:34:46.891
+everything can be configured globally
+
+00:34:46.891 --> 00:34:50.636
+If you want to use that thing for your Flow Layout everywhere
+
+00:34:50.636 --> 00:34:54.540
+and set it up upfront or you can do it on a pre-delegate basis.
+
+00:34:54.540 --> 00:34:57.469
+This is true basically for all properties in a Flow Layout.
+
+00:34:57.469 --> 00:35:03.802
+And the thing that makes this convenient for you
+
+00:35:03.802 --> 00:35:09.800
+is the delegate that the Flow Layout uses is actually the delegate of a Collection View.
+
+00:35:09.800 --> 00:35:17.678
+So the same delegate that gets the itemdidselect and shouldHighlight all this highlight selection calls
+
+00:35:17.678 --> 00:35:22.959
+that same delegate is going to get calls from the flow layout
+
+00:35:22.959 --> 00:35:26.835
+asking for a thing like item sizing and such
+
+00:35:26.835 --> 00:35:32.210
+so to accomplish that the flow layout actually defined an additional protocol
+
+00:35:32.210 --> 00:35:35.995
+that extends uicollectionviewdelegate
+
+00:35:35.995 --> 00:35:39.930
+and we call it uicollectionviewDelegate flowlayout
+
+00:35:39.930 --> 00:35:42.911
+that defines all of the different customizations
+
+00:35:42.911 --> 00:35:47.241
+that you can make in your delegate to dynamically tweak these properties
+
+00:35:47.241 --> 00:35:52.416
+so thats the pattern that flow layout uses for all of itstweaks
+
+00:35:52.416 --> 00:35:56.137
+so let;s talk about scroll directions and we've promised
+
+00:35:56.137 --> 00:35:59.955
+we can scroll horizontally now
+
+00:35:59.955 --> 00:36:02.940
+and thats is simple as setting scroll direction
+
+00:36:02.940 --> 00:36:04.978
+to be vertical or horizontal
+
+00:36:04.978 --> 00:36:07.620
+and what's important to understand
+
+00:36:07.620 --> 00:36:10.547
+that in flow layout lot of our properties
+
+00:36:10.547 --> 00:36:16.260
+the semantics of them depend on the scroll direction that you using
+
+00:36:16.260 --> 00:36:20.522
+so switching from vertical to horizontal is simple as setting a property
+
+00:36:20.522 --> 00:36:23.633
+but then there are some additional considerations
+
+00:36:23.633 --> 00:36:25.264
+on the other properties that you setting
+
+00:36:25.264 --> 00:36:27.674
+and the values that you returning from your delegate
+
+00:36:27.674 --> 00:36:34.714
+this shows looking what a collection view looks like scrolling vertically and we all know the basically it would look like
+
+00:36:34.714 --> 00:36:40.824
+scrolling horizontally this is what were going to see
+
+00:36:40.824 --> 00:36:46.102
+the line breaking is sort of the opposite dimension
+
+00:36:46.102 --> 00:36:50.897
+of what it was on the vertical direction
+
+00:36:50.897 --> 00:36:54.811
+we laid the items out going horizontally when scroll direction was vertical
+
+00:36:54.811 --> 00:36:57.612
+and then broke down on the next line
+
+00:36:57.612 --> 00:37:03.522
+but with horizontal scrolling we laid the items out vertically
+
+00:37:03.522 --> 00:37:06.689
+so the layout of the lines happens on the opposite dimension
+
+00:37:06.689 --> 00:37:09.495
+of the scroll direction and when we break on the following line
+
+00:37:09.495 --> 00:37:11.657
+end of the bounds
+
+00:37:11.657 --> 00:37:17.539
+so the size of the headers and footers and this what I saudis going to definition
+
+00:37:17.539 --> 00:37:25.609
+is also set via a property or by a delegate method
+
+00:37:25.609 --> 00:37:30.390
+but you specifying the width and a height
+
+00:37:30.390 --> 00:37:33.730
+but were only gonna actually use only one dimension
+
+00:37:33.730 --> 00:37:37.729
+and which dimension we use depends on the scroll direction
+
+00:37:37.729 --> 00:37:41.857
+so this is a header that were going to put into a vertically scrolling
+
+00:37:41.857 --> 00:37:45.955
+collection view using uicollectionvuewflowlayout
+
+00:37:45.955 --> 00:37:50.210
+and you specify some height for that collectionview
+
+00:37:50.210 --> 00:37:53.420
+you actually give us the size cause we have the size for header in section
+
+00:37:53.420 --> 00:38:04.321
+but dimension that we care about is height and we gonna take that height and stretch the view up to fit the bounds of the collectionview
+
+00:38:04.321 --> 00:38:09.239
+so that we will always stretch to fit the collectionview
+
+00:38:09.239 --> 00:38:14.870
+but if alternatively you have horizontally scrolling collectionview
+
+00:38:14.870 --> 00:38:17.600
+well take the size value that you provided to us
+
+00:38:17.600 --> 00:38:19.499
+and well actually care about the width in that case and then
+
+00:38:19.499 --> 00:38:22.211
+we will stretch the height of that headerView
+
+00:38:22.211 --> 00:38:26.587
+to fit the collection view bounds that way
+
+00:38:26.587 --> 00:38:30.627
+so the dimension that we care about depends on the dimension that we are scrolling
+
+00:38:30.627 --> 00:38:33.560
+just as we change the dimension on which the layout
+
+00:38:33.560 --> 00:38:38.969
+lines we change the dimension in which we stretch our headers and footers
+
+00:38:38.969 --> 00:38:42.454
+so to summarize what we have done with headers and footers
+
+00:38:42.454 --> 00:38:48.302
+these a defined as supplementary views in the collection view speak
+
+00:38:48.302 --> 00:38:54.175
+the flow layout actually defines two types of supplementary views
+
+00:38:54.175 --> 00:38:58.746
+that are used section header and section footer namely
+
+00:38:58.746 --> 00:39:04.938
+and you notice that we actually capture the term flow layout out of these definitions
+
+00:39:04.938 --> 00:39:09.280
+and thats because if you go write your own layout
+
+00:39:09.280 --> 00:39:14.355
+you may find that your layout works in section headers and section footers as well
+
+00:39:14.355 --> 00:39:22.274
+and you may reuse these supplementary types in your own layout
+
+00:39:22.274 --> 00:39:26.106
+so in order to get them on screen its really just the same dance
+
+00:39:26.106 --> 00:39:27.966
+that you used to doing with cells
+
+00:39:27.966 --> 00:39:30.995
+you register a class or a nib
+
+00:39:30.995 --> 00:39:36.723
+and then in your data source you ll implement the appropriate methods
+
+00:39:36.723 --> 00:39:40.377
+we will ask you for a view for appropriate kind
+
+00:39:40.377 --> 00:39:44.618
+and you can dequeue a view of the type that you've registered
+
+00:39:44.618 --> 00:39:48.592
+and returning to us its really the same thing that you've done with cells
+
+00:39:48.592 --> 00:39:51.339
+so that should be pretty simple code for write
+
+00:39:51.339 --> 00:39:53.203
+let's talk about section insets
+
+00:39:53.203 --> 00:39:58.300
+this is another little tweak that you can do with your content
+
+00:39:58.300 --> 00:40:02.154
+if you imaging having a bunch of content that looks like this
+
+00:40:02.154 --> 00:40:09.680
+we have got a laid out, bunch of stuff in between
+
+00:40:09.680 --> 00:40:15.309
+section insets is the property on content that allows you to specify a box surrounding a content
+
+00:40:15.309 --> 00:40:20.601
+and then the insets top bottom left and right
+
+00:40:20.601 --> 00:40:23.950
+allow you to shrink that box
+
+00:40:23.950 --> 00:40:26.630
+so that bounding box can change
+
+00:40:26.630 --> 00:40:30.548
+your section and footer state put but your content get laid out
+
+00:40:30.548 --> 00:40:32.602
+in a smaller area
+
+00:40:32.602 --> 00:40:35.885
+that what section inset will do for you
+
+00:40:35.885 --> 00:40:40.410
+we use that in olivier demo before in order to ensure
+
+00:40:40.410 --> 00:40:45.511
+that we only had one column for each of the artistic drawings
+
+00:40:45.511 --> 00:40:50.863
+and that got us a nice little line horizontally scrolling line layout
+
+00:40:50.863 --> 00:40:55.938
+so those also can be configured globally or via the delegate
+
+00:40:55.938 --> 00:41:02.472
+very simple pattern that you'll be used to
+
+00:41:02.472 --> 00:41:05.207
+when you walk out of here i want you to think about a flow layout
+
+00:41:05.207 --> 00:41:07.390
+as your new best friend
+
+00:41:07.390 --> 00:41:12.589
+the flow layout is the thing that you wanna go home and play with tonight
+
+00:41:12.589 --> 00:41:14.521
+when you roll out collection view
+
+00:41:14.521 --> 00:41:20.150
+and you wanna see what is capable of what kind of hovers it can bring to your life
+
+00:41:20.150 --> 00:41:22.300
+for creating new beautiful ui
+
+00:41:22.300 --> 00:41:24.723
+its really really powerfull
+
+00:41:24.723 --> 00:41:28.221
+we have a lot of little bells and whistles that you can tweak in here
+
+00:41:28.221 --> 00:41:32.394
+to produce really great user interfaces
+
+00:41:32.394 --> 00:41:37.727
+that maybe would of take a lot of code to write in iOS 5
+
+00:41:37.727 --> 00:41:41.771
+but in iOS 6 you'll find yourself building them in the evening
+
+00:41:41.771 --> 00:41:44.512
+so we have a lot of new behaviors and let you do that
+
+00:41:44.512 --> 00:41:53.341
+the amount of time that you save just you gonna buy yourself an ice-cream you'll be so happy about it
+
+00:41:53.341 --> 00:42:00.200
+and all of this that we've shown is almost tip of the iceberg
+
+00:42:00.200 --> 00:42:04.385
+we designed collection view so that layout themselves
+
+00:42:04.385 --> 00:42:08.214
+are subclass able this include collectionviewflowlayout
+
+00:42:08.214 --> 00:42:14.273
+by subclassing collectionviewflowlayout you can provide all kinds of little tweaks specific to whatever
+
+00:42:14.273 --> 00:42:16.307
+your imagination come up with
+
+00:42:16.307 --> 00:42:24.502
+so this is gonna be a really fantastic starting point to make applications that are going to blow us all away
+
+00:42:24.502 --> 00:42:26.400
+and even I can't dream of today
+
+00:42:26.400 --> 00:42:31.621
+so with that id like to invite Olivier back in stage to show us a beautiful demo
+
+00:42:31.621 --> 00:42:37.981
+of capabilities of collection view and wrap this whole thing back together for us
+
+00:42:37.981 --> 00:42:48.856
+First a quick recap
+
+00:42:48.856 --> 00:42:51.118
+so what do we know about the collectionview
+
+00:42:51.118 --> 00:42:55.446
+its data driven view, data source based
+
+00:42:55.446 --> 00:42:59.649
+we do selection ahdn highlight tracking built in for you
+
+00:42:59.649 --> 00:43:05.641
+is based on cell, supplementary views, decoration views
+
+00:43:05.641 --> 00:43:10.565
+and collection view really does't know about the layout
+
+00:43:10.565 --> 00:43:12.951
+thats the job of the layout class
+
+00:43:12.951 --> 00:43:19.100
+but we have more
+
+00:43:19.100 --> 00:43:23.455
+we have fine-grained block based updates when you change your data source
+
+00:43:23.455 --> 00:43:28.637
+we have fine and precise flow of a layout and the collection view
+
+00:43:28.637 --> 00:43:32.540
+is going to manage insertion and deletion of items
+
+00:43:32.540 --> 00:43:38.702
+we have some built in hooks for any mission layout and you saw the one
+
+00:43:38.702 --> 00:43:43.259
+with this rotation cross fade with flow layout
+
+00:43:43.259 --> 00:43:47.750
+collection view is actually a scrollview subclass
+
+00:43:47.750 --> 00:43:56.677
+but its quiet well integrated the layout can know you scrolling and compute some final position for a cell
+
+00:43:56.677 --> 00:43:57.925
+for instance
+
+00:43:57.925 --> 00:44:01.837
+and custom layout
+
+00:44:01.837 --> 00:44:04.936
+thats quiet a big deal in a collection view
+
+00:44:04.936 --> 00:44:07.554
+but i don;t want to talk about that
+
+00:44:07.554 --> 00:44:21.684
+let me show . What we want to do now is to give you a little taste of what collection view can do actually
+
+00:44:21.684 --> 00:44:28.978
+Wat do we have here. Its a very simple flow layout
+
+00:44:28.978 --> 00:44:40.766
+every cell have the same size, Ive just added a few section insets to show you that we have different sections
+
+00:44:40.766 --> 00:44:49.270
+I can actually select on that. I can even add small key frame animation
+
+00:44:49.270 --> 00:45:02.327
+Well when we insert its quiet easy: we just move new cell on the right base
+
+00:45:02.327 --> 00:45:12.121
+and when we remove, if we remove within a section, what do we do actually we just animate
+
+00:45:12.121 --> 00:45:15.896
+sont have anything to do, you get it for free.
+
+00:45:15.896 --> 00:45:29.673
+for a given collection view with configured with a layout
+
+00:45:29.673 --> 00:45:34.715
+you can call a method on a collection view which is setcollectionviewlaout
+
+00:45:34.715 --> 00:45:39.538
+so you can switch to new layout
+
+00:45:39.538 --> 00:45:43.171
+what do we do in that case
+
+00:45:43.171 --> 00:45:51.828
+well we animate
+
+00:45:51.828 --> 00:46:00.863
+and that is one line of code
+
+00:46:00.863 --> 00:46:16.446
+and note that we keep selection but that grid layout that stacked layout they all rather generic layout, right?
+
+00:46:16.446 --> 00:46:21.810
+could applied to be cd albums anything
+
+00:46:21.810 --> 00:46:25.480
+one thing you can do, if you right your own layout
+
+00:46:25.480 --> 00:46:36.381
+could be actually pick into your data set and build your layout based on some information about the actual item you want to display
+
+00:46:36.381 --> 00:46:40.192
+like for instance for pictures, i don't know.
+
+00:46:40.192 --> 00:46:43.960
+GPS coordinates
+
+00:46:43.960 --> 00:46:49.879
+and that just custom layout with one small decoration view one big decoration view
+
+00:46:49.879 --> 00:46:53.110
+and we just animate
+
+00:46:53.110 --> 00:46:58.000
+and when we switch layout like that
+
+00:46:58.000 --> 00:47:00.526
+we actually call method on each cell
+
+00:47:00.526 --> 00:47:02.711
+and are going to appear in the next layout
+
+00:47:02.711 --> 00:47:14.930
+you might start with a cell with a small size and get into layout where cell size is huge
+
+00:47:14.930 --> 00:47:27.570
+you could add additional information like the label from the picture, the date, anything else.
+
+00:47:27.570 --> 00:47:38.235
+Or what you could do too is just to tweak the visual appearance from that cell so each match is best in a new layout
+
+00:47:38.235 --> 00:47:44.655
+here I'm just changing the corner radius when switching to new layout
+
+00:47:44.655 --> 00:47:51.593
+so thats another custom layout, quiet a simple one
+
+00:47:51.593 --> 00:48:04.278
+and when i implemented that layout i needed two properties one is that reference point for that purser of cells
+
+00:48:04.278 --> 00:48:09.700
+and the other one is the cell distance
+
+00:48:09.700 --> 00:48:15.441
+what thing i could do is to actually add the gesture recognizer
+
+00:48:15.441 --> 00:48:20.644
+on my collection view and just change the distance
+
+00:48:20.644 --> 00:48:24.509
+and that reference point in my layout
+
+00:48:24.509 --> 00:48:26.111
+is just a parameter right?
+
+00:48:26.111 --> 00:48:32.356
+just call the setter, though pinch and move
+
+00:48:32.356 --> 00:48:35.556
+and Im just changing two things
+
+00:48:35.556 --> 00:48:37.736
+set distance, setpoing
+
+00:48:37.736 --> 00:48:46.417
+and what happens is layout invalidates collection view computes the new state for the cell
+
+00:48:46.417 --> 00:48:56.357
+again it is a few lines of code
+
+00:48:56.357 --> 00:49:03.418
+But what if i just call set distance, set reference point
+
+00:49:03.418 --> 00:49:05.349
+what is going to happen?
+
+00:49:05.349 --> 00:49:08.345
+in that case we change the parameter of that ltyout
+
+00:49:08.345 --> 00:49:12.550
+so that layout ois going to jump to the next state
+
+00:49:12.550 --> 00:49:14.647
+which visually is not what i want
+
+00:49:14.647 --> 00:49:19.910
+so what we can do is use this fine-grained blockbased
+
+00:49:19.910 --> 00:49:22.580
+update mechanism so we can ask
+
+00:49:22.580 --> 00:49:26.199
+collection view to actually animate when changing parameter in code
+
+00:49:26.199 --> 00:49:28.739
+for layout
+
+00:49:28.739 --> 00:49:37.854
+you can do some really crasy layout
+
+00:49:37.854 --> 00:49:42.570
+please told to your designer before
+
+00:49:42.570 --> 00:49:47.465
+things like circle layout, wave layout
+
+00:49:47.465 --> 00:49:55.591
+that what is actually quiet interesting
+
+00:49:55.591 --> 00:49:58.462
+remembering my first layout the grid one
+
+00:49:58.462 --> 00:50:02.535
+I was adding and removing items from my data set
+
+00:50:02.535 --> 00:50:04.473
+and cell would just appear and disappear
+
+00:50:04.473 --> 00:50:06.842
+or even animate
+
+00:50:06.842 --> 00:50:08.988
+what happen in that vase
+
+00:50:08.988 --> 00:50:16.306
+we tried to do the right thing, which is were going to actually add the cell at the right position
+
+00:50:16.306 --> 00:50:20.656
+or just fade out the cell when we remove the item
+
+00:50:20.656 --> 00:50:24.933
+so everything should just work right of the box
+
+00:50:24.933 --> 00:50:36.354
+but one thing you can do when you implement custom layout you can define the initial position for a cell
+
+00:50:36.354 --> 00:50:37.769
+when its appearing
+
+00:50:37.769 --> 00:50:45.808
+you can define the final state for a cell when its disappearing and what is that initial and final states
+
+00:50:45.808 --> 00:50:52.330
+its that uicollectionviewlayout previews that define cell position
+
+00:50:52.330 --> 00:50:53.637
+cell size
+
+00:50:53.637 --> 00:50:56.937
+cell opacity a simple transform
+
+00:50:56.937 --> 00:51:03.169
+and you can do things like that
+
+00:51:03.169 --> 00:51:11.926
+and that was adding a cell but you can get creativity for deletion
+
+00:51:11.926 --> 00:51:18.391
+that was quiet a simple layout
+
+00:51:18.391 --> 00:51:26.224
+because that transform actually its a catransform3d
+
+00:51:26.224 --> 00:51:39.115
+so what could you do with that something like that
+
+00:51:39.115 --> 00:51:42.975
+and this is actually interesting layout too
+
+00:51:42.975 --> 00:51:53.576
+because when i swipe i actually need to compute again the cell state
+
+00:51:53.576 --> 00:52:01.104
+and collection view just striking that and asking layout at the right time
+
+00:52:01.104 --> 00:52:10.566
+you might notice that i just scroll that the cell perfectly starts in place
+
+00:52:10.566 --> 00:52:16.165
+and that was a scrollview slash layout integration that i was talking about
+
+00:52:16.165 --> 00:52:27.842
+and of course selection still work
+
+00:52:27.842 --> 00:52:33.482
+so my last layout is my final layout
+
+00:52:33.482 --> 00:52:40.900
+that was not a keynote animation that was a ten lines layout
+
+00:52:40.900 --> 00:52:42.898
+one thing about this demo.
+
+00:52:42.898 --> 00:53:00.811
+Every single layout is about one page of code its that easy to create new custom layout with collectionview
+
+00:53:00.811 --> 00:53:04.957
+so collection view is all about your content
+
+00:53:04.957 --> 00:53:07.689
+cells layouts
+
+00:53:07.689 --> 00:53:12.184
+simple things quiet simple because we ship flow layout for you
+
+00:53:12.184 --> 00:53:17.730
+and we can't wait to see what you going to do with that
+
+00:53:17.730 --> 00:53:25.133
+so for more information please check uikit api documentation
+
+00:53:25.133 --> 00:53:30.177
+male Jake Behrens evangelist
+
+00:53:30.177 --> 00:53:34.177
+and we have these iOS 6 developer forums online

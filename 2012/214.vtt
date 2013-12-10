@@ -1,0 +1,1294 @@
+WEBVTT
+
+99:59:59.999 --> 99:59:59.999
+Good morning, everyone
+
+99:59:59.999 --> 99:59:59.999
+My name is Ben Trumbull and I'm a manager for Core Data
+
+99:59:59.999 --> 99:59:59.999
+and I'm here to begin the Core Data Best Practices session.
+
+99:59:59.999 --> 99:59:59.999
+And today, we're going to talk about a number of topics
+
+99:59:59.999 --> 99:59:59.999
+We're going to talk about concurrency, nested contexts
+
+99:59:59.999 --> 99:59:59.999
+and then I'm going to bring Melissa Turner on stage to talk about schema design and search optimization
+
+99:59:59.999 --> 99:59:59.999
+So, as part of these ?? we're going to talk about using Core Data with multiple threads,
+
+99:59:59.999 --> 99:59:59.999
+sharing unsaved changes between context, debugging performance with Instruments
+
+99:59:59.999 --> 99:59:59.999
+tuning your model, and improving your predicate usage.
+
+99:59:59.999 --> 99:59:59.999
+First up, concurrency:
+
+99:59:59.999 --> 99:59:59.999
+So, when using Core Data,
+
+99:59:59.999 --> 99:59:59.999
+or really any modeling objects, there are some challenges you're going to face
+
+99:59:59.999 --> 99:59:59.999
+the first is obviously thread-safety
+
+99:59:59.999 --> 99:59:59.999
+look at some issues with transactionality when you have a bunch of changes together
+
+99:59:59.999 --> 99:59:59.999
+and of course you need to balance that with performance
+
+99:59:59.999 --> 99:59:59.999
+So, in the past, a lot of people have done something like this;
+
+99:59:59.999 --> 99:59:59.999
+they had a bunch of different contexts together and used performSelector: to route, say, a merge notification
+
+99:59:59.999 --> 99:59:59.999
+or another message onto the main thread or a specific thread
+
+99:59:59.999 --> 99:59:59.999
+to get to a context.
+
+99:59:59.999 --> 99:59:59.999
+This makes us a little sad, though.
+
+99:59:59.999 --> 99:59:59.999
+So, in Lion and iOS 5, we introduced some new methods
+
+99:59:59.999 --> 99:59:59.999
+and some new concurrency types for Managed Object.
+
+99:59:59.999 --> 99:59:59.999
+And instead of having to trampouline through performSelector:,
+
+99:59:59.999 --> 99:59:59.999
+you can use performBlock: and performBlockAndWait:
+
+99:59:59.999 --> 99:59:59.999
+and it's going to look a little bit something like this:
+
+99:59:59.999 --> 99:59:59.999
+when you create a managed object context you'll specify what kind of concurrency you want it to use;
+
+99:59:59.999 --> 99:59:59.999
+it will manage that itself and then use performBlock: to route it tasks.
+
+99:59:59.999 --> 99:59:59.999
+So, there are three concurrency options you can use with Core Data:
+
+99:59:59.999 --> 99:59:59.999
+the first one is, you tell a managed object context that you want it to be bound to the main thread.
+
+99:59:59.999 --> 99:59:59.999
+and this is great for interacting with view controllers and other aspects of the system that are bound to the main thread
+
+99:59:59.999 --> 99:59:59.999
+or don't really know much about Core Data and its concurrency.
+
+99:59:59.999 --> 99:59:59.999
+And then for a lot of your background tasks, and your own work, you can use private queue concurrency.
+
+99:59:59.999 --> 99:59:59.999
+And finally, there's the confinement concurrency type,
+
+99:59:59.999 --> 99:59:59.999
+which is what people have been using in the past
+
+99:59:59.999 --> 99:59:59.999
+before we introduced these new options
+
+99:59:59.999 --> 99:59:59.999
+So, for the confinement concurrency type, you're basically required to have a separate context
+
+99:59:59.999 --> 99:59:59.999
+for every thread
+
+99:59:59.999 --> 99:59:59.999
+and a managed object context can only be used on the thread or queue that created them.
+
+99:59:59.999 --> 99:59:59.999
+This is the default, legacy option.
+
+99:59:59.999 --> 99:59:59.999
+So, with the confinement type, everything is going to be serialized against your ??
+
+99:59:59.999 --> 99:59:59.999
+and you can use either a serialized dispatch queue or an NSOperationQueue with a maximum concurrency manually set to one
+
+99:59:59.999 --> 99:59:59.999
+in addition to a specific thread.
+
+99:59:59.999 --> 99:59:59.999
+So here I just want to point out that Core Data isn't using and thread-local state
+
+99:59:59.999 --> 99:59:59.999
+and we're really interested in having a single control flow;
+
+99:59:59.999 --> 99:59:59.999
+we're not really as focused on whether or not dispatch queues work with multiple threads,
+
+99:59:59.999 --> 99:59:59.999
+or how that's happening underneath the covers.
+
+99:59:59.999 --> 99:59:59.999
+So, thread confinement is pretty straight forward; it's safe; it's efficient.
+
+99:59:59.999 --> 99:59:59.999
+The transactions are obviously scoped to the managed object context so something else gets to interfere with it.
+
+99:59:59.999 --> 99:59:59.999
+But it does put a burden on you to manage all these issues.
+
+99:59:59.999 --> 99:59:59.999
+So, in particular, tracking which context goes with which thread,
+
+99:59:59.999 --> 99:59:59.999
+potentially keeping extra threads around for background tasks,
+
+99:59:59.999 --> 99:59:59.999
+and then all of the special behaviors that Core Data uses to integrate with view controllers,
+
+99:59:59.999 --> 99:59:59.999
+Cocoa bindings, undo management.
+
+99:59:59.999 --> 99:59:59.999
+We're going to have to infer from context whether you created the managed object context on the main thread
+
+99:59:59.999 --> 99:59:59.999
+and those things are driven--those we call "user events", typically--are driven by the run loop of the application.
+
+99:59:59.999 --> 99:59:59.999
+So, in contrast to confinement, private queue concurrency maintains its own private serialized queue
+
+99:59:59.999 --> 99:59:59.999
+and you can only use it on this queue, and you do that
+
+99:59:59.999 --> 99:59:59.999
+by setting up blocks as tasks, and enqueueing them using performBlock: and performBlockAndWait:
+
+99:59:59.999 --> 99:59:59.999
+Now, within those blocks you can use the managed object context API normally.
+
+99:59:59.999 --> 99:59:59.999
+And I just want to really emphasize that in this case, the queue is private and you shouldn't yank it out
+
+99:59:59.999 --> 99:59:59.999
+and interact with it directly.
+
+99:59:59.999 --> 99:59:59.999
+If you want to, you can dispatch work to your own queues, you can dispatch_sync at the end of those blocks.
+
+99:59:59.999 --> 99:59:59.999
+And there are a number of advantages to this,
+
+99:59:59.999 --> 99:59:59.999
+It lets the managed object context maintain which queue it's using and handle whether or not its in the right state,
+
+99:59:59.999 --> 99:59:59.999
+the right thread
+
+99:59:59.999 --> 99:59:59.999
+and other threads can easily interact with that managed object context by calling performBlock:
+
+99:59:59.999 --> 99:59:59.999
+unlike with the confinement concurrency type; those other threads really can't message that managed object context at all.
+
+99:59:59.999 --> 99:59:59.999
+And these can be created from any thread, and the queues are going to be much more efficient than
+
+99:59:59.999 --> 99:59:59.999
+keeping extra threads lying around in the background to do their tasks
+
+99:59:59.999 --> 99:59:59.999
+like background fetching.
+
+99:59:59.999 --> 99:59:59.999
+And the third type is the main queue concurrency type.
+
+99:59:59.999 --> 99:59:59.999
+This is going to behave very similarly to the private queue concurrency type,
+
+99:59:59.999 --> 99:59:59.999
+only the queue is obviously always the main thread,
+
+99:59:59.999 --> 99:59:59.999
+and non-main threads can just call performBlock: on that as well.
+
+99:59:59.999 --> 99:59:59.999
+And it will integrate all of those behaviors that I talked about: undo management and other life cycle events
+
+99:59:59.999 --> 99:59:59.999
+with the main run loop.
+
+99:59:59.999 --> 99:59:59.999
+So, what that means is that when you create a managed object context with the main queue concurrency type,
+
+99:59:59.999 --> 99:59:59.999
+your view controllers and other things can just message it directly;
+
+99:59:59.999 --> 99:59:59.999
+they don't have to know about all of these different performBlock: APIs,
+
+99:59:59.999 --> 99:59:59.999
+and it's very easy for other tasks that you have in the background to just enqueue performBlock: on it
+
+99:59:59.999 --> 99:59:59.999
+and have those then update view state.
+
+99:59:59.999 --> 99:59:59.999
+So, just sort of a diagram of what I mean going on here is,
+
+99:59:59.999 --> 99:59:59.999
+a background thread can enqueue a block directly,
+
+99:59:59.999 --> 99:59:59.999
+but the view controllers can just start using managed object context API.
+
+99:59:59.999 --> 99:59:59.999
+So in this way, Cocoa bindings, for instance, doesn't know about concurrency types or performBlock:,
+
+99:59:59.999 --> 99:59:59.999
+but it can just work with the managed object context the way it always has,
+
+99:59:59.999 --> 99:59:59.999
+and you have have background threads and other queues enqueue messages
+
+99:59:59.999 --> 99:59:59.999
+to happen on the main thread context in that way.
+
+99:59:59.999 --> 99:59:59.999
+So, I mentioned that we had these notions of user events,
+
+99:59:59.999 --> 99:59:59.999
+and for the main thread, that's going to be tightly integrated with with the application's runloop
+
+99:59:59.999 --> 99:59:59.999
+but for contexts running off the main thread,
+
+99:59:59.999 --> 99:59:59.999
+either in a private queue or on your own thread,
+
+99:59:59.999 --> 99:59:59.999
+Core Data is going to defer a bunch of tasks and then coalesce work later on;
+
+99:59:59.999 --> 99:59:59.999
+this is the change notification--coalescing changes for notifications, delete propagation,
+
+99:59:59.999 --> 99:59:59.999
+setting up the undo groupings; stuff like that.
+
+99:59:59.999 --> 99:59:59.999
+And, for the most part, on background threads, we consider this to be the time in between calls to processPendingChanges:.
+
+99:59:59.999 --> 99:59:59.999
+So, a couple of useful points for all the concurrency types
+
+99:59:59.999 --> 99:59:59.999
+is that managed objects are always owned by their managed object contexts
+
+99:59:59.999 --> 99:59:59.999
+and that Object IDs are a great way to pass references around between contexts
+
+99:59:59.999 --> 99:59:59.999
+because they're going to be safe, immutable objects.
+
+99:59:59.999 --> 99:59:59.999
+And something else that's a nice point is that retain and release are going to be thread-safe
+
+99:59:59.999 --> 99:59:59.999
+on all Core Data objects, everywhere, all the time, without exception.
+
+99:59:59.999 --> 99:59:59.999
+They should be thread-safe on all Cocoa objects, but your mileage may vary on that one.
+
+99:59:59.999 --> 99:59:59.999
+That means that you can actually retain a managed object independently of its requirement on the managed object context;
+
+99:59:59.999 --> 99:59:59.999
+you just can't necessarily use it directly.
+
+99:59:59.999 --> 99:59:59.999
+So, some good times for you to pass around updates to other contexts or to update the views
+
+99:59:59.999 --> 99:59:59.999
+are going to be with these NSNotifications that Core Data provides,
+
+99:59:59.999 --> 99:59:59.999
+with the ObjectsDidChange notification and the ContextDidSave notification.
+
+99:59:59.999 --> 99:59:59.999
+and you can refresh other managed object contexts pretty easily, after they save,
+
+99:59:59.999 --> 99:59:59.999
+with the mergeChangesFromContextDidSaveNotification.
+
+99:59:59.999 --> 99:59:59.999
+And here I'd just like to call out that you're responsible for the thread safety of the managed object contexts receiving this message
+
+99:59:59.999 --> 99:59:59.999
+but you don't have to worry about the notification data that's being generated here;
+
+99:59:59.999 --> 99:59:59.999
+Core Data will manage the thread-safety of that information.
+
+99:59:59.999 --> 99:59:59.999
+So, you just have to maintain the rules that we've outlined in the past on the receiver of the merge method.
+
+99:59:59.999 --> 99:59:59.999
+And, when you're inside some of these notifications as the observer,
+
+99:59:59.999 --> 99:59:59.999
+you can find out some useful methods of taking a look at the state of what's changed in the merged objects,
+
+99:59:59.999 --> 99:59:59.999
+something that we added last release was changedValuesForCurrentEvent,
+
+99:59:59.999 --> 99:59:59.999
+which will give you the values that changed since the previous call to savePendingChanges:
+
+99:59:59.999 --> 99:59:59.999
+and then some older methods,
+
+99:59:59.999 --> 99:59:59.999
+changedValues and committedValuesForKeys will go back to the last time the object was saved.
+
+99:59:59.999 --> 99:59:59.999
+So now I'm going to go into a little more depth
+
+99:59:59.999 --> 99:59:59.999
+about these performBlock and performBlockAndWait: methods that I mentioned earlier,
+
+99:59:59.999 --> 99:59:59.999
+and our challenge here is to find a way to pass work to other threads,
+
+99:59:59.999 --> 99:59:59.999
+these managed object contexts running on their own queue or the main queue,
+
+99:59:59.999 --> 99:59:59.999
+and to sort of demarcate the actual group of changes you want to be coalesced together,
+
+99:59:59.999 --> 99:59:59.999
+whether it's for an undo grouping, or for validation,
+
+99:59:59.999 --> 99:59:59.999
+or potentially to save,
+
+99:59:59.999 --> 99:59:59.999
+as well as a convenient way to integrate with all of the other APIs on the platform.
+
+99:59:59.999 --> 99:59:59.999
+and that's part of the reason we chose blocks.
+
+99:59:59.999 --> 99:59:59.999
+So, performBlock: is an asynchronous request to enqueue this.
+
+99:59:59.999 --> 99:59:59.999
+We consider this its own isolated user event, and it also includes an autorelease pool.
+
+99:59:59.999 --> 99:59:59.999
+I really want to call out, that in all of these methods, it is very illegal to throw an exception outside of the block,
+
+99:59:59.999 --> 99:59:59.999
+so if you do have exceptions, please catch them and resolve them inside the block.
+
+99:59:59.999 --> 99:59:59.999
+And there's no support for reentrancy in this performBlock: method
+
+99:59:59.999 --> 99:59:59.999
+And by that what I mean is, when you call performBlock: on a managed object context,
+
+99:59:59.999 --> 99:59:59.999
+and within that performBlock: call, you call performBlock: again,
+
+99:59:59.999 --> 99:59:59.999
+you're basically just getting the same effect as if you had iteratively called performBlock:.
+
+99:59:59.999 --> 99:59:59.999
+So, this is an asynchronous call, and all it's doing is enqueuing up a task to be happening later.
+
+99:59:59.999 --> 99:59:59.999
+So, in contrast, we have performBlockAndWait:.
+
+99:59:59.999 --> 99:59:59.999
+This is synchronous, it's very lightweight, we don't consider it to be any kind of event,
+
+99:59:59.999 --> 99:59:59.999
+It doesn't even include an autorelease pool.
+
+99:59:59.999 --> 99:59:59.999
+But what it does do is, it will support some reentrancy,
+
+99:59:59.999 --> 99:59:59.999
+so if you call performBlockAndWait: from within another performBlock:
+
+99:59:59.999 --> 99:59:59.999
+you'll basically get them nested;
+
+99:59:59.999 --> 99:59:59.999
+they'll be executed immediately inline
+
+99:59:59.999 --> 99:59:59.999
+as opposed to enqueued later
+
+99:59:59.999 --> 99:59:59.999
+So, this is very convenient as long as you're just working with one managed object context
+
+99:59:59.999 --> 99:59:59.999
+for these blocks.
+
+99:59:59.999 --> 99:59:59.999
+So, these APIs are very fast and lightweight.
+
+99:59:59.999 --> 99:59:59.999
+The performBlockAndWait: API is on the same order of magnitude as valueForKey:, for instance
+
+99:59:59.999 --> 99:59:59.999
+and the changes there, from Core Data's perspective
+
+99:59:59.999 --> 99:59:59.999
+are going to be scoped by the block.
+
+99:59:59.999 --> 99:59:59.999
+So, however large or small you make the block,
+
+99:59:59.999 --> 99:59:59.999
+it's going to be sort of one self-encapsulated change set.
+
+99:59:59.999 --> 99:59:59.999
+So, when you're working with data between blocks, like I said,
+
+99:59:59.999 --> 99:59:59.999
+you can retain objects independently of their threads
+
+99:59:59.999 --> 99:59:59.999
+and pass them between blocks, but object IDs are often going to be useful,
+
+99:59:59.999 --> 99:59:59.999
+you can rematerialize them into managed objects when they get inside the block
+
+99:59:59.999 --> 99:59:59.999
+using managedObjectWithID:
+
+99:59:59.999 --> 99:59:59.999
+and this will reuse whatever cached state you have around,
+
+99:59:59.999 --> 99:59:59.999
+perhaps at the persistent store coordinator level
+
+99:59:59.999 --> 99:59:59.999
+We keep a cache there as well as at the managed object context.
+
+99:59:59.999 --> 99:59:59.999
+So if the data is already in memory we're not going to go back to disk to get it
+
+99:59:59.999 --> 99:59:59.999
+and this lets you use object IDs is immutable objects to be passed around
+
+99:59:59.999 --> 99:59:59.999
+and not worry too much about the thread-safety of your references
+
+99:59:59.999 --> 99:59:59.999
+and then when you get into the block you can rematerialize those into managed objects
+
+99:59:59.999 --> 99:59:59.999
+But you can on occasion you'll find it useful to pass managed objects around
+
+99:59:59.999 --> 99:59:59.999
+you just can't actually look or use them; when you do so you can just retain them.
+
+99:59:59.999 --> 99:59:59.999
+And of course __block variables are a great way to pass out results.
+
+99:59:59.999 --> 99:59:59.999
+And a lot of our APIs return NSErrors, so it's very important to remember that these are autoreleased,
+
+99:59:59.999 --> 99:59:59.999
+and as I mentioned performBlock: includes an autorelease pool,
+
+99:59:59.999 --> 99:59:59.999
+so you'll probably want to either handle or retain the errors before returning from your blocks.
+
+99:59:59.999 --> 99:59:59.999
+So, a simple example of how you might use some of these APIs.
+
+99:59:59.999 --> 99:59:59.999
+Here we have a context, and it's synchronously calling performBlockAndWait:
+
+99:59:59.999 --> 99:59:59.999
+to execute a fetch request that's been captured by this block from some code further up
+
+99:59:59.999 --> 99:59:59.999
+and, if we don't have an error, then we just ask the array of managed objects to give us back
+
+99:59:59.999 --> 99:59:59.999
+its object IDs, and we return those out of the block with a __block variable.
+
+99:59:59.999 --> 99:59:59.999
+So, as I mentioned, the queue is often going to be very private to the managed object context,
+
+99:59:59.999 --> 99:59:59.999
+and we don't want you changing anything about it,
+
+99:59:59.999 --> 99:59:59.999
+so if you need to, and you're using your own queues as I'd expect,
+
+99:59:59.999 --> 99:59:59.999
+you can just simply at the end of the work block that you passed the managed object context,
+
+99:59:59.999 --> 99:59:59.999
+enqueue another block back onto your own queue as the callback
+
+99:59:59.999 --> 99:59:59.999
+to let it know that it's done and process any results.
+
+99:59:59.999 --> 99:59:59.999
+But there are a number of other ways that you can either coordinate with your own queues,
+
+99:59:59.999 --> 99:59:59.999
+or other queues in the system, and dispatch semaphores are one way of doing that.
+
+99:59:59.999 --> 99:59:59.999
+You can create a semaphore, and then at the end of the block, signal the semaphore
+
+99:59:59.999 --> 99:59:59.999
+and then in this particular code snippet, the context is asynchronously performing this block
+
+99:59:59.999 --> 99:59:59.999
+and the code that is calling perform: here is actually waiting until that is done
+
+99:59:59.999 --> 99:59:59.999
+on the semaphore.
+
+99:59:59.999 --> 99:59:59.999
+And then, something else that I'd like to give a little shout-out
+
+99:59:59.999 --> 99:59:59.999
+are dispatch groups,
+
+99:59:59.999 --> 99:59:59.999
+and if you haven't used them they have some very interesting behaviors.
+
+99:59:59.999 --> 99:59:59.999
+And you can use them to organize some pretty complex depedencies
+
+99:59:59.999 --> 99:59:59.999
+between a variety of queues and blocks between them.
+
+99:59:59.999 --> 99:59:59.999
+So when you use dispatch<u>group</u>enter, it's a little like incrementing a retain count
+
+99:59:59.999 --> 99:59:59.999
+on when the queue will be done.
+
+99:59:59.999 --> 99:59:59.999
+And then, the worker blocks can call leave to decrement it
+
+99:59:59.999 --> 99:59:59.999
+and when it ends up getting back down to zero,
+
+99:59:59.999 --> 99:59:59.999
+conceptually, dispatch_wait will return, or
+
+99:59:59.999 --> 99:59:59.999
+dispatch<u>group</u>notify will enqueue a block that you passed it onto your own queue.
+
+99:59:59.999 --> 99:59:59.999
+So what this lets you do is basically, you don't actually have to know how many waiters
+
+99:59:59.999 --> 99:59:59.999
+you want to float around, you can just call dispatch<u>group</u>wait as you add more work
+
+99:59:59.999 --> 99:59:59.999
+or as you decide to build in these dependencies
+
+99:59:59.999 --> 99:59:59.999
+and then have them call dispatch<u>group</u>leave.
+
+99:59:59.999 --> 99:59:59.999
+So, this is a very simple example.
+
+99:59:59.999 --> 99:59:59.999
+It's very similar to the semaphore example.
+
+99:59:59.999 --> 99:59:59.999
+This becomes more interesting when you have more queues involved.
+
+99:59:59.999 --> 99:59:59.999
+So, now I'd like to move on from concurrency to talk about nested managed object contexts.
+
+99:59:59.999 --> 99:59:59.999
+And in particular the reasons you'd be interested in nested managed object contexts
+
+99:59:59.999 --> 99:59:59.999
+are going to be passing objects around between managed object contexts
+
+99:59:59.999 --> 99:59:59.999
+and implementing something like an asynchronous save.
+
+99:59:59.999 --> 99:59:59.999
+So in the past, working with managed object contexts,
+
+99:59:59.999 --> 99:59:59.999
+you can push and pull changes that have been saved between contexts
+
+99:59:59.999 --> 99:59:59.999
+and use the merge notification to do that.
+
+99:59:59.999 --> 99:59:59.999
+But passing unsaved changes between contexts, or having them really work with unsaved changes
+
+99:59:59.999 --> 99:59:59.999
+can be very difficult.
+
+99:59:59.999 --> 99:59:59.999
+And similarly it's very difficult to break up the save operation to be asynchronous.
+
+99:59:59.999 --> 99:59:59.999
+So here, for a nested context, the parent contexts are going to act
+
+99:59:59.999 --> 99:59:59.999
+kind of like the persistent store, from the perspective of the child contexts.
+
+99:59:59.999 --> 99:59:59.999
+And the child context is going to see the state of its objects as they currently exist in the parent.
+
+99:59:59.999 --> 99:59:59.999
+Children will then inherit unsaved changes from the parent whenever they fault things in
+
+99:59:59.999 --> 99:59:59.999
+or they execute a save request
+
+99:59:59.999 --> 99:59:59.999
+and they'll marshall their saves in memory.
+
+99:59:59.999 --> 99:59:59.999
+So instead of saving back to disk, the children will just turn around and save to their parent context.
+
+99:59:59.999 --> 99:59:59.999
+So it looks a little something like this
+
+99:59:59.999 --> 99:59:59.999
+and the child doesn't know that it's not actually talking to the persistent store
+
+99:59:59.999 --> 99:59:59.999
+it's just talking to a parent context
+
+99:59:59.999 --> 99:59:59.999
+and the behaviors are going to be very analogous in the way that saving works, and faulting.
+
+99:59:59.999 --> 99:59:59.999
+So, in this way, peers that all inherit from the same parent context
+
+99:59:59.999 --> 99:59:59.999
+can all push and pull changes between them,
+
+99:59:59.999 --> 99:59:59.999
+and you can implement an asynchronous save by setting up the parent context
+
+99:59:59.999 --> 99:59:59.999
+to have a private queue and having the child contexts, typically on the main thread,
+
+99:59:59.999 --> 99:59:59.999
+save into the parent context, and then tell the parent context to save.
+
+99:59:59.999 --> 99:59:59.999
+And one of the ways you might leverage that is something like a detail inspector.
+
+99:59:59.999 --> 99:59:59.999
+So the detail inspector will inherit the view state as it is in your main context.
+
+99:59:59.999 --> 99:59:59.999
+So for sharing unsaved changes, when you save the child context,
+
+99:59:59.999 --> 99:59:59.999
+they'll just push up one level, and then you can pull those changes back down using a fetch
+
+99:59:59.999 --> 99:59:59.999
+or the merge notification between child contexts, or by calling refreshObject:.
+
+99:59:59.999 --> 99:59:59.999
+It's the same way you would with not-nested managed object contexts.
+
+99:59:59.999 --> 99:59:59.999
+For an asynchronous save,
+
+99:59:59.999 --> 99:59:59.999
+when you save the child, the parent context gets those changes and holds onto them until it's told to save
+
+99:59:59.999 --> 99:59:59.999
+and the changes won't be written to disk until the root most parent calls save.
+
+99:59:59.999 --> 99:59:59.999
+So that would look something like this, where a parent context has a private queue concurrency type
+
+99:59:59.999 --> 99:59:59.999
+so it will execute requests asynchronously
+
+99:59:59.999 --> 99:59:59.999
+and the child contexts get set up and create a reference to this parent context
+
+99:59:59.999 --> 99:59:59.999
+so when the child saves, it pushes its changes up to the parent
+
+99:59:59.999 --> 99:59:59.999
+and then here, it enqueues an asynchronous block to tell the parent that you want the parent to save.
+
+99:59:59.999 --> 99:59:59.999
+For inheriting changes in the detail inspector, you just create a child context for the detail inspector.
+
+99:59:59.999 --> 99:59:59.999
+and if you decide to commit the changes within the inspector,
+
+99:59:59.999 --> 99:59:59.999
+they'll get pushed into the parent, which is probably going to be something like the main context
+
+99:59:59.999 --> 99:59:59.999
+for your view state
+
+99:59:59.999 --> 99:59:59.999
+and anything you do in the child context for the inspector,
+
+99:59:59.999 --> 99:59:59.999
+it's just going to incorporate the current unsaved state in the parent
+
+99:59:59.999 --> 99:59:59.999
+and you don't even necessarily have to do anything special
+
+99:59:59.999 --> 99:59:59.999
+if you decide to cancel out of the inspector; you can just throw away the child context.
+
+99:59:59.999 --> 99:59:59.999
+So, some important things to remember.
+
+99:59:59.999 --> 99:59:59.999
+is that saving with the child context is only going to push the changes up a single level,
+
+99:59:59.999 --> 99:59:59.999
+but fetching is going to go to the database and pull data through all the levels.
+
+99:59:59.999 --> 99:59:59.999
+Keep in mind, though that in general, Core Data isn't going to change any objects that you already have
+
+99:59:59.999 --> 99:59:59.999
+out from underneath you
+
+99:59:59.999 --> 99:59:59.999
+so if you fetch an object that you already have, you will see it's previous state,
+
+99:59:59.999 --> 99:59:59.999
+so if you say, yeah, it's been dirtied, we're not going to blow away your changes.
+
+99:59:59.999 --> 99:59:59.999
+We're simply going to keep, in the fetched results, the reference to that object.
+
+99:59:59.999 --> 99:59:59.999
+And you can call refreshObject: if you want to get new values for it.
+
+99:59:59.999 --> 99:59:59.999
+objectWithID: on a child context will pull from the fewest number of levels necessary to get that data
+
+99:59:59.999 --> 99:59:59.999
+so it might go to the database, or it might only go up a single level to the parent.
+
+99:59:59.999 --> 99:59:59.999
+And, all parent contexts must adopt one of the queue types for concurrency.
+
+99:59:59.999 --> 99:59:59.999
+So they can either be main queue concurrency type or private queue concurrency type
+
+99:59:59.999 --> 99:59:59.999
+but we don't support them with the legacy confinement concurrency type.
+
+99:59:59.999 --> 99:59:59.999
+Child contexts depend pretty heavily on their parents,
+
+99:59:59.999 --> 99:59:59.999
+so the parent context really should not do blocking operations down on their children.
+
+99:59:59.999 --> 99:59:59.999
+By this, the children are going to call performBlockAndWait: and do a lot of operations for you.
+
+99:59:59.999 --> 99:59:59.999
+For instance, executeFetchRequest: on a child context internally is going to turn around
+
+99:59:59.999 --> 99:59:59.999
+and ask its parent context to do part of the fetch
+
+99:59:59.999 --> 99:59:59.999
+and then pull down those changes into itself.
+
+99:59:59.999 --> 99:59:59.999
+So what this means is, there's sort of naturally a dependency there,
+
+99:59:59.999 --> 99:59:59.999
+and if the parent contexts turn around and call performBlockAndWait: on their children,
+
+99:59:59.999 --> 99:59:59.999
+you'll basically end up deadlocking, because you'll have all these queues trying to synchronously wait on each other.
+
+99:59:59.999 --> 99:59:59.999
+So in general, you should imagine that requests are going to flow up
+
+99:59:59.999 --> 99:59:59.999
+this hierarchy of managed object contexts finally to the database at the root,
+
+99:59:59.999 --> 99:59:59.999
+and results are going to flow back down.
+
+99:59:59.999 --> 99:59:59.999
+And now I'm going to bring Melissa Turner on stage
+
+99:59:59.999 --> 99:59:59.999
+to talk to you about performance.
+
+99:59:59.999 --> 99:59:59.999
+Thank you.
+
+99:59:59.999 --> 99:59:59.999
+[Applause]
+
+99:59:59.999 --> 99:59:59.999
+Thanks, Ben.
+
+99:59:59.999 --> 99:59:59.999
+So, performance.
+
+99:59:59.999 --> 99:59:59.999
+How do you know when you've got a performance problem?
+
+99:59:59.999 --> 99:59:59.999
+How do you figure out what you need to do when you've got a performance problem?
+
+99:59:59.999 --> 99:59:59.999
+Lots of questions.
+
+99:59:59.999 --> 99:59:59.999
+The first stage, when you're starting to sit down in front of your application,
+
+99:59:59.999 --> 99:59:59.999
+"Is this thing ready to release to my customers?
+
+99:59:59.999 --> 99:59:59.999
+Is it performant enough?
+
+99:59:59.999 --> 99:59:59.999
+Are they going to be annoyed with me?
+
+99:59:59.999 --> 99:59:59.999
+Are they going to file bad reports on me in the App Store
+
+99:59:59.999 --> 99:59:59.999
+or are they going to give me five stars?"
+
+99:59:59.999 --> 99:59:59.999
+is to start asking yourself questions about the application.
+
+99:59:59.999 --> 99:59:59.999
+What environment does it run in, and have I designed it to be compatible with that environment?
+
+99:59:59.999 --> 99:59:59.999
+What should it be doing, and are the "shoulds" and "dos" compatible?
+
+99:59:59.999 --> 99:59:59.999
+What kind of things do you need to know about the environment?
+
+99:59:59.999 --> 99:59:59.999
+Well, actually, very little nowadays.
+
+99:59:59.999 --> 99:59:59.999
+As long as you're using the Apple-supplied frameworks,
+
+99:59:59.999 --> 99:59:59.999
+things like libDispatch, then we will take care of making sure that you're doing things properly from, say,
+
+99:59:59.999 --> 99:59:59.999
+the confinement standpoint,
+
+99:59:59.999 --> 99:59:59.999
+but you will need to do things like design for your network environment.
+
+99:59:59.999 --> 99:59:59.999
+If you have an application that goes out, use the NSIncrementalStore APIs to build a store
+
+99:59:59.999 --> 99:59:59.999
+that talks to a Web service,
+
+99:59:59.999 --> 99:59:59.999
+you probbaly want to make sur ehta whenever your users triggers an action
+
+99:59:59.999 --> 99:59:59.999
+that will require going out and talking to that Web service
+
+99:59:59.999 --> 99:59:59.999
+it doesn't block the main UI of the application.
+
+99:59:59.999 --> 99:59:59.999
+You'll need to think about stuff like that.
+
+99:59:59.999 --> 99:59:59.999
+That is a performance issue.
+
+99:59:59.999 --> 99:59:59.999
+You'll need to think about what is sufficient performance
+
+99:59:59.999 --> 99:59:59.999
+versus what is optimal performance.
+
+99:59:59.999 --> 99:59:59.999
+Sufficient is, your application gets up and gets the job done.
+
+99:59:59.999 --> 99:59:59.999
+Optimal is, it really "wows" your user and allows you
+
+99:59:59.999 --> 99:59:59.999
+to spend more time doing interesting things in your application because you're not wasting cycles
+
+99:59:59.999 --> 99:59:59.999
+doing things inefficiently.
+
+99:59:59.999 --> 99:59:59.999
+One crucial point to remember is that if you're building an application that supports multiple platforms,
+
+99:59:59.999 --> 99:59:59.999
+test on the minimal configuration.
+
+99:59:59.999 --> 99:59:59.999
+This cannot be emphasized enough,
+
+99:59:59.999 --> 99:59:59.999
+because if it works on your minimal configuration,
+
+99:59:59.999 --> 99:59:59.999
+it's going to blow people away on all other platforms.
+
+99:59:59.999 --> 99:59:59.999
+What should your application be going?
+
+99:59:59.999 --> 99:59:59.999
+You should know this; you've written it.
+
+99:59:59.999 --> 99:59:59.999
+You know things like, well, it opens documents.
+
+99:59:59.999 --> 99:59:59.999
+If you open a document, there's very little way to get around it,
+
+99:59:59.999 --> 99:59:59.999
+you need to do file system access and load at least some of the data
+
+99:59:59.999 --> 99:59:59.999
+so you can show it to the user; that's what they're expecting.
+
+99:59:59.999 --> 99:59:59.999
+If the user instigates a network access, it's the same thing.
+
+99:59:59.999 --> 99:59:59.999
+Know when the user is accessing the network and how' they're accessing the network
+
+99:59:59.999 --> 99:59:59.999
+so you don't do things like accidentally go out and fetch the same piece of data three or four times.
+
+99:59:59.999 --> 99:59:59.999
+And you need to know what kind of random processing your user is likely to kick off:
+
+99:59:59.999 --> 99:59:59.999
+calculate me some transform on an image; scale it; apply a filter.
+
+99:59:59.999 --> 99:59:59.999
+Do something interesting like that.
+
+99:59:59.999 --> 99:59:59.999
+These are things you know your application can do,
+
+99:59:59.999 --> 99:59:59.999
+and you should expect to see them in your performance analysis.
+
+99:59:59.999 --> 99:59:59.999
+And then there's what the application does do, stuff it does automatically.
+
+99:59:59.999 --> 99:59:59.999
+You have a data set that you need to go out and check periodically
+
+99:59:59.999 --> 99:59:59.999
+to see if there's new data on your Web service.
+
+99:59:59.999 --> 99:59:59.999
+That kind of thing happens automatically; you should build it into your calculations.
+
+99:59:59.999 --> 99:59:59.999
+Try not to do it when the user has kicked off that image transform.
+
+99:59:59.999 --> 99:59:59.999
+Does it post notifications?
+
+99:59:59.999 --> 99:59:59.999
+You should try to do that in some unobtrusive way
+
+99:59:59.999 --> 99:59:59.999
+using our APIs that will make it all happen nice and smoothly.
+
+99:59:59.999 --> 99:59:59.999
+And if for some reason you want to calculate the 2438th digit of pi,
+
+99:59:59.999 --> 99:59:59.999
+Try and do it at 3 o'clock in the morning on a Friday when they're not likely to be using the application.
+
+99:59:59.999 --> 99:59:59.999
+How do you figure out what your application does
+
+99:59:59.999 --> 99:59:59.999
+once you know what you think it should be doing?
+
+99:59:59.999 --> 99:59:59.999
+Measure it.
+
+99:59:59.999 --> 99:59:59.999
+Measure, measure, measure, measure.
+
+99:59:59.999 --> 99:59:59.999
+This is where everything starts.
+
+99:59:59.999 --> 99:59:59.999
+Figure out where your application is actually spending time
+
+99:59:59.999 --> 99:59:59.999
+so you don't end up spending two weeks optimizing what turns out to be
+
+99:59:59.999 --> 99:59:59.999
+one percent of your application's workload.
+
+99:59:59.999 --> 99:59:59.999
+It's much better to spend two weeks optimizing fifty percent of your application's workload.
+
+99:59:59.999 --> 99:59:59.999
+Start with the Time Profiler in Instruments.
+
+99:59:59.999 --> 99:59:59.999
+This will tell you exactly where your application is spending all of its time,
+
+99:59:59.999 --> 99:59:59.999
+method by method.
+
+99:59:59.999 --> 99:59:59.999
+There's also the Core Data template in Instruments.
+
+99:59:59.999 --> 99:59:59.999
+This will tell you when Core Data is touching the file system.
+
+99:59:59.999 --> 99:59:59.999
+We have a template that contains instruments for fetching, for saving, for firing relationship faults,
+
+99:59:59.999 --> 99:59:59.999
+and for when we have to go to the database because the data we're looking for is not in the cache.
+
+99:59:59.999 --> 99:59:59.999
+And there's also the com.apple.CoreData.SQLDebug default.
+
+99:59:59.999 --> 99:59:59.999
+If you pass this to your application when you launch it,
+
+99:59:59.999 --> 99:59:59.999
+or have in your defaults write,
+
+99:59:59.999 --> 99:59:59.999
+it will cause Core Data to print out all of the SQL that is being sent to the database,
+
+99:59:59.999 --> 99:59:59.999
+and you can have a look at that, see what you're sending to the database,
+
+99:59:59.999 --> 99:59:59.999
+look at the SQL that's being generated,
+
+99:59:59.999 --> 99:59:59.999
+figure out if this is really the SQL that should be generated in that case,
+
+99:59:59.999 --> 99:59:59.999
+if you're doing too much work, doing too little work, or doing too many trips to the database,
+
+99:59:59.999 --> 99:59:59.999
+this kind of thing; this default will tell you that.
+
+99:59:59.999 --> 99:59:59.999
+Many of you have probably heard this before,
+
+99:59:59.999 --> 99:59:59.999
+because it's a very common phrase in the real world, if you're building anything with your hands.
+
+99:59:59.999 --> 99:59:59.999
+Measure twice. Cut once.
+
+99:59:59.999 --> 99:59:59.999
+You cannot uncut a piece of lumber.
+
+99:59:59.999 --> 99:59:59.999
+And it's less important in the virtual world, because we have SCM systems.
+
+99:59:59.999 --> 99:59:59.999
+It's always possible to revert to yesterday's build.
+
+99:59:59.999 --> 99:59:59.999
+But the thing is, you can't get back the time you have invested
+
+99:59:59.999 --> 99:59:59.999
+going down that false path.
+
+99:59:59.999 --> 99:59:59.999
+So make sure you're fixing the right thing before you go off and fix it.
+
+99:59:59.999 --> 99:59:59.999
+For the rest of this presentation I'm going to do a series of demos,
+
+99:59:59.999 --> 99:59:59.999
+or I will be having my lovely assistant do a series of demos
+
+99:59:59.999 --> 99:59:59.999
+that are based around a table view.
+
+99:59:59.999 --> 99:59:59.999
+And this is primarily because table views are easy to visualize;
+
+99:59:59.999 --> 99:59:59.999
+if I say there's too much data being loaded,
+
+99:59:59.999 --> 99:59:59.999
+you can get a grasp of what that says.
+
+99:59:59.999 --> 99:59:59.999
+If I say there's too little data, or the wrong data--it's badly formed--
+
+99:59:59.999 --> 99:59:59.999
+you can get an idea what that means.
+
+99:59:59.999 --> 99:59:59.999
+But the lessons are generally applicable to anything that's going to be loading and processing data
+
+99:59:59.999 --> 99:59:59.999
+from a store.
+
+99:59:59.999 --> 99:59:59.999
+Just as a disclaimer: the demos are specifically chosen so that they have performance issues
+
+99:59:59.999 --> 99:59:59.999
+that are visible on stage.
+
+99:59:59.999 --> 99:59:59.999
+Any performance problems that you have in your app will probably
+
+99:59:59.999 --> 99:59:59.999
+be a bit more subtle, but they'll have the same basic patterns.
+
+99:59:59.999 --> 99:59:59.999
+In the beginning, there was a table view.
+
+99:59:59.999 --> 99:59:59.999
+You know, your customers are not going to pay you for this
+
+99:59:59.999 --> 99:59:59.999
+because that's not terribly interesting.
+
+99:59:59.999 --> 99:59:59.999
+You need something, and in my case, I went on vacation.
+
+99:59:59.999 --> 99:59:59.999
+Those of you who are familiar with this picture will probably realize I was in Rome.
+
+99:59:59.999 --> 99:59:59.999
+and that this is a picture of the Colosseum; it's an architecture picture.
+
+99:59:59.999 --> 99:59:59.999
+These are all pieces of information that I want to build into an application that displays my holiday photos.
+
+99:59:59.999 --> 99:59:59.999
+My first pass is going to be to take all of those pieces of information that I've got
+
+99:59:59.999 --> 99:59:59.999
+and combine those into an object that I can use to back my table view.
+
+99:59:59.999 --> 99:59:59.999
+Call it a Photo object; it's got a label: "This was taken in Rome."
+
+99:59:59.999 --> 99:59:59.999
+It's got a blob that is the photo bytes,
+
+99:59:59.999 --> 99:59:59.999
+some tags: architecture and Colosseum,
+
+99:59:59.999 --> 99:59:59.999
+and a timestamp, when the photo was taken.
+
+99:59:59.999 --> 99:59:59.999
+At this point, I'm going to bring Shane up on stage
+
+99:59:59.999 --> 99:59:59.999
+and he's going to see how well that worked in a first pass.
+
+99:59:59.999 --> 99:59:59.999
+Hello, my name's Shane ???
+
+99:59:59.999 --> 99:59:59.999
+and I am a QA engineer with the Core Data team
+
+99:59:59.999 --> 99:59:59.999
+So here we have the first demo that Melissa mentioned;
+
+99:59:59.999 --> 99:59:59.999
+this is version one of the photos application.
+
+99:59:59.999 --> 99:59:59.999
+As you can see this is simply mapped over, a simple Photo entity. It's a single-entity application.
+
+99:59:59.999 --> 99:59:59.999
+And when you click on the record, we can see the photo.
+
+99:59:59.999 --> 99:59:59.999
+So this works as promised.
+
+99:59:59.999 --> 99:59:59.999
+Now what we're going to do is hook this up to Instruments
+
+99:59:59.999 --> 99:59:59.999
+and get some measurements.
+
+99:59:59.999 --> 99:59:59.999
+Now for those of you who haven't used Instruments before, I'd like to show you what you see when you first launch it.
+
+99:59:59.999 --> 99:59:59.999
+What you'll notice here is that you get a sheet with all of your instrument templates.
+
+99:59:59.999 --> 99:59:59.999
+In our case we're going to use the iOS Simulator.
+
+99:59:59.999 --> 99:59:59.999
+Off to the left you have some groups which allow you to target a specific platform.
+
+99:59:59.999 --> 99:59:59.999
+OS X, iOS, or the Simulator.
+
+99:59:59.999 --> 99:59:59.999
+You want to keep in mind when you're using the Simulator what Melissa mentioned earlier
+
+99:59:59.999 --> 99:59:59.999
+about your environment.
+
+99:59:59.999 --> 99:59:59.999
+This is actually a simulated application,
+
+99:59:59.999 --> 99:59:59.999
+so while it looks like iOS, it's running on our development hardware
+
+99:59:59.999 --> 99:59:59.999
+so we don't have the same constraints that we would have if we were using a device,
+
+99:59:59.999 --> 99:59:59.999
+such as memory, processor, and disk space.
+
+99:59:59.999 --> 99:59:59.999
+If you select the Core Data template you will get the instruments that Melissa mentioned earlier:
