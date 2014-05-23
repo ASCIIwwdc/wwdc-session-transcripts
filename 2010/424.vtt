@@ -1,0 +1,3526 @@
+1
+00:00:06,180 --> 00:00:10,060
+>> Michael Levy: Welcome to the session
+on Core Animation in Practice part 1.
+
+2
+00:00:10,060 --> 00:00:11,780
+My name is Michael Levy.
+
+3
+00:00:11,780 --> 00:00:18,150
+I'm an engineer in Quartz Technologies, and
+I'll be assisted today later by Tim Oriol.
+
+4
+00:00:18,150 --> 00:00:23,240
+My expectation about you, the audience,
+is that you're either new to the platform
+
+5
+00:00:23,240 --> 00:00:28,930
+or perhaps you published the couple of apps, but you
+haven't ever worked with Core Animation directly.
+
+6
+00:00:28,930 --> 00:00:31,190
+So that's why it's part 1.
+
+7
+00:00:31,190 --> 00:00:36,230
+And what I'm hoping to do today is to give
+you a real sense of how Core Animation works,
+
+8
+00:00:36,230 --> 00:00:43,890
+what our thinking was that when behind it, how it makes it
+a lot easier for you to bring your own applications to life.
+
+9
+00:00:43,890 --> 00:00:45,440
+So what will we cover in this talk?
+
+10
+00:00:45,440 --> 00:00:48,020
+There are really three main parts to the talk.
+
+11
+00:00:48,020 --> 00:00:51,340
+We will talk about layers and their properties.
+
+12
+00:00:51,340 --> 00:00:54,430
+We will then talk about how you provide layer content.
+
+13
+00:00:54,430 --> 00:00:56,850
+Now, there are number of ways to do that.
+
+14
+00:00:56,850 --> 00:01:01,890
+I'll talk a fair bit about Core Graphics, and then
+I'll briefly mention some of the other technologies
+
+15
+00:01:01,890 --> 00:01:08,640
+that you probably heard quite a bit about
+at the session so far, including UIKit,
+
+16
+00:01:08,640 --> 00:01:13,070
+OpenGL ES, and the new AVPlayer framework.
+
+17
+00:01:13,070 --> 00:01:18,580
+And then finally, we will get to probably the most fun part
+of the talk, which is actually animating layer properties.
+
+18
+00:01:18,580 --> 00:01:25,650
+So before I even start going there, I want to
+give you some sense of the architecture itself.
+
+19
+00:01:25,650 --> 00:01:28,680
+So as with all our technologies, it's layered.
+
+20
+00:01:28,680 --> 00:01:33,590
+And you can see UIKit sitting there at the top
+and the Graphics Hardware sitting at the bottom,
+
+21
+00:01:33,590 --> 00:01:40,850
+just above that OpenGL ES, and Core
+Graphics users, Core Animation.
+
+22
+00:01:40,850 --> 00:01:43,720
+Now you-- from your applications,
+if you're new to the platform,
+
+23
+00:01:43,720 --> 00:01:46,530
+understand that you can reach any
+of these layers if you need to.
+
+24
+00:01:46,530 --> 00:01:53,890
+But as you go up this layer hierarchy, it gets--
+more and more of the work's taken care of for you.
+
+25
+00:01:53,890 --> 00:02:00,690
+What we tried to accomplish with Core Animation is
+to do all the complicated stuff behind the scenes,
+
+26
+00:02:00,690 --> 00:02:06,060
+making it very easy for you to get the animation
+effects that you need in your apps without having
+
+27
+00:02:06,060 --> 00:02:10,050
+to reinvent many complex and sophisticated algorithms.
+
+28
+00:02:10,050 --> 00:02:17,710
+And roughly, the way it works is that you're application
+will have a layer-- some sort of layer hierarchy like this.
+
+29
+00:02:17,710 --> 00:02:26,340
+You-- in your program, you set one or more layer properties,
+and that will automatically get rendered frame by frame
+
+30
+00:02:26,340 --> 00:02:32,000
+as it needs to, will do the computation of the
+intermediate frames, and they will appear nice--
+
+31
+00:02:32,000 --> 00:02:36,610
+beautifully smoothly on the screen that you have.
+
+32
+00:02:36,610 --> 00:02:39,910
+Before I proceed though, I should just talk about UIKit.
+
+33
+00:02:39,910 --> 00:02:43,080
+So which should you use if you
+face this, the practical problem?
+
+34
+00:02:43,080 --> 00:02:48,600
+And the answer is you can leave now because
+really, almost always, you should use UIKit.
+
+35
+00:02:49,660 --> 00:02:52,710
+So when would you use Core Animation?
+
+36
+00:02:52,710 --> 00:02:57,910
+Well, a good example would be if you have a
+lightweight animation that you want to achieve,
+
+37
+00:02:57,910 --> 00:03:00,490
+or perhaps you have something that is very short-lived.
+
+38
+00:03:00,490 --> 00:03:04,770
+But over and beyond that, it really
+helps you to understand Core Animation
+
+39
+00:03:04,770 --> 00:03:08,330
+because that will make it possible
+for you to write much better apps.
+
+40
+00:03:08,330 --> 00:03:12,490
+You would be more effective even if
+you all you use are UIKit Animations,
+
+41
+00:03:12,490 --> 00:03:15,740
+because all the UIKit Animations are
+really wrappers [phonetic] on Core--
+
+42
+00:03:15,740 --> 00:03:22,860
+on equivalent Core Animation, or maybe
+they aggregate Core Animation objects.
+
+43
+00:03:22,860 --> 00:03:27,110
+And of course, it may be necessary
+to improve a performance, and then,
+
+44
+00:03:27,110 --> 00:03:31,100
+it's very helpful to understand what
+Core Animation is really doing for you.
+
+45
+00:03:31,100 --> 00:03:37,620
+So with that, let's plunge in to the first
+part of Core Animation, which is Layers.
+
+46
+00:03:37,620 --> 00:03:39,790
+And so, what are layers?
+
+47
+00:03:39,790 --> 00:03:40,490
+Actually-- sorry.
+
+48
+00:03:40,490 --> 00:03:43,920
+Before I even say what-- I must
+do the definition of Animation.
+
+49
+00:03:43,920 --> 00:03:49,450
+So the Oxford English Dictionary says
+Animation is the state of being alive.
+
+50
+00:03:49,450 --> 00:03:54,760
+Now, what that actually means in practice, or
+rather, when you apply that to Core Animation,
+
+51
+00:03:54,760 --> 00:04:03,340
+there's another way of thinking about it, which is animation
+is changing the values of your model properties over time.
+
+52
+00:04:03,340 --> 00:04:08,100
+So that's really what we mean when
+we say an animated application.
+
+53
+00:04:08,100 --> 00:04:11,880
+There's another definition I'd like to
+introduce as well, which is declarative,
+
+54
+00:04:11,880 --> 00:04:16,910
+because you'll see that mentioned
+quite a bit in the documentation.
+
+55
+00:04:16,910 --> 00:04:18,390
+And I thought of a good example of that.
+
+56
+00:04:18,390 --> 00:04:26,490
+You arrive at San Francisco Airport, you've never been to
+San Francisco before, you hail a cab outside the terminal,
+
+57
+00:04:26,490 --> 00:04:30,470
+and you say to the driver, "Take
+me to Moscone West, please."
+
+58
+00:04:30,470 --> 00:04:32,670
+Now, that's your declaration.
+
+59
+00:04:32,670 --> 00:04:37,340
+You don't say to him, "Turn left at highway
+280, and then take the first on-ramp."
+
+60
+00:04:37,340 --> 00:04:39,490
+That would be the procedural root.
+
+61
+00:04:39,490 --> 00:04:43,690
+Now of course, you all know that the
+driver may not take the optimal root.
+
+62
+00:04:43,690 --> 00:04:47,870
+So if you knew more, you might want to dig down
+and say, "Well, why are you going that way?"
+
+63
+00:04:47,870 --> 00:04:50,100
+Or, "This is going to be slower."
+
+64
+00:04:50,100 --> 00:04:51,610
+So that will give you sense of declarative.
+
+65
+00:04:51,610 --> 00:04:54,370
+I think the metaphor works quite well.
+
+66
+00:04:54,370 --> 00:04:59,050
+And the magic source of Core Animation
+really consists of three parts.
+
+67
+00:04:59,050 --> 00:05:06,740
+There are Layers, that's the first part, then the fact
+that almost all the properties of layers are Animatable,
+
+68
+00:05:06,740 --> 00:05:10,070
+and finally, there's Declarative
+model, which in many instances,
+
+69
+00:05:10,070 --> 00:05:14,590
+means you don't even have to implement a drawRect method.
+
+70
+00:05:14,590 --> 00:05:17,570
+So let's look at that in a little bit more detail now.
+
+71
+00:05:17,570 --> 00:05:19,050
+We're looking at the Layer hierarchy.
+
+72
+00:05:19,050 --> 00:05:21,300
+At the top is the object CALayer.
+
+73
+00:05:21,300 --> 00:05:22,300
+It's not abstract.
+
+74
+00:05:22,300 --> 00:05:26,490
+In many instances, you will instantiate that directly.
+
+75
+00:05:26,490 --> 00:05:29,420
+But they're in a whole number of interesting sublayers.
+
+76
+00:05:29,420 --> 00:05:30,880
+I'll cover some of them in the talk.
+
+77
+00:05:30,880 --> 00:05:35,960
+So for example, the CAShapeLayer, we'll see some examples.
+
+78
+00:05:35,960 --> 00:05:43,480
+It's a Layer, but it has an additional property which
+let's you set it shape, and we'll see how that works.
+
+79
+00:05:43,480 --> 00:05:47,190
+So this chosen example, which I
+hope is familiar to everybody,
+
+80
+00:05:47,190 --> 00:05:49,420
+just to give you an idea of how this layering works.
+
+81
+00:05:49,420 --> 00:05:52,830
+Now-- so there's the ace of hearts.
+
+82
+00:05:52,830 --> 00:05:57,030
+And you could of course, implement this
+by drawing all the pads, and so on.
+
+83
+00:05:57,030 --> 00:06:01,790
+But another way to do it using-- is to
+break it down into its constituent Layers.
+
+84
+00:06:01,790 --> 00:06:03,910
+And Layers can be lightweight objects.
+
+85
+00:06:03,910 --> 00:06:12,900
+So here, I've composed this-- the back of the card, which is
+the layer, which has some properties like rounded borders,
+
+86
+00:06:12,900 --> 00:06:15,700
+and it has a stroke with a white fill color.
+
+87
+00:06:15,700 --> 00:06:19,790
+And then the two heart-- the three
+heart tips-- there's one--
+
+88
+00:06:19,790 --> 00:06:27,410
+yeah, the three heart tips are
+ShapeLayers, and the two ace are TextLayers.
+
+89
+00:06:27,410 --> 00:06:30,970
+And so, we add all those as sublayers of the card layer.
+
+90
+00:06:30,970 --> 00:06:35,000
+And when they user sees that, that's
+what they see, the ace of hearts.
+
+91
+00:06:35,000 --> 00:06:38,350
+So it give-- so Layer, appropriately named.
+
+92
+00:06:38,350 --> 00:06:41,370
+How do you create a layer in your application?
+
+93
+00:06:41,370 --> 00:06:46,700
+You use the QuartzCore framework, which is not
+included by default in any of the Xcode template.
+
+94
+00:06:46,700 --> 00:06:52,840
+So remember to add it in, and then you need it-- wherever
+you're using one of the Core Animation Layer classes,
+
+95
+00:06:52,840 --> 00:07:02,390
+you need to import QuartzCore.h. And there's a very
+simple example, it illustrates the declarative style
+
+96
+00:07:02,390 --> 00:07:08,600
+on creating a layer using a-- the Layer
+method-- class method of the CALayer class.
+
+97
+00:07:08,600 --> 00:07:11,380
+I'm setting the bounds, the width, and the height.
+
+98
+00:07:11,380 --> 00:07:15,650
+The position is setting a point with
+respect to the parents coordinates.
+
+99
+00:07:15,650 --> 00:07:16,970
+I haven't placed the layer yet.
+
+100
+00:07:16,970 --> 00:07:24,590
+But when I do, that property tells the parent layer where
+to position this-- its sublayer, which will be my layer.
+
+101
+00:07:24,590 --> 00:07:29,980
+And then notice how-- the easiest way to
+give a Layer actual content, visible content,
+
+102
+00:07:29,980 --> 00:07:34,140
+is to assign an image to the content property of the layers.
+
+103
+00:07:34,140 --> 00:07:37,610
+And there, you're seeing, the diagram--
+finally, of course, add the sublayer.
+
+104
+00:07:37,610 --> 00:07:42,950
+We're using a layer method on-- in this
+case, I'm assuming there's a UIView.
+
+105
+00:07:42,950 --> 00:07:47,180
+And every UIView, as you probably learned
+earlier today, has a Layer property.
+
+106
+00:07:47,180 --> 00:07:50,010
+So I'm adding this as a sublayer to the view.
+
+107
+00:07:50,010 --> 00:07:53,260
+The blue that you're looking at is the UIView's Layer.
+
+108
+00:07:53,260 --> 00:07:56,630
+And the text is just descriptive.
+
+109
+00:07:56,630 --> 00:07:58,870
+So you're seeing where the layer has been positioned.
+
+110
+00:07:58,870 --> 00:08:01,020
+And it has got-- and that's all you have to do.
+
+111
+00:08:01,020 --> 00:08:08,310
+If you write this code and add it to your init
+method, that's what you will see on the window.
+
+112
+00:08:08,310 --> 00:08:12,780
+The Layer model's very similar to the UIView model,
+which I assume you somewhat or may be familiar with.
+
+113
+00:08:12,780 --> 00:08:18,530
+That is-- the method is like adding a sublayer,
+you can insert layers above or below other layers.
+
+114
+00:08:18,530 --> 00:08:24,900
+There are methods like setNeedsLayout which give you
+application and opportunity to move the layers around,
+
+115
+00:08:24,900 --> 00:08:29,110
+setNeedsDisplay which is to tell-- now, in
+many cases, you don't need to call that.
+
+116
+00:08:29,110 --> 00:08:34,320
+But in cases where the system doesn't automatically
+know that it needs to refresh the screen,
+
+117
+00:08:34,320 --> 00:08:39,630
+you would use setNeedsDisplay, and you
+can explicitly force out a new layout
+
+118
+00:08:39,630 --> 00:08:42,340
+of your sublayers by calling the layoutSublayers method.
+
+119
+00:08:42,340 --> 00:08:48,050
+And there are many others, as I say, similar
+to the UIView-- equivalent UIView methods.
+
+120
+00:08:48,050 --> 00:08:52,450
+It's a 2 1/2 D Model, and the transform,
+we will see some examples
+
+121
+00:08:52,450 --> 00:08:56,080
+of the transform, is a three-dimensional affine transform.
+
+122
+00:08:56,080 --> 00:08:59,800
+And what I'm showing here is another
+playing card, the ace of spades, and I'm--
+
+123
+00:08:59,800 --> 00:09:02,480
+the diagram is showing the layer hierarchy.
+
+124
+00:09:02,480 --> 00:09:07,530
+So I have the UIViewsLayer at the top,
+it's got a sublayer, which is the card.
+
+125
+00:09:07,530 --> 00:09:11,720
+Now, the card is simply specified
+with a couple of properties.
+
+126
+00:09:11,720 --> 00:09:15,720
+One of them is rounded rectangle, and
+then it has a background color of white.
+
+127
+00:09:15,720 --> 00:09:17,340
+That's all I had to do for the card.
+
+128
+00:09:17,340 --> 00:09:24,560
+And then I've create three shape layers, given them all the
+same Bezier path, we'll see this example a bit further on,
+
+129
+00:09:24,560 --> 00:09:31,580
+but I've set the transform property and the position
+property to put the pips in the appropriate place.
+
+130
+00:09:31,580 --> 00:09:38,280
+And then there are two CATextLayers for the indexes A, and
+again, I used the position and the transform to position
+
+131
+00:09:38,280 --> 00:09:42,160
+and orient those shapes in the right place.
+
+132
+00:09:42,160 --> 00:09:44,730
+So let's work this through, and you'll see how it all works.
+
+133
+00:09:44,730 --> 00:09:49,390
+And really, what I'm trying to illustrate
+here is there's no drawRect code involved.
+
+134
+00:09:49,390 --> 00:09:53,560
+It's really just setting properties and
+letting the core animation framework figure
+
+135
+00:09:53,560 --> 00:09:56,480
+out the details and render it correctly for you.
+
+136
+00:09:56,480 --> 00:10:03,890
+So we will start by adding the card itself,
+and I have just deleted the various properties,
+
+137
+00:10:03,890 --> 00:10:05,030
+but they're pretty straight forward.
+
+138
+00:10:05,030 --> 00:10:08,040
+They're like, you know, border styled, and so on.
+
+139
+00:10:08,040 --> 00:10:09,280
+All nicely documented.
+
+140
+00:10:09,280 --> 00:10:13,790
+OK. Now, I'm assuming that I have classical
+cards, which you can think of as a card factory.
+
+141
+00:10:13,790 --> 00:10:19,810
+So I've ordered from the card factory a ShapeLayer,
+and I've said to it, "Give me a spade pip."
+
+142
+00:10:19,810 --> 00:10:25,950
+Now, inside there, there will be
+the Bezier path that defines this--
+
+143
+00:10:25,950 --> 00:10:28,950
+the spade shape that I want from my playing card.
+
+144
+00:10:28,950 --> 00:10:35,350
+I set the position to be in the middle of the card fairly
+straightforward, and then add it to the spade ace, the card.
+
+145
+00:10:35,350 --> 00:10:37,780
+And so, that's what will happen.
+
+146
+00:10:37,780 --> 00:10:39,390
+The next one is a little more interesting.
+
+147
+00:10:39,390 --> 00:10:45,060
+I ordered the same ShapeLayer, an
+identical copy of the spade pip.
+
+148
+00:10:45,060 --> 00:10:53,290
+But in this case, I want to spin it around by pi radians
+and I want to position it at the bottom right hand corner
+
+149
+00:10:53,290 --> 00:10:58,950
+of the card, and then again, I add it the
+spade layer, and similarly for their remaining.
+
+150
+00:10:58,950 --> 00:11:04,080
+I think now, you get the idea at-- similar
+for the remaining parts of the layer.
+
+151
+00:11:04,080 --> 00:11:09,860
+So it is important when you're using Core
+Animation to understand the geometry of layers.
+
+152
+00:11:09,860 --> 00:11:12,340
+In some ways, if it's simpler than UIView geometry.
+
+153
+00:11:12,340 --> 00:11:18,590
+These are the important properties that you need, the
+bounds, mostly the width and height, the position,
+
+154
+00:11:18,590 --> 00:11:21,390
+and as I have mentioned, that's
+in the superlayer coordinates.
+
+155
+00:11:21,390 --> 00:11:25,010
+So that tells you where this layer
+goes with respect to its parent.
+
+156
+00:11:25,010 --> 00:11:29,650
+The anchorPoint, which I'll talk a bit-- more
+about in a second, and then the Transform,
+
+157
+00:11:29,650 --> 00:11:32,380
+which is a three-dimensional transform, and I'll--
+
+158
+00:11:32,380 --> 00:11:37,680
+again, in the demos, we will some uses of the
+three dimensional aspect of that transform.
+
+159
+00:11:37,680 --> 00:11:42,880
+But very commonly, if you're doing a two-dimensional
+app, you will just use the 2D part of it.
+
+160
+00:11:42,880 --> 00:11:45,700
+But the 3D is available there for you as well.
+
+161
+00:11:45,700 --> 00:11:49,580
+The anchorPoint now is a point,
+and it's really meant to indicate
+
+162
+00:11:49,580 --> 00:11:54,610
+where within the bounds, the meaning
+of certain other properties.
+
+163
+00:11:54,610 --> 00:11:59,760
+So for example, if you think your position--
+its positioned with respect to the anchorPoint.
+
+164
+00:11:59,760 --> 00:12:04,150
+So-- and that's specified as a CGPoint, a
+floating-- a pair of floating point numbers,
+
+165
+00:12:04,150 --> 00:12:06,380
+and they both range between zero and one.
+
+166
+00:12:06,380 --> 00:12:14,640
+So in this example, we're looking at an anchorPoint
+of 0.5, 0.5, which is the default for anchorPoint.
+
+167
+00:12:14,640 --> 00:12:21,030
+So normally, you don't have to actually specify that if
+you're happy for your anchorPoint to be in the middle.
+
+168
+00:12:21,030 --> 00:12:27,190
+And I'm just showing explicitly now, if you do an
+anchorPoint of 0.5, 0.5 and then do a rotationTransform,
+
+169
+00:12:27,190 --> 00:12:31,500
+then the transformation will happen around that anchorPoint.
+
+170
+00:12:31,500 --> 00:12:35,950
+Let's suppose you set the anchorPoint
+to the bottom left of the layer.
+
+171
+00:12:35,950 --> 00:12:36,800
+How do you do that?
+
+172
+00:12:36,800 --> 00:12:41,040
+Well, we do it by specifying a point of zero and one.
+
+173
+00:12:41,040 --> 00:12:46,740
+So zero in the X coordinate, and in this case, my
+coordinates system is starting from the upper left.
+
+174
+00:12:46,740 --> 00:12:51,670
+So one represents the maximum Y value of my layer.
+
+175
+00:12:51,670 --> 00:12:54,510
+So that's what positions it at the bottom left hand corner.
+
+176
+00:12:54,510 --> 00:13:00,840
+And you can see that the rotations-- same
+rotation is now applied around that anchorPoint.
+
+177
+00:13:00,840 --> 00:13:05,950
+And I would like to demonstrate a slightly
+unusual use of this, plus the use of layering.
+
+178
+00:13:05,950 --> 00:13:10,540
+What I did to create this very little code to do
+this, but I wanted to illustrate a couple of things.
+
+179
+00:13:10,540 --> 00:13:13,360
+So one is a nonstandard use of anchorPoint.
+
+180
+00:13:13,360 --> 00:13:17,340
+So I wanted a model, the human arm, and
+I wanted to get a fairly realistic way.
+
+181
+00:13:17,340 --> 00:13:22,630
+Now, to do that, you know, with a sophisticated animation,
+would take a lot of knowledge of human anatomy and so on.
+
+182
+00:13:22,630 --> 00:13:24,040
+This is a very simple model.
+
+183
+00:13:24,040 --> 00:13:30,120
+I attached the arm-- you know, the arm bone
+to the shoulder, and then I attach the radius
+
+184
+00:13:30,120 --> 00:13:34,920
+and the ulna to the humerus, and I attach the wrist.
+
+185
+00:13:34,920 --> 00:13:36,590
+So there-- and that's sublayered.
+
+186
+00:13:36,590 --> 00:13:40,050
+So I've got three sublayers, as well
+as the body, which is not showing here.
+
+187
+00:13:40,050 --> 00:13:42,590
+The head is just put in for effect.
+
+188
+00:13:42,590 --> 00:13:47,510
+Each of the rotations has its own little
+animation, and you'll see how to do that.
+
+189
+00:13:47,510 --> 00:13:49,880
+So diagrammatically, this is what's going on.
+
+190
+00:13:49,880 --> 00:13:52,010
+Now, to specify the anchorPoint is pretty easy.
+
+191
+00:13:52,010 --> 00:13:56,320
+The X coordinate would be zero, the Y
+coordinate of the anchorPoint would be 0.5,
+
+192
+00:13:56,320 --> 00:13:59,520
+and then the sublayering attaches
+the body in the way I want.
+
+193
+00:13:59,520 --> 00:14:05,240
+And obviously, by tweaking the anchorPoint, you
+could make for stretcher or narrow the hands.
+
+194
+00:14:05,240 --> 00:14:11,370
+So that's-- mainly, I wanted to illustrate both the
+concept of layering and the utility of anchorPoints,
+
+195
+00:14:11,370 --> 00:14:15,080
+and I wanted to sneak in the fact that
+when you hear about animation, you think,
+
+196
+00:14:15,080 --> 00:14:17,230
+well, is this is like, you know, cartoon time.
+
+197
+00:14:17,230 --> 00:14:18,970
+Well, yes, it can be.
+
+198
+00:14:18,970 --> 00:14:25,800
+They can be-- you can add image content and you can have
+an entire animated movie using the Core Animation classes.
+
+199
+00:14:25,800 --> 00:14:30,650
+Much more commonly, you will use it for you--
+for your visual elements of your application,
+
+200
+00:14:30,650 --> 00:14:33,340
+but there's no reason to do this kind of animation.
+
+201
+00:14:33,340 --> 00:14:37,830
+Now, I want to take a slight detour now
+and talk about providing layer content.
+
+202
+00:14:37,830 --> 00:14:40,290
+And I'm going to talk about four
+different ways of doing that.
+
+203
+00:14:40,290 --> 00:14:46,610
+In some detail about Core Graphics with the assumption that
+you've might not be familiar with Core Graphics directly.
+
+204
+00:14:46,610 --> 00:14:51,200
+You've used it indirectly over time
+because of where it fits in UIKit.
+
+205
+00:14:51,200 --> 00:14:57,450
+And then I'll just talk very briefly about
+Open GL ES, AVFoundation, and UIKit itself.
+
+206
+00:14:57,450 --> 00:15:00,010
+Let's add a little bit about that.
+
+207
+00:15:00,010 --> 00:15:04,050
+So supposing that the clarity of
+style that I've been talking
+
+208
+00:15:04,050 --> 00:15:08,390
+about has not given you enough
+control over what you want to display.
+
+209
+00:15:08,390 --> 00:15:12,080
+Well, in that case, there are two ways
+to actually provide additionally content.
+
+210
+00:15:12,080 --> 00:15:20,100
+If your layer object is just an instant of CALayer, then
+you set its delegate property to one of your own objects,
+
+211
+00:15:20,100 --> 00:15:24,630
+and your own object must implement drawLayer:InContext:.
+
+212
+00:15:24,630 --> 00:15:29,230
+The alternative is to sublayer the CALayer
+with your own Layer, in which case,
+
+213
+00:15:29,230 --> 00:15:32,200
+you must implement at least the drawInContext method.
+
+214
+00:15:32,200 --> 00:15:37,340
+And in both cases, the context argument
+will be something called a CGContextRef,
+
+215
+00:15:37,340 --> 00:15:41,630
+which is what I'm going to talk about quite a bit coming on.
+
+216
+00:15:41,630 --> 00:15:44,740
+Note that very often, you do not need to subclass CALayer.
+
+217
+00:15:44,740 --> 00:15:46,580
+And this was part of the design.
+
+218
+00:15:46,580 --> 00:15:51,960
+They are meant to be usable in lightweight situations
+where there's no need for an additional class
+
+219
+00:15:51,960 --> 00:15:54,220
+in your already quite complex set of classes.
+
+220
+00:15:54,220 --> 00:15:56,380
+You can just instantiate CALayer.
+
+221
+00:15:56,380 --> 00:15:59,750
+Nevertheless, by using Delegate,
+you can provide draw in code,
+
+222
+00:15:59,750 --> 00:16:02,870
+and you'll notice that the delegate
+method takes a layer argument
+
+223
+00:16:02,870 --> 00:16:06,380
+so the same delegate object can
+do double duty if it needs to.
+
+224
+00:16:06,380 --> 00:16:11,470
+So let's talk about Core Graphics a
+little bit, also known as Quartz 2D.
+
+225
+00:16:11,470 --> 00:16:18,590
+And Core Graphics is really at the heart of all the 2D-- the
+beautiful 2D graphics you see on any of the Apple devices.
+
+226
+00:16:18,590 --> 00:16:25,910
+Mac OS X, on the iPad, on the iPhone,
+on iPod-- or the iPod Touch, at least.
+
+227
+00:16:25,910 --> 00:16:30,510
+It's a concise and elegant model that
+gives you full 2D graphic capabilities.
+
+228
+00:16:30,510 --> 00:16:36,010
+I've picked a sample from the iWork's
+pages template, and I chose this example
+
+229
+00:16:36,010 --> 00:16:42,250
+because it illustrates the three fundamental
+primitive elements that Core Graphics works with.
+
+230
+00:16:42,250 --> 00:16:47,320
+There is the image that you see, the picture
+is the one, and then there are shapes.
+
+231
+00:16:47,320 --> 00:16:52,240
+So you see a big red rectangle, then the
+black lines, and the black rectangle.
+
+232
+00:16:52,240 --> 00:16:55,560
+And then finally, text the glyphs
+that you've seen-- the text.
+
+233
+00:16:55,560 --> 00:16:59,430
+So that's showing all the three primitive elements.
+
+234
+00:16:59,430 --> 00:17:03,290
+Comprehensive color support, Resolution
+independence, Device independence,
+
+235
+00:17:03,290 --> 00:17:06,180
+that's all taken care of for you automatically.
+
+236
+00:17:06,180 --> 00:17:11,640
+And the other nice thing about Core Graphics is you
+can create a number of different kinds of context,
+
+237
+00:17:11,640 --> 00:17:17,150
+you use exactly the same methods and cause
+to, for example, going around this-- around--
+
+238
+00:17:17,150 --> 00:17:22,380
+counterclockwise to generate a
+bitmap, to generate a PDF document,
+
+239
+00:17:22,380 --> 00:17:26,840
+to render on to an iPad, or to render on to an iPhone.
+
+240
+00:17:26,840 --> 00:17:29,210
+And in fact, to render on to OS X too.
+
+241
+00:17:29,210 --> 00:17:33,740
+So I don't want to give an entire course in Core Graphics
+here, but I thought I'd like to give you the spirit of it
+
+242
+00:17:33,740 --> 00:17:37,560
+so that-- and then I'll give you a reference
+to a very nice book so that you can followup
+
+243
+00:17:37,560 --> 00:17:39,360
+if you need to, to found out more about it.
+
+244
+00:17:39,360 --> 00:17:45,270
+So the coordinate space is an abstract to dimensional
+space, the units of floating point numbers.
+
+245
+00:17:45,270 --> 00:17:48,500
+And just bear in mind that a point
+is not necessarily a pixel.
+
+246
+00:17:48,500 --> 00:17:54,500
+And then as screens gets higher and higher resolution,
+it's important not to confuse those two things.
+
+247
+00:17:54,500 --> 00:18:00,990
+Generally speaking, the origins at the top left or
+the bottom left of the device that you're looking at.
+
+248
+00:18:00,990 --> 00:18:05,150
+So on the iPhone, it's in the top
+left, PDF's bottom left, and so on.
+
+249
+00:18:05,150 --> 00:18:07,490
+And of course, you obviously have to know that.
+
+250
+00:18:07,490 --> 00:18:11,930
+And then there's this important object called CTContextRef.
+
+251
+00:18:11,930 --> 00:18:16,660
+So it's an opaque reference to a graphics context.
+
+252
+00:18:16,660 --> 00:18:19,300
+And there really are two parts to a graphic context.
+
+253
+00:18:19,300 --> 00:18:23,090
+When she grasped back the ref,
+becomes pretty straightforwardly.
+
+254
+00:18:23,090 --> 00:18:28,260
+There's the place you're going to actually
+render to, in this case, the artist's canvass.
+
+255
+00:18:28,260 --> 00:18:31,310
+But there's also the implements that you're
+going to use and the state they're in.
+
+256
+00:18:31,310 --> 00:18:36,570
+So there, you're seeing in the picture, an easel has
+some paint premixed, and maybe there's a paintbrush
+
+257
+00:18:36,570 --> 00:18:40,110
+in the artist's hand, and that's
+got a particular color on it.
+
+258
+00:18:40,110 --> 00:18:43,250
+And that's all part of the context object.
+
+259
+00:18:43,250 --> 00:18:46,460
+So the drawing destination and the state.
+
+260
+00:18:46,460 --> 00:18:52,620
+So notice the state has a number of properties, including
+path, fill and stroke colors, line width, and so on.
+
+261
+00:18:52,620 --> 00:18:54,130
+And the state changes.
+
+262
+00:18:54,130 --> 00:18:57,330
+So it's state-based model, so you
+set a fill color for example.
+
+263
+00:18:57,330 --> 00:19:01,360
+And then the next, all the fields that
+follow setting the fill color will use
+
+264
+00:19:01,360 --> 00:19:03,810
+that color until you set a new fill color.
+
+265
+00:19:03,810 --> 00:19:07,650
+It's a C-based model.
+
+266
+00:19:07,650 --> 00:19:09,540
+It uses reference-based memory.
+
+267
+00:19:09,540 --> 00:19:11,550
+There's a little protocol that you need to learn.
+
+268
+00:19:11,550 --> 00:19:14,970
+So if you're using this for the first
+time, you need to learn the conventions
+
+269
+00:19:14,970 --> 00:19:17,520
+to make sure your applications don't leak memory.
+
+270
+00:19:17,520 --> 00:19:19,360
+It's CFType compliant.
+
+271
+00:19:19,360 --> 00:19:22,430
+I'll illustrate the sense of it with this made-up example.
+
+272
+00:19:22,430 --> 00:19:27,540
+So let's say you want to create a stunning color,
+and you already have your color space chosen,
+
+273
+00:19:27,540 --> 00:19:33,760
+and you've set your color components, you
+call the Core Graphics method CGColorCreate.
+
+274
+00:19:33,760 --> 00:19:38,740
+Now, notice the Create word, that's the
+key that says to you, you own this memory.
+
+275
+00:19:38,740 --> 00:19:43,310
+If you own it, you must release it when you're done with it.
+
+276
+00:19:43,310 --> 00:19:45,720
+So having created the color, we want to use it now.
+
+277
+00:19:45,720 --> 00:19:53,000
+So we changed the state of the graphics context
+by calling CGContextSetFillColorWithColor.
+
+278
+00:19:53,000 --> 00:20:00,530
+Now, all the state-changing methods of the Core Graphics
+context will start with CGContextSet and something.
+
+279
+00:20:00,530 --> 00:20:05,390
+So once you get used to that, very
+easy to find the method that you need.
+
+280
+00:20:05,390 --> 00:20:10,280
+Now, having done that set, if the
+context, the graphics context,
+
+281
+00:20:10,280 --> 00:20:14,100
+wishes to retain a reference to
+that object, it's free to do that.
+
+282
+00:20:14,100 --> 00:20:15,660
+I don't care-- I don't know what it does.
+
+283
+00:20:15,660 --> 00:20:17,780
+Maybe, it copies the components somewhere else.
+
+284
+00:20:17,780 --> 00:20:19,290
+Irrelevant at this level.
+
+285
+00:20:19,290 --> 00:20:23,550
+What I do know is because of the word
+create, I have to release the memory.
+
+286
+00:20:23,550 --> 00:20:27,100
+So I called CGColorRelease with my color object.
+
+287
+00:20:27,100 --> 00:20:30,200
+So let's work through a small example
+now and make all these concrete.
+
+288
+00:20:30,200 --> 00:20:34,670
+So back at the playing cards, sticking with
+the playing card theme for the time being, now,
+
+289
+00:20:34,670 --> 00:20:38,200
+if you play team games like bridge, you know, you want--
+
+290
+00:20:38,200 --> 00:20:44,550
+the card designers want to make it very hard for you
+to signal additional information to your partners.
+
+291
+00:20:44,550 --> 00:20:45,860
+Same thing applies for poker.
+
+292
+00:20:45,860 --> 00:20:52,150
+So perhaps your design requirement for the back of
+your playing card is that they had two-way symmetry.
+
+293
+00:20:52,150 --> 00:20:54,140
+So let's see how we might achieve that.
+
+294
+00:20:54,140 --> 00:21:01,450
+Now, what we'll do is we'll use a stroke and fill path,
+and that's what our card's going to look like, except that,
+
+295
+00:21:01,450 --> 00:21:05,960
+since it's going to be two-way symmetrical, I
+only need to render a quarter of it, and the rest,
+
+296
+00:21:05,960 --> 00:21:09,770
+I can do with appropriate transformations and positioning.
+
+297
+00:21:09,770 --> 00:21:11,600
+So there's our basic design.
+
+298
+00:21:11,600 --> 00:21:17,860
+Now, because it's a state based model, it's always nice
+to save the current state and prevent nasty surprises
+
+299
+00:21:17,860 --> 00:21:22,020
+to your caller when you go changing
+things like the fill color.
+
+300
+00:21:22,020 --> 00:21:24,320
+So that's the call that will do that.
+
+301
+00:21:24,320 --> 00:21:27,000
+It's an efficient call, won't cost you much.
+
+302
+00:21:27,000 --> 00:21:29,770
+Now, I'm going to create something called a CGPath.
+
+303
+00:21:29,770 --> 00:21:39,590
+Now CGPath is a Bezier path, good old Bezier path, I'm
+creating a mutable one because I want to modify this path.
+
+304
+00:21:39,590 --> 00:21:44,550
+And here are some of the lines of
+code for creating that petal shape.
+
+305
+00:21:44,550 --> 00:21:50,290
+So I'll move to some starting position, add a
+curve, it's the usual Bezier path, move to--
+
+306
+00:21:50,290 --> 00:21:53,810
+add another curve, and there are
+other way, the lines, and so on there.
+
+307
+00:21:53,810 --> 00:22:01,610
+And once I've done all that, I add it the Core Graphics
+context, and then tell the context to fill the path.
+
+308
+00:22:01,610 --> 00:22:07,630
+And visually, that's what-- if you return from your
+draw method at that stage, that's what you would see.
+
+309
+00:22:07,630 --> 00:22:12,540
+Now, when you call fill path, Core
+Graphics deletes the current path.
+
+310
+00:22:12,540 --> 00:22:17,560
+So if you want to use the same path again in order
+to stroke the flower, you have to add it back.
+
+311
+00:22:17,560 --> 00:22:23,410
+So let's-- a tiny little gotcha, we add the
+path back, and now we call CGContextStrokePath.
+
+312
+00:22:23,410 --> 00:22:27,770
+And I'm assuming that the fill color and
+the stroke colors have already been set up.
+
+313
+00:22:27,770 --> 00:22:32,560
+And then with a little bit more work, you can
+see that I will get the center and the petal.
+
+314
+00:22:32,560 --> 00:22:39,260
+Now, the next part of it of course, is repeating that, but
+in four different positions and making them all join up.
+
+315
+00:22:39,260 --> 00:22:41,600
+So there, we'll use Affine Transforms.
+
+316
+00:22:41,600 --> 00:22:46,620
+And an Affine Transform is used for
+scaling, rotating, and translating.
+
+317
+00:22:46,620 --> 00:22:51,140
+They can all combine into a single matrix
+skewing as well, but it's less common.
+
+318
+00:22:51,140 --> 00:22:56,780
+And the trick to making your life more pleasant
+when you're working with transforms is just remember
+
+319
+00:22:56,780 --> 00:22:59,960
+that what you're transforming is the
+coordinate space, not the object.
+
+320
+00:22:59,960 --> 00:23:06,430
+So every object that gets applied after transform
+will go into the transform coordinate space.
+
+321
+00:23:06,430 --> 00:23:07,890
+So let's work through this example.
+
+322
+00:23:07,890 --> 00:23:09,970
+We would be nice to our caller.
+
+323
+00:23:09,970 --> 00:23:14,560
+I'm assuming now I have a drawDesign
+method, so it will draw our basic design.
+
+324
+00:23:14,560 --> 00:23:18,850
+And now, I want to flip the card and move it down.
+
+325
+00:23:18,850 --> 00:23:21,720
+So I do this with the two calls that you are seeing there.
+
+326
+00:23:21,720 --> 00:23:28,420
+Flip is done by changing the-- by scaling the Y
+coordinate to be negative, and then I translate twice
+
+327
+00:23:28,420 --> 00:23:33,040
+because the first flip will put the coordinate
+space, or flip above the first cards,
+
+328
+00:23:33,040 --> 00:23:37,480
+so I want to go down twice the height of the card.
+
+329
+00:23:37,480 --> 00:23:45,720
+And very similar transformations for the rest of the
+card, and then we'd be nice and restore the graphic state.
+
+330
+00:23:45,720 --> 00:23:47,540
+Now there's a quite a lot more to Core Graphics.
+
+331
+00:23:47,540 --> 00:23:52,200
+I'm just going to give you some examples
+here without going into anymore detail.
+
+332
+00:23:52,200 --> 00:23:55,960
+It'll take care of anti-aliasing for you,
+which would be very nice if your app--
+
+333
+00:23:55,960 --> 00:24:02,680
+the same code you run now, running on the new
+iPhone 4, and you've got the retinal display,
+
+334
+00:24:02,680 --> 00:24:10,930
+the Core Graphic framework will take care of making
+sure that you get those beautiful smooth lines.
+
+335
+00:24:10,930 --> 00:24:19,140
+There's gradient fills, shading, which is a more
+complex fill, pattern, such as that familiar pattern,
+
+336
+00:24:19,140 --> 00:24:23,550
+and many properties of lines, line caps, strokes, and so on.
+
+337
+00:24:23,550 --> 00:24:28,120
+And there's quite a bit more, all
+nicely documented in our documentation.
+
+338
+00:24:28,120 --> 00:24:29,910
+And-- can you read that?
+
+339
+00:24:29,910 --> 00:24:32,720
+There's a very nice book I recommend
+if you want to follow up on this,
+
+340
+00:24:32,720 --> 00:24:37,640
+called Programming with Quartz
+2D and PDF Graphics in Mac OS X.
+
+341
+00:24:37,640 --> 00:24:39,900
+And there's one more tip on Core Graphics.
+
+342
+00:24:39,900 --> 00:24:44,100
+So Core Graphics, if you can remember the layer
+of hierarchy that I showed you earlier on.
+
+343
+00:24:44,100 --> 00:24:47,270
+So Core Graphics comes underneath UIKit.
+
+344
+00:24:47,270 --> 00:24:51,570
+And so, when you want to do things with Core
+Graphics, sometimes it's a bit more programmatic work.
+
+345
+00:24:51,570 --> 00:24:53,400
+So a nice tip is use UIKit.
+
+346
+00:24:53,400 --> 00:24:56,300
+So to just give you a trivial example,
+if you want a red color,
+
+347
+00:24:56,300 --> 00:25:04,820
+it's a lot easier to say UIColor redColor calling the UIKit
+class method, and then get the CGColor property out of it.
+
+348
+00:25:04,820 --> 00:25:07,480
+And a nice example is loading an image.
+
+349
+00:25:07,480 --> 00:25:08,360
+It's very easily done.
+
+350
+00:25:08,360 --> 00:25:13,100
+There's a UIKit method say-- a UIImage
+method, class method, saying image name,
+
+351
+00:25:13,100 --> 00:25:14,810
+then it will grab an image from your project.
+
+352
+00:25:14,810 --> 00:25:21,780
+If you actually need the CGImage for some reason, then
+you can just get the CGImage property of the image.
+
+353
+00:25:21,780 --> 00:25:28,090
+So it's very useful to let UIKit do the
+heavy lifting, and you just pick the object.
+
+354
+00:25:28,090 --> 00:25:29,490
+So that's Core Graphics.
+
+355
+00:25:29,490 --> 00:25:32,300
+This is going to be just a slide on each of these.
+
+356
+00:25:32,300 --> 00:25:37,740
+You'll probably tend to talk about the game Quest now.
+
+357
+00:25:37,740 --> 00:25:42,860
+And what I wanted to point out is almost
+everything you're looking at visually,
+
+358
+00:25:42,860 --> 00:25:45,740
+when you play the game of Quest,
+is actually is actually a CALayer.
+
+359
+00:25:45,740 --> 00:25:53,320
+The only exceptions are the rendered dungeon model and
+possibly the character, which we have done with OpenGL ES.
+
+360
+00:25:53,320 --> 00:25:55,100
+So everything else is really a CALayer.
+
+361
+00:25:55,100 --> 00:26:02,310
+Now, it might be indirectly through a UIView, but the
+point is we're using layers on the top of OpenGL ES.
+
+362
+00:26:02,310 --> 00:26:03,520
+And you can turn that round.
+
+363
+00:26:03,520 --> 00:26:09,830
+You may have an application which is mostly just
+sort of conventional UIElements made of CALayers,
+
+364
+00:26:09,830 --> 00:26:17,790
+and one of those layers could be an OpenGLES layer in
+which you can do your sophisticated OpenGLES rendering.
+
+365
+00:26:17,790 --> 00:26:22,710
+And it all integrates completely seamlessly for you.
+
+366
+00:26:22,710 --> 00:26:26,600
+Another example, I've just taken
+from the YouTube application--
+
+367
+00:26:26,600 --> 00:26:28,530
+what I'm trying to illustrate there is the use
+
+368
+00:26:28,530 --> 00:26:34,940
+of the new layer object that's been introduced
+with iOS4 which is the AVPlayerLayer.
+
+369
+00:26:34,940 --> 00:26:37,120
+Now, it's very easy to use the AVPlayerLayer.
+
+370
+00:26:37,120 --> 00:26:44,400
+You can set its URL to a movie, and then
+you can add the AVPlayerLayer as a sublayer
+
+371
+00:26:44,400 --> 00:26:47,110
+to your views layer, which is what you would do here.
+
+372
+00:26:47,110 --> 00:26:53,020
+And there, we're seeing a couple of other layers
+with some nice properties like opacity and so on.
+
+373
+00:26:53,020 --> 00:26:55,550
+And that's it.
+
+374
+00:26:55,550 --> 00:26:59,270
+Very simple, and again, all integrate seamlessly together.
+
+375
+00:26:59,270 --> 00:27:00,740
+And then finally, UIKit.
+
+376
+00:27:00,740 --> 00:27:08,570
+So it turns out on iOS 4, every UIView object
+has a layer-- a CALayer object behind it.
+
+377
+00:27:08,570 --> 00:27:09,740
+It's sort of comes for free.
+
+378
+00:27:09,740 --> 00:27:13,360
+Normally, you don't have to worry about
+it or even get it any thought at all.
+
+379
+00:27:13,360 --> 00:27:16,980
+And the default is an instance of the CALayer.
+
+380
+00:27:16,980 --> 00:27:25,270
+You can overwrite the default by providing a
+layer class method for your UIView subview,
+
+381
+00:27:25,270 --> 00:27:33,430
+and you can either provide one of the CALayer
+subclasses like CAShapeLayer, for example,
+
+382
+00:27:33,430 --> 00:27:38,090
+or you can use your own subclass, in which case,
+
+383
+00:27:38,090 --> 00:27:42,890
+anything that you do with the UIView will
+actually be using your own layer of subclass.
+
+384
+00:27:42,890 --> 00:27:47,940
+OK. So that's covering providing content.
+
+385
+00:27:47,940 --> 00:27:51,430
+And now, we're going to get to the heart
+of this presentation, which is Animation.
+
+386
+00:27:51,430 --> 00:27:56,560
+So remember, the dictionary definition
+is, you know, bringing something to life.
+
+387
+00:27:56,560 --> 00:28:00,380
+So we're going to hopefully bring
+all your applications to life.
+
+388
+00:28:00,380 --> 00:28:04,310
+So what does animation actually mean
+from a programmatic point of view?
+
+389
+00:28:04,310 --> 00:28:12,940
+It really means changing the value of a property from
+some starting value to some ending value over time.
+
+390
+00:28:12,940 --> 00:28:16,010
+Now, we used Position a lot because that's the obvious one.
+
+391
+00:28:16,010 --> 00:28:19,440
+But as we'll see, as we progress,
+there are many other properties
+
+392
+00:28:19,440 --> 00:28:22,940
+that can be animated to good effect in your application.
+
+393
+00:28:22,940 --> 00:28:24,360
+But let's start with the basic.
+
+394
+00:28:24,360 --> 00:28:30,550
+Now, it turns out that whenever you change one of the
+layer's properties, you will automatically get an animation.
+
+395
+00:28:30,550 --> 00:28:34,370
+So you remember that render diagram I showed you early on,
+
+396
+00:28:34,370 --> 00:28:38,620
+which showed the individual interpolated
+frames, that happens automatically for you.
+
+397
+00:28:38,620 --> 00:28:40,000
+So here's an example.
+
+398
+00:28:40,000 --> 00:28:46,560
+I have the original layer I showed you with-- where
+the contents was the Core Animation logo image,
+
+399
+00:28:46,560 --> 00:28:49,720
+and I'm going to set the position property of the layer.
+
+400
+00:28:49,720 --> 00:28:56,910
+And but-- now, not totally satisfactory because
+it started, you know, it went to infinite speed
+
+401
+00:28:56,910 --> 00:28:59,470
+and stopped doing, you know, so a bit unsatisfactory.
+
+402
+00:28:59,470 --> 00:29:03,910
+So it turns out that when you set
+a whole bunch properties of layers,
+
+403
+00:29:03,910 --> 00:29:07,220
+the next time the run-loop gets
+controlled, it implements a transaction.
+
+404
+00:29:07,220 --> 00:29:12,480
+The transaction will cause all the layer properties that
+have changed to animate in the way that I showed you
+
+405
+00:29:12,480 --> 00:29:15,550
+on the slide with the jumping presentation that it has.
+
+406
+00:29:15,550 --> 00:29:21,420
+So if you want to overwrite some of those default
+properties, you use a classical CATransaction
+
+407
+00:29:21,420 --> 00:29:24,000
+and that allows us to overwrite some of the default.
+
+408
+00:29:24,000 --> 00:29:31,510
+So in this case, we want our animation to last five seconds,
+and we want to use a tiny function called EaseInEaseOut,
+
+409
+00:29:31,510 --> 00:29:34,570
+which will allow this to behave in a bit more realistic way.
+
+410
+00:29:34,570 --> 00:29:38,770
+That is it'll speed up, reach its max
+speed for a bit, and then slow down.
+
+411
+00:29:38,770 --> 00:29:41,310
+Now, remember, I said all the details will be worked out.
+
+412
+00:29:41,310 --> 00:29:42,960
+So you don't need to do anything else.
+
+413
+00:29:42,960 --> 00:29:44,870
+You don't have to do additional math to work that out.
+
+414
+00:29:44,870 --> 00:29:47,030
+You can forget your Calculus 101.
+
+415
+00:29:47,030 --> 00:29:47,750
+Don't need it.
+
+416
+00:29:47,750 --> 00:29:55,710
+But you do know that you want this nice timing
+function, and there goes a much nicer looking animation.
+
+417
+00:29:55,710 --> 00:29:56,380
+And I timed it.
+
+418
+00:29:56,380 --> 00:29:57,510
+It is five seconds.
+
+419
+00:29:57,510 --> 00:30:01,150
+Now, it's obvious to think of Position.
+
+420
+00:30:01,150 --> 00:30:02,030
+I keep mentioning that.
+
+421
+00:30:02,030 --> 00:30:05,610
+But I just wanted to get you thinking,
+because really, there are other properties.
+
+422
+00:30:05,610 --> 00:30:07,190
+So I put down some of the meanings.
+
+423
+00:30:07,190 --> 00:30:13,460
+So for example, there's an opacity property, and it
+ranges from zero, invisible, to one, fully visible.
+
+424
+00:30:13,460 --> 00:30:18,500
+If you animate that property, you
+would get a fade in or fade out effect.
+
+425
+00:30:18,500 --> 00:30:21,900
+The shadow properties make the shadow appear or disappear.
+
+426
+00:30:21,900 --> 00:30:26,520
+There's Transforms which will obviously,
+move your object in 3D space.
+
+427
+00:30:26,520 --> 00:30:29,800
+So a bit more general than Position.
+
+428
+00:30:29,800 --> 00:30:31,960
+Bounds, you can grow and shrink objects.
+
+429
+00:30:31,960 --> 00:30:36,250
+In fact, almost all the Layer properties are animatable.
+
+430
+00:30:36,250 --> 00:30:42,680
+You're limited only by your own imagination in how to
+use the animated-- animatable value of these properties.
+
+431
+00:30:42,680 --> 00:30:46,840
+And I haven't covered this, but you can even
+animate your own properties if necessary.
+
+432
+00:30:46,840 --> 00:30:48,270
+I've mentioned the transactions.
+
+433
+00:30:48,270 --> 00:30:53,660
+So the way to think about this is I have my Layer tree,
+I settle my properties, the run-loop gets controlled,
+
+434
+00:30:53,660 --> 00:31:00,850
+it checks to see-- look-- it looks for property changes,
+that's the transaction, it uses the CATransaction class,
+
+435
+00:31:00,850 --> 00:31:05,990
+you can set things like the duration, the timing
+function, as I illustrated in the previous slide,
+
+436
+00:31:05,990 --> 00:31:11,990
+you can also have explicit transactions using
+CATransaction Begin, set your properties,
+
+437
+00:31:11,990 --> 00:31:14,840
+and do a CATransaction Commit, and those can be nested.
+
+438
+00:31:14,840 --> 00:31:19,600
+I'm not going to go into that in
+this talk, again, nicely documented.
+
+439
+00:31:19,600 --> 00:31:22,570
+Now, once in a while, Animation might get in your way.
+
+440
+00:31:22,570 --> 00:31:23,910
+So here's a handy tip.
+
+441
+00:31:23,910 --> 00:31:30,800
+If you want to turn it off, then you would use the
+CATransaction setDisableAction, and I'm going to turn it
+
+442
+00:31:30,800 --> 00:31:35,050
+over to Tim to show you the difference
+between doing that and not doing that.
+
+443
+00:31:35,050 --> 00:31:41,800
+OK. So what Tim's going to do is he's
+going to move that logo around the screen.
+
+444
+00:31:41,800 --> 00:31:45,330
+And you'll notice the lag as he moves his finger,
+
+445
+00:31:45,330 --> 00:31:48,110
+and that's because we're setting the--
+what the app's doing is very simple.
+
+446
+00:31:48,110 --> 00:31:55,830
+It's detecting the touchpoint and then setting the
+position of the CALayer to be where the touchpoint is.
+
+447
+00:31:55,830 --> 00:31:56,620
+But it's animated.
+
+448
+00:31:56,620 --> 00:32:02,160
+So there's a default duration that-- and a
+default timing function, in this case, linear.
+
+449
+00:32:02,160 --> 00:32:10,650
+Now, the switch at the top, when turned over, will cause
+our application in each iteration before we set the property
+
+450
+00:32:10,650 --> 00:32:14,100
+to say, if that switch is on, disable the action.
+
+451
+00:32:14,100 --> 00:32:18,810
+And-- now, of course, this you know,
+this will look-- might be a slight lag--
+
+452
+00:32:18,810 --> 00:32:21,950
+That's the GPU working hard to do
+all the work it needs to do, but it--
+
+453
+00:32:21,950 --> 00:32:24,990
+in this case, it will track the finger much more closely.
+
+454
+00:32:24,990 --> 00:32:28,700
+OK. I'm going to do another example
+now of Implicit Animation,
+
+455
+00:32:28,700 --> 00:32:30,790
+and in this case, getting back to playing to cards.
+
+456
+00:32:30,790 --> 00:32:35,460
+I chose those just because I could assume that
+almost everyone in this room has seen playing cards.
+
+457
+00:32:35,460 --> 00:32:37,530
+And so, I don't have to explain them.
+
+458
+00:32:37,530 --> 00:32:42,820
+But in this case, I'm assuming that I have three
+cards that are stacked one on top of each other,
+
+459
+00:32:42,820 --> 00:32:44,980
+and at some stage, I want to fan them out.
+
+460
+00:32:44,980 --> 00:32:49,510
+I've just chosen three because it's the smallest
+number I could get away with that showed a fan,
+
+461
+00:32:49,510 --> 00:32:52,000
+and I didn't want to bug you down with too much detail.
+
+462
+00:32:52,000 --> 00:32:57,650
+So I'm assuming that I'm going to have
+an array, just a normal array of-- its--
+
+463
+00:32:57,650 --> 00:33:05,490
+its type is CALayer, they have three elements of this
+array, and I'm going to populate each of the elements
+
+464
+00:33:05,490 --> 00:33:10,650
+of their array with an instance of a CALayer
+object, that's the third like of code there.
+
+465
+00:33:10,650 --> 00:33:14,540
+They're all going to have identical bounds and position.
+
+466
+00:33:14,540 --> 00:33:19,600
+And then the important thing is I'm going to-- because
+I want to do a fan, I'm going to set the anchorPoint
+
+467
+00:33:19,600 --> 00:33:22,950
+to be the bottom left hand corner of the card.
+
+468
+00:33:22,950 --> 00:33:25,850
+If I rotated them around the center,
+we'd still get an effect,
+
+469
+00:33:25,850 --> 00:33:28,380
+but it would be different from fanning the cards out.
+
+470
+00:33:28,380 --> 00:33:33,670
+The usual objective of fanning cards
+out is to show all the card indices.
+
+471
+00:33:33,670 --> 00:33:36,400
+So you really want to rotate around
+the bottom of left hand corner.
+
+472
+00:33:36,400 --> 00:33:42,740
+So the only thing that's different on this-- in this loop
+is that I give each of the contents a different image.
+
+473
+00:33:42,740 --> 00:33:50,270
+So I'm assuming that I've preloaded an image array with
+card images, and then we add them sublayers of the view,
+
+474
+00:33:50,270 --> 00:33:54,490
+and that's what it will look like before I do the animation.
+
+475
+00:33:54,490 --> 00:33:56,970
+So how do I do the Implicit Animation now?
+
+476
+00:33:56,970 --> 00:34:02,270
+Well, what I'm going to do is Transform-- I'm going
+to change the Transform property of each of the cards.
+
+477
+00:34:02,270 --> 00:34:07,820
+In the first case, I'm going to
+rotate by three degrees to the left.
+
+478
+00:34:07,820 --> 00:34:09,600
+The second one is actually redundant.
+
+479
+00:34:09,600 --> 00:34:12,720
+I'm doing no transformation, but
+it doesn't hurt to stick that in.
+
+480
+00:34:12,720 --> 00:34:20,750
+And then the last one, I'm going to rotate by three degrees
+clockwise, and we'll see how that looks on the demo.
+
+481
+00:34:20,750 --> 00:34:26,900
+I've added just one more tweak because it is
+visually-- it gives you the real sense about its layers.
+
+482
+00:34:26,900 --> 00:34:32,300
+So I'm going to ask Tim to push another button, and
+that's going to cause the queen of hearts to go sport
+
+483
+00:34:32,300 --> 00:34:34,580
+of sliding underneath the other two cards.
+
+484
+00:34:34,580 --> 00:34:40,140
+So-- just so it really has the feeling of layer.
+
+485
+00:34:40,140 --> 00:34:44,360
+And there's more sophisticated stuff you can do with
+that, but I thought that would give you a strong sense.
+
+486
+00:34:44,360 --> 00:34:45,680
+So-- but-- thanks, Tim.
+
+487
+00:34:45,680 --> 00:34:47,180
+So that's Implicit Animation.
+
+488
+00:34:47,180 --> 00:34:53,300
+And I've just shown you how easy it is to do that you
+have control over the timing of the timingFunctions,
+
+489
+00:34:53,300 --> 00:34:55,520
+there were number of properties that you can animate.
+
+490
+00:34:55,520 --> 00:34:59,050
+Sometimes, you want more control of your animation.
+
+491
+00:34:59,050 --> 00:35:02,320
+And in that case, you would use
+what's called Explicit Animation.
+
+492
+00:35:02,320 --> 00:35:06,560
+So what we're looking at here is the Animation hierarchy.
+
+493
+00:35:06,560 --> 00:35:14,300
+Now, in this case, the roots of the Animation hierarchy,
+CAAnimation, is abstract, as is CAPropertyAnimation.
+
+494
+00:35:14,300 --> 00:35:20,840
+The ones that you'll typically use most often in your
+application are the remaining ones, CABasicAnimation,
+
+495
+00:35:20,840 --> 00:35:27,650
+which as the name implies, is a basic animation,
+CAKeyframeAnimation, which we'll talk quite a bit about,
+
+496
+00:35:27,650 --> 00:35:35,440
+CAAnimationGroup, which lets you bunch a whole lot of
+animations together onto a layer so you can animate opacity,
+
+497
+00:35:35,440 --> 00:35:43,230
+position, transform, you can do all that simultaneously,
+and then I'm going to talk very briefly about CATransition,
+
+498
+00:35:43,230 --> 00:35:47,360
+which is a little unfair because mostly,
+what you'll see when you're running apps
+
+499
+00:35:47,360 --> 00:35:50,280
+on the devices are actually, transitions.
+
+500
+00:35:50,280 --> 00:35:52,190
+But we'll talk about that a little bit later.
+
+501
+00:35:52,190 --> 00:35:55,200
+And I'm showing here some of the
+properties that are important,
+
+502
+00:35:55,200 --> 00:35:58,510
+but we'll go into enough detail
+for you to understand the basics.
+
+503
+00:35:58,510 --> 00:36:02,080
+So firstly, when you create an animation--
+I'll start with basic animation.
+
+504
+00:36:02,080 --> 00:36:08,330
+How do you tell the Core Animation framework
+which property it is that you wish to animate?
+
+505
+00:36:08,330 --> 00:36:09,910
+The answer is you use a keyPath.
+
+506
+00:36:09,910 --> 00:36:11,200
+It's a string.
+
+507
+00:36:11,200 --> 00:36:16,710
+So for example, position or position.y, or anchorPoint.x.
+
+508
+00:36:16,710 --> 00:36:21,460
+And there in the line says Animation
+=, that's how you do it.
+
+509
+00:36:21,460 --> 00:36:29,650
+You instantiate a CABasicAnimation object, you
+use a class method called animationWithKeyPath,
+
+510
+00:36:29,650 --> 00:36:33,920
+and the argument you give, it's
+just a string and it's the name
+
+511
+00:36:33,920 --> 00:36:38,110
+of the property that you wish to apply the animation to.
+
+512
+00:36:38,110 --> 00:36:39,770
+Now, of course, that's not quite enough.
+
+513
+00:36:39,770 --> 00:36:44,570
+If you remember the slide where I said it
+was a graph, I said, "What is an animation?"
+
+514
+00:36:44,570 --> 00:36:50,390
+And I-- there were two important
+properties, the fromValue and the toValue.
+
+515
+00:36:50,390 --> 00:36:56,170
+So after you've created the basic animation, you
+typically want to specify a fromValue and a toValue.
+
+516
+00:36:56,170 --> 00:37:02,150
+If you don't, the default is the current model value,
+in which case, the Animation won't do anything.
+
+517
+00:37:02,150 --> 00:37:06,010
+Very often, it's sufficient to just say toValue.
+
+518
+00:37:06,010 --> 00:37:08,650
+And then, how do you actually get the animation to kick off?
+
+519
+00:37:08,650 --> 00:37:09,160
+Very easily.
+
+520
+00:37:09,160 --> 00:37:12,810
+You add the animation to the layer.
+
+521
+00:37:12,810 --> 00:37:16,960
+So there's the call layer addAnimation:animation.
+
+522
+00:37:16,960 --> 00:37:19,630
+It's important to note that you
+haven't changed your Layer model.
+
+523
+00:37:19,630 --> 00:37:25,540
+That is, while the animation's occurring, all the
+presentation frames are changing, your model's unchanged.
+
+524
+00:37:25,540 --> 00:37:30,740
+If your program queries the model during
+the animation, it will get the old value,
+
+525
+00:37:30,740 --> 00:37:33,710
+it won't get the current presentation values.
+
+526
+00:37:33,710 --> 00:37:35,060
+Could that be a problem?
+
+527
+00:37:35,060 --> 00:37:39,290
+Occasionally, and I'll show how to deal with that later on.
+
+528
+00:37:39,290 --> 00:37:42,000
+So let's start with a very simple example.
+
+529
+00:37:42,000 --> 00:37:43,400
+We're going to drop a ball.
+
+530
+00:37:43,400 --> 00:37:48,000
+So we're going to animate just the
+Y code of its position property.
+
+531
+00:37:48,000 --> 00:37:54,530
+So I give a keyPath which says position.y,
+and I want it to take two seconds,
+
+532
+00:37:54,530 --> 00:37:58,030
+and I want the new value, the toValue, to be 300.
+
+533
+00:37:58,030 --> 00:38:00,540
+So I'm assuming it somewhere below.
+
+534
+00:38:00,540 --> 00:38:04,600
+And then I'm going to add the animation,
+and I'll talk about this key property.
+
+535
+00:38:04,600 --> 00:38:06,350
+But right now, I just picked some string.
+
+536
+00:38:06,350 --> 00:38:09,890
+You could also pass No in the forKey property.
+
+537
+00:38:09,890 --> 00:38:13,550
+In the next slide, we'll find a better use for it,
+
+538
+00:38:13,550 --> 00:38:21,210
+and I'm sure you can predict-- can
+you predict what's going to happen?
+
+539
+00:38:21,210 --> 00:38:23,630
+Not quite what you might have expected.
+
+540
+00:38:23,630 --> 00:38:26,740
+So this is a bit of a beginner track
+for everyone learning Core Animation.
+
+541
+00:38:26,740 --> 00:38:31,650
+And when it first happened to me, I did a search
+on the internet to find out what I was doing wrong,
+
+542
+00:38:31,650 --> 00:38:36,180
+and I have to say that all the
+answers I found were rather bogus.
+
+543
+00:38:36,180 --> 00:38:36,890
+[ Laughter ]
+
+544
+00:38:36,890 --> 00:38:41,870
+So now, I'll give you the definitive answer,
+and it turns out it's actually straightforward.
+
+545
+00:38:41,870 --> 00:38:47,460
+But really, the real reason I'm giving this example is
+because it will help you understand what's really going on.
+
+546
+00:38:47,460 --> 00:38:52,010
+And once you understand what's going on, it turns
+out it's rather trivial to solve this problem.
+
+547
+00:38:52,010 --> 00:38:54,380
+OK. So here's the way I should have done it.
+
+548
+00:38:54,380 --> 00:38:57,960
+Well, what's really going on is
+that the model value did not change.
+
+549
+00:38:57,960 --> 00:39:04,400
+And therefore, after rendering the animation, after the
+presentation frames were all displayed on the screen,
+
+550
+00:39:04,400 --> 00:39:08,220
+the next time the screen was refreshed,
+the model value was used, and of course,
+
+551
+00:39:08,220 --> 00:39:11,750
+the ball was back where it is-- where it was to start with.
+
+552
+00:39:11,750 --> 00:39:16,710
+So really, what I want to do is put
+the ball in the destination position.
+
+553
+00:39:16,710 --> 00:39:23,730
+Now, before I do that, I'd better save the starting
+position and you'll see why as I walk through this example.
+
+554
+00:39:23,730 --> 00:39:27,460
+So I want to set the ball in its target position.
+
+555
+00:39:27,460 --> 00:39:32,740
+Now, that line under the comment target
+position is essentially going to tell the layer
+
+556
+00:39:32,740 --> 00:39:39,630
+that there's an Implicit Animation that has to be performed,
+and it's going to be an animation on the position property.
+
+557
+00:39:39,630 --> 00:39:46,530
+So really, by the time I've added the basic animation,
+there're potentially two animations going on.
+
+558
+00:39:46,530 --> 00:39:52,230
+Now, I may not want that because in my basic animation,
+I might have set a timingFunction and a time duration,
+
+559
+00:39:52,230 --> 00:39:57,320
+and those might be different from the
+default for the Implicit Transaction.
+
+560
+00:39:57,320 --> 00:40:01,930
+So really, what I want to do is make sure
+that the Implicit Animation doesn't happen.
+
+561
+00:40:01,930 --> 00:40:09,330
+And the way I do that is by using the key, and
+I'd give the value for the key to be the name
+
+562
+00:40:09,330 --> 00:40:14,350
+of the implicitly animated-- the
+implicitly animated property.
+
+563
+00:40:14,350 --> 00:40:15,210
+Now, why does that work?
+
+564
+00:40:15,210 --> 00:40:19,800
+Well, it works because what's really going
+on is that the CALayer has a dictionary
+
+565
+00:40:19,800 --> 00:40:22,720
+of animations, and the animations are keyed.
+
+566
+00:40:22,720 --> 00:40:27,290
+And so, when I add that animation in the last
+line, it's just going to overwrite the one
+
+567
+00:40:27,290 --> 00:40:29,990
+that had been set up by the Implicit Animation.
+
+568
+00:40:29,990 --> 00:40:36,900
+And so, the effect is that when the transaction finally does
+the actual animation, the Implicit Animation is history.
+
+569
+00:40:36,900 --> 00:40:38,730
+It no longer exists.
+
+570
+00:40:38,730 --> 00:40:44,840
+And now, the moment you will be
+waiting for-- the ball stays.
+
+571
+00:40:44,840 --> 00:40:47,240
+[ Laughter ]
+
+572
+00:40:47,240 --> 00:40:49,640
+[ Applause ]
+
+573
+00:40:49,640 --> 00:40:51,880
+OK. So that's basic animation.
+
+574
+00:40:51,880 --> 00:40:57,130
+Now, sometimes useful, but very often, you
+want to get a much more sophisticated effect,
+
+575
+00:40:57,130 --> 00:41:03,480
+a roller coaster for example, slow, slow, slow,
+speed, speed, speed, scream, hands waving, and so on.
+
+576
+00:41:03,480 --> 00:41:05,620
+So then you might want to use key frames.
+
+577
+00:41:05,620 --> 00:41:09,240
+And so, just to remind you-- you might know this.
+
+578
+00:41:09,240 --> 00:41:14,520
+So when you rendering, you know, you don't always
+need to have a representation of every single frame.
+
+579
+00:41:14,520 --> 00:41:19,730
+So for example, on compressed movies, you
+know, the key frame has all the information.
+
+580
+00:41:19,730 --> 00:41:22,170
+But you can interpolate intermediate frames.
+
+581
+00:41:22,170 --> 00:41:27,640
+So it's exactly the same concept, their
+interpolated values and their key values.
+
+582
+00:41:27,640 --> 00:41:34,160
+When you make a key frame animation, you provide the key
+values, Core Animation will do the interpolation itself,
+
+583
+00:41:34,160 --> 00:41:38,070
+and as we'll see in a second, you can also
+control the timing of the interpolation.
+
+584
+00:41:38,070 --> 00:41:40,110
+So how do you do a key frame animation?
+
+585
+00:41:40,110 --> 00:41:43,080
+Very similar constructive, we'll see an example in a second.
+
+586
+00:41:43,080 --> 00:41:45,190
+You have the choice of doing it in one of two arrays.
+
+587
+00:41:45,190 --> 00:41:51,180
+You can either use the path property of the
+CAKeyframeAnimation object, in which case,
+
+588
+00:41:51,180 --> 00:41:57,820
+the animation will follow the path that you've specified
+finding the key-- the key frames as it goes along,
+
+589
+00:41:57,820 --> 00:42:03,040
+or you can set the values array and you
+can use one or two, you need-- sorry--
+
+590
+00:42:03,040 --> 00:42:07,460
+you need at least two values, but you can have
+more, and they will be the key frame points,
+
+591
+00:42:07,460 --> 00:42:11,130
+the interpolated points are worked
+out for you automatically.
+
+592
+00:42:11,130 --> 00:42:15,750
+And then to control timing, there's
+an optional array of key times,
+
+593
+00:42:15,750 --> 00:42:20,660
+which is the fraction of the total
+time for each frame segment.
+
+594
+00:42:20,660 --> 00:42:24,560
+When you're actually doing animations,
+obviously, timing is very important.
+
+595
+00:42:24,560 --> 00:42:27,090
+So you often set the duration.
+
+596
+00:42:27,090 --> 00:42:30,910
+And if you want to do, for example, the
+roller coaster, then you would have to know
+
+597
+00:42:30,910 --> 00:42:38,060
+for your particular roller coaster what fraction of
+the time there was in each part of that animation.
+
+598
+00:42:38,060 --> 00:42:44,600
+And then of course, the interpolation will be either
+between the values or along the path that you've provided.
+
+599
+00:42:44,600 --> 00:42:48,670
+So I'm going to do a more complicated example.
+
+600
+00:42:48,670 --> 00:42:53,030
+So imagine we have a playing card
+now, and we want to flip it around.
+
+601
+00:42:53,030 --> 00:42:57,670
+So now, I want to do a transformation, except not in this--
+
+602
+00:42:57,670 --> 00:43:01,730
+the normal transformations in 2D
+space or in the zed coordinate,
+
+603
+00:43:01,730 --> 00:43:06,170
+because you're imaging your user looking down on the screen.
+
+604
+00:43:06,170 --> 00:43:09,440
+In this case though, I want to flip the Y direction.
+
+605
+00:43:09,440 --> 00:43:18,390
+So first, I'll set the transform, and notice that the
+CATransform3DMakeRotation call has four parameters.
+
+606
+00:43:18,390 --> 00:43:24,030
+The first one is the number of radiance that I want
+to do the transform in, and the next three are the--
+
+607
+00:43:24,030 --> 00:43:27,370
+is a vector that defines where the translation occurs.
+
+608
+00:43:27,370 --> 00:43:32,120
+So in this case, I'm using the vector zero,
+one, zero, which says rotate around the Y axis.
+
+609
+00:43:32,120 --> 00:43:37,620
+And now, I make my KeyframeAnimation--
+again, I use a string, which is a keyPath,
+
+610
+00:43:37,620 --> 00:43:40,660
+very similar, I'm going to create that animation.
+
+611
+00:43:40,660 --> 00:43:44,830
+Now, I'm going to do something a bit
+more sophisticated for the values.
+
+612
+00:43:44,830 --> 00:43:49,100
+Rather than trying to animate the transform
+properties, which is ultimately what I'm going to do,
+
+613
+00:43:49,100 --> 00:43:52,670
+I'm going to use something called a valueFunction.
+
+614
+00:43:52,670 --> 00:43:56,430
+So I'm going to specify two values, zero and pi.
+
+615
+00:43:56,430 --> 00:43:59,170
+That is I want to animate between zero and pi.
+
+616
+00:43:59,170 --> 00:44:04,620
+But what I actually want to animate between
+zero and pi is a Transform around the Y axis.
+
+617
+00:44:04,620 --> 00:44:11,510
+So there's an extra property called valueFunction which
+I set on my animation object, and the particular value
+
+618
+00:44:11,510 --> 00:44:18,420
+of function I want is the one that will take one of the
+values, either the key values or the interpolated values,
+
+619
+00:44:18,420 --> 00:44:25,770
+and return the appropriate transform around the Y axis,
+and that's what Core Animation will apply to the count.
+
+620
+00:44:25,770 --> 00:44:32,500
+I'm going to make it last for two seconds, and
+then add it, and of course, same trick, yes,
+
+621
+00:44:32,500 --> 00:44:34,700
+since I've already set the transform property,
+
+622
+00:44:34,700 --> 00:44:38,920
+I want to get rid of the Implicit Animation
+and just use the KeyframeAnimation.
+
+623
+00:44:38,920 --> 00:44:45,010
+And this is how it looks.
+
+624
+00:44:45,010 --> 00:44:47,820
+Now, I have cheated very slightly,
+and I should come clean here.
+
+625
+00:44:47,820 --> 00:44:52,180
+I've used an extra property, which you can
+read up about, called the Sublayer Transform.
+
+626
+00:44:52,180 --> 00:44:58,030
+The parent layer has a sort of camera angle already
+set, so that we get a perspective view of that--
+
+627
+00:44:58,030 --> 00:45:02,160
+let me show it to you again so you can see what I mean.
+
+628
+00:45:02,160 --> 00:45:06,160
+So just-- just so you're clear, that the code
+I showed you wasn't the complete picture.
+
+629
+00:45:06,160 --> 00:45:11,150
+It's pretty easy though, to do the extra bit.
+
+630
+00:45:11,150 --> 00:45:15,730
+Now, you may want to combine animation, so that's
+pretty obvious, but I thought I would just illustrate.
+
+631
+00:45:15,730 --> 00:45:17,890
+I'm not going to show a movie of
+this, but just to give you the idea.
+
+632
+00:45:17,890 --> 00:45:18,780
+It's fairly straightforward.
+
+633
+00:45:18,780 --> 00:45:24,500
+Let's suppose that while the card is spinning, I also want
+to move it, and maybe I set a repeatCount on the flips,
+
+634
+00:45:24,500 --> 00:45:28,380
+so that is spinning around and I want the
+whole thing to go spinning across the screen.
+
+635
+00:45:28,380 --> 00:45:33,340
+So in that case, I'd use a group animation,
+which is basically a collection of animations
+
+636
+00:45:33,340 --> 00:45:37,280
+that are applied simultaneously to a layer's property.
+
+637
+00:45:37,280 --> 00:45:40,950
+So let's assume we already have
+created the KeyframeAnimation
+
+638
+00:45:40,950 --> 00:45:44,120
+with the valueFunction to do the
+flip, and I want to move it.
+
+639
+00:45:44,120 --> 00:45:48,360
+So I create a basic animation, no
+need to be too complicated here.
+
+640
+00:45:48,360 --> 00:45:54,720
+I set the toValue, the 10 second duration,
+and now, I create a CAAnimationGroup.
+
+641
+00:45:54,720 --> 00:45:59,620
+Now, the group animation has a property called
+Animations, and that's just simply an array
+
+642
+00:45:59,620 --> 00:46:02,900
+of all the animations that you want to apply one at a time.
+
+643
+00:46:02,900 --> 00:46:09,940
+I'm going to set a 20 second-- want to account for the fact
+that maybe I'm flipping the card twice while I'm moving.
+
+644
+00:46:09,940 --> 00:46:14,920
+And in this case, I don't need to delete any--
+may not need to delete any Implicit Animation.
+
+645
+00:46:14,920 --> 00:46:18,520
+So I'll just use No for the key,
+and I have the group animation.
+
+646
+00:46:18,520 --> 00:46:22,330
+A few other things that are useful to
+know about, the CAMediaTiming protocol.
+
+647
+00:46:22,330 --> 00:46:27,320
+Now, protocol really is a contract that
+is adopted by class implementations.
+
+648
+00:46:27,320 --> 00:46:31,440
+If you're fairly new to the platform,
+this will be something you have to learn.
+
+649
+00:46:31,440 --> 00:46:37,550
+In this case, both CAAnimation and
+CALayer adopt the CAMediaTiming protocol,
+
+650
+00:46:37,550 --> 00:46:44,370
+which means that they provide implementations of the
+properties that you're seeing below, and a couple of others.
+
+651
+00:46:44,370 --> 00:46:48,330
+TimeOffsets of-- and particularly important
+if you're doing a group animation, you want--
+
+652
+00:46:48,330 --> 00:46:52,240
+you might want part of your group
+to kick in later than other parts.
+
+653
+00:46:52,240 --> 00:46:53,890
+RepeatCount is nice.
+
+654
+00:46:53,890 --> 00:47:00,230
+Autoreverses is very nice because if you set that-- so for
+example, if I've done my ball animation with autoreverse,
+
+655
+00:47:00,230 --> 00:47:02,290
+then I don't need to specify it coming back.
+
+656
+00:47:02,290 --> 00:47:04,750
+It will autoreverse, as the name implies.
+
+657
+00:47:04,750 --> 00:47:10,830
+And if I set the repeatCount to the maximum floating
+point value, then the animation will go forever,
+
+658
+00:47:10,830 --> 00:47:15,810
+or at least as long as the user is
+looking at that particular screen.
+
+659
+00:47:15,810 --> 00:47:21,870
+Now, I mentioned a problem earlier on, which is what--
+that the layer model is not changed, and maybe you care.
+
+660
+00:47:21,870 --> 00:47:26,590
+So in that case, for example, say, you're trying to do
+a hit test, you're implementing pong, and you want to--
+
+661
+00:47:26,590 --> 00:47:31,550
+you know, the user kind of touch the
+ball and you want to detect that hit.
+
+662
+00:47:31,550 --> 00:47:36,360
+So you can't use the model value because it'll still
+be what it was before you fired off your animation.
+
+663
+00:47:36,360 --> 00:47:39,690
+So what you do is use the presentationLayer,
+and it's very easy.
+
+664
+00:47:39,690 --> 00:47:44,460
+You just take your layer and you
+send it the method presentationLayer.
+
+665
+00:47:44,460 --> 00:47:49,500
+You would typically use it in two cases,
+I will illustrate both of them here.
+
+666
+00:47:49,500 --> 00:47:53,300
+So there, I'm doing a hit test, and I'm
+going to do another little trick here.
+
+667
+00:47:53,300 --> 00:47:57,440
+I'm going to use it to do an animation
+where maybe I care about the color
+
+668
+00:47:57,440 --> 00:48:00,390
+and value as presented, rather than the model value.
+
+669
+00:48:00,390 --> 00:48:09,100
+So I will get the fromValue from my animation to be the
+value of the current.position rather than layer.position,
+
+670
+00:48:09,100 --> 00:48:14,440
+and that will tell you where the object is as
+close as possible to when it was actually rendered,
+
+671
+00:48:14,440 --> 00:48:18,740
+and the user is looking at it,
+and I'm adding a bogus animation.
+
+672
+00:48:18,740 --> 00:48:21,820
+In real life, if you tried this,
+it would just cause a little jerk,
+
+673
+00:48:21,820 --> 00:48:23,860
+and then of course, you go back to the model value.
+
+674
+00:48:23,860 --> 00:48:28,800
+And then one more topic before the next
+step, which is Animation Notification.
+
+675
+00:48:28,800 --> 00:48:31,250
+So there are two ways to do this.
+
+676
+00:48:31,250 --> 00:48:37,530
+One way is to set a Delegate, and then you can get notified
+that the animation started, usually, more interestingly,
+
+677
+00:48:37,530 --> 00:48:41,530
+that the animation stopped, and you
+might use that, for example, to clean up,
+
+678
+00:48:41,530 --> 00:48:44,900
+get rid of sublayers that are no longer needed, and so on.
+
+679
+00:48:44,900 --> 00:48:50,430
+Another way to do it is to use the new
+block feature that's being added to iOS 4.
+
+680
+00:48:50,430 --> 00:48:57,170
+And so the CATransaction class in iOS 4 has a
+setCompletionBlock method, and you can pass it literally,
+
+681
+00:48:57,170 --> 00:49:03,990
+a block of code that does the cleanup or whatever
+it is you wish to do at the end of your animation.
+
+682
+00:49:03,990 --> 00:49:09,270
+Now, the thing that comes to mind is animation
+chaining, and yes, maybe you could do that.
+
+683
+00:49:09,270 --> 00:49:13,280
+But you might also use some other timing
+since you got access to the media protocol.
+
+684
+00:49:13,280 --> 00:49:16,390
+You can also chain your animations using various timings.
+
+685
+00:49:16,390 --> 00:49:18,490
+But that's also a possibility.
+
+686
+00:49:18,490 --> 00:49:24,790
+OK. So what we've done is we've put together a sample code.
+
+687
+00:49:24,790 --> 00:49:29,310
+What I've trying to do is put up sample code that will
+make-- that will illustrate all the points that I've covered
+
+688
+00:49:29,310 --> 00:49:36,490
+up until now, so you can very quickly go and look at it, and
+refresh your memory about what happened here and, you know,
+
+689
+00:49:36,490 --> 00:49:39,590
+look at the code to get concrete
+examples of how all of this is done.
+
+690
+00:49:39,590 --> 00:49:43,550
+So there's the playing card made with
+the sublayers, as I have illustrated.
+
+691
+00:49:43,550 --> 00:49:45,270
+Can you touch?
+
+692
+00:49:45,270 --> 00:49:51,350
+Now, I'm doing a more interesting
+vector for my CA3DTransform.
+
+693
+00:49:51,350 --> 00:49:56,510
+OK. Another click, returning it
+back to its original state, touch--
+
+694
+00:49:56,510 --> 00:49:57,400
+[ Laughter ]
+
+695
+00:49:57,400 --> 00:49:59,320
+Thank you.
+
+696
+00:49:59,320 --> 00:50:04,210
+OK. Now here, I've used one of the layers I haven't
+talked about it a lot, which is the CATextLayer.
+
+697
+00:50:04,210 --> 00:50:11,040
+So each letter is a CATextLayer, and I just-- and I used
+the monospaced font so that my layer was very simple.
+
+698
+00:50:11,040 --> 00:50:15,020
+In reality, if you're going to layout
+text, you're more likely to use Core Text.
+
+699
+00:50:15,020 --> 00:50:20,800
+But this just illustrates to you a CATextLayer Touch.
+
+700
+00:50:20,800 --> 00:50:28,990
+And now, I'm using a timing notification to detect when the
+ball struck the text, and then I'm using a group animation,
+
+701
+00:50:28,990 --> 00:50:37,200
+which simultaneously moves each of the text layers to a
+random position on the screen and does an opacity animation
+
+702
+00:50:37,200 --> 00:50:40,010
+which changes the opacity from one to zero.
+
+703
+00:50:40,010 --> 00:50:41,630
+And that's how I get that effect.
+
+704
+00:50:41,630 --> 00:50:50,250
+OK. And I've got one more for this demo, which is I wanted
+to show that you don't have to use EaseIn and an EaseOut.
+
+705
+00:50:50,250 --> 00:50:53,900
+And wit-- you know, this gives a
+reasonable sense of a bouncing ball.
+
+706
+00:50:53,900 --> 00:50:56,270
+And in fact, I have just a linear timing function here.
+
+707
+00:50:56,270 --> 00:51:00,870
+Now of course, if you want realistic bouncing,
+then you have to go into complicated physics.
+
+708
+00:51:00,870 --> 00:51:05,490
+But, you know, this often would be good
+enough to give the effect of a ball bouncing.
+
+709
+00:51:05,490 --> 00:51:09,410
+Now, we're getting a bit low in time, so I'm just going
+to mention a couple of these classes, and then I'm--
+
+710
+00:51:09,410 --> 00:51:11,790
+Tim is going to do some pretty cool demos.
+
+711
+00:51:11,790 --> 00:51:13,730
+So I've talked about text layer.
+
+712
+00:51:13,730 --> 00:51:17,060
+I think you've heard a bit about
+CATiledLayer if you went to the scroll view.
+
+713
+00:51:17,060 --> 00:51:23,170
+But briefly speaking, a CATiledLayer is to
+deal with presenting content that's very big,
+
+714
+00:51:23,170 --> 00:51:27,620
+in a way that doesn't kill the memory use on your device.
+
+715
+00:51:27,620 --> 00:51:30,600
+It also helps you zoom, so it uses mipmaps.
+
+716
+00:51:30,600 --> 00:51:32,410
+So it's a pretty useful class.
+
+717
+00:51:32,410 --> 00:51:35,400
+I've talked about shape layers quite a bit.
+
+718
+00:51:35,400 --> 00:51:39,720
+Tim will talk a little bit about Replicator
+Layers which are quite interesting.
+
+719
+00:51:39,720 --> 00:51:43,120
+And so, with that, I'd like to hand over to Time Oriol.
+
+720
+00:51:43,120 --> 00:51:43,180
+[ Applause ]
+
+721
+00:51:43,180 --> 00:51:50,640
+>> Tim Oriol: What I've done for you today
+is I put together two demos which sort
+
+722
+00:51:50,640 --> 00:51:54,180
+of put together a lot of these
+concepts that we talked about.
+
+723
+00:51:54,180 --> 00:51:58,790
+We have a few layers on the screen
+right now, or fire hydrant is a CALayer
+
+724
+00:51:58,790 --> 00:52:02,570
+with content provided by CGImage, the same with the nozzle.
+
+725
+00:52:02,570 --> 00:52:09,610
+The hose is actually using the CAShapeLayer, and we
+specified a Bezier path that will define the Layer.
+
+726
+00:52:09,610 --> 00:52:17,310
+And what I've done is when you detect a user touch, the
+shape layer will be constructed such that it will end
+
+727
+00:52:17,310 --> 00:52:19,610
+up where the nozzle is, which follows the user's finger.
+
+728
+00:52:19,610 --> 00:52:25,930
+We've done the thing we've talked about earlier was we
+turned off the Implicit Animations when moving the nozzle.
+
+729
+00:52:25,930 --> 00:52:29,990
+So we get to follow the finger as
+smoothly as possible when we do this.
+
+730
+00:52:29,990 --> 00:52:38,810
+The handle on the nozzle is actually a separate layer,
+and we've set an anchorPoint at the base of the handle,
+
+731
+00:52:38,810 --> 00:52:43,500
+so that we're going to animate it so it sort
+of depresses when we detect a second touch,
+
+732
+00:52:43,500 --> 00:52:49,500
+and then we're going to use a Replicator Layer to sort
+of stream water out of the nozzle, as we can see here.
+
+733
+00:52:49,500 --> 00:52:55,000
+[ Pause ]
+
+734
+00:52:55,000 --> 00:52:56,060
+[ Applause ]
+
+735
+00:53:00,190 --> 00:53:05,790
+So you use the Implicit Animation to rotate that
+handle there, and then we have Replicator Layer
+
+736
+00:53:05,790 --> 00:53:09,280
+which will create instances of all the sublayers.
+
+737
+00:53:09,280 --> 00:53:12,250
+We have one single sublayer, which is this water droplet.
+
+738
+00:53:12,250 --> 00:53:17,590
+And one of the interesting offsets-- there's a few offsets
+you can set in Replicator Layers is the timeOffset.
+
+739
+00:53:17,590 --> 00:53:23,290
+So if we apply this timeOffset when we animate
+one of these water drops moving out to the side,
+
+740
+00:53:23,290 --> 00:53:27,570
+the other one will follow each after that
+timeOffset, and we apply a scale and a fade,
+
+741
+00:53:27,570 --> 00:53:30,480
+we can get semi-realistic water stream here.
+
+742
+00:53:30,480 --> 00:53:35,040
+The final demo I'd like to show
+you also uses Replicator Layers.
+
+743
+00:53:35,040 --> 00:53:39,470
+And we use the sublayer transform
+to create a 3D effect as well in here.
+
+744
+00:53:39,470 --> 00:53:45,070
+And just so you can understand what's going on
+when I bring it up, this is three replicators.
+
+745
+00:53:45,070 --> 00:53:48,870
+We have one for the Extraction,
+one for the Y, one for the Z.
+
+746
+00:53:48,870 --> 00:53:53,550
+And I have a single sublayer that's
+used to create this entire sample.
+
+747
+00:53:53,550 --> 00:53:55,370
+And we'll add in the replicators one by one.
+
+748
+00:53:55,370 --> 00:53:57,860
+We'll add the Z and the Y and the X.
+
+749
+00:53:57,860 --> 00:54:03,580
+And so we have a single sublayer here with a
+color offset, position offset, and as you can see,
+
+750
+00:54:03,580 --> 00:54:10,540
+a timeOffset to create this animating cube of layers using a
+single sublayer, and I apply an animation that will spin it
+
+751
+00:54:10,540 --> 00:54:16,600
+and move it towards the camera and fade out, and that
+will be replicated to all of the instances after to sort
+
+752
+00:54:16,600 --> 00:54:18,650
+of make it look like they're all coming out.
+
+753
+00:54:18,650 --> 00:54:22,780
+But you could do this all separately, and it's a
+lot more work and a lot more work at the timing,
+
+754
+00:54:22,780 --> 00:54:25,770
+but this just show how the Replicator
+Layer can do a lot of the work for you.
+
+755
+00:54:25,770 --> 00:54:28,350
+And we have one animation to bring it all back in.
+
+756
+00:54:28,350 --> 00:54:30,860
+>> Michael Levy: So in summary,
+I won't go into some huge detail.
+
+757
+00:54:30,860 --> 00:54:35,280
+I talked about Layers and their
+properties, how you provide layer content,
+
+758
+00:54:35,280 --> 00:54:38,650
+and Implicit and Explicit ways of animating layers.
+
+759
+00:54:38,650 --> 00:54:44,080
+I really hope you have a good sense now of
+how you can go out and get going with Layers.
+
+760
+00:54:44,080 --> 00:54:49,180
+If you have more questions, please
+feel free to e-mail Allan Schaffer,
+
+761
+00:54:49,180 --> 00:54:52,160
+the sample code up already, there are the URL's for it.
+
+762
+00:54:52,160 --> 00:54:57,860
+Of course, the great Developer Forums, and I
+invite you to come to part two of this talk,
+
+763
+00:54:57,860 --> 00:55:01,590
+which is in the same room, John
+Hopper will be giving that at 2 PM.
+
+764
+00:55:01,590 --> 00:55:04,620
+Today, it goes into more advanced
+concepts of Core Animation.
+

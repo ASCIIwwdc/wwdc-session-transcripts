@@ -1,0 +1,3350 @@
+1
+00:00:06,330 --> 00:00:09,460
+>> Peter Ammon: Welcome to Key
+Equivalent Handling in Cocoa Applications.
+
+2
+00:00:09,460 --> 00:00:10,980
+My name is Peter Ammon.
+
+3
+00:00:10,980 --> 00:00:13,440
+I'm an engineer in the Cocoa Frameworks team.
+
+4
+00:00:13,440 --> 00:00:18,000
+Before we begin, I must confess that the
+title of the session is a little incomplete.
+
+5
+00:00:18,000 --> 00:00:23,090
+The first half will indeed be about key equivalents
+in Cocoa applications, but in the second half we will bring
+
+6
+00:00:23,090 --> 00:00:26,720
+out my colleague Raleigh who will show
+you how to create custom views and menus.
+
+7
+00:00:26,720 --> 00:00:33,470
+For example, the finder label view or also entirely
+simulated menus like the suggestions popup in Safari.
+
+8
+00:00:33,470 --> 00:00:35,780
+So you don't want to miss that.
+
+9
+00:00:35,780 --> 00:00:42,570
+So, we're going to cover the basics of key equivalent
+handling, what are key equivalents, how do you set one.
+
+10
+00:00:42,570 --> 00:00:44,530
+We'll go over the keyboard event flow.
+
+11
+00:00:44,530 --> 00:00:48,020
+So, when the user actually types the
+key event, what methods get invoked
+
+12
+00:00:48,020 --> 00:00:51,100
+and how can your application involve itself with that.
+
+13
+00:00:51,100 --> 00:00:55,410
+We'll talk about handling key equivalents
+from other applications so you can respond
+
+14
+00:00:55,410 --> 00:00:58,490
+to events when you aren't even the front most app.
+
+15
+00:00:58,490 --> 00:01:00,050
+We'll go over to conflict handling.
+
+16
+00:01:00,050 --> 00:01:02,790
+What happens when two menu items
+claim the same key equivalent?
+
+17
+00:01:02,790 --> 00:01:03,590
+Which one wins?
+
+18
+00:01:03,590 --> 00:01:08,690
+We'll go over how to debug these conflicts
+when they occur and then I'll bring up Raleigh
+
+19
+00:01:08,690 --> 00:01:12,490
+for the custom menu items and simulated menus.
+
+20
+00:01:12,490 --> 00:01:15,610
+So, key equivalent basics.
+
+21
+00:01:15,610 --> 00:01:21,540
+Well, key equivalents are there to accelerate access to
+commonly used menu items and buttons via the keyboard.
+
+22
+00:01:21,540 --> 00:01:27,840
+So here we see the Save button which has a key
+equivalent of return which is why it's showing blue
+
+23
+00:01:27,840 --> 00:01:31,940
+and we have the New menu item which has
+a key equivalent of command-N of course.
+
+24
+00:01:31,940 --> 00:01:37,700
+And it's the same API on NSButton and NSMenuItem
+but most key equivalents are on menu items.
+
+25
+00:01:37,700 --> 00:01:43,640
+Now, programmatically, we refer to the N
+that you see there as the key equivalent
+
+26
+00:01:43,640 --> 00:01:46,270
+and you can set that with the setKeyEquivalent method.
+
+27
+00:01:46,270 --> 00:01:51,600
+Now, notice that the N we pass is lower case even
+though it draws as uppercase in the menu item.
+
+28
+00:01:51,600 --> 00:01:52,790
+This is important.
+
+29
+00:01:52,790 --> 00:01:55,940
+It will draw uppercase even though
+you pass a lowercase string.
+
+30
+00:01:55,940 --> 00:01:59,960
+If you pass an uppercase string
+it would in fact interpret it
+
+31
+00:01:59,960 --> 00:02:03,010
+as if you were requesting shift
+that's part of the modifier mask.
+
+32
+00:02:03,010 --> 00:02:08,510
+So you want to stick to lowercase
+characters unless you want the Shift key.
+
+33
+00:02:08,510 --> 00:02:11,740
+Now the command key you see next
+to it is part of the modifier mask.
+
+34
+00:02:11,740 --> 00:02:14,930
+Of course, there are four different
+modifier flags that are available.
+
+35
+00:02:14,930 --> 00:02:18,110
+There is command, option, control and shift.
+
+36
+00:02:18,110 --> 00:02:19,870
+You can also pass nothing at all.
+
+37
+00:02:19,870 --> 00:02:24,060
+It's perfectly valid to have the key
+equivalent with no modifier mask.
+
+38
+00:02:24,060 --> 00:02:26,250
+You may be wondering about the Function key.
+
+39
+00:02:26,250 --> 00:02:29,200
+A lot of keyboards have that but
+in fact that is not supported.
+
+40
+00:02:29,200 --> 00:02:31,680
+The reason for that is that not all keyboards have that.
+
+41
+00:02:31,680 --> 00:02:35,730
+So those key equivalents will be unavailable to those users.
+
+42
+00:02:35,730 --> 00:02:42,470
+And again, to set the key equivalent modifier mask,
+of course you call setKeyEquivalentModifierMask
+
+43
+00:02:42,470 --> 00:02:47,150
+and you pass a bitmask of the modifier
+flags that you would also get from NSEvent
+
+44
+00:02:47,150 --> 00:02:50,670
+and this is the same on NSButton as it is on menu item.
+
+45
+00:02:50,670 --> 00:02:57,450
+Now, you can set this programmatically but most of
+the time of course you set them in Interface Builder.
+
+46
+00:02:57,450 --> 00:03:01,890
+Here the new menu item is selected and down
+at the lower left you can see the portion
+
+47
+00:03:01,890 --> 00:03:04,840
+of the inspector where you can set the key equivalent.
+
+48
+00:03:04,840 --> 00:03:06,710
+So which item should get key equivalents?
+
+49
+00:03:06,710 --> 00:03:12,950
+Well, you want to assign them to frequently use command
+and in fact the HIG lists a lot of key equivalents
+
+50
+00:03:12,950 --> 00:03:16,470
+that have standard established meanings and I mean a lot.
+
+51
+00:03:16,470 --> 00:03:17,050
+There's a lot there.
+
+52
+00:03:17,050 --> 00:03:19,370
+It's very comprehensive.
+
+53
+00:03:19,370 --> 00:03:25,180
+You want to try to avoid repurposing the standard or
+reserved key equivalents because users expect them
+
+54
+00:03:25,180 --> 00:03:28,640
+to behave consistently across applications.
+
+55
+00:03:28,640 --> 00:03:33,720
+Now, a very powerful technique for enabling
+power users is to use an alternate menu item.
+
+56
+00:03:33,720 --> 00:03:35,300
+This is for example Close All.
+
+57
+00:03:35,300 --> 00:03:38,410
+The Close All appears when you press the
+Option key, that's why it's called alternate
+
+58
+00:03:38,410 --> 00:03:40,810
+and this doesn't clutter up the user interface.
+
+59
+00:03:40,810 --> 00:03:44,430
+But because these items aren't very
+discoverable you have to know what to press.
+
+60
+00:03:44,430 --> 00:03:47,210
+You always want to provide another
+way to accomplish the task.
+
+61
+00:03:47,210 --> 00:03:51,350
+For the example of Close All, you can of
+course just close each window individually.
+
+62
+00:03:51,350 --> 00:03:58,020
+Now, it's worth noting that the key equivalent
+you set may not be the one that appears.
+
+63
+00:03:58,020 --> 00:04:00,750
+The one reason for that is what's
+called the user key equivalents.
+
+64
+00:04:00,750 --> 00:04:04,320
+These are things that user can
+set in the system preferences.
+
+65
+00:04:04,320 --> 00:04:12,500
+So here the user setting command-Option-C, I'm
+sorry command-Shift-C as close for the text data.
+
+66
+00:04:12,500 --> 00:04:16,970
+It's called the user key equivalent and you can access
+it with the user key equivalent method on the menu item.
+
+67
+00:04:16,970 --> 00:04:22,700
+So we actually expose when these occurs and you can
+get what the currently selected user key equivalent is.
+
+68
+00:04:22,700 --> 00:04:24,830
+So those are just the basics.
+
+69
+00:04:24,830 --> 00:04:29,390
+What happens when the user actually types an event?
+
+70
+00:04:29,390 --> 00:04:32,720
+Well, event handling always starts
+in NSApplication sendEvent.
+
+71
+00:04:32,720 --> 00:04:37,670
+That is the earliest point at which you can catch
+an event and it's worth nothing in this diagram
+
+72
+00:04:37,670 --> 00:04:42,650
+that I'll show you every orange box represents
+a point in which your application can override.
+
+73
+00:04:42,650 --> 00:04:45,990
+It's an override point that you can
+involve yourself in event handling.
+
+74
+00:04:45,990 --> 00:04:52,090
+And the first thing sendEvent will do is
+invoke what are called local event monitors.
+
+75
+00:04:52,090 --> 00:04:59,040
+So here's an event and local event monitors,
+they can just pass the event on through.
+
+76
+00:04:59,040 --> 00:05:02,270
+They can handle it or they can return
+in an entirely different event.
+
+77
+00:05:02,270 --> 00:05:08,890
+So in this case the event goes in and it comes out and
+you can see it's totally different, different color.
+
+78
+00:05:08,890 --> 00:05:16,080
+So let's say that the local event
+monitor does not ignore the event.
+
+79
+00:05:16,080 --> 00:05:18,580
+It returns it so it can continue being processed.
+
+80
+00:05:18,580 --> 00:05:26,570
+Now, the next step whether the event contains command or
+control is an important fact in how the event is dispatched.
+
+81
+00:05:26,570 --> 00:05:31,310
+If it contains command or control, it's going
+to treat it like a key equivalent first.
+
+82
+00:05:31,310 --> 00:05:34,330
+So it's going to call performKeyEquivalent on the keyWindow.
+
+83
+00:05:34,330 --> 00:05:39,190
+So before it even reaches the main
+menu, it will start on the keyWindow.
+
+84
+00:05:39,190 --> 00:05:47,720
+And the default behavior performKeyEquivalent is to call
+performKeyEquivalent on all the views and this is recursive.
+
+85
+00:05:47,720 --> 00:05:53,460
+So if you wanted to do a custom key equivalent on
+a view you could override performKeyEquivalent.
+
+86
+00:05:53,460 --> 00:05:57,160
+Now assuming none of the key-- the event
+is not handled by performKeyEquivalent.
+
+87
+00:05:57,160 --> 00:05:59,960
+It will also try other active windows.
+
+88
+00:05:59,960 --> 00:06:01,390
+What do I mean by an active window?
+
+89
+00:06:01,390 --> 00:06:06,590
+I mean a window such as a drawer attached to
+the keyWindow, or a sheet, or the main window.
+
+90
+00:06:06,590 --> 00:06:08,370
+It's different than the keyWindow.
+
+91
+00:06:08,370 --> 00:06:12,830
+But in this case, it only sends-- calls
+performKeyEquivalent on views that manage menus.
+
+92
+00:06:12,830 --> 00:06:17,420
+That's specifically our popup buttons
+and segmented controls that have menus.
+
+93
+00:06:17,420 --> 00:06:25,240
+So for example, a popup button in the main window can handle
+key equivalents and this is recursive in the same way.
+
+94
+00:06:25,240 --> 00:06:32,400
+Now, performKeyEquivalent returns YES, that's a way
+of indicating that the view handled the key equivalent
+
+95
+00:06:32,400 --> 00:06:38,960
+and if it returns NO, it indicates it
+doesn't and the recursion should continue.
+
+96
+00:06:38,960 --> 00:06:44,680
+So let's say that keyWindow didn't handle the key
+event and neither did any other active windows.
+
+97
+00:06:44,680 --> 00:06:50,470
+Finally, we reach the main menu performKeyEquivalent
+is called and normally through dynamic key equivalents
+
+98
+00:06:50,470 --> 00:06:54,110
+in the main menu, you want to implement delegate methods.
+
+99
+00:06:54,110 --> 00:06:59,090
+A very tempting looking delegate method is menu
+has key equivalent for event target action.
+
+100
+00:06:59,090 --> 00:07:05,890
+This allows you to return to YES that does have a key
+equivalent and NO that doesn't and this looks tempting
+
+101
+00:07:05,890 --> 00:07:10,200
+but in fact this is a problematic
+method for a couple of reasons.
+
+102
+00:07:10,200 --> 00:07:14,040
+One of them is that if you just dynamically
+say YES, it had it or NO, it didn't have it.
+
+103
+00:07:14,040 --> 00:07:18,420
+We don't know what to draw in the menu item
+and it doesn't get called if the menu was open.
+
+104
+00:07:18,420 --> 00:07:23,550
+So if the user opens the menu and then types a
+key equivalent, this method will not get called.
+
+105
+00:07:23,550 --> 00:07:26,800
+And lastly, it doesn't work by
+default with user key equivalent.
+
+106
+00:07:26,800 --> 00:07:31,670
+You have to go to heroics to make user key
+equivalents work with this type of delegate method.
+
+107
+00:07:31,670 --> 00:07:37,010
+But it has one good use and that's just to press
+expensive population for menus without key equivalents.
+
+108
+00:07:37,010 --> 00:07:41,280
+So for example, the open reasons menu
+has a heap of disk to be populated.
+
+109
+00:07:41,280 --> 00:07:45,750
+You don't want to do that every time the user presses
+a key so you might implement this delegate method
+
+110
+00:07:45,750 --> 00:07:49,530
+to just return NO which is a way of
+saying don't even bother populating me
+
+111
+00:07:49,530 --> 00:07:54,830
+for key equivalent searching because
+I promise I don't have any.
+
+112
+00:07:54,830 --> 00:07:57,770
+Now, a better method to implement is menu needs update.
+
+113
+00:07:57,770 --> 00:08:03,970
+This is called not just for key equivalent handling
+but also when the menu is opened when it searched
+
+114
+00:08:03,970 --> 00:08:06,720
+for accessibility, when it searched spotlight for help.
+
+115
+00:08:06,720 --> 00:08:12,400
+So it's called in a number of places and your delegate
+method should populate the menu with the menu items that--
+
+116
+00:08:12,400 --> 00:08:17,570
+and their key equivalents and then the frameworks
+will actually take responsibility for determining
+
+117
+00:08:17,570 --> 00:08:19,730
+which items match the key equivalent if any.
+
+118
+00:08:19,730 --> 00:08:24,440
+So the owners lift it off your application
+for determining which key equivalents match.
+
+119
+00:08:24,440 --> 00:08:31,760
+So, so far we've been assuming the event had
+command or control in this modifier mask.
+
+120
+00:08:31,760 --> 00:08:32,950
+What if it didn't have those?
+
+121
+00:08:32,950 --> 00:08:35,070
+Or what if performKeyEquivalent returned NO?
+
+122
+00:08:35,070 --> 00:08:37,430
+So it not recognizes a key equivalent.
+
+123
+00:08:37,430 --> 00:08:41,170
+So we're going to take off the command key.
+
+124
+00:08:41,170 --> 00:08:46,830
+Well this is where-- the next step is
+that app command hot keys are handled.
+
+125
+00:08:46,830 --> 00:08:51,190
+So these are keys like command-tilde
+for windows cycling or there are keys
+
+126
+00:08:51,190 --> 00:08:54,320
+for moving a focus in the menu bar or for the toolbar.
+
+127
+00:08:54,320 --> 00:09:00,820
+Now, other hot keys that you might register for with
+register hot key don't actually get invoked via this path.
+
+128
+00:09:00,820 --> 00:09:03,920
+In that case the event is never ever
+sent to the front most application.
+
+129
+00:09:03,920 --> 00:09:06,380
+It's sent only to the app that registered the hot key.
+
+130
+00:09:06,380 --> 00:09:10,780
+But for this sort of app command hot keys,
+these do get sent to the app at this point.
+
+131
+00:09:10,780 --> 00:09:16,410
+And finally, we reach sendEvent on the keyWindow.
+
+132
+00:09:16,410 --> 00:09:21,410
+And the keyWindow is going to call keyDown on
+the first responder, for example a text view.
+
+133
+00:09:21,410 --> 00:09:25,030
+And the default behavior is to call
+keyDown up that responder chain
+
+134
+00:09:25,030 --> 00:09:28,880
+until we reach the window itself NSWindow keyDown.
+
+135
+00:09:28,880 --> 00:09:32,970
+And at this point the default behavior
+is to call performKeyEquivalent.
+
+136
+00:09:32,970 --> 00:09:37,590
+Now, if this is an event without command or control this
+is the first time performKeyEquivalent has been called.
+
+137
+00:09:37,590 --> 00:09:41,000
+If it did have command or control,
+this is in fact the second time.
+
+138
+00:09:41,000 --> 00:09:43,300
+But most of the time it wouldn't get that far.
+
+139
+00:09:43,300 --> 00:09:50,560
+And if the performKeyEquivalent on
+the keyWindow did not return NO,
+
+140
+00:09:50,560 --> 00:09:53,090
+then it will call performKeyEquivalent on the main menu.
+
+141
+00:09:53,090 --> 00:09:58,940
+So again, this might be the first or second time that
+performKeyEquivalent is called depending on the event.
+
+142
+00:09:58,940 --> 00:10:04,130
+And the very last thing it does is it
+will beep and then the event is destroyed.
+
+143
+00:10:04,130 --> 00:10:07,710
+So this is the very fallback behavior.
+
+144
+00:10:07,710 --> 00:10:12,730
+So, that's a lot to take in I know but
+these are the things to keep in mind.
+
+145
+00:10:12,730 --> 00:10:16,780
+Windows get first crack a key
+equivalent before the main menu.
+
+146
+00:10:16,780 --> 00:10:20,850
+Now if the event has command or control
+it's treated like a key equivalent first,
+
+147
+00:10:20,850 --> 00:10:23,510
+performKeyEquivalent is called before sendEvent.
+
+148
+00:10:23,510 --> 00:10:27,520
+Other events performKeyEquivalent is called after sendEvent.
+
+149
+00:10:27,520 --> 00:10:31,480
+So, the best practices to do dynamic key equivalent.
+
+150
+00:10:31,480 --> 00:10:35,700
+If you want to apply them to a menu
+you would implement menu needs update
+
+151
+00:10:35,700 --> 00:10:39,180
+to just install the menu items with the key equivalents.
+
+152
+00:10:39,180 --> 00:10:43,170
+If it's on view you would override performKeyEquivalent.
+
+153
+00:10:43,170 --> 00:10:46,660
+Now, if you want to do your special work
+before normal key equivalent handling,
+
+154
+00:10:46,660 --> 00:10:52,870
+you can override NSApplication sendEvent, NSWindow
+sendEvent and NSWindow performKeyEquivalent
+
+155
+00:10:52,870 --> 00:10:56,380
+or you can call and install a local event monitor.
+
+156
+00:10:56,380 --> 00:11:03,850
+If you want to do your special processing after all
+the other work is done, you can override keyDown
+
+157
+00:11:03,850 --> 00:11:06,240
+on NSWindow and you call through the super.
+
+158
+00:11:06,240 --> 00:11:12,290
+So that's how you handle key event
+within your own application.
+
+159
+00:11:12,290 --> 00:11:14,740
+How do you handle them from other applications?
+
+160
+00:11:14,740 --> 00:11:21,200
+Well, a very powerful and polite
+way to do this is to use a service.
+
+161
+00:11:21,200 --> 00:11:25,260
+We see here's a bit of the services
+declaration from Stickies.
+
+162
+00:11:25,260 --> 00:11:31,450
+Notice that Declare is a key equivalent of Y and because
+it's uppercase it will actually be command-Shift-Y.
+
+163
+00:11:31,450 --> 00:11:35,190
+This is very powerful because your
+app doesn't even have to be running.
+
+164
+00:11:35,190 --> 00:11:41,010
+The frameworks will launch your application for you
+and users can customize this in System Preferences.
+
+165
+00:11:41,010 --> 00:11:47,800
+It's polite because if the front most application also uses
+the key equivalent that you want, the application will win.
+
+166
+00:11:47,800 --> 00:11:50,420
+So you won't interfere with the front most app.
+
+167
+00:11:50,420 --> 00:11:52,810
+And you can also interact with the text selection.
+
+168
+00:11:52,810 --> 00:11:57,200
+Stickies will create a new sticky
+with whatever text is selected.
+
+169
+00:11:57,200 --> 00:12:03,520
+And to do this of course you specify the NSKeyEquivalent
+key in the service declaration like we see here
+
+170
+00:12:03,520 --> 00:12:08,200
+and I recommend seeing my talk from last
+year about services for more information.
+
+171
+00:12:09,420 --> 00:12:14,770
+Now, another very powerful approach is the use
+of hot key and your application has be running
+
+172
+00:12:14,770 --> 00:12:17,840
+to use a hot key and hot key always take precedence.
+
+173
+00:12:17,840 --> 00:12:23,070
+So it's very possible to register for a hot key
+for the letter N and then anytime the user types N
+
+174
+00:12:23,070 --> 00:12:28,500
+in any application that will get sent to your app instead of
+the front most app because that will be a rude thing to do.
+
+175
+00:12:28,500 --> 00:12:35,040
+This requires a virtual key code so you can't just pass
+the string and you have to pass a virtual key code.
+
+176
+00:12:35,040 --> 00:12:41,330
+You can find many of these in the Events.h header
+in HIToolbox framework or another technique is
+
+177
+00:12:41,330 --> 00:12:48,400
+to actually ask the user type the key event you want to be
+the hot key and then you can pull out the virtual key code
+
+178
+00:12:48,400 --> 00:12:51,270
+from the NSEvent with the key code method.
+
+179
+00:12:52,340 --> 00:12:56,880
+Now, to install a hot key you use
+the RegisterEventHotKey function.
+
+180
+00:12:56,880 --> 00:13:04,420
+This is a carbon function but unlike many carbon
+function this one is available in 64-bit which is nice.
+
+181
+00:13:05,590 --> 00:13:08,990
+The third option is to use a global event monitor.
+
+182
+00:13:08,990 --> 00:13:12,150
+This is sort of the analog to local event monitors.
+
+183
+00:13:12,150 --> 00:13:15,040
+They asynchronously respond to
+event and they don't block events.
+
+184
+00:13:15,040 --> 00:13:22,940
+So a hot key will actually swallow the event whereas the
+global event monitors will just allow you to observe them.
+
+185
+00:13:22,940 --> 00:13:28,350
+To do this you use addGlobalMonitorForEventsMatchingMask
+at handler and handler is a block that you pass
+
+186
+00:13:28,350 --> 00:13:32,090
+when you want your-- to be invoked
+when the right event is dispatched.
+
+187
+00:13:32,090 --> 00:13:38,000
+So on to conflict handling.
+
+188
+00:13:38,000 --> 00:13:40,110
+Most key equivalents are always visible, right.
+
+189
+00:13:40,110 --> 00:13:47,740
+Close just shows command-W all the time and some of them can
+be revealed such as Close All when you press the option key.
+
+190
+00:13:47,740 --> 00:13:54,370
+And some of them are just sort of power user secrets like
+you can hit Escape to close the dialog with a Cancel button.
+
+191
+00:13:54,370 --> 00:14:02,000
+Now, when the key equivalents are visible, it's
+really important that what you see is what you get.
+
+192
+00:14:02,000 --> 00:14:02,650
+What do I mean?
+
+193
+00:14:02,650 --> 00:14:07,830
+Well, imagine an app location like this with
+delete and duplicate both showing command-D,
+
+194
+00:14:07,830 --> 00:14:11,100
+user types command-D hoping to
+duplicate instead it deleted something.
+
+195
+00:14:11,100 --> 00:14:12,330
+That's bad.
+
+196
+00:14:12,330 --> 00:14:16,600
+This might seem like a very contrive example but
+if the menu items are in very different menus,
+
+197
+00:14:16,600 --> 00:14:21,450
+maybe ones that are popup, who knows, it could be confusing.
+
+198
+00:14:21,450 --> 00:14:27,090
+So when two menu items claim the same key equivalent
+NSMenu will actually mediate between them to determine
+
+199
+00:14:27,090 --> 00:14:30,600
+which one wins and the other menu item
+will not show that key equivalent.
+
+200
+00:14:30,600 --> 00:14:35,570
+And you may think, you know, I designed my app.
+
+201
+00:14:35,570 --> 00:14:36,810
+I pick all the key equivalents.
+
+202
+00:14:36,810 --> 00:14:41,070
+I know there are no conflicts but as we've seen,
+key equivalents can come from other places.
+
+203
+00:14:41,070 --> 00:14:42,540
+They can come from the service.
+
+204
+00:14:42,540 --> 00:14:46,420
+They can come from something the user
+requested as a user key equivalent.
+
+205
+00:14:46,420 --> 00:14:47,570
+Your application has plug-ins.
+
+206
+00:14:47,570 --> 00:14:48,720
+They can come from there.
+
+207
+00:14:48,720 --> 00:14:53,720
+Input managers and any future menu items
+added by added by AppKit such as Close All.
+
+208
+00:14:53,720 --> 00:14:57,170
+Now, the first come first serve meaning the first menu item
+
+209
+00:14:57,170 --> 00:15:02,220
+that requests the key equivalent will get it
+except that user key equivalent always win.
+
+210
+00:15:02,220 --> 00:15:07,660
+We respect the users' wishes and services
+always lose because it's very polite.
+
+211
+00:15:07,660 --> 00:15:13,030
+And a surprising fact is that the key equivalent method
+actually returns to currently applicable key equivalent.
+
+212
+00:15:13,030 --> 00:15:17,810
+So if I call a setKeyEquivalent when I pass N
+and then I call key equivalent to get it back
+
+213
+00:15:17,810 --> 00:15:22,730
+and I get back the empty string that's a good hint that
+some other menu item has claimed that key equivalent.
+
+214
+00:15:22,730 --> 00:15:24,350
+Now the NI pass isn't lost.
+
+215
+00:15:24,350 --> 00:15:30,970
+It just sort of dormant in the menu item and when the winner
+goes out of the menu or it changes its key equivalent,
+
+216
+00:15:30,970 --> 00:15:38,470
+my item will, its N will become prominent and then
+it will return it from the key equivalent method.
+
+217
+00:15:38,470 --> 00:15:41,680
+So I'll give you a demo of the conflict handling.
+
+218
+00:15:41,680 --> 00:15:45,250
+So here I have a simple application which shows some files.
+
+219
+00:15:45,250 --> 00:15:51,510
+I can get info on a particular file and I can edit it.
+
+220
+00:15:51,510 --> 00:15:56,350
+You'll notice that get info contains
+command-I as the key equivalent.
+
+221
+00:15:56,350 --> 00:15:59,470
+Now, command I is also used for italics, right?
+
+222
+00:15:59,470 --> 00:16:05,120
+So in the Font menu you can see that Bold and Underline
+have their normal key equivalent but italic does not.
+
+223
+00:16:05,120 --> 00:16:08,400
+This is because the get info item got to it first.
+
+224
+00:16:08,400 --> 00:16:15,070
+Now if I open this file, you'll notice
+that get info loses its key equivalent.
+
+225
+00:16:15,070 --> 00:16:15,670
+Where did it go?
+
+226
+00:16:15,670 --> 00:16:21,060
+Well, if you remember that keyWindow get
+to try key equivalents before the main menu
+
+227
+00:16:21,060 --> 00:16:27,750
+and in fact this keyWindow has a popup button
+which has key equivalents in it and you can
+
+228
+00:16:27,750 --> 00:16:31,130
+that italics goes to that-- is in that popup button.
+
+229
+00:16:31,130 --> 00:16:35,990
+If I hit command-I, in fact, it
+does do italic instead of get info.
+
+230
+00:16:35,990 --> 00:16:44,190
+And you also notice that the italics menu item also
+has command-I which should be surprising because I said
+
+231
+00:16:44,190 --> 00:16:47,820
+that key equivalents can't be shared
+so we'll talk about how that works.
+
+232
+00:16:47,820 --> 00:16:55,020
+And if I go back and make this the keyWindow, get info
+recovers those key equivalents and italic loses it.
+
+233
+00:16:55,020 --> 00:16:59,660
+So the winner can be determined very dynamically.
+
+234
+00:16:59,660 --> 00:17:07,910
+So as we saw with italic, sometimes it's OK
+if two menu items share a key equivalent.
+
+235
+00:17:07,910 --> 00:17:10,620
+It's OK when they sort of do the same thing.
+
+236
+00:17:10,620 --> 00:17:14,490
+In that case there's no confusion if they both show it.
+
+237
+00:17:14,490 --> 00:17:18,250
+To indicate to AppKit that it's okay if these
+two menu items have the same key equivalent,
+
+238
+00:17:18,250 --> 00:17:19,660
+you can give them the same action.
+
+239
+00:17:19,660 --> 00:17:21,090
+They don't need the same target.
+
+240
+00:17:21,090 --> 00:17:26,030
+They just need the same action and that's true as
+we saw even if one is in a popup and the other is
+
+241
+00:17:26,030 --> 00:17:31,800
+in the main menu, they can be widely separated.
+
+242
+00:17:31,800 --> 00:17:33,980
+So debugging.
+
+243
+00:17:33,980 --> 00:17:37,280
+Often as I said you'll set a key
+equivalent and then it doesn't show up.
+
+244
+00:17:37,280 --> 00:17:38,050
+You know, where did it go?
+
+245
+00:17:38,050 --> 00:17:40,520
+Well, another menu item has it but where?
+
+246
+00:17:40,520 --> 00:17:41,860
+How do you find out?
+
+247
+00:17:41,860 --> 00:17:46,700
+Well, this is an important enough question
+that will share a bit of NSMenus internals.
+
+248
+00:17:46,700 --> 00:17:47,210
+Here it is.
+
+249
+00:17:47,210 --> 00:17:54,950
+You can actually access the uniqueing properties, the main
+menu uniquer and print out its content to figure out, OK,
+
+250
+00:17:54,950 --> 00:17:57,510
+which menu items have which key equivalents registered?
+
+251
+00:17:57,510 --> 00:18:04,660
+This is of course for debugging only because, you
+know, absolutely this is going to change in the future.
+
+252
+00:18:04,660 --> 00:18:06,400
+Hopefully, it will become easier.
+
+253
+00:18:06,400 --> 00:18:09,860
+But for now this is a powerful way to solve this problem.
+
+254
+00:18:09,860 --> 00:18:13,670
+I'll give you a demo of that.
+
+255
+00:18:13,670 --> 00:18:19,290
+So I've launched this application in GDB over here.
+
+256
+00:18:19,290 --> 00:18:28,820
+I'm going to pause it and I'll call what I said
+NSMenuKUniquer MinMenuUniquer print contents
+
+257
+00:18:28,820 --> 00:18:34,330
+and it outputs a lot of information and we're
+looking for italics so let's search for italic.
+
+258
+00:18:34,330 --> 00:18:41,110
+There it is and you can see that italic is registered for
+command-I but so is get info and get info is ahead of it
+
+259
+00:18:41,110 --> 00:18:48,510
+which shows you that get info is the winner and that's
+why get info has the keyEquivalent and italics does not.
+
+260
+00:18:48,510 --> 00:18:50,480
+That's a powerful way to debug conflicts.
+
+261
+00:18:50,480 --> 00:18:56,850
+So that is the end of the key equivalent
+portion of this session.
+
+262
+00:18:56,850 --> 00:19:02,250
+I'm going to hand the podium over to my coworker Raleigh
+who will talk about how to create custom menu items
+
+263
+00:19:02,250 --> 00:19:12,890
+like finders label view and how to simulate
+menus when you need the ultimate and flexibility.
+
+264
+00:19:12,890 --> 00:19:12,950
+[ Applause ]
+
+265
+00:19:12,950 --> 00:19:14,550
+>> Raleigh Ledet: Thank you Peter.
+
+266
+00:19:14,550 --> 00:19:15,930
+My name is Raleigh Ledet.
+
+267
+00:19:15,930 --> 00:19:22,180
+I'm a coworker with Peter on the Coca Frameworks.
+
+268
+00:19:22,180 --> 00:19:25,410
+So custom menus and simulating menus,
+we're kind of switching gears here.
+
+269
+00:19:25,410 --> 00:19:30,840
+So let me give you a couple of examples of the
+things that we do in OS X today and I'm going
+
+270
+00:19:30,840 --> 00:19:33,880
+to show you how to implement those things yourself.
+
+271
+00:19:33,880 --> 00:19:35,760
+This is the menu from the finder.
+
+272
+00:19:35,760 --> 00:19:37,420
+Hopefully, you're familiar with it.
+
+273
+00:19:37,420 --> 00:19:42,070
+In this particular portion is you could set
+the label color that you want for your files.
+
+274
+00:19:42,070 --> 00:19:43,760
+This isn't just a text.
+
+275
+00:19:43,760 --> 00:19:45,780
+This isn't just some text in the menu.
+
+276
+00:19:45,780 --> 00:19:53,340
+You can actually select little code boxes and they've
+done this by putting in a custom view inside the menu
+
+277
+00:19:53,340 --> 00:19:57,900
+and we'll go ahead and show you how to do that yourself.
+
+278
+00:19:57,900 --> 00:20:03,850
+Sometimes though menus aren't quite what
+you need and so for our example here
+
+279
+00:20:03,850 --> 00:20:10,790
+when you start typing a location it
+puts up a custom list of suggestions.
+
+280
+00:20:10,790 --> 00:20:19,230
+The problem with having this in a menu is that focus is
+actually still on the text field and the menu wants to focus
+
+281
+00:20:19,230 --> 00:20:22,660
+for itself and so that won't work
+and you can't put up a menu.
+
+282
+00:20:22,660 --> 00:20:24,630
+So you actually have to simulate a menu.
+
+283
+00:20:24,630 --> 00:20:26,340
+So I'm going to show you how to do that as well.
+
+284
+00:20:26,340 --> 00:20:29,720
+So we have some sample code.
+
+285
+00:20:29,720 --> 00:20:30,970
+Hopefully, you've already downloaded it.
+
+286
+00:20:30,970 --> 00:20:40,300
+If not, you can find it there and we'll give
+you a quick tour of what the sample code does.
+
+287
+00:20:40,300 --> 00:20:48,160
+So right over here we have a custom menu items and you see
+it has a normal regular menu item here and we can track
+
+288
+00:20:48,160 --> 00:20:57,150
+around and these are just pulling images from the
+desktop images and we can also search for them here.
+
+289
+00:20:57,150 --> 00:21:04,960
+Just type L and we see a list of suggestions and we can
+choose a suggestion or we can change that and here's all
+
+290
+00:21:04,960 --> 00:21:08,730
+of the L items and maybe we want the ladybug instead.
+
+291
+00:21:08,730 --> 00:21:14,060
+So this is the sample code and will
+show you how to do both of those items.
+
+292
+00:21:14,060 --> 00:21:16,810
+So first let's talk about custom menu items.
+
+293
+00:21:16,810 --> 00:21:21,110
+Whenever you can it's preferable that you actually
+create a custom view and put that in a menu
+
+294
+00:21:21,110 --> 00:21:23,360
+when what you really want is true menu behavior.
+
+295
+00:21:23,360 --> 00:21:28,950
+This is the most appropriate way to do it and
+the most future proof way of accomplishing that.
+
+296
+00:21:28,950 --> 00:21:32,310
+And so this is our analog to what
+we've been doing in the finder.
+
+297
+00:21:32,310 --> 00:21:33,410
+It's the exact same thing.
+
+298
+00:21:33,410 --> 00:21:36,230
+We've got a custom view with 4 images.
+
+299
+00:21:36,230 --> 00:21:40,900
+And so the first thing you need to do is you
+need to create your custom view and set it
+
+300
+00:21:40,900 --> 00:21:43,350
+as the view that the menu item should use.
+
+301
+00:21:43,350 --> 00:21:48,980
+So Interface Builder then I went ahead in and
+I created a custom view with four image wells.
+
+302
+00:21:48,980 --> 00:21:53,720
+I also put in four progress indicators so the
+progress indicator will spin while we're waiting
+
+303
+00:21:53,720 --> 00:21:55,250
+for the thumbnails to be generated.
+
+304
+00:21:55,250 --> 00:22:02,180
+And then the other thing that you need to do which is really
+important, you actually need to go in Interface Builder
+
+305
+00:22:02,180 --> 00:22:07,680
+and then Properties and set your class for your view
+to some custom subclass that you're going to write.
+
+306
+00:22:07,680 --> 00:22:12,040
+You need to write a custom subclass that you can
+handle the mouse events and the keyboard events.
+
+307
+00:22:12,040 --> 00:22:20,850
+Now that you have a custom view, how do you put
+that custom view in to the actual menu item?
+
+308
+00:22:20,850 --> 00:22:23,540
+It's actually fairly easy in Interface Builder.
+
+309
+00:22:23,540 --> 00:22:30,150
+You can jot down your menu, pull off its properties
+and then connect the view outlet right to the view.
+
+310
+00:22:30,150 --> 00:22:35,090
+Now when you run your application instead of item
+two it will put your custom menu item in there.
+
+311
+00:22:35,090 --> 00:22:37,610
+You have custom view.
+
+312
+00:22:37,610 --> 00:22:43,390
+That's not what I actually went in the sample code
+because I actually look at that source folder.
+
+313
+00:22:43,390 --> 00:22:47,750
+You said it was one menu item where you could
+select the folder to be a source of images
+
+314
+00:22:47,750 --> 00:22:52,700
+and there are four images per menu item
+so I dynamically add menu items as needed.
+
+315
+00:22:52,700 --> 00:22:59,230
+And so since I do this dynamically in code,
+there's an API call on NSMenuItem called setView.
+
+316
+00:22:59,230 --> 00:23:02,230
+All you have to do is call menuItem
+setView and you add your view
+
+317
+00:23:02,230 --> 00:23:05,810
+and now when the menu is displayed
+your view will be shown there.
+
+318
+00:23:05,810 --> 00:23:07,820
+So now we got our view inside of menuItem.
+
+319
+00:23:07,820 --> 00:23:08,660
+It's coming up correctly.
+
+320
+00:23:08,660 --> 00:23:12,060
+Let's talk about mouse navigation.
+
+321
+00:23:12,060 --> 00:23:17,690
+Hopefully, you hear for the previous talk
+that Troy gave and he talked some great--
+
+322
+00:23:17,690 --> 00:23:24,660
+some interesting hints about mouse navigation
+and a lot of people go into tracking loop
+
+323
+00:23:24,660 --> 00:23:27,010
+so you override mouseDown, mouse drag, and mouseUp.
+
+324
+00:23:27,010 --> 00:23:30,520
+We don't want to do that in this case for this application.
+
+325
+00:23:30,520 --> 00:23:37,290
+Particularly, we don't want to do a tracking loop because
+the user can track from your menu item to other menu items
+
+326
+00:23:37,290 --> 00:23:45,120
+and for that matter, the user might press the mouse button
+down and keep it held down while we pop up the menu,
+
+327
+00:23:45,120 --> 00:23:47,600
+drag to the menu item they want to select and then let go.
+
+328
+00:23:47,600 --> 00:23:50,800
+So you might not ever get a mouseDown anyway.
+
+329
+00:23:50,800 --> 00:23:54,020
+Instead, we're going to go ahead
+and use updateTrackingAreas.
+
+330
+00:23:54,020 --> 00:23:57,380
+We're going to create tracking areas
+to do our mouse tracking and you do
+
+331
+00:23:57,380 --> 00:24:00,760
+that by overriding updateTrackingAreas in you custom view.
+
+332
+00:24:00,760 --> 00:24:07,050
+In this case we just loop through each one of our
+image views and we're going to call an internal method
+
+333
+00:24:07,050 --> 00:24:11,960
+that we'll get to in a little bit called
+trackingAreaForIndex and the key important thing
+
+334
+00:24:11,960 --> 00:24:15,470
+in the slide here is what you call self addTrackingArea.
+
+335
+00:24:15,470 --> 00:24:21,970
+So addTrackignArea is an API on NSView and that's how
+you add your tracking areas once you've created them.
+
+336
+00:24:21,970 --> 00:24:28,920
+Here is the internal method inside discussed in subclass
+called trackingAreaForIndex and we have to do a number
+
+337
+00:24:28,920 --> 00:24:33,910
+of things before we actually allocate our tracking
+area and the first is that I create a dictionary
+
+338
+00:24:33,910 --> 00:24:37,360
+to hold the index that this tracking area is for.
+
+339
+00:24:37,360 --> 00:24:44,130
+In this index I've just used so I can correlate which
+is the imageView that this index is associate with,
+
+340
+00:24:44,130 --> 00:24:48,990
+what's the spinner that this index is associated with,
+and more importantly what's the URL that's associated
+
+341
+00:24:48,990 --> 00:24:53,980
+with this index which is actually what other
+parts of the application are looking for.
+
+342
+00:24:53,980 --> 00:25:00,760
+So then we go ahead and we grab our view that's
+associated with that index and we convert its bounds
+
+343
+00:25:00,760 --> 00:25:08,250
+to the coordinate system of our custom subview and then
+we have to figure out what our tracking area options are.
+
+344
+00:25:08,250 --> 00:25:16,330
+As I mentioned earlier, the user can drag
+through your menu item to other menu items.
+
+345
+00:25:16,330 --> 00:25:24,220
+So you want to get your entered and exited tracking
+area events for both mouse moves and mouse drags.
+
+346
+00:25:24,220 --> 00:25:27,810
+So we add the NSTrackingEnabledDuringMouseDrag
+to our options.
+
+347
+00:25:27,810 --> 00:25:30,060
+That way we'll get them in both cases.
+
+348
+00:25:30,060 --> 00:25:31,870
+We want both the mouseEntered and the mouseExited.
+
+349
+00:25:31,870 --> 00:25:33,820
+We want to see whenever you come over one of the image views
+
+350
+00:25:33,820 --> 00:25:36,880
+and whenever you leave it so we
+update our selection properly.
+
+351
+00:25:36,880 --> 00:25:41,060
+And then the last option is NSTrackingActiveInActiveApp.
+
+352
+00:25:41,060 --> 00:25:43,610
+When the menu is up your app is active.
+
+353
+00:25:43,610 --> 00:25:48,060
+That works great and anything happens
+that's going to require your apps
+
+354
+00:25:48,060 --> 00:25:50,390
+to lose activation, the menu is going to go away anyway.
+
+355
+00:25:50,390 --> 00:25:53,970
+So that's a nice little option to add on there as well.
+
+356
+00:25:53,970 --> 00:26:02,860
+Now that we have all of that figured out we can go
+ahead and call NSTrackingArea alloc initWithRect,
+
+357
+00:26:02,860 --> 00:26:07,120
+the trackingRect that we in our local
+coordinate system that we determined earlier.
+
+358
+00:26:07,120 --> 00:26:10,270
+The options that we figured up above, real important.
+
+359
+00:26:10,270 --> 00:26:15,620
+Make the owner sell so that your custom view
+receives the mouseEntered and mouseExited events.
+
+360
+00:26:15,620 --> 00:26:23,430
+And then that dictionary that we created at the beginning as
+the user info and this will allow us to associate the view,
+
+361
+00:26:23,430 --> 00:26:27,550
+the spinner and the URL that's all
+associated with this tracking area.
+
+362
+00:26:27,550 --> 00:26:32,760
+So now we have our tracking areas
+implemented and they're in place
+
+363
+00:26:32,760 --> 00:26:38,980
+and they automatically get updated whenever
+the system thinks that they need to be updated.
+
+364
+00:26:38,980 --> 00:26:44,550
+We can go ahead and implement our mouseEntered responder
+method and so you could just call a user data right off
+
+365
+00:26:44,550 --> 00:26:49,720
+of event and this will be that user info
+dictionary that we added to the tracking area,
+
+366
+00:26:49,720 --> 00:26:55,060
+grab our index value out of there and just
+set our property selected index to that index.
+
+367
+00:26:55,060 --> 00:26:57,770
+I'm not going to show you the code for it
+
+368
+00:26:57,770 --> 00:27:05,760
+but in the implementation I've actually created a custom
+set selected index set of method for this property.
+
+369
+00:27:05,760 --> 00:27:11,640
+And in that set of method I make sure that whenever
+the index changes that I call self set needs display.
+
+370
+00:27:11,640 --> 00:27:17,140
+In that way, at any time for whatever
+means that the index changes,
+
+371
+00:27:17,140 --> 00:27:20,260
+we know that we need to redraw with the proper selection.
+
+372
+00:27:21,820 --> 00:27:24,190
+Then we implement the mouseExited responder method.
+
+373
+00:27:24,190 --> 00:27:29,530
+We don't need to look at the user dictionary
+in this case because the user is gone
+
+374
+00:27:29,530 --> 00:27:32,570
+out of our tracking area so at
+this point we have kNoSelection.
+
+375
+00:27:32,570 --> 00:27:39,200
+We'll receive a mouseEntered if the user moves with the
+curser into another image view inside this menu item.
+
+376
+00:27:39,200 --> 00:27:44,750
+So we can rely on that and just return those
+selections here, set our selected index to kNoSelection.
+
+377
+00:27:47,840 --> 00:27:52,830
+Now we're not implementing mouseDown and mouseDrag
+but it is important that we implement mouseUp.
+
+378
+00:27:52,830 --> 00:27:55,360
+When you get a mouseUp event in your custom view,
+
+379
+00:27:55,360 --> 00:28:01,430
+you'll only get that when the user has
+actually released the mouseOver your menu item,
+
+380
+00:28:01,430 --> 00:28:02,970
+your custom view for the menu item.
+
+381
+00:28:02,970 --> 00:28:05,010
+If it's any other menu item you won't get the mouseUp.
+
+382
+00:28:05,010 --> 00:28:09,410
+So now that a mouseUp has occurred in your
+menu item, we obviously want to go ahead
+
+383
+00:28:09,410 --> 00:28:14,870
+and send the action that's associated with that
+and here's what we're doing, we send the action.
+
+384
+00:28:14,870 --> 00:28:19,280
+There is a method on NSView called enclosing menu item.
+
+385
+00:28:19,280 --> 00:28:22,170
+If you're associated with the menu
+item and of course in this case we are,
+
+386
+00:28:22,170 --> 00:28:25,890
+it will return to you the menu
+item that you're associated with.
+
+387
+00:28:25,890 --> 00:28:32,550
+And in this case I would call NSApp sendAction and actually
+get the action and the target that's already associated
+
+388
+00:28:32,550 --> 00:28:36,910
+with the menu item that was wired up in Interface
+Builder so I didn't have to do any additional work here.
+
+389
+00:28:36,910 --> 00:28:38,370
+I could just wire it up in Interface Builder.
+
+390
+00:28:38,370 --> 00:28:46,550
+Now, that we've actually sent the action we need to go ahead
+and cancelTracking for the menu so that the menu dismisses.
+
+391
+00:28:46,550 --> 00:28:50,770
+And for menu item we can ask for its
+parent menu, the menu it's associated with
+
+392
+00:28:50,770 --> 00:28:53,730
+and then just call cancelTracking on that menu.
+
+393
+00:28:55,300 --> 00:28:58,180
+That's all you really need to do for mouse navigation.
+
+394
+00:28:58,180 --> 00:29:03,980
+Very pretty, it's very simple but now we also need to handle
+keyboard navigation because of course the user can navigate
+
+395
+00:29:03,980 --> 00:29:07,930
+with the keyboard as well and I'll
+give you a quick demo of that.
+
+396
+00:29:10,240 --> 00:29:16,180
+So here we have the custom menu application so I'm going
+to like move the mouse way over here so not using it.
+
+397
+00:29:16,180 --> 00:29:18,170
+Everything is going to be keyboard driven now.
+
+398
+00:29:18,170 --> 00:29:24,420
+OK. [Whispering] There we go.
+
+399
+00:29:24,420 --> 00:29:29,700
+Mouse is out the way and so of course I can
+navigate with the keyboard, move around,
+
+400
+00:29:29,700 --> 00:29:31,930
+I can jump to the beginning and to the end.
+
+401
+00:29:31,930 --> 00:29:45,640
+You hit the Space for return and the item is selected and
+of course you can just hit Escape and dismiss the menu.
+
+402
+00:29:45,640 --> 00:29:52,850
+There we go.
+
+403
+00:29:52,850 --> 00:29:55,730
+So let's see how we handle that in code.
+
+404
+00:29:55,730 --> 00:30:00,180
+So if you're here for the last talk, then you already
+know that you're not going to receive any keyboard events
+
+405
+00:30:00,180 --> 00:30:03,750
+until you override acceptsFirstResponder return YES.
+
+406
+00:30:03,750 --> 00:30:06,220
+By default NSView returns NO.
+
+407
+00:30:06,220 --> 00:30:09,590
+So, we need to become first responder.
+
+408
+00:30:09,590 --> 00:30:13,690
+Once you've informed Cocoa that you
+do in fact acceptsFirstResponder,
+
+409
+00:30:13,690 --> 00:30:16,960
+you will at some point be asked to become first responder.
+
+410
+00:30:16,960 --> 00:30:20,200
+There are 2 cases that you might become first responder.
+
+411
+00:30:20,200 --> 00:30:25,210
+The users are navigated into the view of
+the keyboard or perhaps the user clicked
+
+412
+00:30:25,210 --> 00:30:28,510
+onto your custom view inside the menu item.
+
+413
+00:30:28,510 --> 00:30:33,890
+If it's a user click, then we've already set
+the selection based on the tracking areas.
+
+414
+00:30:33,890 --> 00:30:36,700
+So if there is a selection, we don't want to overwrite that.
+
+415
+00:30:36,700 --> 00:30:43,310
+But if the user arrowed in to the menu item view of
+the keyboard then we don't currently have a selection
+
+416
+00:30:43,310 --> 00:30:46,940
+but we want to set the selection
+to something so that the user sees
+
+417
+00:30:46,940 --> 00:30:49,630
+that that is the item that they're
+manipulating at the moment.
+
+418
+00:30:49,630 --> 00:30:51,660
+So, in this case, we just our selected index to 0.
+
+419
+00:30:51,660 --> 00:30:57,620
+If you want to get really fancy, you might remember the last
+selection that was there on the menu item so when they move
+
+420
+00:30:57,620 --> 00:30:59,520
+to it, you move to the last remembered one.
+
+421
+00:30:59,520 --> 00:31:04,930
+Since you've become the first responder,
+at some point you're going to be asked
+
+422
+00:31:04,930 --> 00:31:10,490
+to resign first responder generally moving off with
+the keyboard or perhaps the menu is getting dismissed.
+
+423
+00:31:10,490 --> 00:31:16,010
+If the menu is getting dismissed and your
+item was the one that was activated, we've--
+
+424
+00:31:16,010 --> 00:31:23,460
+at this point we have already set the action so setting
+the selected index to kNoSelection doesn't do anything.
+
+425
+00:31:23,460 --> 00:31:28,430
+But if you-- if we're resigning first responder
+because of keyboard movement then it's important
+
+426
+00:31:28,430 --> 00:31:30,260
+that we set our selected index to kNoSelection
+
+427
+00:31:30,260 --> 00:31:36,040
+so that the user doesn't get two highlighted
+items inside the menu and get confused.
+
+428
+00:31:36,040 --> 00:31:43,650
+Finally, we can get a keyDown message and we're going to
+do the typical Cocoa thing of just call interpretKeyEvents.
+
+429
+00:31:43,650 --> 00:31:51,170
+This will key bindings to kick in and look at the key
+event and figure out what is the user's intention.
+
+430
+00:31:51,170 --> 00:31:55,800
+And what's really important in this example which is
+kind of unique is that after we call interpretKeyEvents,
+
+431
+00:31:55,800 --> 00:32:00,540
+we still need to call super keyDown so that
+eventually it will go up the responder chain
+
+432
+00:32:00,540 --> 00:32:03,950
+and then this menu can handle the
+key events that we don't handle.
+
+433
+00:32:03,950 --> 00:32:11,090
+So, keyDown is just going to look at the event
+and if it's the right arrow or the left arrow,
+
+434
+00:32:11,090 --> 00:32:13,500
+it's going to call moveRight, moveLeft in our view.
+
+435
+00:32:13,500 --> 00:32:17,240
+This is great so now you don't have to forget
+what the key code is or the appropriate character
+
+436
+00:32:17,240 --> 00:32:18,860
+for the right arrow key and the left arrow key.
+
+437
+00:32:18,860 --> 00:32:20,110
+It's taken care of for you.
+
+438
+00:32:20,110 --> 00:32:27,360
+So, here we just move our selection right or left and
+likewise, the user might do command-right or command-left
+
+439
+00:32:27,360 --> 00:32:33,390
+and that will be interpreted as move to beginning
+of line so you can move your selection to the end
+
+440
+00:32:33,390 --> 00:32:37,220
+of the beginning in the sample code's case.
+
+441
+00:32:37,220 --> 00:32:43,780
+Then of course if the user hits the Return key or the
+Enter key, we'll want to go ahead and send the action
+
+442
+00:32:43,780 --> 00:32:48,370
+if they've committed it so we can do send action and
+we've already taken a look at that implementation.
+
+443
+00:32:48,370 --> 00:32:58,030
+But we also want to activate our menu whenever the user hits
+the space bar and traditionally, key binding just thinks
+
+444
+00:32:58,030 --> 00:33:02,840
+of space as being part of texts
+usually associated with the text field.
+
+445
+00:33:02,840 --> 00:33:06,280
+So, there's no user action associated with space.
+
+446
+00:33:06,280 --> 00:33:12,740
+So, when key binding doesn't find some action
+associated with that, it will call insertText so,
+
+447
+00:33:12,740 --> 00:33:18,550
+we overwrite insertText and we look for the space string
+that has to be inserted and if that's the case, again,
+
+448
+00:33:18,550 --> 00:33:23,130
+we want to go ahead and send the action
+and commit that item and dismiss the menu.
+
+449
+00:33:23,130 --> 00:33:33,480
+The way key bindings actually works when you
+call interpretKeyEvents is that once it figures
+
+450
+00:33:33,480 --> 00:33:39,320
+out what the command is, that it wasn't send for an action,
+it calls doCommandBySelector on your view and by default,
+
+451
+00:33:39,320 --> 00:33:45,450
+this will find out-- the default implementation
+will determine if your view responds to selector.
+
+452
+00:33:45,450 --> 00:33:46,800
+If it doesn't, we'll call that.
+
+453
+00:33:46,800 --> 00:33:49,260
+If not, it will route up the responder chain appropriately.
+
+454
+00:33:49,260 --> 00:33:56,910
+And if it goes all the way to the end of the responder chain
+and nobody has responded to it, he will get the system B
+
+455
+00:33:56,910 --> 00:34:02,140
+and menus, whenever there's some invalid
+keyboard movement, they don't beat.
+
+456
+00:34:02,140 --> 00:34:06,500
+So, we want to go ahead and just check for
+the selectors that we've implemented above.
+
+457
+00:34:06,500 --> 00:34:13,610
+If it's one of those selectors, we'll go ahead and just
+call up the super which will call back the correct method
+
+458
+00:34:13,610 --> 00:34:17,840
+but if it's not one of those methods,
+we specifically don't want to call super
+
+459
+00:34:17,840 --> 00:34:22,150
+so that we eat the action right
+here and we don't have a system B.
+
+460
+00:34:22,150 --> 00:34:24,270
+Now, you might be wondering well,
+if we don't allow this to call
+
+461
+00:34:24,270 --> 00:34:28,710
+up the super then how can you navigate
+up or down off of your menu item.
+
+462
+00:34:28,710 --> 00:34:36,070
+Or remember previously, when we implemented keyDown after
+calling interpretKeyEvents, we called up the super keyDown
+
+463
+00:34:36,070 --> 00:34:42,990
+and that's why we're-- it's perfectly fine
+to eat this here and not worry about it.
+
+464
+00:34:42,990 --> 00:34:49,010
+Now, we got menu navigation via the
+keyboard and we can navigate via mouse.
+
+465
+00:34:49,010 --> 00:34:51,440
+You might want to throw some animations
+in your custom menu item.
+
+466
+00:34:51,440 --> 00:34:56,560
+Now, you don't want your animations just
+running wild while the menu isn't even showing.
+
+467
+00:34:56,560 --> 00:35:01,450
+That's a waste of resources but you
+can override viewDidMoveToWindow.
+
+468
+00:35:01,450 --> 00:35:06,640
+The way this works is whenever we show a menu, we create
+a new window and we add all the menu items in there.
+
+469
+00:35:06,640 --> 00:35:09,490
+If you have a custom view as your menu
+item, that gets added to the window
+
+470
+00:35:09,490 --> 00:35:13,010
+and you'll-- we'll get a viewDidMoveToWindow call.
+
+471
+00:35:13,010 --> 00:35:16,560
+You could check your window property from self.window.
+
+472
+00:35:16,560 --> 00:35:20,650
+If you have a valid value, you can start your animations.
+
+473
+00:35:20,650 --> 00:35:26,800
+When the menu is dismissed, we deallocate the
+window after we pulled out all of the menu items
+
+474
+00:35:26,800 --> 00:35:28,890
+and including removing your view from the window.
+
+475
+00:35:28,890 --> 00:35:36,530
+Your view is not going to be deallocated or released because
+it's actually still being held onto by the menu item.
+
+476
+00:35:36,530 --> 00:35:40,830
+However, you'll get a viewDidMoveToWindow
+and window will now be nil so you know
+
+477
+00:35:40,830 --> 00:35:44,330
+that you can stop any of your animations.
+
+478
+00:35:44,330 --> 00:35:48,570
+So that was creating custom menu items.
+
+479
+00:35:48,570 --> 00:35:49,360
+Real easy to do.
+
+480
+00:35:49,360 --> 00:35:53,770
+It's a recommended approach but
+sometimes that's not quite good enough.
+
+481
+00:35:53,770 --> 00:35:59,310
+As our example here with our custom suggestions
+example, we need something that acts a lot like a menu,
+
+482
+00:35:59,310 --> 00:36:05,400
+looks like a menu, but is not in full control
+because we want the text to still be type--
+
+483
+00:36:05,400 --> 00:36:07,690
+go into the text field as the user types.
+
+484
+00:36:07,690 --> 00:36:14,220
+So, the first thing we need to do when we create-- when
+we're going to create our suggestion in windows is we need
+
+485
+00:36:14,220 --> 00:36:17,550
+to create a borderless window, fairly easy to do.
+
+486
+00:36:17,550 --> 00:36:22,900
+In this case, we have a custom subclass of NSWindow
+called suggestions window in the sample code
+
+487
+00:36:22,900 --> 00:36:26,350
+and we've created a subclass for two reasons.
+
+488
+00:36:26,350 --> 00:36:30,500
+First off because Interface Builder,
+there's no checkbox or a series
+
+489
+00:36:30,500 --> 00:36:32,760
+of checkboxes you can click to get a borderless window.
+
+490
+00:36:32,760 --> 00:36:37,130
+If you have a subclass, you can set the
+class in Interface Builder to your subclass
+
+491
+00:36:37,130 --> 00:36:39,330
+which will force a borderless window property.
+
+492
+00:36:39,330 --> 00:36:45,990
+But the main reason we did it in this sample code was
+that we're doing a unique situation here that we need
+
+493
+00:36:45,990 --> 00:36:54,070
+to inform accessibility about and having a custom subclass
+of NSWindow provides the appropriate places to hook
+
+494
+00:36:54,070 --> 00:36:59,420
+into that and we'll cover a little bit of that later.
+
+495
+00:36:59,420 --> 00:37:05,090
+In NSWindow, the designated initializer is
+initWithContentRect styleMask backing defer.
+
+496
+00:37:05,090 --> 00:37:08,690
+So we're going to overwrite the designated initializer.
+
+497
+00:37:08,690 --> 00:37:16,010
+When we call up the super, we're always going to
+send the NSBorderlessWindowMask as the styleMask.
+
+498
+00:37:16,010 --> 00:37:21,700
+So, regardless of what set in Interface Builder when this
+gets called, we're going to create a borderless window
+
+499
+00:37:21,700 --> 00:37:25,510
+or if you call it programatically,
+you'll get a borderless window.
+
+500
+00:37:25,510 --> 00:37:32,860
+That's great, we get this which isn't quite what we
+want so we will add some depth by saying setHasShadow.
+
+501
+00:37:32,860 --> 00:37:39,920
+That's great but we want the nice kind of rounded corners
+like a menu has and we do that with a custom view that's set
+
+502
+00:37:39,920 --> 00:37:45,720
+up as the content view for drawing so we just need to
+tell the window that it has a clear background color.
+
+503
+00:37:45,720 --> 00:37:49,200
+But then we get these black tips.
+
+504
+00:37:49,200 --> 00:37:51,530
+We're getting our rounded drawing but
+we're going to have these black tips.
+
+505
+00:37:51,530 --> 00:37:56,000
+And that's because the window server doesn't realize
+that this window has some transparency in it.
+
+506
+00:37:56,000 --> 00:37:57,840
+It still thinks it's completely opaque.
+
+507
+00:37:57,840 --> 00:38:04,610
+So, we tell the window setOpaque:NO and at this point,
+the window server does an appropriate compositing now
+
+508
+00:38:04,610 --> 00:38:09,220
+and we have a nice rounded cornered
+window that looks a lot like a menu.
+
+509
+00:38:09,220 --> 00:38:13,080
+We're ready to add content.
+
+510
+00:38:13,080 --> 00:38:15,380
+The next thing we need to do now
+that we have our window is we need
+
+511
+00:38:15,380 --> 00:38:19,160
+to make our suggestion window a
+child window of the parent window.
+
+512
+00:38:19,160 --> 00:38:21,790
+This is really important.
+
+513
+00:38:21,790 --> 00:38:27,320
+Why it's important is best shown when things go wrong.
+
+514
+00:38:27,320 --> 00:38:36,030
+So, this is not actually in the sample code but
+I've modified it to do some things wrong here.
+
+515
+00:38:36,030 --> 00:38:43,160
+So, here we have the suggestion window is up
+and if I go ahead and do expose nice and slowly,
+
+516
+00:38:43,160 --> 00:38:48,620
+we see that our suggestion window kind of
+disappeared and that's not what we want.
+
+517
+00:38:48,620 --> 00:38:51,810
+And I was playing around with the window level there.
+
+518
+00:38:51,810 --> 00:38:58,960
+Maybe we would change the window level to
+something else and we get this one we expose.
+
+519
+00:38:58,960 --> 00:39:01,210
+Well, now this is definitely not what we want.
+
+520
+00:39:01,210 --> 00:39:03,560
+What is the user really going to be
+clicking on here, we don't want it.
+
+521
+00:39:03,560 --> 00:39:05,490
+We definitely don't want that.
+
+522
+00:39:05,490 --> 00:39:10,670
+So, we'll go ahead and make it a child
+window and we'll make it a child window.
+
+523
+00:39:10,670 --> 00:39:17,490
+You'll see that a suggestion window
+in expose will stay with our window
+
+524
+00:39:17,490 --> 00:39:20,540
+and it plays nicely and scales with the expose scaling.
+
+525
+00:39:20,540 --> 00:39:27,930
+And if you would have tried this with the suggestions list
+up in Safari, this is the exact same behavior that occurs.
+
+526
+00:39:27,930 --> 00:39:31,840
+So, that's the best we have.
+
+527
+00:39:31,840 --> 00:39:34,800
+And now, what happened there?
+
+528
+00:39:34,800 --> 00:39:41,260
+This is what happens if you aren't careful on how you
+deconstruct your child window whenever you go to dismiss it.
+
+529
+00:39:41,260 --> 00:39:42,930
+I'll show you that again.
+
+530
+00:39:42,930 --> 00:39:50,280
+Now a child window and it's doing
+the right thing, great, but if--
+
+531
+00:39:50,280 --> 00:39:55,540
+when I click anywhere, this is going to dismiss
+this menu, the whole window went away and if we look
+
+532
+00:39:55,540 --> 00:40:00,650
+at the real example that you have in the code,
+as you've seen earlier, and this window is up.
+
+533
+00:40:00,650 --> 00:40:02,670
+I can click here and it dismisses properly.
+
+534
+00:40:02,670 --> 00:40:08,280
+So, I'll show you how to avoid that mistake as well.
+
+535
+00:40:08,280 --> 00:40:12,560
+So as I've said you need to add at your suggestion
+window the child window of the parent window.
+
+536
+00:40:12,560 --> 00:40:16,680
+parentWindow addChildWindow:suggestionWindow
+ordered:NSWindowAbove.
+
+537
+00:40:16,680 --> 00:40:20,240
+This will bring the child window above
+your parent window and be displayed.
+
+538
+00:40:20,240 --> 00:40:22,690
+Put in the appropriate place.
+
+539
+00:40:22,690 --> 00:40:29,770
+So, now you don't need to call order front on the window
+and we obviously don't want to make it key so we don't want
+
+540
+00:40:29,770 --> 00:40:34,220
+to call it a front made key because the key
+focus needs to remain in the text field.
+
+541
+00:40:34,220 --> 00:40:37,970
+And whenever the suggestion window is dismissed
+
+542
+00:40:37,970 --> 00:40:43,980
+and we do that in our cancelSuggestions method inside
+SuggestionsWindowController.m in the sample code.
+
+543
+00:40:43,980 --> 00:40:50,800
+The trick is to remove your child window from
+the parent before ordering out the child window,
+
+544
+00:40:50,800 --> 00:40:54,060
+and our child window here is our suggestions window.
+
+545
+00:40:54,060 --> 00:40:57,980
+If you order out a child window, it will
+automatically order out its parent window
+
+546
+00:40:57,980 --> 00:41:00,720
+and that's what was going wrong in the demo.
+
+547
+00:41:00,720 --> 00:41:04,930
+So make sure you remove your parent-child
+relationship then order out your child window.
+
+548
+00:41:04,930 --> 00:41:10,230
+When do we want to activate our suggestions window?
+
+549
+00:41:10,230 --> 00:41:11,340
+And how do we get that to work?
+
+550
+00:41:11,340 --> 00:41:18,530
+So, in Interface Builder, I went ahead and wired up the
+text field to the CustomMenusApplication delegate class
+
+551
+00:41:18,530 --> 00:41:22,150
+and I set it as the delegate of the text field.
+
+552
+00:41:22,150 --> 00:41:24,550
+Then I went ahead and implemented
+the NSTextFieldDelegate methods.
+
+553
+00:41:24,550 --> 00:41:27,680
+In this case, controlTextDidBeginEditing.
+
+554
+00:41:27,680 --> 00:41:29,000
+The user started typing something.
+
+555
+00:41:29,000 --> 00:41:34,860
+This seems like a wonderful place to go ahead
+and start putting up a list of suggestions.
+
+556
+00:41:34,860 --> 00:41:40,720
+controlTextDidChange, we probably need to modify our
+suggestions or maybe we no longer have suggestions.
+
+557
+00:41:40,720 --> 00:41:44,260
+We need to dismiss our suggestions window.
+
+558
+00:41:44,260 --> 00:41:49,390
+Or maybe for some reason it was dismissed and now we
+do have suggestions so we need to make it reappear.
+
+559
+00:41:49,390 --> 00:41:54,270
+controlTextDidEndEditing, we'll implement
+that one and dismiss our suggestions window
+
+560
+00:41:54,270 --> 00:41:58,140
+because the user's either committed whatever they had typed
+
+561
+00:41:58,140 --> 00:42:04,010
+or some other means canceled that
+or perhaps key focus changed.
+
+562
+00:42:04,010 --> 00:42:08,210
+So, we'll need to go ahead and
+dismiss our suggestions window.
+
+563
+00:42:08,210 --> 00:42:12,730
+And then last but not the least,
+control:textView:doCommandBySelector.
+
+564
+00:42:12,730 --> 00:42:18,840
+If you remember earlier in our custom menu section of
+the talk, interpretKeyEvents calls doCommandBySelector
+
+565
+00:42:18,840 --> 00:42:20,790
+and this is what's actually going on in the text field.
+
+566
+00:42:20,790 --> 00:42:23,400
+In the text field then, we'll go ahead and forward that on
+
+567
+00:42:23,400 --> 00:42:26,950
+to its delegate via this
+control:textView:doCommandBySelector.
+
+568
+00:42:26,950 --> 00:42:32,590
+And the main reason we want to implement
+this is to search for the complete action.
+
+569
+00:42:32,590 --> 00:42:38,580
+AppKit has an autocompletion mechanism built in
+whenever you're typing and we need to suppress
+
+570
+00:42:38,580 --> 00:42:44,740
+that 'cause we don't want the autocompletion popping up
+on top of our suggestions, our custom suggestions window.
+
+571
+00:42:44,740 --> 00:42:50,820
+And it's also great place if we can catch this,
+suppress the autocompletion from AppKit but use this
+
+572
+00:42:50,820 --> 00:42:53,650
+to toggle the behavior that the user would expect.
+
+573
+00:42:53,650 --> 00:42:58,640
+So, when the users hit escape to do autocompletion
+we can go ahead and jot down our list of suggestions
+
+574
+00:42:58,640 --> 00:43:06,320
+and when the users hit escape and our list of suggestions
+is already up, we can go ahead and dismiss that.
+
+575
+00:43:06,320 --> 00:43:11,040
+Now, since we're simulating a menu, there are times
+when we need to go ahead and watch for the mouse
+
+576
+00:43:11,040 --> 00:43:16,100
+and various other actions that go through the system
+and automatically dismiss our suggestions window.
+
+577
+00:43:16,100 --> 00:43:20,150
+So, let's take a look at some of those cases.
+
+578
+00:43:20,150 --> 00:43:29,300
+So, here we have a suggestions window up and perhaps
+the user clicks into the desktop or another application.
+
+579
+00:43:29,300 --> 00:43:32,050
+Obviously, we want our suggestions window to go away.
+
+580
+00:43:32,050 --> 00:43:37,080
+You've already seen how the user can click
+in the parent window and it goes away.
+
+581
+00:43:37,080 --> 00:43:38,390
+Here's an interesting trick.
+
+582
+00:43:38,390 --> 00:43:43,860
+If I would have clicked on the menu here, the menu
+doesn't pop up because we don't want the menu to pop up.
+
+583
+00:43:43,860 --> 00:43:48,290
+If I click again, the menu is going to go ahead and display.
+
+584
+00:43:48,290 --> 00:43:53,810
+Or perhaps the user wasn't mousing at all and
+they did command-tab and switch that way of--
+
+585
+00:43:53,810 --> 00:43:56,350
+so, there we want our suggestions
+window to go away there as well.
+
+586
+00:43:56,350 --> 00:44:01,320
+They hit did command-tilde to switch menus--
+to switch windows inside your application.
+
+587
+00:44:01,320 --> 00:44:06,460
+So, we need to go ahead and catch all those cases
+but there's one other interesting little case
+
+588
+00:44:06,460 --> 00:44:09,630
+which is perhaps the user clicks in this text field.
+
+589
+00:44:09,630 --> 00:44:14,460
+We still want that to work because we want to
+allow the user to be able to modify their selection
+
+590
+00:44:14,460 --> 00:44:19,760
+so they can then go ahead and perhaps type
+an A instead and see the ladybug in lavender.
+
+591
+00:44:19,760 --> 00:44:27,410
+Just go ahead and select the Menu button.
+
+592
+00:44:27,410 --> 00:44:33,050
+Peter has already talked earlier in the talk about
+localEventMonitors and when they are processed
+
+593
+00:44:33,050 --> 00:44:35,170
+and this is a great place for us to use it.
+
+594
+00:44:35,170 --> 00:44:39,000
+It's a new-- event monitors are new in Snow Leopard.
+
+595
+00:44:39,000 --> 00:44:45,930
+So, whenever we go to the show our suggestions window,
+we'll go ahead and add a localEventMonitor and this is great
+
+596
+00:44:45,930 --> 00:44:50,940
+because now we don't have to subclass
+NSApplication or NSWindow.
+
+597
+00:44:50,940 --> 00:44:57,370
+So, we'll addLocalEventMonitorForEventsMatchingMask
+and we're interested in any of the mouseDowns
+
+598
+00:44:57,370 --> 00:45:01,760
+with just the right mouse button, the primary
+mouse button or the any other mouse button.
+
+599
+00:45:01,760 --> 00:45:08,360
+And riding along we can go ahead and add our
+code to how to respond to that type of situation.
+
+600
+00:45:08,360 --> 00:45:14,410
+First thing we're going to do for our mousedown event is
+we're going to find out what window did this event occur in.
+
+601
+00:45:14,410 --> 00:45:15,980
+Did it occur in our suggestions window?
+
+602
+00:45:15,980 --> 00:45:20,490
+When it occurred in the suggestion window, we
+want to go ahead and allow the click to process
+
+603
+00:45:20,490 --> 00:45:23,370
+through and allow that to act as an action.
+
+604
+00:45:23,370 --> 00:45:25,130
+So, we don't want to do anything.
+
+605
+00:45:25,130 --> 00:45:28,040
+If it's not the suggestion window
+then perhaps it's our parent window.
+
+606
+00:45:28,040 --> 00:45:32,160
+Well, if it's not our parent window,
+this is a LocalEventMonitor so it has
+
+607
+00:45:32,160 --> 00:45:35,020
+to be some click that's associated with our application.
+
+608
+00:45:35,020 --> 00:45:38,500
+If it's not our parent window, it must be
+some other window inside of our application.
+
+609
+00:45:38,500 --> 00:45:41,960
+So, we'll go ahead and cancel our suggestions window.
+
+610
+00:45:41,960 --> 00:45:45,530
+If it is in the parent window, then
+we have a little bit more work to do.
+
+611
+00:45:45,530 --> 00:45:52,600
+You got a whole bunch of code here and the whole point of
+this code is basically to find out did the user click here.
+
+612
+00:45:52,600 --> 00:45:56,880
+The user clicked in the text field, we want to go ahead and
+allow that click to go through and be processed normally
+
+613
+00:45:56,880 --> 00:46:03,060
+so that user can move the selection, change
+the selection or just move the carat.
+
+614
+00:46:03,060 --> 00:46:10,060
+All of this work is just basically doing normal hit testing
+but the real key here is that whenever the user is typing
+
+615
+00:46:10,060 --> 00:46:15,290
+in the text field, we actually place the field editor
+there and so hit testing will actually hit test
+
+616
+00:46:15,290 --> 00:46:17,870
+to the field editor and not the text field.
+
+617
+00:46:17,870 --> 00:46:23,760
+So, we need to check the hit tested view here if it's
+the text field or if it's the field editor associated
+
+618
+00:46:23,760 --> 00:46:27,220
+with that text field that we want to
+let the event process do normally.
+
+619
+00:46:27,220 --> 00:46:33,290
+If it's anywhere else in our parent window,
+we'll go ahead and make event equal nil.
+
+620
+00:46:33,290 --> 00:46:36,020
+This is the event that was passed
+into us in the beginning of our block.
+
+621
+00:46:36,020 --> 00:46:38,440
+We're going to return to that in
+a moment and you'll see that.
+
+622
+00:46:38,440 --> 00:46:41,440
+And this will effectively eat the event.
+
+623
+00:46:41,440 --> 00:46:46,450
+So, Cocoa will no longer run this event because we
+can modify the event here and the event is eaten
+
+624
+00:46:46,450 --> 00:46:50,900
+but we'll go ahead and cancel our suggestions
+window which will dismiss the window
+
+625
+00:46:50,900 --> 00:46:53,730
+and this is how we accomplish the user clicking
+
+626
+00:46:53,730 --> 00:46:59,350
+on the popup button dismissing the suggestions
+but not having the popup button pop up.
+
+627
+00:46:59,350 --> 00:47:02,950
+At the end of a block here for
+completeness, you can see how we return event.
+
+628
+00:47:02,950 --> 00:47:08,880
+And in this case, we will either always return the event,
+the mouseDown event as it was passed to us or we're going
+
+629
+00:47:08,880 --> 00:47:12,740
+to return nil and effectively eat the event.
+
+630
+00:47:12,740 --> 00:47:16,580
+So, we set up our localEventMonitor
+whenever we showed our suggestions window.
+
+631
+00:47:16,580 --> 00:47:22,160
+Likewise, we need to remove our event monitor
+whenever we dismiss our suggestions window.
+
+632
+00:47:22,160 --> 00:47:29,210
+So, event monitors are automatically retained and the
+memory management is automatically already done for you.
+
+633
+00:47:29,210 --> 00:47:36,140
+So, when we add our localEventMonitor, we didn't need to
+call retain on it but we did need to hang on to the observer
+
+634
+00:47:36,140 --> 00:47:42,400
+so that we can call NSEvent removeMonitor
+and we could pass in that observer.
+
+635
+00:47:42,400 --> 00:47:49,380
+Since we didn't retain it, we don't need to release
+it but we're going to go ahead and make sure
+
+636
+00:47:49,380 --> 00:47:56,130
+that we set our local number variable to nil because
+we don't want to hold on to an invalid object.
+
+637
+00:47:56,130 --> 00:48:04,190
+So, that handles a lot of the mouse cases but the user
+can navigate with the keyboard or perhaps something else
+
+638
+00:48:04,190 --> 00:48:07,370
+like an alert pops up and we want to handle that case.
+
+639
+00:48:07,370 --> 00:48:13,940
+And that can all be done by listening for the
+NSWindowDidResignKeyNotification on the parent window.
+
+640
+00:48:13,940 --> 00:48:18,830
+So, this will handle all the other cases
+that we need to worry about and you'll see
+
+641
+00:48:18,830 --> 00:48:24,890
+that I'm using here the new the 10.6
+notification method addObserverForName.
+
+642
+00:48:24,890 --> 00:48:29,540
+That way, this allows me to put right in line
+the behavior that I want associated with that
+
+643
+00:48:29,540 --> 00:48:32,940
+which is simply to dismiss our suggestions window.
+
+644
+00:48:32,940 --> 00:48:35,840
+So, we go ahead and we install the notification
+
+645
+00:48:35,840 --> 00:48:42,190
+for NSWindowDidResignKeyNotification
+whenever we show our suggestions window,
+
+646
+00:48:42,190 --> 00:48:48,460
+and likewise whenever we dismiss our suggestions window,
+we need to go ahead and remove that observer as well
+
+647
+00:48:48,460 --> 00:48:54,420
+and just like the localEventMonitors, you don't-- the
+observer that's returned to, you don't need to retain it.
+
+648
+00:48:54,420 --> 00:48:59,890
+The memory is handled for you but you do need to go ahead
+and remove the observer or else it's hanging around forever.
+
+649
+00:48:59,890 --> 00:49:06,020
+And likewise, once you've removed the
+observer, we need to set our local ivar to nil.
+
+650
+00:49:06,020 --> 00:49:13,230
+Otherwise, we're hanging on to a potentially invalid object.
+
+651
+00:49:13,230 --> 00:49:15,400
+So, that's great.
+
+652
+00:49:15,400 --> 00:49:18,020
+So, we got our suggestions window showing up.
+
+653
+00:49:18,020 --> 00:49:23,060
+It's playing around nicely with the
+keyboard and the mouse and autocancelling.
+
+654
+00:49:23,060 --> 00:49:27,480
+But how do we get to play nicely with the
+keyboard and the mouse as far as tracking goes.
+
+655
+00:49:27,480 --> 00:49:32,840
+This turns out that it's very similar to what
+we're doing in our custom menu item view case so,
+
+656
+00:49:32,840 --> 00:49:37,140
+I'm not going to go over that code here
+because it's practically the same thing.
+
+657
+00:49:37,140 --> 00:49:39,970
+Please look at the sample code
+for some of the monitor changes.
+
+658
+00:49:39,970 --> 00:49:45,350
+But I do want to touch a little bit on accessibility.
+
+659
+00:49:45,350 --> 00:49:48,120
+We're doing something a little bit unique here.
+
+660
+00:49:48,120 --> 00:49:49,780
+So, we have to inform accessibility of that.
+
+661
+00:49:49,780 --> 00:49:57,490
+Cocoa does a lot of things for us but what this
+looks like to the user is that there's a list
+
+662
+00:49:57,490 --> 00:50:00,330
+of suggestions associated with the text field.
+
+663
+00:50:00,330 --> 00:50:05,620
+In reality, we have a child window
+that's associated with the parent window.
+
+664
+00:50:05,620 --> 00:50:10,520
+And we need to inform accessibility of the
+logical relationship that we have here.
+
+665
+00:50:10,520 --> 00:50:17,440
+Namely, that we have a list of suggestions
+that of the child of some text field.
+
+666
+00:50:17,440 --> 00:50:22,580
+So in this suggestions window class in the sample
+code, in the suggestion with text field cell
+
+667
+00:50:22,580 --> 00:50:29,900
+in the suggestions controller, whenever we show the
+suggestions window we go ahead and build this relationship
+
+668
+00:50:29,900 --> 00:50:35,900
+and whenever we dismiss the suggestions window, we go ahead
+and tear down this logical relationship for accessibility.
+
+669
+00:50:35,900 --> 00:50:40,150
+I'm not going to go over the code but real
+quick in Interface Builder for that text field,
+
+670
+00:50:40,150 --> 00:50:44,990
+I went down and I gave it a custom cell class
+which is the suggestible text field cell,
+
+671
+00:50:44,990 --> 00:50:51,410
+and this cell knows that it can potentially
+have a child window associated with it
+
+672
+00:50:51,410 --> 00:50:53,900
+and that's how we handle this relationship.
+
+673
+00:50:57,940 --> 00:50:59,790
+And we have a whole bunch of items on here.
+
+674
+00:50:59,790 --> 00:51:05,430
+We need to report accessibility that this is an AX list
+and we actually handle this in the rounded corners view
+
+675
+00:51:05,430 --> 00:51:11,000
+and set NSView subclass that draws the nice rounded
+corners in our content for our suggestions window
+
+676
+00:51:11,000 --> 00:51:15,990
+but it will also report for us that we have--
+that it contains a list of items to accessibility.
+
+677
+00:51:15,990 --> 00:51:17,560
+There's not a lot of code there.
+
+678
+00:51:17,560 --> 00:51:19,150
+It's in the sample code.
+
+679
+00:51:19,150 --> 00:51:28,640
+And then we need to report that the image, the main
+label and the blue label are all part of the same group.
+
+680
+00:51:28,640 --> 00:51:33,250
+And we go ahead and we do that
+in the highlight view subclass.
+
+681
+00:51:33,250 --> 00:51:37,660
+It's already had it there to handle the
+highlighting that you see at the top
+
+682
+00:51:37,660 --> 00:51:41,650
+of the window as the selection is changed.
+
+683
+00:51:41,650 --> 00:51:46,020
+So, it's a great place to go ahead and report
+accessibility that it contains a group that all
+
+684
+00:51:46,020 --> 00:51:48,970
+of its item should be considered part of a group.
+
+685
+00:51:48,970 --> 00:51:54,110
+From there, the label views will report the
+appropriate things to accessibility and that's great.
+
+686
+00:51:54,110 --> 00:51:56,360
+But we still need to deal with this image.
+
+687
+00:51:56,360 --> 00:52:03,530
+For an accessibility user, this image is just an
+opaque field unless we do a little bit of work.
+
+688
+00:52:03,530 --> 00:52:07,050
+And in 10.6 we added an API that
+go ahead and allow you to do that.
+
+689
+00:52:07,050 --> 00:52:09,250
+You can call setAccessibilityDescription.
+
+690
+00:52:09,250 --> 00:52:11,610
+You can go ahead and put in a localized description there.
+
+691
+00:52:11,610 --> 00:52:15,750
+In this case, we'll go ahead and put the file
+name since that's all that we know about it.
+
+692
+00:52:15,750 --> 00:52:20,040
+If it's images in your application,
+call in setAccessibilityDescription,
+
+693
+00:52:20,040 --> 00:52:26,400
+we'll add a wealth of information for controls
+and displaying the intent to your users.
+
+694
+00:52:26,400 --> 00:52:27,770
+That's real easy to do.
+
+695
+00:52:27,770 --> 00:52:34,070
+Particularly since we've also added that you can-- if
+you're using named image whenever you create your images,
+
+696
+00:52:34,070 --> 00:52:40,080
+you can actually just create an accessibility image
+descriptions that strings file and localizes file
+
+697
+00:52:40,080 --> 00:52:45,490
+and the accessibility description will be
+localized from this file and just add it
+
+698
+00:52:45,490 --> 00:52:49,380
+to the image automatically and
+then report it to accessibility.
+
+699
+00:52:49,380 --> 00:52:55,630
+There was a good talk about this in the Cocoa Tips
+and Tricks so I recommend you check out that session.
+
+700
+00:52:55,630 --> 00:53:00,370
+So, we go ahead and look at our key equivalents.
+
+701
+00:53:00,370 --> 00:53:04,150
+They allow user to accelerate their use of your application.
+
+702
+00:53:04,150 --> 00:53:06,890
+So, we've looked at how they flow through the system.
+
+703
+00:53:06,890 --> 00:53:14,050
+We've looked at how the appropriate places for you
+to implement overrides our implement delegate methods
+
+704
+00:53:14,050 --> 00:53:18,690
+to dynamically modify your key equivalents.
+
+705
+00:53:18,690 --> 00:53:24,670
+We've looked at how key equivalents in their conflicts
+are mediated by NSMenu and how you can even debug that.
+
+706
+00:53:24,670 --> 00:53:29,680
+And then the last two items here, we've
+looked at how to create a custom view
+
+707
+00:53:29,680 --> 00:53:32,850
+and put it in the menu, it's really simple to do.
+
+708
+00:53:32,850 --> 00:53:33,790
+It's fairly easy.
+
+709
+00:53:33,790 --> 00:53:38,960
+This is the recommended approach as we change
+things in the operating system for the menu,
+
+710
+00:53:38,960 --> 00:53:42,080
+you'll get the new look and behavior appropriately.
+
+711
+00:53:42,080 --> 00:53:47,940
+But when that absolutely won't do and you have to
+do it yourself, you can look at the sample code
+
+712
+00:53:47,940 --> 00:53:53,160
+to see how we go ahead and we simulate the menu
+where appropriate and do all the appropriate things
+
+713
+00:53:53,160 --> 00:54:00,300
+in the autocancellation and attaching to the child
+window and working correctly with the system.
+
+714
+00:54:00,300 --> 00:54:04,210
+For more information, you can see
+our-- the frameworks evangelist
+
+715
+00:54:04,210 --> 00:54:07,330
+and there are a couple of links to our documentation.
+
+716
+00:54:07,330 --> 00:54:11,180
+Now forums are always a great place to get
+some more information and ask questions.
+
+717
+00:54:11,180 --> 00:54:15,960
+The Cocoa Tips and Tricks session I referenced earlier.
+
+718
+00:54:15,960 --> 00:54:21,140
+There's a lot of great information there and went
+to a little bit more detail on some of the topics
+
+719
+00:54:21,140 --> 00:54:24,930
+and the Crafting Custom Cocoa Views which
+was the session right before this one.
+
+720
+00:54:24,930 --> 00:54:30,060
+Hopefully, you've seen that one and if you're watching
+this on the video, you can go back and check that one out.
+
+721
+00:54:30,060 --> 00:54:33,390
+There's some good information there as
+well that's related and a little bit more
+
+722
+00:54:33,390 --> 00:54:35,810
+in depth in some areas that we've covered here.
+

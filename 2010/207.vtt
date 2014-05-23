@@ -1,0 +1,3070 @@
+1
+00:00:06,130 --> 00:00:09,140
+>>Greetings, my name is Quinn "The Eskimo",
+
+2
+00:00:09,140 --> 00:00:16,210
+and I work in Apple's developer technical support
+group answering questions from developers like you
+
+3
+00:00:16,210 --> 00:00:20,920
+about networking file system threads
+and other core OS related matters.
+
+4
+00:00:20,920 --> 00:00:27,190
+Welcome to Network Apps for iPhone OS, and you'll note this
+is an iPhone OS, not iOS, because we're talking about stuff
+
+5
+00:00:27,190 --> 00:00:31,100
+that already exists, not the stuff
+to be released in the next few days.
+
+6
+00:00:31,100 --> 00:00:36,550
+We're going to start off today with a question.
+
+7
+00:00:36,550 --> 00:00:39,380
+Why are we here?
+
+8
+00:00:39,380 --> 00:00:42,660
+I don't know why you guys are here; I
+suspect it might be because, at least,
+
+9
+00:00:42,660 --> 00:00:46,310
+some of you are sleeping off lunch in the back.
+
+10
+00:00:46,310 --> 00:00:53,940
+But most of you I expect are here because you have network
+applications in the Store and you'd like to figure out how
+
+11
+00:00:53,940 --> 00:01:01,220
+to make those applications better, or because you have,
+an application and you're planning to add networking,
+
+12
+00:01:01,220 --> 00:01:04,700
+or you're planning to create a new
+application that uses networking.
+
+13
+00:01:04,700 --> 00:01:08,500
+But there's a flip side to this
+question, which is why am I here.
+
+14
+00:01:08,500 --> 00:01:13,430
+Now I've worked in DTS for about 15 years now, and
+in the last few years, we've seen a massive increase
+
+15
+00:01:13,430 --> 00:01:16,410
+in the number of networking questions that I receive.
+
+16
+00:01:16,410 --> 00:01:26,290
+And, so the reason why I am here is to try and stop
+those questions, and its, altruism is dead, as they say.
+
+17
+00:01:26,290 --> 00:01:34,720
+Now the, in order to solve a problem you really need to
+understand it, and so to understand why we're here I sort
+
+18
+00:01:34,720 --> 00:01:39,150
+of sat down and thought well, why I am
+here and why are you guys asking questions,
+
+19
+00:01:39,150 --> 00:01:42,130
+and the first answer was this guy here.
+
+20
+00:01:42,130 --> 00:01:46,790
+This is the iPhone, and if you think about it
+networking is central to the iPhone, it's in the name,
+
+21
+00:01:46,790 --> 00:01:52,270
+and it's not just in the name once, it's in the name
+twice, and networking is central to the iPhone and that,
+
+22
+00:01:52,270 --> 00:01:54,850
+there's a lot of interest in the iPhone
+and it's generated a lot of questions.
+
+23
+00:01:54,850 --> 00:02:00,490
+But it's not just the iPhone, networking is
+central to every product that Apple ships;
+
+24
+00:02:00,490 --> 00:02:06,010
+from the lowliest iPod Touch to the beefy Xserve.
+
+25
+00:02:06,010 --> 00:02:13,350
+Networking is an essential part of their
+functionality, but there's more to it than that.
+
+26
+00:02:13,350 --> 00:02:17,730
+It's not just that networking is central,
+so we get a lot to these products,
+
+27
+00:02:17,730 --> 00:02:22,060
+and so we get a lot of questions, but
+it's also that networking is hard.
+
+28
+00:02:22,060 --> 00:02:24,050
+It's a fundamentally hard topic.
+
+29
+00:02:24,050 --> 00:02:27,440
+Everything runs asynchronously,
+you can't control the environment.
+
+30
+00:02:27,440 --> 00:02:33,610
+Networking is a difficult thing to do right, and so we
+get a lot of questions, because networking is difficult
+
+31
+00:02:33,610 --> 00:02:38,640
+and so my goal here is to sort of explain
+the problem and explain the architecture
+
+32
+00:02:38,640 --> 00:02:41,830
+that you can adopt to get a good solution.
+
+33
+00:02:41,830 --> 00:02:48,140
+So we're going to start, again, with the problem and
+this is what I call my spinning pizza of network death.
+
+34
+00:02:48,140 --> 00:02:50,270
+[Laughter]
+
+35
+00:02:50,270 --> 00:02:55,790
+Listed around the pizza are slices of
+network horror that you have to deal with.
+
+36
+00:02:55,790 --> 00:03:00,620
+I'm going to go around the spinning pizza looking at
+each slice in turn, and sort of explaining the problem,
+
+37
+00:03:00,620 --> 00:03:05,160
+so that we can then understand why that we
+need to architect solutions for these problems.
+
+38
+00:03:05,160 --> 00:03:08,340
+And to start, we are going to go look at packet problems.
+
+39
+00:03:08,340 --> 00:03:10,910
+And packet problems are sort of the
+traditional problems in networking.
+
+40
+00:03:10,910 --> 00:03:15,320
+It's corrupt packets, dropped packets,
+reordered packets and so on.
+
+41
+00:03:15,320 --> 00:03:17,920
+And these aren't, isn't really a huge problem these days.
+
+42
+00:03:17,920 --> 00:03:22,190
+People working on machines like you see
+there, in the 70's came up with solutions
+
+43
+00:03:22,190 --> 00:03:26,460
+to these problems, and the primary solution is TCP.
+
+44
+00:03:26,460 --> 00:03:29,930
+TCP is a fabulous piece of design.
+
+45
+00:03:29,930 --> 00:03:34,710
+It allows you to pour a stream of data into one
+end of the Internet and get it out the other end
+
+46
+00:03:34,710 --> 00:03:38,160
+in a completely reliable fashion,
+what you get in is what you get out.
+
+47
+00:03:38,160 --> 00:03:43,680
+Unless the network just is completely broken,
+and in that case, the connection tears,
+
+48
+00:03:43,680 --> 00:03:47,750
+so it's a fundamental piece of any network solution, is TCP.
+
+49
+00:03:47,750 --> 00:03:50,750
+So the end result of that is packet
+problems aren't really an issue.
+
+50
+00:03:50,750 --> 00:03:55,330
+Every platform has TCP and you
+can just use it, and that's good.
+
+51
+00:03:55,330 --> 00:04:01,400
+But in this other, not a, not necessarily
+interesting solution, problem, and that's bandwidth.
+
+52
+00:04:01,400 --> 00:04:03,790
+Bandwidth, most people have a good
+understanding of Bandwidth.
+
+53
+00:04:03,790 --> 00:04:08,300
+It's the amount of data that you can get through the
+network at any given unit of time, and it's got to the point
+
+54
+00:04:08,300 --> 00:04:12,790
+where ISP's will say, you know 8 megabytes per
+second, and so bandwidth isn't really an issue.
+
+55
+00:04:12,790 --> 00:04:16,730
+Most people who program on the network realize that
+the network has a fundamentally limit to the amount
+
+56
+00:04:16,730 --> 00:04:20,610
+of bandwidth it has and they can cope with that.
+
+57
+00:04:20,610 --> 00:04:23,630
+The only real "gotcha" with bandwidth
+is cost, in some places.
+
+58
+00:04:23,630 --> 00:04:30,010
+I was visiting my family in Australia and this was the case,
+where the bandwidth is, you pay for every packet you send
+
+59
+00:04:30,010 --> 00:04:34,140
+and so the only real "gotcha" there is
+that you have be careful about that.
+
+60
+00:04:34,140 --> 00:04:38,040
+In contrast to bandwidth, latency is a real challenge.
+
+61
+00:04:38,040 --> 00:04:41,880
+Lots of people programming for networking
+don't really understand the issue of latency
+
+62
+00:04:41,880 --> 00:04:45,960
+and how critical latency is to network performance.
+
+63
+00:04:45,960 --> 00:04:54,040
+Now to illustrate this, I've created my silly little social
+networking application here, it's called qBook, it's,
+
+64
+00:04:54,040 --> 00:04:57,510
+as I like I to like say, the social networking
+application for the anti-social, which is me.
+
+65
+00:04:57,510 --> 00:05:00,300
+[Laughter]
+
+66
+00:05:00,300 --> 00:05:05,930
+Now if you look at this display, you can see that it's got a
+list of friends, and for each friend, it's got a thumbnail,
+
+67
+00:05:05,930 --> 00:05:10,850
+and so when you translate that to a network architecture it
+might be, well, you make a request with the list of friends,
+
+68
+00:05:10,850 --> 00:05:14,830
+and then you make a request for
+each thumbnail for the friends.
+
+69
+00:05:14,830 --> 00:05:20,100
+And so, how this might look in a timeline is this,
+you make little request of the list of friends
+
+70
+00:05:20,100 --> 00:05:24,570
+and you get the results, and you thumbnail
+one, thumbnail two and thumbnail three.
+
+71
+00:05:24,570 --> 00:05:28,930
+Now each of these requests take a certain
+amount of time and that's the latency.
+
+72
+00:05:28,930 --> 00:05:34,350
+And it's important to realize that the latency
+is only minimally related to bandwidth.
+
+73
+00:05:34,350 --> 00:05:40,140
+For example, if you transfer data across the wider
+Internet, you might expect a latency of 200 milliseconds,
+
+74
+00:05:40,140 --> 00:05:44,650
+and that's the same latency for a tiny
+packet as it is for a huge packet,
+
+75
+00:05:44,650 --> 00:05:48,380
+so latency is sort of a fixed feature of the network.
+
+76
+00:05:48,380 --> 00:05:52,460
+And so you really need to do, to improve the performance
+of your network products, you really need to work
+
+77
+00:05:52,460 --> 00:05:56,490
+on hiding this latency and doing the best to minimize that.
+
+78
+00:05:56,490 --> 00:06:01,990
+And if you think about this diagram here, you can
+easily see how you could recode it to do this.
+
+79
+00:06:01,990 --> 00:06:05,010
+Where you make a requested listed of
+friends, and once you've got list of friends,
+
+80
+00:06:05,010 --> 00:06:10,160
+you know all the thumbnails you need, and so you
+dispatch request immediately for one, two and three,
+
+81
+00:06:10,160 --> 00:06:13,460
+and then they come back, you know
+after a certain amount of time.
+
+82
+00:06:13,460 --> 00:06:17,280
+And so now you've sort of doubled the performance
+of your networking, and if you think about this,
+
+83
+00:06:17,280 --> 00:06:23,400
+if you're requesting ten thumbnails, you would have
+likely increased the performance by about five times.
+
+84
+00:06:23,400 --> 00:06:27,030
+So, clearly, latency hiding is
+a critical part of performance.
+
+85
+00:06:27,030 --> 00:06:29,980
+But it's not just that either.
+
+86
+00:06:29,980 --> 00:06:34,810
+If you imagine iPhone OS, often you find
+yourself running on cellular networks.
+
+87
+00:06:34,810 --> 00:06:39,100
+And with the cellular technologies we
+have today, latency is rather extreme.
+
+88
+00:06:39,100 --> 00:06:44,770
+It typically adds about 200 milliseconds to the round
+trip time, so if you think about 200 milliseconds
+
+89
+00:06:44,770 --> 00:06:50,100
+across the wider Internet, if you're on a cellular phone,
+that's 400 milliseconds, so the maximum number of requests
+
+90
+00:06:50,100 --> 00:06:54,440
+and responses that you can receive,
+in any given second is about 2.
+
+91
+00:06:54,440 --> 00:06:57,850
+So, and that's completely independent to the
+bandwidth, you can add more and more bandwidth,
+
+92
+00:06:57,850 --> 00:07:04,320
+but the latency never drops, and so to illustrate this, look
+what happens when you stretch out the latency by double.
+
+93
+00:07:04,320 --> 00:07:10,630
+Now if you consider real time, which is the time the user
+is waiting, the amount of time that the user has to wait
+
+94
+00:07:10,630 --> 00:07:15,880
+in the serial case, is much greater
+and this is a real good illustration
+
+95
+00:07:15,880 --> 00:07:19,520
+of why latency is so critical to network performance.
+
+96
+00:07:19,520 --> 00:07:26,650
+Now, in addition to this, all of these
+techniques to hide latency have their issues.
+
+97
+00:07:26,650 --> 00:07:30,920
+We're going to go back to the small diagram
+here, because it's easier to see, but imagine,
+
+98
+00:07:30,920 --> 00:07:36,220
+this is really the ideal world, you've requested thumbnail
+one, two and three, you get them back in that order.
+
+99
+00:07:36,220 --> 00:07:38,380
+That's really not what happens on the Internet.
+
+100
+00:07:38,380 --> 00:07:43,330
+What happens is you get something like this, where you
+make the request for the friend list, you get that result
+
+101
+00:07:43,330 --> 00:07:48,750
+and you request thumbnails one, two and three and you
+get them back in the order two, one, three, and, in fact,
+
+102
+00:07:48,750 --> 00:07:53,450
+three may never come back, apparently
+it's gone off with a fairy somewhere.
+
+103
+00:07:53,450 --> 00:07:56,900
+So, it's important to understand what's going on here.
+
+104
+00:07:56,900 --> 00:08:03,130
+We've introduced parallelism into our program in order to
+hide latency, but by adding parallelism into our program,
+
+105
+00:08:03,130 --> 00:08:07,840
+we've complicated the program, because now we have
+to deal with requests completing out of order.
+
+106
+00:08:07,840 --> 00:08:11,030
+And so this is sort of just a fundamental
+truth of networking.
+
+107
+00:08:11,030 --> 00:08:14,710
+You just, you can't do anything about
+latency, you just have to plan for it.
+
+108
+00:08:14,710 --> 00:08:19,030
+And that's planning at both the protocol level, which
+is how you dispatch requests across the network,
+
+109
+00:08:19,030 --> 00:08:23,710
+and it's also planning at the architectural
+level, how do you structure your program to deal
+
+110
+00:08:23,710 --> 00:08:27,620
+with these parallel requests and to get
+the responses out of order and so on.
+
+111
+00:08:27,620 --> 00:08:30,810
+So that pretty much wraps it up for latency.
+
+112
+00:08:30,810 --> 00:08:34,670
+The next issue I wanted to look at was service discovery.
+
+113
+00:08:34,670 --> 00:08:39,590
+Now service discovery divides into one of two cams, if you
+have a centralized server design where there's one server
+
+114
+00:08:39,590 --> 00:08:42,770
+out there on the Internet, then
+service discovery is very easy.
+
+115
+00:08:42,770 --> 00:08:47,620
+You take your DNS name, you hard wire into all
+your clients, clients connect to the server
+
+116
+00:08:47,620 --> 00:08:51,230
+by result of the DNS name, that's simple.
+
+117
+00:08:51,230 --> 00:08:56,160
+But service discovery, in a peer-to-peer
+environment, is much trickier.
+
+118
+00:08:56,160 --> 00:08:59,810
+And for that, at Apple, we have a technology called Bonjour.
+
+119
+00:08:59,810 --> 00:09:05,160
+Now there was a session on Bonjour earlier today,
+it's too big for me to cover in this session here,
+
+120
+00:09:05,160 --> 00:09:09,890
+so if you're interested, you'll just have to go grab the
+session on the off video, and you can learn all about how
+
+121
+00:09:09,890 --> 00:09:15,630
+to do peer-to-peer service discovery
+using Bonjour, it's fabulous stuff,
+
+122
+00:09:15,630 --> 00:09:20,920
+Monsieur always give good preso as
+well, so it's well worth the effort.
+
+123
+00:09:20,920 --> 00:09:23,540
+Our next item here is asymmetric connectivity.
+
+124
+00:09:23,540 --> 00:09:28,760
+Back when the Internet was first created, every host could
+connect to every other host on the net, it was entirely,
+
+125
+00:09:28,760 --> 00:09:32,900
+peer-to-peer was perfectly reasonable,
+but it's not how it works today.
+
+126
+00:09:32,900 --> 00:09:38,580
+If you imagine a common network setup, here we have an
+iPad and an iPhone attached to a network that's controlled
+
+127
+00:09:38,580 --> 00:09:43,820
+by NAT, a Network Address Translation box, that
+goes across the wider Internet to a Firewall,
+
+128
+00:09:43,820 --> 00:09:48,400
+which then gets you through to the server, and
+connectivity typically runs in this direction.
+
+129
+00:09:48,400 --> 00:09:53,490
+Everyone's pretty much aware of this, clients
+always connect to servers, and that's good.
+
+130
+00:09:53,490 --> 00:09:59,040
+What doesn't work well is this, where the server
+tries to connect back to the client, it generally,
+
+131
+00:09:59,040 --> 00:10:02,040
+it's possible to do this, there are
+techniques you can use for NAT tunneling
+
+132
+00:10:02,040 --> 00:10:04,690
+and so on, but it generally is very painful.
+
+133
+00:10:04,690 --> 00:10:08,160
+So, if you do want to do the, make your
+life easier, it's generally best to try
+
+134
+00:10:08,160 --> 00:10:11,180
+and get your clients to connect to your servers.
+
+135
+00:10:11,180 --> 00:10:18,080
+But another wrinkle on this is this here, where
+you have two clients, both on the same network,
+
+136
+00:10:18,080 --> 00:10:20,210
+that can't necessarily talk to each other.
+
+137
+00:10:20,210 --> 00:10:26,280
+We see this in Wi-Fi hotspots, we all see this on cellular
+networks where there are two clients on the same network,
+
+138
+00:10:26,280 --> 00:10:31,970
+behind the same NAT, but they're segregated from
+each other by the security policy of the network.
+
+139
+00:10:31,970 --> 00:10:37,010
+So, that's asymmetric connectivity, and it's just something
+you have to watch out for, when you plan your networking.
+
+140
+00:10:37,010 --> 00:10:41,730
+And finally, well not finally, because we're
+going to do security, and that's the big one,
+
+141
+00:10:41,730 --> 00:10:48,050
+we have the issue of mobility, which is sort of a generic
+term that Apple uses to cover all the sorts of things
+
+142
+00:10:48,050 --> 00:10:50,600
+that require for an application
+to deal with a dynamic network.
+
+143
+00:10:50,600 --> 00:10:56,060
+If you think about, again, when the Internet was
+first invented, well actually we're going to look
+
+144
+00:10:56,060 --> 00:11:02,840
+at this question here, which I get quite a bit,
+which is what's the IP address of a device?
+
+145
+00:11:02,840 --> 00:11:11,440
+And it's sort of one those bogus questions, it made
+sense back when devices looked like that, giant backs,
+
+146
+00:11:11,440 --> 00:11:16,230
+everything was hard wired, everything had a single
+IP address or a small number of IP addresses,
+
+147
+00:11:16,230 --> 00:11:20,690
+and they didn't change much, they were the same from
+day to day and from week to week and month to month.
+
+148
+00:11:20,690 --> 00:11:25,900
+And it's not just that the IP addresses that stayed
+the same; the level of connectivity stayed the same.
+
+149
+00:11:25,900 --> 00:11:32,170
+They might have been connected by very slow networks, but
+those networks tended to work the same from day to day.
+
+150
+00:11:32,170 --> 00:11:38,170
+In contrast, iPhones don't work that way, iPhones have
+lots of IP addresses, they have lots of network interfaces,
+
+151
+00:11:38,170 --> 00:11:40,290
+the IP addresses can come and go from minute to minute
+
+152
+00:11:40,290 --> 00:11:44,380
+and likewise the connectivity can
+come and go from minute to minute.
+
+153
+00:11:44,380 --> 00:11:49,150
+If you're, if the user is on their iPhone and
+they step into an elevator and the doors close,
+
+154
+00:11:49,150 --> 00:11:54,670
+well the metal walls of the elevator prevent the radio
+signals entering and suddenly you have no connectivity
+
+155
+00:11:54,670 --> 00:11:59,870
+at all, and for the next minute or two, your application
+has no connectivity, and then a couple of minutes later,
+
+156
+00:11:59,870 --> 00:12:04,090
+the elevator doors open, and the user gets
+out and they've got connectivity back again.
+
+157
+00:12:04,090 --> 00:12:09,750
+And you have to design your applications to cope with
+environments like that, highly dynamic environments.
+
+158
+00:12:09,750 --> 00:12:11,180
+There's all sorts of things you can do here.
+
+159
+00:12:11,180 --> 00:12:16,810
+You can do things like doing automatic retry's, where if
+something fails, you don't just tell the user about it,
+
+160
+00:12:16,810 --> 00:12:21,810
+you say, let's try it again and see if it works
+the second time, up to some limit obviously.
+
+161
+00:12:21,810 --> 00:12:27,810
+You also want to do things like resume transfers, if you've
+downloaded 90% of a file and network connectivity goes away,
+
+162
+00:12:27,810 --> 00:12:34,660
+you really want to make sure that the download continues
+from where you left off, not downloads the entire 90% again.
+
+163
+00:12:34,660 --> 00:12:40,550
+And similarly there's this notion of persistent state, where
+if the user quits the application, you want to really try
+
+164
+00:12:40,550 --> 00:12:43,430
+and maintain a view of what's out there
+on the network so that you don't have
+
+165
+00:12:43,430 --> 00:12:46,480
+to hit the network in order to regenerate that view.
+
+166
+00:12:46,480 --> 00:12:49,360
+So, there's all so sorts of things
+that you can do to deal with mobility,
+
+167
+00:12:49,360 --> 00:12:52,540
+but the key thing is to think about it carefully.
+
+168
+00:12:52,540 --> 00:12:55,730
+And finally, as I mentioned, the security.
+
+169
+00:12:55,730 --> 00:13:00,760
+This is a big slice of pie because
+it contains a lot of issues
+
+170
+00:13:00,760 --> 00:13:06,710
+and it's often very daunting, I see comments like this.
+
+171
+00:13:06,710 --> 00:13:13,920
+I don't care about security, because, because my application
+is just a game, or because my applications only used
+
+172
+00:13:13,920 --> 00:13:17,510
+on local network, so whatever, and whenever I see
+these comments, I give them the big Fail stamp.
+
+173
+00:13:17,510 --> 00:13:20,040
+[Laughter]
+
+174
+00:13:20,040 --> 00:13:21,600
+You have to care about security.
+
+175
+00:13:21,600 --> 00:13:24,080
+The threats out there on the Internet are extreme,
+
+176
+00:13:24,080 --> 00:13:27,120
+and there's no doubt about that,
+you see it every day on the news.
+
+177
+00:13:27,120 --> 00:13:32,320
+And in addition to that, the data
+that the user gives to you,
+
+178
+00:13:32,320 --> 00:13:37,400
+and puts in your trust as an application
+developer can be extremely confidential
+
+179
+00:13:37,400 --> 00:13:41,770
+and you can't tell whether the data
+is going to be confidential or not.
+
+180
+00:13:41,770 --> 00:13:48,780
+And so, to illustrate this point, I went through my personal
+iPhone and I looked at the applications on it and I sort
+
+181
+00:13:48,780 --> 00:13:52,710
+of ignored all the Apple applications and I ignored
+all the applications that didn't do networking,
+
+182
+00:13:52,710 --> 00:13:57,640
+and I came up with this list of applications,
+and so some of them, obviously need security,
+
+183
+00:13:57,640 --> 00:14:02,250
+things like instant messaging, clearly
+I want my messages to be private,
+
+184
+00:14:02,250 --> 00:14:05,570
+and in addition to that I don't
+want anyone spoofing my messages.
+
+185
+00:14:05,570 --> 00:14:09,740
+And other obvious ones, just like my
+Shopping application has my credit card,
+
+186
+00:14:09,740 --> 00:14:15,460
+or my banking application has my bank
+account, but there's non-obvious ones as well.
+
+187
+00:14:15,460 --> 00:14:20,110
+If your writing a to-do list application, what
+you're thinking about is creating a to-do list
+
+188
+00:14:20,110 --> 00:14:26,250
+and how the user edits them and so on, you're not really
+thinking about networking, but when your users come to you
+
+189
+00:14:26,250 --> 00:14:29,010
+and say, "Well I would really like to sync the to-do list."
+
+190
+00:14:29,010 --> 00:14:34,190
+They don't realize that you might respond to
+that by producing an insecure syncing mechanism,
+
+191
+00:14:34,190 --> 00:14:37,270
+and then the to-do list is going
+in the clear over the network.
+
+192
+00:14:37,270 --> 00:14:41,960
+Now for most users, to-do lists aren't that
+secret, you know go shopping or whatever,
+
+193
+00:14:41,960 --> 00:14:49,030
+but I can imagine some users have very secure or very
+sensitive to-do lists, yeah, launch iPhone 4, for example.
+
+194
+00:14:49,030 --> 00:14:51,050
+[Laughter]
+
+195
+00:14:51,050 --> 00:14:55,800
+So, there's a case where you just don't know
+whether the user's data is confidential or not.
+
+196
+00:14:55,800 --> 00:15:00,740
+And you really have to do deal with
+security, even though you might not think so.
+
+197
+00:15:00,740 --> 00:15:03,750
+Another example is my favorite TV remote control example.
+
+198
+00:15:03,750 --> 00:15:07,910
+If you're building a TV remote control application, it's
+one of those I don't care about security because it's only
+
+199
+00:15:07,910 --> 00:15:13,720
+on the local network, and it's like, no, I can
+think of at least two reasons why I would like,
+
+200
+00:15:13,720 --> 00:15:16,940
+a user might like to hide the contents of their TV.
+
+201
+00:15:16,940 --> 00:15:21,770
+And not only hide it from in general, but
+specifically hide it from people on the local network.
+
+202
+00:15:21,770 --> 00:15:24,340
+You will have to fill in the blanks there.
+
+203
+00:15:24,340 --> 00:15:28,550
+But there's this idea of, you know this data
+isn't sensitive, you just don't know that,
+
+204
+00:15:28,550 --> 00:15:31,800
+and so my watchwords here are secure by default.
+
+205
+00:15:31,800 --> 00:15:40,070
+Add the security to start off with, plan for it in advance,
+don't just say, "Oh, I don't need security because."
+
+206
+00:15:40,070 --> 00:15:45,160
+Now to break down security, there's a number of
+different sections in security; there's authentication
+
+207
+00:15:45,160 --> 00:15:49,140
+and authorization, and authentication
+and authorization are commonly mixed up,
+
+208
+00:15:49,140 --> 00:15:52,800
+so we are actually going to deal with those together.
+
+209
+00:15:52,800 --> 00:15:57,670
+First, some definitions, authentication is
+about who's at the other end of the network.
+
+210
+00:15:57,670 --> 00:16:02,580
+Who am I talking to, and that an essential
+part of any sort of network communication.
+
+211
+00:16:02,580 --> 00:16:07,350
+If you think about it, networking is all about
+transferring data, you're going send data to someone
+
+212
+00:16:07,350 --> 00:16:09,550
+or you're going to get data from someone.
+
+213
+00:16:09,550 --> 00:16:11,490
+If you don't know who's at the other end of the wire,
+
+214
+00:16:11,490 --> 00:16:16,790
+then sending them data that might be potentially
+confidential is a problem, and similarly,
+
+215
+00:16:16,790 --> 00:16:19,680
+if you don't know who's at the other end
+of the data accepting malicious data
+
+216
+00:16:19,680 --> 00:16:24,290
+from them is your problem, so authentication is critical.
+
+217
+00:16:24,290 --> 00:16:29,690
+There's also authorization, and that's deciding once you
+know who's at the other end of the wire, what can they do,
+
+218
+00:16:29,690 --> 00:16:35,040
+can they upload this photo, can they
+access this database record, and so on.
+
+219
+00:16:35,040 --> 00:16:40,110
+And so with those definitions in hand, we're going to look
+at the common cases of authentication and authorization,
+
+220
+00:16:40,110 --> 00:16:43,780
+and the most critical one is Client Authenticates Server.
+
+221
+00:16:43,780 --> 00:16:48,750
+If you're writing a network client and you're talking
+to a server, you absolutely must know that the server
+
+222
+00:16:48,750 --> 00:16:51,130
+that you're talking to is the server
+you expected to be talking too.
+
+223
+00:16:51,130 --> 00:16:57,360
+There are a variety of networks, there's the,
+you know, free public Wi-Fi network for example,
+
+224
+00:16:57,360 --> 00:17:02,720
+where the servers on that network, just can't be
+trusted, and in fact, pretty much with an iPhone,
+
+225
+00:17:02,720 --> 00:17:06,690
+which goes out into the real world,
+you can't trust any network.
+
+226
+00:17:06,690 --> 00:17:10,360
+So you have to have Client Authenticates
+Server authentication.
+
+227
+00:17:11,480 --> 00:17:15,600
+The next most common one is where the
+server has to authorize the client.
+
+228
+00:17:15,600 --> 00:17:18,910
+It has to say, "Well, this client
+can do this or can do that."
+
+229
+00:17:18,910 --> 00:17:23,520
+And clearly to do that, the server also has to
+authenticate the client, but that's sort of a side effect
+
+230
+00:17:23,520 --> 00:17:26,580
+of the real desire to authorize the client.
+
+231
+00:17:26,580 --> 00:17:30,390
+And finally, there's the case where sometimes
+the clients need to authorize the server.
+
+232
+00:17:30,390 --> 00:17:32,900
+It's fairly rare, but it does happen.
+
+233
+00:17:32,900 --> 00:17:34,760
+A web browser is a good example.
+
+234
+00:17:34,760 --> 00:17:38,490
+If a server says to the client, "Here, have this cookie."
+
+235
+00:17:38,490 --> 00:17:40,930
+The client has to make an authorization
+decision as to whether it's going
+
+236
+00:17:40,930 --> 00:17:44,130
+to hold onto the cookie or not and for how long.
+
+237
+00:17:44,130 --> 00:17:49,110
+And the next item here is privacy.
+
+238
+00:17:49,110 --> 00:17:52,390
+I want to stress here that we're
+talking about on the wire privacy.
+
+239
+00:17:52,390 --> 00:17:56,840
+This is a talk for network application developers
+and so for example, the privacy of the user's data
+
+240
+00:17:56,840 --> 00:18:00,880
+on your server is not really, what I'm talking about here.
+
+241
+00:18:00,880 --> 00:18:04,900
+I'm talking about the privacy of the user's
+data as it goes across the network, in fact,
+
+242
+00:18:04,900 --> 00:18:08,870
+I've talked about privacy a lot already, I think I sort
+of made the point there, so I'm going to skip that on
+
+243
+00:18:08,870 --> 00:18:13,760
+and move straight on to malicious attack.
+
+244
+00:18:13,760 --> 00:18:17,640
+Oh, what to say about malicious attack;
+malicious attack is a tricky one.
+
+245
+00:18:17,640 --> 00:18:23,400
+It's very hard to defend against, it's a complicated topic,
+and it's way beyond the scope of what I can cover here.
+
+246
+00:18:23,400 --> 00:18:28,870
+Fortunately, there's an entire session about this sort of
+thing, called Creating Secure Applications in iPhone OS.
+
+247
+00:18:28,870 --> 00:18:35,480
+So, that wraps up the spinning pizza of network death, we've
+looked at all the slices, we sort of understand the problem,
+
+248
+00:18:35,480 --> 00:18:40,620
+and it's well, what are we going to do about that problem?
+
+249
+00:18:40,620 --> 00:18:44,610
+And, so we've established that networking is
+hard, so what are we going to do about it,
+
+250
+00:18:44,610 --> 00:18:46,630
+the answer is, we need good architecture.
+
+251
+00:18:46,630 --> 00:18:49,350
+Architecture is critical to solving network problems.
+
+252
+00:18:49,350 --> 00:18:52,600
+Apple can add more and more networking APIs to the system,
+
+253
+00:18:52,600 --> 00:18:55,940
+but unless you architect application
+properly, it won't make a difference.
+
+254
+00:18:55,940 --> 00:19:01,530
+You have to design your application well,
+and it's not really a question of API's.
+
+255
+00:19:01,530 --> 00:19:07,490
+And also in this first talk, I'm just going to cover
+security using the Transport Layer Security mechanism just
+
+256
+00:19:07,490 --> 00:19:11,580
+as a little aside at the end of the talk,
+because security really is that important.
+
+257
+00:19:11,580 --> 00:19:18,500
+In my second talk, I'm going to cover more practical
+things; asynchronous programming, network debugging
+
+258
+00:19:18,500 --> 00:19:20,980
+and a short list of the more common mistakes I see.
+
+259
+00:19:20,980 --> 00:19:25,490
+But we're going to start here with architecture.
+
+260
+00:19:25,490 --> 00:19:29,070
+I was thinking about architecture and
+I was thinking about San Francisco,
+
+261
+00:19:29,070 --> 00:19:34,730
+I was thinking about what's the best combination of
+those two, and it's the bridge, I love the bridge.
+
+262
+00:19:34,730 --> 00:19:38,800
+When I might come to San Francisco, I really like
+to try and catch up with the bridge it's fabulous.
+
+263
+00:19:38,800 --> 00:19:45,370
+So I took the bridge architecture and I turned
+it into my second cheesy graphic for today.
+
+264
+00:19:46,480 --> 00:19:51,340
+And each component of the bridge is a different
+component of the architecture I want to talk about.
+
+265
+00:19:51,340 --> 00:19:56,090
+To start with is the User Interface,
+you know, why we built the bridge
+
+266
+00:19:56,090 --> 00:19:59,050
+in the first place, was so people could drive across it.
+
+267
+00:19:59,050 --> 00:20:01,730
+The wires of the On-The-Wire-Architecture, obviously,
+
+268
+00:20:01,730 --> 00:20:05,000
+and then the two towers are sort of
+the fundamental bits of architecture.
+
+269
+00:20:05,000 --> 00:20:09,890
+The Platform Architecture, which is what iPhone
+OS does for you, and the In-Memory architecture,
+
+270
+00:20:09,890 --> 00:20:12,430
+which is how to structure your application.
+
+271
+00:20:12,430 --> 00:20:17,420
+So we're going to start with User Interface, and people
+who know me will know what am I doing up on stage talking
+
+272
+00:20:17,420 --> 00:20:20,810
+about User Interface, clearly not qualified.
+
+273
+00:20:20,810 --> 00:20:24,320
+But, it is really important to
+get your User Interface right.
+
+274
+00:20:24,320 --> 00:20:29,740
+The thing I'd like to say here is, don't
+make promises that the network can't deliver.
+
+275
+00:20:29,740 --> 00:20:38,600
+The network is not infinitely fast or infinitely
+reliable or infinitely responsive in the case of latency.
+
+276
+00:20:38,600 --> 00:20:43,990
+Your goal, as an application developer, is often
+to hide the networks details from a developer.
+
+277
+00:20:43,990 --> 00:20:47,660
+You're trying to make it so that the
+networking is seamless in your application.
+
+278
+00:20:47,660 --> 00:20:52,500
+But if you do that too well, then you hide,
+then you confuse the user into thinking
+
+279
+00:20:52,500 --> 00:20:55,680
+that the network will always work
+perfectly, and that not the case.
+
+280
+00:20:55,680 --> 00:20:57,460
+Sometimes the network fails.
+
+281
+00:20:57,460 --> 00:21:02,440
+So you need to give the user subtle cues as to you're doing
+something for the network, in some cases unsubtle cues,
+
+282
+00:21:02,440 --> 00:21:05,030
+that you're doing something for the
+network, so that they understand
+
+283
+00:21:05,030 --> 00:21:08,860
+that if the network goes away, that thing won't work.
+
+284
+00:21:08,860 --> 00:21:13,970
+And so if you look through iPhone applications, you'll see a
+bunch of places where this happens, but it's worth thinking
+
+285
+00:21:13,970 --> 00:21:18,590
+about them in a little more detail, rather
+than just sort of accepting them as truth.
+
+286
+00:21:18,590 --> 00:21:21,530
+The first one of these that I want
+to look at is placeholders.
+
+287
+00:21:21,530 --> 00:21:24,090
+We see this on iPhone OS all the time.
+
+288
+00:21:24,090 --> 00:21:32,430
+Here's my bogus social networking application, again, and in
+the top cell you see a placeholder for the thumbnail image.
+
+289
+00:21:32,430 --> 00:21:34,090
+Why is that placeholder there?
+
+290
+00:21:34,090 --> 00:21:36,010
+Why do we need placeholders?
+
+291
+00:21:36,010 --> 00:21:41,350
+And the answer is it's the latency hiding mechanism,
+the application can get the list of friends,
+
+292
+00:21:41,350 --> 00:21:47,820
+but it can't get all the thumbnails immediately, and so
+instead of, I mean as we saw before, thumbnail three was off
+
+293
+00:21:47,820 --> 00:21:52,000
+with the fairies and we don't know why it's not
+come back, we will eventually time it out and retry,
+
+294
+00:21:52,000 --> 00:21:58,140
+but we want to show the user something and we don't
+want to do something like, hide the entire display
+
+295
+00:21:58,140 --> 00:22:01,740
+of the friends list, just because
+we've missed one of these images.
+
+296
+00:22:01,740 --> 00:22:05,310
+So you need to think a little bit
+about why the placeholders are there.
+
+297
+00:22:05,310 --> 00:22:10,710
+Another example I'd like to talk about is the
+misnotion of solicited and unsolicited operations.
+
+298
+00:22:10,710 --> 00:22:13,520
+Network operations like to divide into these two categories.
+
+299
+00:22:13,520 --> 00:22:18,370
+Solicited operations are the ones the user has
+specifically requested, they've said launch your application
+
+300
+00:22:18,370 --> 00:22:25,800
+and click the log in button or they've clicked on a user in
+the list of users and want to see all the user's details.
+
+301
+00:22:25,800 --> 00:22:30,560
+Unsolicited operations are those that happen as
+sort of a side effect of solicited operations.
+
+302
+00:22:30,560 --> 00:22:33,350
+An example of that might be downloading a thumbnail.
+
+303
+00:22:33,350 --> 00:22:37,010
+The user didn't really ask for the thumbnails,
+the user asked for the overall list,
+
+304
+00:22:37,010 --> 00:22:39,720
+and you've given them the overall
+list, and the thumbnails are sort
+
+305
+00:22:39,720 --> 00:22:42,740
+of the secondary stuff that's going on in the background.
+
+306
+00:22:42,740 --> 00:22:49,710
+These affect your User Interface, because, for example,
+solicited operations you really want to show progress,
+
+307
+00:22:49,710 --> 00:22:55,030
+and you really want to show a cancellation dialogue and
+you want to inform the users where things have gone wrong.
+
+308
+00:22:55,030 --> 00:23:01,050
+In contrast, unsolicited operations, the user didn't
+really ask for them, so it's like, eh, what do you do?
+
+309
+00:23:01,050 --> 00:23:05,760
+And a good example of that is the placeholder, well you
+just show a placeholder, and if the connection fails,
+
+310
+00:23:05,760 --> 00:23:10,450
+you might show a broken image as
+opposed to just the empty placeholder.
+
+311
+00:23:10,450 --> 00:23:13,000
+You don't really need to put up a big alert saying,
+
+312
+00:23:13,000 --> 00:23:17,950
+we couldn't download that thumbnail,
+it's like the user doesn't care.
+
+313
+00:23:17,950 --> 00:23:24,360
+It's also critical to remember that a given operation can
+be either solicited or unsolicited depending on the context.
+
+314
+00:23:24,360 --> 00:23:30,180
+If I click the sync button, that's a solicited
+operation, but if the application syncs every hour,
+
+315
+00:23:30,180 --> 00:23:33,190
+then that's an unsolicited operation
+and your error display needs
+
+316
+00:23:33,190 --> 00:23:38,250
+to work appropriately in your progress display and so on.
+
+317
+00:23:38,250 --> 00:23:43,520
+Modality, I've got the good and bad examples here.
+
+318
+00:23:43,520 --> 00:23:47,200
+I used my own application for this so
+that I wouldn't be picking on anybody.
+
+319
+00:23:47,200 --> 00:23:53,770
+So here you see the application on the left, highly modal,
+it's syncing the list, put up the big grey progress bar,
+
+320
+00:23:53,770 --> 00:23:56,130
+with the big spinner, and the user can't do anything.
+
+321
+00:23:56,130 --> 00:23:59,970
+The application on the right is very un-modal.
+
+322
+00:23:59,970 --> 00:24:03,720
+It's syncing in the background, it's got
+a little bit of status information there
+
+323
+00:24:03,720 --> 00:24:06,430
+and the user can keep using the application.
+
+324
+00:24:06,430 --> 00:24:08,770
+My model here is the Apple application's.
+
+325
+00:24:08,770 --> 00:24:13,990
+If you use Safari, it doesn't, if you load one
+page and it's busily loading off the network,
+
+326
+00:24:13,990 --> 00:24:17,520
+it doesn't stop you from making another
+page and loading something else, you know,
+
+327
+00:24:17,520 --> 00:24:20,130
+it doesn't stop you from going to the bookmarks and so on.
+
+328
+00:24:20,130 --> 00:24:23,580
+You can keep using the application, even
+though it's doing something and that's sort
+
+329
+00:24:23,580 --> 00:24:26,690
+of a critical design goal for any
+sort of networking application.
+
+330
+00:24:26,690 --> 00:24:33,680
+And my last item here is errors, and
+again, I have good and bad examples.
+
+331
+00:24:33,680 --> 00:24:39,750
+Throwing out error dialogue in the user's face is kind
+of annoying, especially for unsolicited operations.
+
+332
+00:24:39,750 --> 00:24:44,970
+For solicited operations, there's more excuse, yeah, but in
+general it's much better to try to get the error dialogues
+
+333
+00:24:44,970 --> 00:24:49,880
+to be non-modal, although the error's not an error
+dialogue at that point, but the error information,
+
+334
+00:24:49,880 --> 00:24:53,800
+display it alongside the progress
+information, and try and make it non-modal.
+
+335
+00:24:53,800 --> 00:25:00,210
+There's another crime here too, which is this
+second line of text, Connection Reset by Peer.
+
+336
+00:25:00,210 --> 00:25:05,900
+You may understand this, a small fraction of the
+audience I'm sure understands TCP at a deep level
+
+337
+00:25:05,900 --> 00:25:07,570
+and knows what Connection Reset by Peer means.
+
+338
+00:25:07,570 --> 00:25:09,570
+But your users have no idea.
+
+339
+00:25:09,570 --> 00:25:11,440
+That doesn't belong on a screen.
+
+340
+00:25:11,440 --> 00:25:14,730
+This is the network as firewall classified.
+
+341
+00:25:14,730 --> 00:25:20,260
+And so with that, we've covered the sort of
+things I wanted to talk about User Interface,
+
+342
+00:25:20,260 --> 00:25:23,970
+we're next going to move on to On-The-Wire-Architecture.
+
+343
+00:25:23,970 --> 00:25:26,220
+There's two fundamental On-The-Wire-Architectures,
+
+344
+00:25:26,220 --> 00:25:29,740
+I sort of talked about these a little
+bit, but I want to make them explicit.
+
+345
+00:25:29,740 --> 00:25:34,170
+There's a centralized server design where there is a server
+out there on the wider Internet and all the clients connect
+
+346
+00:25:34,170 --> 00:25:38,350
+to it, and then there's this peer-to-peer
+model, and the real question is
+
+347
+00:25:38,350 --> 00:25:41,280
+which one do you chose if you're starting from scratch.
+
+348
+00:25:41,280 --> 00:25:45,680
+I have my algorithm here for doing this.
+
+349
+00:25:45,680 --> 00:25:50,950
+To start with, if you're building an application
+that talks a specific protocol, if you build,
+
+350
+00:25:50,950 --> 00:25:54,800
+then you don't get a choice; you have to
+conform to whatever the application used.
+
+351
+00:25:54,800 --> 00:25:59,750
+So, for example, if you're doing a Twitter
+client, you have to speak to a different protocol
+
+352
+00:25:59,750 --> 00:26:03,580
+and that's always centralized server, no choice there.
+
+353
+00:26:03,580 --> 00:26:07,560
+My next step is, if it's compatible with
+centralized server, use centralized server,
+
+354
+00:26:07,560 --> 00:26:13,680
+generally centralized server is going to be easier, and I'm
+going to talk a few points about why it's going to be easier
+
+355
+00:26:13,680 --> 00:26:17,920
+on the next slide, for the moment, you're
+just going to have to trust me on that one.
+
+356
+00:26:17,920 --> 00:26:22,770
+And finally, some architectures are only
+compatible with peer-to-peer designs.
+
+357
+00:26:22,770 --> 00:26:27,170
+A real-time networking game for example,
+you know if you playing a tank game,
+
+358
+00:26:27,170 --> 00:26:31,360
+doing it with centralized server is going to be tricky
+because of the latencies involved, sometimes it's possible
+
+359
+00:26:31,360 --> 00:26:36,550
+to do, but sometimes it's just impossible,
+especially if you're playing over cellular.
+
+360
+00:26:36,550 --> 00:26:41,450
+So, if that's your only choice, then that's your
+only choice and you have to use peer-to-peer.
+
+361
+00:26:41,450 --> 00:26:44,520
+Now looking at centralized server, why is it easier?
+
+362
+00:26:44,520 --> 00:26:49,830
+And the answer is because of all the networking
+problems I listed in the first section of this talk,
+
+363
+00:26:49,830 --> 00:26:52,600
+centralized server makes the bunch of them much easier.
+
+364
+00:26:52,600 --> 00:26:57,830
+Service discovery, as I mentioned, it's just
+DNS resolution in a centralized server design.
+
+365
+00:26:57,830 --> 00:27:02,030
+Asymmetric connectivity, as we showed,
+it's much easier for all your clients
+
+366
+00:27:02,030 --> 00:27:04,360
+to connect to one server out there on the Internet.
+
+367
+00:27:04,360 --> 00:27:12,190
+Security is much much easier in centralized server, because
+the key security mechanism, Transport Layer Security,
+
+368
+00:27:12,190 --> 00:27:19,510
+was really designed for use in centralized server models
+and so on-the-wire security is not a problem at all.
+
+369
+00:27:19,510 --> 00:27:24,920
+And authentication, it's still some issue, you still have
+to deal with it a little bit, but you get server, I'm sorry,
+
+370
+00:27:24,920 --> 00:27:30,960
+client authenticate server authentication
+for free, so that makes life much easier.
+
+371
+00:27:30,960 --> 00:27:33,800
+In contrast, mobility is only a little bit easier.
+
+372
+00:27:33,800 --> 00:27:40,670
+Dealing with mobility, you still have to deal with a mobile
+client even if the server is fixed, so that's not a big win.
+
+373
+00:27:40,670 --> 00:27:45,590
+And malicious attack is a problem no matter
+how you, what sort of architecture you use.
+
+374
+00:27:45,590 --> 00:27:50,170
+So the summary of this is that centralized server will
+make your life easier, and if you can get away with it,
+
+375
+00:27:50,170 --> 00:27:52,620
+I would recommend you go in that direction.
+
+376
+00:27:53,710 --> 00:27:59,710
+Once you've decided on your overall design,
+you then have to work on your protocol choice,
+
+377
+00:27:59,710 --> 00:28:03,550
+what actual data are you going to send over the wire.
+
+378
+00:28:03,550 --> 00:28:08,980
+There's three options here, which I sort of often see, but
+there's actually a fourth here, which is that in some cases,
+
+379
+00:28:08,980 --> 00:28:12,390
+you don't get a choice, which is again,
+if you're doing a Twitter client,
+
+380
+00:28:12,390 --> 00:28:15,180
+you've got to do Twitter protocol, no argument there.
+
+381
+00:28:15,180 --> 00:28:20,950
+But if you do get a choice, then you have really a
+choice between sort of reusing existing protocol,
+
+382
+00:28:20,950 --> 00:28:25,350
+rolling your own protocol, or extending an existing one.
+
+383
+00:28:25,350 --> 00:28:28,710
+Now if you reuse an existing protocol,
+there's certain advantages.
+
+384
+00:28:28,710 --> 00:28:30,580
+The first of which is there's less design.
+
+385
+00:28:30,580 --> 00:28:32,290
+Designing a network protocol is tricky.
+
+386
+00:28:32,290 --> 00:28:39,170
+Designing a good one is really quite tricky and
+so if you can skip the design work, that's great.
+
+387
+00:28:39,170 --> 00:28:44,910
+In addition to that, if you reuse an existing
+protocol, you may end up running less code.
+
+388
+00:28:44,910 --> 00:28:49,590
+The chances are, if the protocol exists somewhere
+else, then someone has written code for it,
+
+389
+00:28:49,590 --> 00:28:55,720
+and it's either in the operating system or you can grab a
+library from open source or from some third party vendor,
+
+390
+00:28:55,720 --> 00:28:58,810
+and that will definitely make less work for you.
+
+391
+00:28:58,810 --> 00:29:03,830
+In contrast, rolling your own protocol
+gives you the maximum flexibility.
+
+392
+00:29:03,830 --> 00:29:08,110
+You can design your protocol to give you really
+good advantages, one of which is latency hiding,
+
+393
+00:29:08,110 --> 00:29:12,460
+you can build latency hiding right into
+your protocol, that's a good thing.
+
+394
+00:29:12,460 --> 00:29:16,150
+But, of course, it's extra work,
+both in design and implementation.
+
+395
+00:29:16,150 --> 00:29:24,680
+And it carries what I call a network risk iPhones
+often find themselves on networks that are managed by,
+
+396
+00:29:24,680 --> 00:29:30,750
+let's say security conscious network administrators, and
+they'll prevent network protocols that they don't know
+
+397
+00:29:30,750 --> 00:29:34,600
+from escaping the network, the firewall
+will just stop outgoing connections,
+
+398
+00:29:34,600 --> 00:29:37,910
+and that causes a problem if you're
+designing your own protocol.
+
+399
+00:29:37,910 --> 00:29:41,950
+Now one of my favorite choices here
+is actually extending an existing one.
+
+400
+00:29:41,950 --> 00:29:43,930
+And the protocol to extend is most commonly HTTP.
+
+401
+00:29:43,930 --> 00:29:51,640
+HTTP has good security features, it has good support
+in the OS and it's relatively easy to extend,
+
+402
+00:29:51,640 --> 00:29:54,690
+so it's generally a good choice
+for designing your own protocol.
+
+403
+00:29:54,690 --> 00:30:05,290
+And so a quick summary here is, if you have to design your
+own protocol, then try doing extending HTTP, if you can.
+
+404
+00:30:05,290 --> 00:30:08,640
+Try to avoid rolling your own protocol.
+
+405
+00:30:08,640 --> 00:30:14,110
+Now, along those lines, my top five
+tips for rolling your own protocol.
+
+406
+00:30:14,110 --> 00:30:17,180
+Number 5 is CPU architecture neutral.
+
+407
+00:30:17,180 --> 00:30:23,450
+If you send multi-byte quantities over the network, integers
+let's say, make sure that they're CPU architecture neutral,
+
+408
+00:30:23,450 --> 00:30:28,770
+they're at a constant size and a constant
+byte order, and do it before you start,
+
+409
+00:30:28,770 --> 00:30:30,420
+rather than trying to retro-fit it later.
+
+410
+00:30:30,420 --> 00:30:32,700
+Number 4 is of course, latency.
+
+411
+00:30:32,700 --> 00:30:37,350
+Now I've talked a lot about latency, it's a critical part of
+network performance, if you're designing your own protocol,
+
+412
+00:30:37,350 --> 00:30:44,070
+one of the key benefits is that you get to
+hide latency, do the extra work to do that.
+
+413
+00:30:44,070 --> 00:30:46,040
+Number 3, Transport Layer Security.
+
+414
+00:30:46,040 --> 00:30:52,490
+I'm going to talk about Transport Layer Security a
+bit later in this talk, but it is the only security,
+
+415
+00:30:52,490 --> 00:30:59,740
+on-the-wire security built into iPhone OS and designing your
+own on-the-wire security protocol is a really bad choice,
+
+416
+00:30:59,740 --> 00:31:03,370
+on-the-wire security protocols
+should be left to security experts.
+
+417
+00:31:03,370 --> 00:31:05,390
+It's very tricky to get right.
+
+418
+00:31:05,390 --> 00:31:11,710
+And bringing your own in-the-wire security protocol
+porting SSH or something like that, is a lot of work.
+
+419
+00:31:11,710 --> 00:31:17,600
+So, if you can use Transport Layer Security, try to do so.
+
+420
+00:31:17,600 --> 00:31:20,400
+Number 2, TCP not UDP.
+
+421
+00:31:20,400 --> 00:31:26,300
+Lots of people think, yeah, I know how TCP
+works, I can do it myself, and I'll do it better.
+
+422
+00:31:26,300 --> 00:31:28,230
+Trust me, that's not the case.
+
+423
+00:31:28,230 --> 00:31:32,100
+You may do it better in some very
+restricted environments, like your office,
+
+424
+00:31:32,100 --> 00:31:35,680
+but it will not work better across the wider Internet.
+
+425
+00:31:35,680 --> 00:31:42,050
+This habeen, you know, a subject of research for decades
+and what's in TCP is about as good as you can get.
+
+426
+00:31:42,050 --> 00:31:44,850
+So, don't design your own, unless
+you're way out in the security,
+
+427
+00:31:44,850 --> 00:31:50,150
+in the network protocol guru level
+of competency, certainly not me.
+
+428
+00:31:50,150 --> 00:31:53,500
+And finally my Number 1 tip is, of course, don't.
+
+429
+00:31:53,500 --> 00:31:57,110
+[Laughter]
+
+430
+00:31:57,110 --> 00:32:00,720
+So that covers On-The-Wire-Architecture, now
+we're going to look at the first tower here,
+
+431
+00:32:00,720 --> 00:32:05,280
+which is the Platform Architecture;
+what iPhone OS does for you.
+
+432
+00:32:05,280 --> 00:32:08,730
+Here's our architecture stack, I'm
+sure you've seen diagrams like this.
+
+433
+00:32:08,730 --> 00:32:13,880
+The one you'll note, the key feature of this one
+is, sort of this applications box at the top.
+
+434
+00:32:13,880 --> 00:32:17,610
+If you're a network developer, of
+course, UIKit fits up there somewhere,
+
+435
+00:32:17,610 --> 00:32:20,050
+we don't highlight it on the box,
+because we just don't care.
+
+436
+00:32:20,050 --> 00:32:25,880
+But down at the bottom, there's Darwin, which
+is the fundamental networking on iPhone OS.
+
+437
+00:32:25,880 --> 00:32:33,010
+It's a C API, the networking API for moving packets
+is called BSD sockets, there's also a Bonjour API
+
+438
+00:32:33,010 --> 00:32:38,890
+down here called dns_sd, it's the closest to the
+kernel so it will give you the best performance,
+
+439
+00:32:38,890 --> 00:32:41,870
+but I advise you not to get hung up on performance too much.
+
+440
+00:32:41,870 --> 00:32:46,040
+In my experience, network performance is not about,
+you know, can I save a few milliseconds going
+
+441
+00:32:46,040 --> 00:32:51,250
+down to the kernel, it's about optimizing
+your on-the-wire traffic and you win
+
+442
+00:32:51,250 --> 00:32:56,060
+from optimizing your on-the-wire traffic, not
+from, you know working at the BSD sockets level.
+
+443
+00:32:56,060 --> 00:33:02,130
+So, performance is not a good reason to use this API,
+unless you're on Mac OS X server and you've got 2 gigabytes,
+
+444
+00:33:02,130 --> 00:33:07,380
+you know, 10-gigabyte Ethernet card installed,
+then it's an issue, but on iPhone, no.
+
+445
+00:33:07,380 --> 00:33:11,010
+In contrast, cross platform is a
+good reason to be using this API.
+
+446
+00:33:11,010 --> 00:33:17,430
+BSD sockets is available on virtually every platform, and
+the dns_sd API is available on Mac OS X, iPhone OS, iOS,
+
+447
+00:33:17,430 --> 00:33:24,910
+I guess, it's available on Windows, and it's
+available on a variety of other platforms as well.
+
+448
+00:33:24,910 --> 00:33:28,780
+So, if you've got cross platform code,
+this is a good place to be working.
+
+449
+00:33:28,780 --> 00:33:31,980
+The biggest issues with working at
+this level are the cellular interface,
+
+450
+00:33:31,980 --> 00:33:34,330
+by far the biggest one is the cellular interface.
+
+451
+00:33:34,330 --> 00:33:38,550
+There's no way to bring up the cellular
+interface if it's down, at this level,
+
+452
+00:33:38,550 --> 00:33:43,860
+so it's a bit tricky to use sockets
+on iPhone OS at the moment.
+
+453
+00:33:43,860 --> 00:33:49,250
+The other issue, which is less of an
+issue today, is ground loop integration.
+
+454
+00:33:49,250 --> 00:33:55,320
+Integrating sockets into a ground loop based application,
+which is all Mac OS X and iPhone applications,
+
+455
+00:33:55,320 --> 00:34:00,360
+is a bit tricky and you have to jump through some hoops.
+
+456
+00:34:00,360 --> 00:34:05,090
+One key advantage of grand central dispatch in this
+context, is that grand central dispatch makes it much easier
+
+457
+00:34:05,090 --> 00:34:07,650
+to integrate with the ground loop from sockets code.
+
+458
+00:34:07,650 --> 00:34:12,710
+But the reality is, I generally
+recommend you move up in the stack.
+
+459
+00:34:12,710 --> 00:34:14,430
+Always recommend you move up.
+
+460
+00:34:14,430 --> 00:34:19,890
+And the next stop is CFNetwork, which is also a C
+API, and it solves the key problems with sockets,
+
+461
+00:34:19,890 --> 00:34:23,350
+of cellular activation and ground loop integration.
+
+462
+00:34:23,350 --> 00:34:27,810
+And it also, in addition to doing Bonjour and
+TCP, it also supports other high level protocols
+
+463
+00:34:27,810 --> 00:34:29,940
+and this is the first place where
+you can get support for TLS,
+
+464
+00:34:29,940 --> 00:34:33,880
+and it supports an FTP and HTTP and HTTPS, so it's great.
+
+465
+00:34:33,880 --> 00:34:38,870
+But the real issue here is, if you're working at this
+level, you might as well just move up to the next level,
+
+466
+00:34:38,870 --> 00:34:44,170
+and that's Foundation, it gives you everything,
+or almost everything CFNetwork gives you.
+
+467
+00:34:44,170 --> 00:34:48,520
+In a nice Objective-C package, which is ideal
+for Cocoa applications, its ground loops
+
+468
+00:34:48,520 --> 00:34:51,940
+and delegates and all the stuff you know from Cocoa.
+
+469
+00:34:51,940 --> 00:34:56,920
+And again, it gives you most of the
+protocols except for a few edge cases.
+
+470
+00:34:56,920 --> 00:35:02,680
+So, the take home point here is,
+Foundation networking, use it, love it.
+
+471
+00:35:02,680 --> 00:35:08,400
+Another take home point, another thing I wanted
+to cover here is this particular factoid.
+
+472
+00:35:08,400 --> 00:35:12,110
+The Mac OS X and iPhone OS networking
+stacks are virtually identical.
+
+473
+00:35:12,110 --> 00:35:17,380
+So, if you're running code for iPhone OS, you can
+pretty much port it to Mac OS X and vice versa just
+
+474
+00:35:17,380 --> 00:35:20,210
+by recompiling it, and it's a very useful feature.
+
+475
+00:35:20,210 --> 00:35:26,360
+And if you want to do applications that run
+on both, well, that have ends running on both.
+
+476
+00:35:26,360 --> 00:35:28,720
+And that sums up Platform Architecture.
+
+477
+00:35:28,720 --> 00:35:34,830
+We're going to look at In-Memory Architecture, and
+that's how you structure your objects to work well,
+
+478
+00:35:34,830 --> 00:35:39,910
+how you architect them to deal with a
+networking, the issues proposed by networking.
+
+479
+00:35:39,910 --> 00:35:45,430
+If you've done any Cocoa programming, you'll be
+familiar with his whole Model-View-Controller thing.
+
+480
+00:35:45,430 --> 00:35:51,940
+And it's not obvious where you fit your networking in to
+this model, well enter into the view, no don't do that.
+
+481
+00:35:51,940 --> 00:35:55,940
+My recommendation here is, do your networking in the model.
+
+482
+00:35:55,940 --> 00:35:59,580
+There's good reasons for this, but if
+you think about it at a high level,
+
+483
+00:35:59,580 --> 00:36:03,930
+your model is all about data, it's
+the data that you're managing.
+
+484
+00:36:03,930 --> 00:36:08,730
+And similarly, networking is all about data, you're
+either sending or receiving data across the network,
+
+485
+00:36:08,730 --> 00:36:10,610
+so these are a good fit, in some regards.
+
+486
+00:36:10,610 --> 00:36:14,340
+But they are especially good fit
+because doing it in the other places,
+
+487
+00:36:14,340 --> 00:36:18,140
+generally ends up really badly, things don't go well.
+
+488
+00:36:18,140 --> 00:36:21,680
+And to illustrate this, we have my bogus
+social networking application again,
+
+489
+00:36:21,680 --> 00:36:27,860
+and here you can see we're downloading this
+thumbnail for the end that's got a placeholder there.
+
+490
+00:36:27,860 --> 00:36:30,600
+What happens if we download that in the view?
+
+491
+00:36:30,600 --> 00:36:34,940
+Well, the view is on the screen at the moment, but
+what happens when the user scrolls the table view off,
+
+492
+00:36:34,940 --> 00:36:43,380
+that cell off the top of the screen, well, depending on
+table view reuse goes, that table view cell may get reused,
+
+493
+00:36:43,380 --> 00:36:47,150
+and it can't continue downloading the thumbnail
+because that would get you the wrong thumbnail,
+
+494
+00:36:47,150 --> 00:36:51,560
+so you end up having to cancel the network operation
+and then the user scrolls that cell back on the screen
+
+495
+00:36:51,560 --> 00:36:54,450
+and then you have to un-cancel and start it all over again.
+
+496
+00:36:54,450 --> 00:36:58,800
+Clearly that's not the replace you
+want to do the thumbnails downloads.
+
+497
+00:36:58,800 --> 00:37:03,080
+Similarly, if you do the work in the Controller,
+then we are looking at the list of friends.
+
+498
+00:37:03,080 --> 00:37:06,700
+If you tap on one of the friends and it
+brings up a big picture of that friend,
+
+499
+00:37:06,700 --> 00:37:10,260
+it has to go and get that off the
+network, then if you tap on it,
+
+500
+00:37:10,260 --> 00:37:13,350
+and then tap back, and then tap down again, what happens?
+
+501
+00:37:13,350 --> 00:37:18,320
+Well, the View Controller gets disposed of, or
+gets created, disposed of and created again,
+
+502
+00:37:18,320 --> 00:37:22,920
+and if it's cancelling the network
+operation when it's disposed of, then again,
+
+503
+00:37:22,920 --> 00:37:26,690
+you've wasted a whole bunch of bandwidth.
+
+504
+00:37:26,690 --> 00:37:34,220
+So, to repeat, it's the work, do the networking in the
+model, because the model object can persist for as long as,
+
+505
+00:37:34,220 --> 00:37:36,920
+well you need to persist in order to do the work.
+
+506
+00:37:36,920 --> 00:37:44,020
+Now I'm going to show a concrete example of this,
+and again it builds on this notion of thumbnails.
+
+507
+00:37:44,020 --> 00:37:47,990
+You'll see the big grey box again which is sort of the
+rest of the application, we're focused on the model,
+
+508
+00:37:47,990 --> 00:37:52,810
+and in this case we are now focused on the object
+called the thumbnails, and that's how the rest
+
+509
+00:37:52,810 --> 00:37:55,090
+of the application interacts with the networking.
+
+510
+00:37:55,090 --> 00:38:00,100
+There's a thumbnail object, and that object has
+a property, which is the current thumbnail image.
+
+511
+00:38:00,100 --> 00:38:04,800
+Now if the rest of the application requests the
+image from the thumbnail, well what happens?
+
+512
+00:38:04,800 --> 00:38:10,590
+The thumbnail doesn't have an image to hand back, so it
+kicks off a request to the server to go and get the image,
+
+513
+00:38:10,590 --> 00:38:15,020
+and then what it does is it returns this placeholder
+and the rest of the application get a placeholder,
+
+514
+00:38:15,020 --> 00:38:17,920
+and the rest of the application doesn't care, that as far
+
+515
+00:38:17,920 --> 00:38:22,320
+as it's concerned is the image for
+that user, or for that thumbnail.
+
+516
+00:38:22,320 --> 00:38:28,150
+And it uses that placeholder and all is good, until
+the server responds with the actual real contents,
+
+517
+00:38:28,150 --> 00:38:32,810
+and now the thumbnail object has a real
+image, and it just kicks off a notification
+
+518
+00:38:32,810 --> 00:38:37,430
+to the high-level software to say,
+"Hey, I've changed my image."
+
+519
+00:38:37,430 --> 00:38:41,160
+Now I'd like to stress that this isn't
+"Hey the network operation has finished."
+
+520
+00:38:41,160 --> 00:38:44,690
+Or "Hey, I've completed this, you know, complicated thing."
+
+521
+00:38:44,690 --> 00:38:47,070
+It's "Hey the thumbnail has changed."
+
+522
+00:38:47,070 --> 00:38:49,630
+And in fact, the thumbnail could
+change for a variety of reason.
+
+523
+00:38:49,630 --> 00:38:54,050
+You might be on a social networking application,
+the thumbnail might have just changed on the server
+
+524
+00:38:54,050 --> 00:38:57,190
+and the network has detected that
+and returned a new thumbnail.
+
+525
+00:38:57,190 --> 00:39:02,730
+But as far as the rest of the application is concerned, it's
+just a change in the thumbnail image, and then it just goes
+
+526
+00:39:02,730 --> 00:39:07,180
+and fetches the new image and displays
+that, and life is good.
+
+527
+00:39:07,180 --> 00:39:12,080
+Another advantage of dealing with networking
+at this level, is the notion persistence.
+
+528
+00:39:12,080 --> 00:39:14,780
+The thumbnail object knows what data it's displaying.
+
+529
+00:39:14,780 --> 00:39:21,590
+It knows it's dealing with images, and more to the point
+it knows that the image, if it hands back a stale image,
+
+530
+00:39:21,590 --> 00:39:26,550
+that's not the end of the world, and so when the rest
+of the application, if you just launched the application
+
+531
+00:39:26,550 --> 00:39:32,070
+and you haven't really fired up the networking yet, and
+the rest of the application says, "Give me a thumbnail."
+
+532
+00:39:32,070 --> 00:39:36,760
+Then the thumbnail image, then the thumbnail can go
+get it off disk, the last one we saw and handed back,
+
+533
+00:39:36,760 --> 00:39:39,370
+because it knows that giving the user a
+stale thumbnail isn't the end of the world.
+
+534
+00:39:39,370 --> 00:39:45,160
+So, it's a good way to do caching, because you
+can set the cache policy at the model level,
+
+535
+00:39:45,160 --> 00:39:48,250
+and so a different model object, like the list of friends,
+
+536
+00:39:48,250 --> 00:39:55,190
+where stale data might be more worrying,
+couldn't have a different cache policy.
+
+537
+00:39:55,190 --> 00:40:00,100
+So, persistent state is a good
+reason to do networking in the model.
+
+538
+00:40:00,100 --> 00:40:06,800
+So, to summarize, we do networking in the model because it
+isolates the rest of the application from the networking.
+
+539
+00:40:06,800 --> 00:40:13,570
+As far as the rest of the application is concerned, there
+are just model objects and changes to model objects.
+
+540
+00:40:13,570 --> 00:40:16,310
+In addition to that, another good advantage is persistence.
+
+541
+00:40:16,310 --> 00:40:19,760
+The model objects can persist and in
+fact they can persist with core data,
+
+542
+00:40:19,760 --> 00:40:25,120
+you can make this thumbnail object a managed object and
+everything sort of just works, it's kind of like magic.
+
+543
+00:40:25,120 --> 00:40:32,110
+If you do do persistence at this level, make sure that
+you disabling caching at the NSURL connection level,
+
+544
+00:40:32,110 --> 00:40:38,450
+because you don't really want to be caching at NSURL
+connection level and caching at the model level.
+
+545
+00:40:38,450 --> 00:40:44,420
+It's a good way to handle external changes, like I said,
+if the image changes on the social networking site,
+
+546
+00:40:44,420 --> 00:40:49,900
+the rest of the application doesn't care why
+it changed, it just knows that it did change.
+
+547
+00:40:49,900 --> 00:40:51,810
+It's also a good way to do testing.
+
+548
+00:40:51,810 --> 00:40:57,260
+Testing network applications is very difficult, because
+the network behavior changes from minute to minute,
+
+549
+00:40:57,260 --> 00:41:01,980
+but if you disconnect the rest of the application from
+the model, then you can put in a new model that just goes
+
+550
+00:41:01,980 --> 00:41:05,810
+through some sequence of steps, set
+steps and then you can test that the rest
+
+551
+00:41:05,810 --> 00:41:08,340
+of the application handles those properly.
+
+552
+00:41:08,340 --> 00:41:13,480
+So, it's a good way to test the higher levels of your
+software, just by connecting your model to a dummy model
+
+553
+00:41:13,480 --> 00:41:17,050
+that just goes through a set of transforms.
+
+554
+00:41:17,050 --> 00:41:20,490
+So, that networking in the model,
+before we leave that topic,
+
+555
+00:41:20,490 --> 00:41:23,910
+I wanted to cover that green arrow
+there, which is the notification.
+
+556
+00:41:23,910 --> 00:41:28,840
+How does the model tell the rest of the
+application that things have changed.
+
+557
+00:41:28,840 --> 00:41:31,510
+Now there are three basic ways of doing this in Cocoa.
+
+558
+00:41:31,510 --> 00:41:37,210
+There's this notion of Delegation, and then there's
+NSNotification , and there's Key Value Observing.
+
+559
+00:41:37,210 --> 00:41:43,360
+Delegation isn't always the best choice here, because it's
+very hard to do, delegation just does one-to-one messaging.
+
+560
+00:41:43,360 --> 00:41:47,290
+There's only one delegate for a given object and
+so if two people are observing the same property,
+
+561
+00:41:47,290 --> 00:41:52,510
+as is quite common for things like thumbnails,
+you can't really do that in the delegation model.
+
+562
+00:41:52,510 --> 00:41:59,410
+In contrast, NSNotification and KVO are both one to
+many, so you can have many observers, which is good.
+
+563
+00:41:59,410 --> 00:42:04,080
+I tend to use KVO, I'm a big fan of
+KVO, because it's very fine grained,
+
+564
+00:42:04,080 --> 00:42:07,090
+so you can learn about very specific changes in the model.
+
+565
+00:42:07,090 --> 00:42:11,990
+But the reality is NSNotification is pretty much
+just as good, so there's no reason not to use,
+
+566
+00:42:11,990 --> 00:42:15,790
+it's just sort of one of those personal preferences.
+
+567
+00:42:15,790 --> 00:42:22,310
+So that's how, typically how you tell the high levels
+of your application that something has changed deep
+
+568
+00:42:22,310 --> 00:42:26,580
+down in the model, because of the networking,
+but it doesn't need to know about the networking.
+
+569
+00:42:26,580 --> 00:42:31,310
+And with that, we've wrapped up
+the whole architecture business.
+
+570
+00:42:31,310 --> 00:42:35,910
+We started with the User Interface, which is
+why we built the application in the first place.
+
+571
+00:42:35,910 --> 00:42:43,280
+We want to make sure that the User Interface
+reflects to the user the realities of networking.
+
+572
+00:42:43,280 --> 00:42:50,110
+We then looked at On-The-Wire Architecture, and how
+centralized server makes your application much easier,
+
+573
+00:42:50,110 --> 00:42:55,760
+and also how reusing an existing protocol and
+maybe extending it a little bit, is a big win.
+
+574
+00:42:55,760 --> 00:43:01,120
+We looked at Platform Architecture, and the take home
+message there is that Foundation is your friend and use it.
+
+575
+00:43:01,120 --> 00:43:07,800
+And then we looked at In-Memory Architecture; which is how
+to structure your model objects to reflect the realities
+
+576
+00:43:07,800 --> 00:43:09,520
+of networking to the rest of your application.
+
+577
+00:43:09,520 --> 00:43:13,290
+And with that, a short digression into security.
+
+578
+00:43:13,290 --> 00:43:16,620
+And specifically security by Transport Layer Security.
+
+579
+00:43:16,620 --> 00:43:20,270
+Now Transport Layer Security is the evolution of SSL.
+
+580
+00:43:20,270 --> 00:43:23,990
+Lots of people say, "This network
+connection is secured by SSL."
+
+581
+00:43:23,990 --> 00:43:26,420
+And they don't really mean that,
+they really mean it's secured by TLS.
+
+582
+00:43:26,420 --> 00:43:29,910
+If it was secured by SSL, we might be worried.
+
+583
+00:43:29,910 --> 00:43:35,500
+It's the only On-The-Wire security protocol in
+iPhone OS, so it's the one I recommend, obviously.
+
+584
+00:43:35,500 --> 00:43:38,060
+[Laughter]
+
+585
+00:43:38,060 --> 00:43:40,370
+It works best with the centralized server model.
+
+586
+00:43:40,370 --> 00:43:44,900
+How you might, how you organize this is you go to a
+certificate, you set up your server on the Internet,
+
+587
+00:43:44,900 --> 00:43:50,130
+and then you go to your certificate authority, verifying or
+whoever, and you say "I want an identity for this server."
+
+588
+00:43:50,130 --> 00:43:55,100
+And they give you an identity it's
+stored on the server, and from then on,
+
+589
+00:43:55,100 --> 00:44:01,220
+any client out there on the wider Internet can automatically
+get client authenticate server authentication based
+
+590
+00:44:01,220 --> 00:44:02,610
+on DNS names.
+
+591
+00:44:02,610 --> 00:44:07,680
+And it also automatically gets
+On-The-Wire privacy so that's the vast bulk
+
+592
+00:44:07,680 --> 00:44:13,060
+of the really hard security problems just
+solved by this one simple design decision.
+
+593
+00:44:13,060 --> 00:44:15,470
+In contrast, using Transport Layer Security
+
+594
+00:44:15,470 --> 00:44:20,200
+in a peer-to-peer environment is
+as [inaudible] would say, "Tricky".
+
+595
+00:44:20,200 --> 00:44:25,440
+Transport Layer Security supports
+peer-to-peer, because it's part of the protocol.
+
+596
+00:44:25,440 --> 00:44:32,500
+But it's hard to get to from the iPhone OS APIs, it's
+even hard to get through frankly from the Mac OS X APIs
+
+597
+00:44:32,500 --> 00:44:37,330
+and so using it in a peer-to-peer model becomes
+quite tricky and really if there's one reason
+
+598
+00:44:37,330 --> 00:44:41,230
+to favor centralized server over peer-to-peer, it's this.
+
+599
+00:44:41,230 --> 00:44:47,730
+You can't live without security and Transport
+Layer Security works best for centralized server.
+
+600
+00:44:47,730 --> 00:44:52,580
+As far as accessing Transport Layer
+Security within iPhone OS,
+
+601
+00:44:52,580 --> 00:44:56,820
+there is no Transport Layer Security
+that's accessible at the dial-up level.
+
+602
+00:44:56,820 --> 00:45:00,050
+The secure transport mechanism,
+which is available on Mac OS X,
+
+603
+00:45:00,050 --> 00:45:05,960
+public API Mac OS X is not a public API
+on iPhone OS, so you just can't use it.
+
+604
+00:45:05,960 --> 00:45:11,840
+And OpenSSL, which is also available on Mac
+OS X, is not actually on iPhone OS at all.
+
+605
+00:45:11,840 --> 00:45:16,260
+Now you can bring your own copy of OpenSSL if you
+want, it's open source, you can compile it and link it
+
+606
+00:45:16,260 --> 00:45:21,200
+into your application, that's quite a bit of work,
+and if you really want to make your life easy,
+
+607
+00:45:21,200 --> 00:45:27,530
+the best way to do that is to stick to using the TLS that's
+built into the system, and that means using CFSocketStream.
+
+608
+00:45:27,530 --> 00:45:32,890
+CFSocketStream you can enable TLS just by setting
+a few properties, and everything just works.
+
+609
+00:45:32,890 --> 00:45:36,430
+You just treat like it a different type of stream.
+
+610
+00:45:36,430 --> 00:45:42,490
+But as before, if you're working at this level, at the CF
+Level, you might as well work it in at the NSStream level,
+
+611
+00:45:42,490 --> 00:45:46,270
+CFSocketStream and NSStream toll-free
+bridged, so you can create,
+
+612
+00:45:46,270 --> 00:45:52,760
+or can configure a socket stream using whatever
+fancy Transport Layer Security options you need,
+
+613
+00:45:52,760 --> 00:45:58,240
+and then just treat it as a NSStream in the rest
+of your application and that's a good thing.
+
+614
+00:45:58,240 --> 00:46:04,050
+Also in the Foundation level, there's NSURL
+connection, which is about accessing URL's.
+
+615
+00:46:04,050 --> 00:46:08,080
+And normally, if you give it at
+HTTP URL, it will do normal HTTP.
+
+616
+00:46:08,080 --> 00:46:13,750
+If you give it an HTTPS URL, it will automatically
+enable Transport Layer Security for you,
+
+617
+00:46:13,750 --> 00:46:18,650
+so it's trivial to access TLS from
+the NSURL connection level.
+
+618
+00:46:18,650 --> 00:46:22,070
+And that, is more or less that.
+
+619
+00:46:22,070 --> 00:46:25,940
+Networking is hard, there's no beating about
+the bush, networking is a difficult problem,
+
+620
+00:46:25,940 --> 00:46:29,010
+there's a lot of environmental
+issues that make it difficult,
+
+621
+00:46:29,010 --> 00:46:32,960
+there's a lot of asynchrony issues that make it difficult.
+
+622
+00:46:32,960 --> 00:46:39,540
+The best way to make networking easier is not about APIs,
+it's about architecture, its design your application well
+
+623
+00:46:39,540 --> 00:46:44,000
+from day one, and the most critical thing
+there is actually design your User Interface.
+
+624
+00:46:44,000 --> 00:46:48,060
+Don't let you User Interface sort of paint you into a
+corner where you have to do something synchronously,
+
+625
+00:46:48,060 --> 00:46:50,360
+because that won't work in the long term.
+
+626
+00:46:50,360 --> 00:46:55,840
+You really want to have User Interface accept
+asynchronous operations as part of its design,
+
+627
+00:46:55,840 --> 00:46:59,610
+so with things like placeholders
+and non-modal user interface.
+
+628
+00:46:59,610 --> 00:47:02,640
+Work at the Foundation layer if you can.
+
+629
+00:47:02,640 --> 00:47:08,140
+There are good reasons to go down to lower layers,
+it's fine to do so, it's not, nothing bad about it,
+
+630
+00:47:08,140 --> 00:47:12,160
+but if you can work at Foundation,
+it's going to make your life easier.
+
+631
+00:47:12,160 --> 00:47:18,340
+And finally, put your networking in the model and
+try and isolate the networking in the model deep
+
+632
+00:47:18,340 --> 00:47:23,630
+down in your application so it doesn't get
+its claws into the rest of your application.
+
+633
+00:47:23,630 --> 00:47:33,360
+And last, but not least, TLS is your friend, it will
+make security much easier and security is critical.
+
+634
+00:47:33,360 --> 00:47:40,820
+Now, but wait, there's more, in fact, there
+is of course a whole another talk more,
+
+635
+00:47:40,820 --> 00:47:45,820
+in that talk I'm going to cover asynchronous
+programming, which is a lot of content,
+
+636
+00:47:45,820 --> 00:47:49,060
+and I'm going to look at ground loops and depth.
+
+637
+00:47:49,060 --> 00:47:54,260
+I'm also going to look at network debugging, what
+you can do to make your network debugging easier,
+
+638
+00:47:54,260 --> 00:47:59,380
+sort of plan in advance to make your networking
+better, make your debugging experience better.
+
+639
+00:47:59,380 --> 00:48:02,400
+I'm also going to go through a
+short list of common mistakes.
+
+640
+00:48:02,400 --> 00:48:05,560
+For more information, you can contact
+me directly if you'd like.
+
+641
+00:48:05,560 --> 00:48:09,860
+You can also contact Paul Danbold,
+who's our Networking Evangelist.
+
+642
+00:48:09,860 --> 00:48:12,690
+There's tons of documentation on our website.
+
+643
+00:48:12,690 --> 00:48:18,180
+The Apple Developer forums, there's a Core OS section
+there where I hang out and answer networking questions.
+
+644
+00:48:18,180 --> 00:48:27,950
+Sample Code, again the Mac OS X and iPhone OS
+networking architectures are virtually identical,
+
+645
+00:48:27,950 --> 00:48:32,580
+so if there's a sample that's only in Mac OS X,
+it's well worth looking to see whether it will work
+
+646
+00:48:32,580 --> 00:48:35,540
+on iPhone OS because in a lot of cases it will.
+
+647
+00:48:35,540 --> 00:48:39,520
+And sometimes it's just easier to shift a
+Mac OS X sample that you run from a terminal
+
+648
+00:48:39,520 --> 00:48:41,920
+than build a whole application around it.
+

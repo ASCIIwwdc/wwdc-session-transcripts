@@ -1,0 +1,3149 @@
+1
+00:00:06,220 --> 00:00:07,950
+>> Daniel Delwood: Howdy.
+
+2
+00:00:07,950 --> 00:00:11,400
+I'm Daniel Delwood, engineer on the Performance Tools Team.
+
+3
+00:00:11,400 --> 00:00:15,350
+And I'm happy to introduce you to
+Advanced Memory Analysis with Instruments.
+
+4
+00:00:15,350 --> 00:00:16,940
+So let's get started.
+
+5
+00:00:16,940 --> 00:00:19,030
+Well, what are we talking about today?
+
+6
+00:00:19,030 --> 00:00:21,610
+Memory. And memory is critical to performance.
+
+7
+00:00:21,610 --> 00:00:28,390
+It's an extremely important part of your program's
+execution and that's because it's such a limited resource.
+
+8
+00:00:28,390 --> 00:00:33,150
+On Mac if you use too much memory, you'll
+start paging and really slow your app down.
+
+9
+00:00:33,150 --> 00:00:39,530
+And iPhone -- this is even more important because
+there's less memory and your app will get terminated.
+
+10
+00:00:39,530 --> 00:00:42,780
+So today we're going to talk about Instruments.
+
+11
+00:00:42,780 --> 00:00:48,350
+And Instruments offers you a lot of tools
+for tracking down those common memory issues
+
+12
+00:00:48,350 --> 00:00:51,230
+and is really useful -- what exactly for?
+
+13
+00:00:51,230 --> 00:00:58,720
+Well, first of all, it's useful to understand your
+app's memory usage and this is really a key point
+
+14
+00:00:58,720 --> 00:01:05,150
+because with understanding comes the ability to
+change and the ability to change your application
+
+15
+00:01:05,150 --> 00:01:10,840
+to do what you want it to do, not what you
+think it's doing and maybe isn't already.
+
+16
+00:01:10,840 --> 00:01:13,420
+So use Instruments to reduce wasted memory.
+
+17
+00:01:13,420 --> 00:01:15,150
+We'll have a couple demos of this today.
+
+18
+00:01:15,150 --> 00:01:18,810
+Diagnose memory-related crashes -- a demo of this as well.
+
+19
+00:01:18,810 --> 00:01:24,780
+And I really want to encourage you from the start to
+be proactive about your memory usage: profile early,
+
+20
+00:01:24,780 --> 00:01:28,320
+profile often, and don't just wait
+until you get those terminations
+
+21
+00:01:28,320 --> 00:01:32,610
+or your app doesn't fare well in a multitasking environment.
+
+22
+00:01:32,610 --> 00:01:36,180
+So exactly what are we going to talk about?
+
+23
+00:01:36,180 --> 00:01:42,840
+Well, 5 issues: first of all, eliminating leaks, which
+is an issue of wasted memory; abandoned memory --
+
+24
+00:01:42,840 --> 00:01:48,420
+also wasted memory; messages to the allocated
+objects; responding to memory warnings; and finally,
+
+25
+00:01:48,420 --> 00:01:53,780
+a little blurb on how to use autorelease
+properly and track that down in Instruments.
+
+26
+00:01:53,780 --> 00:01:55,460
+So let's get started.
+
+27
+00:01:55,460 --> 00:01:57,920
+What constitutes a leak?
+
+28
+00:01:57,920 --> 00:02:02,170
+Well, leaks are allocated memory
+that can no longer be reached.
+
+29
+00:02:02,170 --> 00:02:06,760
+This means that they're no longer useful to
+your program, you allocated them some time,
+
+30
+00:02:06,760 --> 00:02:09,000
+and now there are no more pointers to it.
+
+31
+00:02:09,000 --> 00:02:12,060
+So what can you do about it?
+
+32
+00:02:12,060 --> 00:02:17,670
+Well, you can program more carefully but it's hard to
+find these sometimes and that's why we provide tools.
+
+33
+00:02:17,670 --> 00:02:21,790
+So for example to make this concrete,
+say you have an object.
+
+34
+00:02:21,790 --> 00:02:24,770
+My object and it has an instance variable name.
+
+35
+00:02:24,770 --> 00:02:29,050
+Well, in your init method, you might say something
+like name = [[NSString alloc] initWithFormat:...].
+
+36
+00:02:29,050 --> 00:02:34,080
+So that creates a string with a reference count of 1.
+
+37
+00:02:34,080 --> 00:02:39,050
+And then later on, after your object's
+been used and it's about to go away,
+
+38
+00:02:39,050 --> 00:02:41,610
+you'll be running your object's dealloc method.
+
+39
+00:02:41,610 --> 00:02:46,190
+Well, what happens when you forget
+to write the [name release]?
+
+40
+00:02:46,190 --> 00:02:51,880
+Well, your object still goes away and
+that pointer to your string object,
+
+41
+00:02:51,880 --> 00:02:56,130
+but your string object doesn't go away
+because it still has a rough count of 1.
+
+42
+00:02:56,130 --> 00:02:58,590
+So all right, what do we do about this?
+
+43
+00:02:58,590 --> 00:03:00,620
+Well, that's what the Leaks template is for.
+
+44
+00:03:00,620 --> 00:03:06,220
+And Leaks, as its name suggests,
+identifies leaked memory on your behalf.
+
+45
+00:03:06,220 --> 00:03:14,020
+It does this by doing a conservative memory analysis,
+scans your process's address space, and it looks for blocks
+
+46
+00:03:14,020 --> 00:03:17,470
+in your heap that are no longer referenced.
+
+47
+00:03:17,470 --> 00:03:23,580
+Now, when I say "conservative," I mean that it works
+really, really, really hard to make sure that it's reliable.
+
+48
+00:03:23,580 --> 00:03:29,780
+So that means it may miss a few leaks but it is
+very reliable in the leaks that it does report.
+
+49
+00:03:29,780 --> 00:03:37,040
+So what I mean by all of this is that if you have a bunch of
+heap objects, what it does is it scans through your stack,
+
+50
+00:03:37,040 --> 00:03:42,480
+looking for pointers to those heap objects, and marks
+those and also through some global data so this is statics
+
+51
+00:03:42,480 --> 00:03:47,100
+that you may declare and then scans to other heap objects.
+
+52
+00:03:47,100 --> 00:03:53,010
+From those it continually, recursively scans and anything
+left over that isn't reachable, well, those are your leaks.
+
+53
+00:03:53,010 --> 00:03:54,900
+Well, great.
+
+54
+00:03:54,900 --> 00:03:59,030
+Now you know what the leaks are;
+how can you go about fixing them?
+
+55
+00:03:59,030 --> 00:04:02,180
+Well, that's what Allocations instrument is for.
+
+56
+00:04:02,180 --> 00:04:09,860
+And this is sort of the heavy lifter of our memory tools
+in that it tracks all malloc-type heap allocations.
+
+57
+00:04:09,860 --> 00:04:19,530
+So this includes C's, malloc, calloc, and any other
+ways - objective-C, when you say alloc or new,
+
+58
+00:04:19,530 --> 00:04:25,060
+C++'s new operators -- all of those
+things get tracked by Allocations.
+
+59
+00:04:25,060 --> 00:04:29,970
+And then it provides you those malloc events,
+those free events at the end, and if you specify,
+
+60
+00:04:29,970 --> 00:04:34,100
+you can also get the retain/release and the
+autorelease event from the middle and those will come
+
+61
+00:04:34,100 --> 00:04:37,570
+in really useful as we'll see in some of the demos.
+
+62
+00:04:37,570 --> 00:04:41,960
+And the other thing, by tracking all of
+these allocations, you can type statistics.
+
+63
+00:04:41,960 --> 00:04:43,860
+So how many strings have you created?
+
+64
+00:04:43,860 --> 00:04:47,030
+How many of your object controller have you created?
+
+65
+00:04:47,030 --> 00:04:51,400
+And you can find out when they're deallocated
+and that sort of useful information.
+
+66
+00:04:51,400 --> 00:04:56,540
+And finally, the most important part is that it
+gathers backtraces for each one of these events.
+
+67
+00:04:56,540 --> 00:05:00,860
+And so with that backtrace, you can put it
+in the call tree and find out what parts
+
+68
+00:05:00,860 --> 00:05:06,450
+of your code are allocating the most memory --
+those probably are what you want to focus on.
+
+69
+00:05:06,450 --> 00:05:13,170
+One final note, the Allocations instrument does incur
+a little bit of overhead with all this tracking.
+
+70
+00:05:13,170 --> 00:05:20,650
+So it's perhaps not the best idea to use Time
+Profiler or Time Analysis at the same time.
+
+71
+00:05:20,650 --> 00:05:25,320
+All right, so let's go ahead and show
+a demo of finding and fixing leaks.
+
+72
+00:05:25,320 --> 00:05:30,860
+All right, I'm going to launch my project and for
+the purposes of this, I'm going to be showing most
+
+73
+00:05:30,860 --> 00:05:40,580
+of this technology in the iPhone simulator, although
+all of this applies to Mac, iPhone, iPad as well.
+
+74
+00:05:40,580 --> 00:05:42,980
+So here we go.
+
+75
+00:05:42,980 --> 00:05:45,690
+I'll go ahead and launch my application.
+
+76
+00:05:45,690 --> 00:05:47,850
+It's a really simple iPhone app.
+
+77
+00:05:47,850 --> 00:05:51,850
+All it does is it displays a bunch of
+what we want to call "breadcrumb entries."
+
+78
+00:05:51,850 --> 00:05:56,470
+And so these are places you've been, maybe
+you took a picture and left a description.
+
+79
+00:05:56,470 --> 00:06:01,230
+But you can just go back and forth and
+there's even a latitude and a longitude.
+
+80
+00:06:01,230 --> 00:06:02,830
+So this is geocoded.
+
+81
+00:06:02,830 --> 00:06:06,310
+The important part is: is this application leaking memory?
+
+82
+00:06:06,310 --> 00:06:12,680
+Well, we can find that out directly from Xcode by
+running from this run menu, run with performance tool,
+
+83
+00:06:12,680 --> 00:06:14,760
+and we'll just select the leaks template.
+
+84
+00:06:14,760 --> 00:06:22,290
+So Instruments starts up in the
+background and starts recording.
+
+85
+00:06:22,290 --> 00:06:25,570
+We'll deal with that later.
+
+86
+00:06:25,570 --> 00:06:27,720
+All right.
+
+87
+00:06:27,720 --> 00:06:36,030
+So it starts recording in the background
+and I can start using my app.
+
+88
+00:06:36,030 --> 00:06:41,690
+But the first thing you'll note is that there's
+some graphs in Instruments being displayed already.
+
+89
+00:06:41,690 --> 00:06:46,810
+So this is the immediate mode where you
+can see your data as it's being recorded.
+
+90
+00:06:46,810 --> 00:06:50,890
+So if I zoom in on the track view, you'll
+notice that Allocations right now is showing me
+
+91
+00:06:50,890 --> 00:06:53,780
+where I've allocated the current memory in my application.
+
+92
+00:06:53,780 --> 00:06:56,260
+So at the beginning there was a spike -- is it launched?
+
+93
+00:06:56,260 --> 00:07:01,490
+And then there was another spike,
+probably as I loaded in my SQLite database.
+
+94
+00:07:01,490 --> 00:07:06,690
+And if I wanted to change the view, I could even
+change in the Style option in the inspector.
+
+95
+00:07:06,690 --> 00:07:08,360
+But for now that's good.
+
+96
+00:07:08,360 --> 00:07:10,430
+And leaks -- as I already discovered something --
+
+97
+00:07:10,430 --> 00:07:15,030
+and so its graph is showing me the number
+of leaks discovered in the total leak bytes.
+
+98
+00:07:15,030 --> 00:07:20,860
+So if I want to find out some more information
+and go ahead and click on the Leaks instrument.
+
+99
+00:07:20,860 --> 00:07:25,190
+And let me scroll a little bit more
+just so I can find a few more leaks.
+
+100
+00:07:25,190 --> 00:07:32,360
+But in the table view here, what we have is
+a bunch of what looks like leaked strings.
+
+101
+00:07:32,360 --> 00:07:35,240
+So there's 13 leaked strings and 2 leaked strings.
+
+102
+00:07:35,240 --> 00:07:38,800
+And this first one says there's 600 bytes leaked --
+
+103
+00:07:38,800 --> 00:07:41,420
+well, not too much but we should
+really endeavor to fix everything.
+
+104
+00:07:41,420 --> 00:07:49,110
+And if I turn this down, you'll see that what this is
+doing is this is taking 13 different leaks of strings
+
+105
+00:07:49,110 --> 00:07:54,210
+and aggregating them into one place because
+usually code that leaks, leaks multiple times.
+
+106
+00:07:54,210 --> 00:08:05,190
+And so by doing this, you can find that fixing one of these
+strings will fix all 13 -- in this case, possibly even 15.
+
+107
+00:08:05,190 --> 00:08:07,830
+So I'm interested in this object.
+
+108
+00:08:07,830 --> 00:08:10,660
+What I'm going to do next is take a look at the backtrace.
+
+109
+00:08:10,660 --> 00:08:16,810
+So at the top we have that view that I can
+bring in and it's the extended detail view.
+
+110
+00:08:16,810 --> 00:08:28,240
+And you may recognize this form of stack trace from the
+Xcode 4 with the backtrace compression slider at the bottom.
+
+111
+00:08:28,240 --> 00:08:35,210
+So immediately I can see that my code in black is calling
+NSString initWithFormat from my root view controller.
+
+112
+00:08:35,210 --> 00:08:38,670
+And I can just double-click to
+jump there, see it my source view.
+
+113
+00:08:38,670 --> 00:08:42,350
+And I'm going to open it in Xcode just
+to make it a little bit easier to see.
+
+114
+00:08:42,350 --> 00:08:50,470
+And so what we have here is that string, that subtitle
+text, the latitude and longitude that you see in the entry.
+
+115
+00:08:50,470 --> 00:08:53,410
+And since most leaks are pretty simple, I can just go ahead
+
+116
+00:08:53,410 --> 00:08:56,070
+and look around this method and
+make sure I did things right.
+
+117
+00:08:56,070 --> 00:09:01,900
+So I have an alloc initWithFormat -- that gives me a
+reference count of 1; there's no autorelease at the end.
+
+118
+00:09:01,900 --> 00:09:06,070
+So I need to release this somewhere and
+if I follow it through in the function --
+
+119
+00:09:06,070 --> 00:09:07,800
+oh, there we go, we did release it properly.
+
+120
+00:09:07,800 --> 00:09:12,080
+So it looks like this isn't going
+to be a really simple leak.
+
+121
+00:09:12,080 --> 00:09:22,860
+So going back to Instruments, the biggest thing to
+understand here is that leaks aren't always that simple
+
+122
+00:09:22,860 --> 00:09:25,370
+and there aren't just the allocation point --
+
+123
+00:09:25,370 --> 00:09:28,960
+you need to know the full story and
+that's why we record the reference counts.
+
+124
+00:09:28,960 --> 00:09:34,050
+So I'll just go ahead and select any one of these
+leaks and press the Focus button next to it.
+
+125
+00:09:34,050 --> 00:09:38,840
+And it gives me the reference count list so I can
+see that there's a malloc, a retain, and a release,
+
+126
+00:09:38,840 --> 00:09:41,820
+and the RIF count dropped
+to 1 but what we really want is for it to drop
+
+127
+00:09:41,820 --> 00:09:45,590
+to zero before we have no references to it.
+
+128
+00:09:45,590 --> 00:09:48,440
+OK. So we looked at the malloc, let's look at the retain.
+
+129
+00:09:48,440 --> 00:09:51,610
+So just jumping here we can see that this is
+
+130
+00:09:51,610 --> 00:09:57,320
+in my breadcrumb cell set location string
+and that's displaying on the screen.
+
+131
+00:09:57,320 --> 00:10:03,420
+And what we've got is a string coming in, we're copying it,
+which makes sense, and we're also doing some special work.
+
+132
+00:10:03,420 --> 00:10:06,960
+This is probably why we didn't synthesize the setter.
+
+133
+00:10:06,960 --> 00:10:12,520
+And I'll even jump to the header just so we can
+make sure that we specified it as Copy and we did.
+
+134
+00:10:12,520 --> 00:10:15,400
+And great, that looks probably right.
+
+135
+00:10:15,400 --> 00:10:18,470
+And we go back to the history and look at the release.
+
+136
+00:10:18,470 --> 00:10:26,070
+And this again is in that table view cellForRowAtIndexPath
+so that was the release we saw in the first function.
+
+137
+00:10:26,070 --> 00:10:30,040
+So obviously it's this retain that's
+unbalanced and that was in the cell.
+
+138
+00:10:30,040 --> 00:10:31,840
+Well, perhaps we're leaking the cell, too.
+
+139
+00:10:31,840 --> 00:10:34,900
+Or perhaps the cells aren't going away as we expect.
+
+140
+00:10:34,900 --> 00:10:40,570
+So if we go back to the Allocations instrument,
+the view here is showing you the statistic.
+
+141
+00:10:40,570 --> 00:10:45,550
+So like I was saying, all the -- telling
+you how many numbers you've created
+
+142
+00:10:45,550 --> 00:10:47,520
+and giving you the number of bytes there.
+
+143
+00:10:47,520 --> 00:10:51,310
+And what we want to know is: for our
+breadcrumb cell, how many are still alive?
+
+144
+00:10:51,310 --> 00:10:53,480
+Well, only 7.
+
+145
+00:10:53,480 --> 00:10:54,210
+Well, that makes sense.
+
+146
+00:10:54,210 --> 00:11:00,600
+We have ourselves an iPhone app and so
+we're probably doing cell reuse properly.
+
+147
+00:11:00,600 --> 00:11:02,490
+Oh, so that's interesting.
+
+148
+00:11:02,490 --> 00:11:05,510
+That means that our set location
+string really is leaking somewhere.
+
+149
+00:11:05,510 --> 00:11:12,820
+Well, let's take a look at it one more
+time, now that we know it's at fault.
+
+150
+00:11:12,820 --> 00:11:17,160
+So we are setting an end location string
+and we're even releasing in dealloc.
+
+151
+00:11:17,160 --> 00:11:20,130
+But the one thing we are forgetting is:
+if we call this over and over again,
+
+152
+00:11:20,130 --> 00:11:22,680
+we're going to be leaking the instance variable --
+
+153
+00:11:22,680 --> 00:11:27,280
+while we properly copy the string,
+we're not releasing the location string.
+
+154
+00:11:27,280 --> 00:11:32,520
+And so it's a very simple fix, we can say
+NLocation string release just above it.
+
+155
+00:11:32,520 --> 00:11:34,480
+But that's not quite right.
+
+156
+00:11:34,480 --> 00:11:38,390
+What if MLocation string and string
+are the exact same object?
+
+157
+00:11:38,390 --> 00:11:41,170
+Well, following the memory management
+guidelines, we really should check here
+
+158
+00:11:41,170 --> 00:11:48,740
+and say if MLocation string is
+not equal to string, then do this.
+
+159
+00:11:51,770 --> 00:11:52,600
+So all right.
+
+160
+00:11:52,600 --> 00:11:54,220
+Should we build?
+
+161
+00:11:54,220 --> 00:12:01,360
+Go ahead and just Stop and Rerun.
+
+162
+00:12:01,360 --> 00:12:07,200
+And I'll use the app again.
+
+163
+00:12:07,200 --> 00:12:09,540
+And it doesn't look like we're finding any leaks.
+
+164
+00:12:09,540 --> 00:12:13,220
+So there we go, that's just one leak fixed.
+
+165
+00:12:13,220 --> 00:12:18,390
+Again, it's important to make sure that you
+look at the whole life cycle of the leak.
+
+166
+00:12:18,390 --> 00:12:23,490
+[ Applause ]
+
+167
+00:12:23,490 --> 00:12:28,120
+All right, so again, just want to reiterate this
+is a very, very common thing -- common mistake.
+
+168
+00:12:28,120 --> 00:12:29,890
+It's just looking at the allocation point.
+
+169
+00:12:29,890 --> 00:12:32,370
+And the reason you can't do it is
+because it's not the whole story.
+
+170
+00:12:32,370 --> 00:12:37,820
+You need to know what the object was assigned
+to, what instance variables, where it went.
+
+171
+00:12:37,820 --> 00:12:45,450
+And it's also because framework-created objects can actually
+be leaked by your app code because if you get an object back
+
+172
+00:12:45,450 --> 00:12:50,830
+from the framework and you stuff it away in an instance
+variable and, say, forget to release it in the dealloc,
+
+173
+00:12:50,830 --> 00:12:53,640
+you're responsible for leaking the object.
+
+174
+00:12:53,640 --> 00:12:57,580
+Finally, just want to reiterate: focus
+on a single instance to investigate.
+
+175
+00:12:57,580 --> 00:13:01,570
+Use that little Focus button and just look at one instance.
+
+176
+00:13:01,570 --> 00:13:07,710
+Finally, memory management guide: it's a really
+useful document, there's a lot to it and, you know,
+
+177
+00:13:07,710 --> 00:13:10,330
+I still learn great things from this thing.
+
+178
+00:13:10,330 --> 00:13:15,390
+So that was eliminating leaks and
+that's one type of wasted memory.
+
+179
+00:13:15,390 --> 00:13:19,360
+Another type of wasted memory -- it's even
+harder to track down -- is abandoned memory.
+
+180
+00:13:19,360 --> 00:13:24,160
+And we find that it's actually more
+times even more important than leaks.
+
+181
+00:13:24,160 --> 00:13:25,780
+So what is it exactly?
+
+182
+00:13:25,780 --> 00:13:26,640
+How do we define it?
+
+183
+00:13:26,640 --> 00:13:32,280
+Well, leaked memory was memory that is
+allocated but can no longer be reached.
+
+184
+00:13:32,280 --> 00:13:39,040
+So that means it's inaccessible and the tools --
+just look for any blocks with no more pointers.
+
+185
+00:13:39,040 --> 00:13:48,100
+Now, abandoned memory is a little bit different from that;
+it's accessible allocated memory that is never used again.
+
+186
+00:13:48,100 --> 00:13:53,250
+It's conceptually abandoned by you, the
+programmer, abandoned by your app; it's leftover
+
+187
+00:13:53,250 --> 00:13:56,690
+and it's wasted or perhaps just forgotten.
+
+188
+00:13:56,690 --> 00:14:05,610
+And so this memory is not nearly as easy to detect and
+more importantly, it also occurs in garbage-collected code.
+
+189
+00:14:05,610 --> 00:14:11,490
+So you really have to be careful about
+abandoned memory and it's a big problem.
+
+190
+00:14:11,490 --> 00:14:17,140
+So let me give you a concrete example
+of what I mean by that.
+
+191
+00:14:17,140 --> 00:14:18,750
+How can you abandon memory?
+
+192
+00:14:18,750 --> 00:14:23,610
+Well, one way is extraneous information --
+information that your app doesn't really need.
+
+193
+00:14:23,610 --> 00:14:29,610
+So for example, let's say you have a tic-tack-toe
+game and you want to support one little feature:
+
+194
+00:14:29,610 --> 00:14:33,050
+undo or redo the very last move, that's it.
+
+195
+00:14:33,050 --> 00:14:37,560
+Well, you could implement it pretty simply
+by saying, "Whenever a user makes a move,
+
+196
+00:14:37,560 --> 00:14:42,590
+add that current game state before they
+make the move to the previous game states."
+
+197
+00:14:42,590 --> 00:14:47,070
+And then when someone selects a new game, well, you'll add a
+blank state because you don't want to undo pass a new game.
+
+198
+00:14:47,070 --> 00:14:53,350
+And then you'll probably have a button action that
+says, "Undo or redo whatever the last move was."
+
+199
+00:14:53,350 --> 00:14:56,810
+And so that just looks at the last
+game state and switches it.
+
+200
+00:14:56,810 --> 00:14:58,700
+So where is the abandoned memory here?
+
+201
+00:14:58,700 --> 00:15:02,230
+Well, the problem is that we've
+got a previous game state's array
+
+202
+00:15:02,230 --> 00:15:07,430
+and every single time the user makes
+a move, we add more states to it.
+
+203
+00:15:07,430 --> 00:15:12,380
+Well, only the last one's useful for
+this simple undo and redo feature.
+
+204
+00:15:12,380 --> 00:15:17,860
+And all of the rest of it is abandoned and will just grow
+without limit as they continue to use your application.
+
+205
+00:15:17,860 --> 00:15:23,230
+Another common example is a faulty cache.
+
+206
+00:15:23,230 --> 00:15:27,020
+Now we've seen this many times and caching itself is great.
+
+207
+00:15:27,020 --> 00:15:32,520
+Caching makes your app more responsive, makes it
+faster, but a faulty cache is what I'm talking about
+
+208
+00:15:32,520 --> 00:15:35,250
+and that's a cache that doesn't work as designed.
+
+209
+00:15:35,250 --> 00:15:42,270
+So take this example: it's just a quick little function
+to look for an image in a directory with an index.
+
+210
+00:15:42,270 --> 00:15:45,730
+So if you've got 10 images, maybe
+you're looking for image 3, right?
+
+211
+00:15:45,730 --> 00:15:47,810
+So it looks in the image cache first and says, "Hey,
+
+212
+00:15:47,810 --> 00:15:52,570
+is there an object in there with
+this directory URL and this index?"
+
+213
+00:15:52,570 --> 00:15:56,410
+And then if there's no index, it creates
+it alloc init autorelease, great.
+
+214
+00:15:56,410 --> 00:16:02,150
+And it sets the image in the cache for that
+stream key, using the URL and the index.
+
+215
+00:16:02,150 --> 00:16:06,090
+Well, let's pay really close attention
+to this example here because the key
+
+216
+00:16:06,090 --> 00:16:10,700
+that we looked up was using stringWithFormat%@.
+
+217
+00:16:10,700 --> 00:16:17,890
+And that calls description on URL and gets the
+key we wanted, the URL followed by the index.
+
+218
+00:16:17,890 --> 00:16:24,770
+However, the key that we set the
+image as was actually using the %d.
+
+219
+00:16:24,770 --> 00:16:26,080
+So this is just a typo.
+
+220
+00:16:26,080 --> 00:16:30,570
+It's an easy mistake to make, but in this case
+it's a really hard one to find because it looks
+
+221
+00:16:30,570 --> 00:16:35,820
+like your cache is working properly but every
+time it's actually allocating a new image
+
+222
+00:16:35,820 --> 00:16:40,090
+and this is definitely not what you want.
+
+223
+00:16:40,090 --> 00:16:47,390
+OK. So if that's what abandoned
+memory is, how do we detect it?
+
+224
+00:16:47,390 --> 00:16:51,050
+Well, there's a basic principle and
+that's: memory shouldn't grow without bound
+
+225
+00:16:51,050 --> 00:16:54,500
+when repeating operation that returns
+the user to the same state.
+
+226
+00:16:54,500 --> 00:16:57,060
+So conceptually this makes sense to programmers.
+
+227
+00:16:57,060 --> 00:17:03,140
+If you say, "Push and pop a view controller,"
+you'd expect the memory goes back to where it was.
+
+228
+00:17:03,140 --> 00:17:05,370
+Or say maybe you open and close a window, right?
+
+229
+00:17:05,370 --> 00:17:07,390
+The idea is that you think your application --
+
+230
+00:17:07,390 --> 00:17:11,550
+before using the window and after using
+the window -- will be the same thing.
+
+231
+00:17:11,550 --> 00:17:14,620
+Or maybe it's even a different, more subtle action
+
+232
+00:17:14,620 --> 00:17:18,160
+such as just toggling an app preference
+on and off using a check box.
+
+233
+00:17:18,160 --> 00:17:20,720
+Maybe it's setting user defaults behind the scenes.
+
+234
+00:17:20,720 --> 00:17:24,370
+The point is, you'd expect it to go back where it was.
+
+235
+00:17:24,370 --> 00:17:27,850
+Now this is where you would need to use
+Instruments to verify your expectation
+
+236
+00:17:27,850 --> 00:17:31,000
+and making sure that you're not abandoning any memory.
+
+237
+00:17:31,000 --> 00:17:33,290
+So there's three steps to it.
+
+238
+00:17:33,290 --> 00:17:38,360
+Three steps that you as a programmer need to
+do: one, get your app into a starting state.
+
+239
+00:17:38,360 --> 00:17:42,730
+So let's say you're doing that pushing
+and popping of view controller,
+
+240
+00:17:42,730 --> 00:17:48,320
+you launch your app and get it to the first view.
+
+241
+00:17:48,320 --> 00:17:52,740
+Then you need to perform an action and return
+back to that state, that's your user scenario --
+
+242
+00:17:52,740 --> 00:17:57,440
+that's what you're going to repeat over and
+over again because then you take a snapshot
+
+243
+00:17:57,440 --> 00:18:01,870
+of the heap using a new feature
+in the Allocations instrument.
+
+244
+00:18:01,870 --> 00:18:06,410
+And as I said, it's really important
+that you repeat steps 2 and 3.
+
+245
+00:18:06,410 --> 00:18:11,790
+You need to perform that scenario over
+and over again and keep taking a snapshot.
+
+246
+00:18:11,790 --> 00:18:17,950
+Because the first time there may be correct caching or
+maybe you're warming up something in your application.
+
+247
+00:18:17,950 --> 00:18:20,200
+And so it's that over and over again.
+
+248
+00:18:20,200 --> 00:18:23,440
+It shouldn't increase without bounds
+as you repeat that action.
+
+249
+00:18:23,440 --> 00:18:27,670
+So let me go ahead and show you a demo
+and help make this make more sense.
+
+250
+00:18:27,670 --> 00:18:33,610
+So our application had no leaks as last time
+we checked it and this time I'm going to say,
+
+251
+00:18:33,610 --> 00:18:39,420
+"run with performance tool allocations," to use that
+new feature as part of the Allocations instrument.
+
+252
+00:18:39,420 --> 00:18:45,150
+So it comes up and it's showing me
+the statistics in the table view here.
+
+253
+00:18:45,150 --> 00:18:49,700
+And so I've gotten my application
+to a starting state, great.
+
+254
+00:18:49,700 --> 00:18:52,010
+Well, now what I want to do is I want to take a snapshot
+
+255
+00:18:52,010 --> 00:18:56,570
+and that's what this new heap-shot analysis
+category with the Mark Heap button does.
+
+256
+00:18:56,570 --> 00:19:06,120
+And so when I press it, you'll notice in the Track
+View a little flag appears and in my Detail View,
+
+257
+00:19:06,120 --> 00:19:10,660
+the view has been updated to show me the
+heap-shots, that's what we call these snapshots.
+
+258
+00:19:10,660 --> 00:19:13,980
+And the one I just took was the baseline snapshot.
+
+259
+00:19:13,980 --> 00:19:18,650
+And so it shows me there's about 3 megabytess
+of growth since the beginning of the application
+
+260
+00:19:18,650 --> 00:19:22,330
+and then there's 21,000 objects still live.
+
+261
+00:19:22,330 --> 00:19:23,320
+OK, great.
+
+262
+00:19:23,320 --> 00:19:24,800
+Now I need to repeat my scenario.
+
+263
+00:19:24,800 --> 00:19:28,550
+So what I'm going to do is I'm just going
+to click on the first one and go back.
+
+264
+00:19:28,550 --> 00:19:33,150
+And you can even see there's a bump
+in the Track View as I did that,
+
+265
+00:19:33,150 --> 00:19:36,690
+probably as some caches were warmed or something like that.
+
+266
+00:19:36,690 --> 00:19:39,890
+So now all I'm going to do is press
+the Mark Heap button again.
+
+267
+00:19:39,890 --> 00:19:47,400
+So I'll do it a second time and even a third time.
+
+268
+00:19:47,400 --> 00:19:56,620
+And so what we notice here in the Detail View is that the
+first shot I took, there was a heap growth of 167 kilobytes
+
+269
+00:19:56,620 --> 00:20:03,650
+with 2100 objects that were still
+living now from that snapshot.
+
+270
+00:20:03,650 --> 00:20:07,340
+And then the other two were growing by about 400 objects.
+
+271
+00:20:07,340 --> 00:20:10,210
+Well, is that going to continue forever?
+
+272
+00:20:10,210 --> 00:20:17,030
+If I just click back and forth, is my app
+going to grow by 400 objects every single time?
+
+273
+00:20:17,030 --> 00:20:20,110
+It sort of looks like it.
+
+274
+00:20:20,110 --> 00:20:25,170
+So I've done it 6 times and now I'm done.
+
+275
+00:20:25,170 --> 00:20:32,310
+Oh, but wait, I actually wanted to take a snapshot at the
+end there because I forgot to before I stopped the app.
+
+276
+00:20:32,310 --> 00:20:37,240
+Well, what's was very nice about this new
+feature is you can do analysis after the fact.
+
+277
+00:20:37,240 --> 00:20:42,900
+So a few outtakes of the old screen or maybe you
+have an old trace document that you want to analyze.
+
+278
+00:20:42,900 --> 00:20:52,270
+All you do is go to the Track View, drag the inspection
+head to where you want the snapshot, and press Mark Heap.
+
+279
+00:20:52,270 --> 00:20:54,780
+And it drops another snapshot point there.
+
+280
+00:20:54,780 --> 00:20:59,280
+[ Applause ]
+
+281
+00:20:59,280 --> 00:21:03,840
+OK, so now our problem is that it's
+going up by about 380 objects every time.
+
+282
+00:21:03,840 --> 00:21:05,100
+How do we fix this?
+
+283
+00:21:05,100 --> 00:21:09,090
+Well, what we're going to do is we're going to find
+one of those that seems to be most representative
+
+284
+00:21:09,090 --> 00:21:13,320
+of these snapshots, say this one -- 366 objects.
+
+285
+00:21:13,320 --> 00:21:16,330
+So I'm going to use the Focus button, just focus in on that.
+
+286
+00:21:16,330 --> 00:21:20,830
+And what I see is all those objects
+that were created in that time range
+
+287
+00:21:20,830 --> 00:21:25,120
+that are still living at the end of the program's execution.
+
+288
+00:21:25,120 --> 00:21:30,270
+So these are the objects I'm really, really interested
+in because the fourth time I would expect none
+
+289
+00:21:30,270 --> 00:21:33,790
+to be alive at the end of the program's execution.
+
+290
+00:21:33,790 --> 00:21:37,480
+So I'm going to look for objects
+that are probably created by me
+
+291
+00:21:37,480 --> 00:21:40,520
+and the first thing I see is that
+there's a breadcrumb entry.
+
+292
+00:21:40,520 --> 00:21:41,810
+My app is called Breadcrumbs.
+
+293
+00:21:41,810 --> 00:21:45,750
+Each one of those rows represents
+an entry and there's one of those.
+
+294
+00:21:45,750 --> 00:21:48,850
+And that's probably holding onto some
+instance variables and some other stuff.
+
+295
+00:21:48,850 --> 00:21:51,940
+Is there anything else I recognize?
+
+296
+00:21:51,940 --> 00:21:56,090
+Oh, yes, a composed view controller; I wrote that.
+
+297
+00:21:56,090 --> 00:22:02,890
+Whoa, there's one view controller still live
+after every iteration but I didn't link it.
+
+298
+00:22:02,890 --> 00:22:08,710
+Well, to figure this out, what I need to do is just turn
+this down and see the address of the view controller
+
+299
+00:22:08,710 --> 00:22:12,530
+and I can bring in the Extended Detail
+View and show me where it's allocating.
+
+300
+00:22:12,530 --> 00:22:16,710
+Now I go ahead and jump to that and I'll
+open an Xcode here so you can see it.
+
+301
+00:22:16,710 --> 00:22:19,530
+This is my "did select row at index" path method.
+
+302
+00:22:19,530 --> 00:22:27,570
+So user taps on the row and what we do is we say,
+"OK what's the entry that that row represents?"
+
+303
+00:22:27,570 --> 00:22:30,560
+Once we have that, it looks like we're
+actually caching view controllers --
+
+304
+00:22:30,560 --> 00:22:34,890
+don't necessarily know why we need to
+cache before each entry but it looks
+
+305
+00:22:34,890 --> 00:22:39,060
+like this is performance enhancement
+we made to the application.
+
+306
+00:22:39,060 --> 00:22:47,730
+Now the interesting thing here is that we notice that
+our snapshot was creating the object every single time.
+
+307
+00:22:47,730 --> 00:22:53,130
+Now, why? Because I clicked on the first row
+but there's the same entry every single time.
+
+308
+00:22:53,130 --> 00:22:54,890
+So why is that?
+
+309
+00:22:54,890 --> 00:23:01,940
+Well, it's probably a faulty cache on our fault and
+so what we look is we see that the cache is looking
+
+310
+00:23:01,940 --> 00:23:06,220
+up for the key entry, which is a
+breadcrumb entry type, it's an object.
+
+311
+00:23:06,220 --> 00:23:08,520
+And that we're setting it for the entry as well.
+
+312
+00:23:08,520 --> 00:23:12,070
+So that looks like these two match, that's good.
+
+313
+00:23:12,070 --> 00:23:13,090
+What about the entry?
+
+314
+00:23:13,090 --> 00:23:17,300
+Is it performing properly?
+
+315
+00:23:17,300 --> 00:23:25,280
+Well, to use it as a key in NSDictionary, the entry has to
+actually conform to NSCopying and that's because by default,
+
+316
+00:23:25,280 --> 00:23:30,500
+NSMutableDictionaries will copy in their keys.
+
+317
+00:23:30,500 --> 00:23:32,790
+The other things we need to make
+sure that we wrote correctly --
+
+318
+00:23:32,790 --> 00:23:41,220
+so that there's copy with zone to conform to NSCopying --
+the other things we need to write are "hash" and "is equal"
+
+319
+00:23:41,220 --> 00:23:44,700
+because the dictionary needs to
+know how to hash it and how to check
+
+320
+00:23:44,700 --> 00:23:48,110
+if two different keys -- two different objects -- are equal.
+
+321
+00:23:48,110 --> 00:23:51,640
+But we've clearly written hash and it's just the row ID
+
+322
+00:23:51,640 --> 00:23:56,360
+because what these breadcrumb entries actually
+represent is an object from a SQLite database
+
+323
+00:23:56,360 --> 00:23:59,760
+so that's the primary key, that's all we need.
+
+324
+00:23:59,760 --> 00:24:01,890
+But there isn't an "is equal."
+
+325
+00:24:01,890 --> 00:24:06,350
+So the problem here is just sort of
+like comparing two cans of soup, right?
+
+326
+00:24:06,350 --> 00:24:12,160
+If they're both tomato soup, well, they're different
+cans but we haven't actually taught our cans how
+
+327
+00:24:12,160 --> 00:24:14,760
+to compare to each other to read the labels.
+
+328
+00:24:14,760 --> 00:24:19,480
+And so what we need to do is write an "is equal" method.
+
+329
+00:24:19,480 --> 00:24:21,220
+So I will go ahead.
+
+330
+00:24:21,220 --> 00:24:23,090
+I've got one prewritten here.
+
+331
+00:24:23,090 --> 00:24:25,440
+There we go.
+
+332
+00:24:25,440 --> 00:24:28,330
+And I'll just drop it in.
+
+333
+00:24:28,330 --> 00:24:33,810
+And it's a really simple little "is equal."
+
+334
+00:24:33,810 --> 00:24:37,340
+It says if the other object is the same
+class, then we just compare the row IDs.
+
+335
+00:24:37,340 --> 00:24:45,270
+Great. So simple fix and let's see if
+it actually fixing our abandoned memory.
+
+336
+00:24:45,270 --> 00:24:49,230
+So run with performance tool Allocations.
+
+337
+00:24:49,230 --> 00:24:53,600
+Here we go, back in the same document.
+
+338
+00:24:53,600 --> 00:25:00,680
+And I'll wait until it gets all ready
+and take a snapshot, a baseline snapshot.
+
+339
+00:25:00,680 --> 00:25:03,720
+Let me see here.
+
+340
+00:25:07,140 --> 00:25:10,740
+Oops. And then I'm going to repeat
+my scenario over and over again.
+
+341
+00:25:10,740 --> 00:25:17,900
+So do it the first time, do it the second
+time, and you'll notice that, you know,
+
+342
+00:25:17,900 --> 00:25:22,580
+our change hasn't made much difference on the
+first time -- it's still about 2100 objects.
+
+343
+00:25:22,580 --> 00:25:25,970
+The second time seems to be a little less, about 119.
+
+344
+00:25:25,970 --> 00:25:28,600
+Well, let's keep doing it and see if there's any change.
+
+345
+00:25:28,600 --> 00:25:32,680
+So the third time, the fourth.
+
+346
+00:25:32,680 --> 00:25:38,810
+And one thing we'll notice here in a
+minute is that the number of objects
+
+347
+00:25:38,810 --> 00:25:43,320
+in those previous snapshots is actually
+going down from the original numbers.
+
+348
+00:25:43,320 --> 00:25:47,050
+So I'll talk about that in a little bit.
+
+349
+00:25:47,050 --> 00:25:54,280
+But the main thing we want to notice here is that for
+snapshots 4, 5, 6, and 7, there was no heap growth,
+
+350
+00:25:54,280 --> 00:25:58,570
+none whatsoever when we pushed the view
+controller and when we popped the view controller.
+
+351
+00:25:58,570 --> 00:26:05,250
+So now we've verified that our application behaves as
+we expected and that our cache is indeed working now.
+
+352
+00:26:06,490 --> 00:26:10,750
+So that is the demo.
+
+353
+00:26:10,750 --> 00:26:14,070
+[ Applause ]
+
+354
+00:26:14,070 --> 00:26:18,840
+So I want to talk a little bit more about
+the details of how those snapshots work.
+
+355
+00:26:18,840 --> 00:26:23,490
+But the first thing, if you remember anything about
+abandoned memory, is that it will require some work
+
+356
+00:26:23,490 --> 00:26:27,770
+on the part of the programmer: you need to follow
+the steps, you need to have a user scenario,
+
+357
+00:26:27,770 --> 00:26:31,500
+and you need to verify that your
+application's memory growth isn't going
+
+358
+00:26:31,500 --> 00:26:35,790
+up over time just because you keep stashing away memory.
+
+359
+00:26:35,790 --> 00:26:40,230
+And very simple things, such as the typo
+I showed you can contribute to that.
+
+360
+00:26:40,230 --> 00:26:42,930
+Now those heapshots.
+
+361
+00:26:42,930 --> 00:26:47,420
+Well, they're not snapshots in the
+classical sense of being immutable.
+
+362
+00:26:47,420 --> 00:26:52,530
+So let's say for instance that your application
+starts up and you get it to that starting state.
+
+363
+00:26:52,530 --> 00:26:55,980
+Well, once you get to the starting
+state, you take a baseline snapshot.
+
+364
+00:26:55,980 --> 00:27:01,700
+Now, that doesn't mean that all of those objects in the
+snapshot will still live to the end of your program.
+
+365
+00:27:01,700 --> 00:27:03,510
+And that's what you're interested in.
+
+366
+00:27:03,510 --> 00:27:09,070
+So that when you actually repeat your scenario for the
+first time and take a snapshot, perhaps there's some caching
+
+367
+00:27:09,070 --> 00:27:12,920
+and you see 4 objects, this is sort
+of like what we saw in the demo.
+
+368
+00:27:12,920 --> 00:27:17,270
+If you repeat it again, take a snapshot,
+maybe there's two the second time.
+
+369
+00:27:17,270 --> 00:27:22,500
+But again, those objects can go away
+later and that is what you're looking for.
+
+370
+00:27:22,500 --> 00:27:28,170
+And so as you repeat it over and over again, hopefully
+you've coded well enough that those objects will go away
+
+371
+00:27:28,170 --> 00:27:34,360
+and that the number in between those two snapshots --
+the number of objects live at the of your program --
+
+372
+00:27:34,360 --> 00:27:40,280
+will drop to zero and that is when you actually fix
+the problem of abandoned memory for that scenario.
+
+373
+00:27:40,280 --> 00:27:45,180
+Perhaps it's time to look at a different scenario.
+
+374
+00:27:45,180 --> 00:27:45,530
+All right.
+
+375
+00:27:45,530 --> 00:27:46,250
+That's enough for me.
+
+376
+00:27:46,250 --> 00:27:51,950
+I'd like to pass this off to my colleague, Victor Hernandez.
+
+377
+00:27:51,950 --> 00:27:52,040
+[ Applause ]
+
+378
+00:27:52,040 --> 00:27:53,150
+>> Victor Hernandez: So thank you, Daniel.
+
+379
+00:27:53,150 --> 00:27:54,270
+My name is Victor Hernandez.
+
+380
+00:27:54,270 --> 00:27:57,660
+I'm also an engineer on the Performance Tools Team.
+
+381
+00:27:57,660 --> 00:28:01,980
+So the next memory issue we're going to be
+discussing is messages to deallocated objects.
+
+382
+00:28:01,980 --> 00:28:07,120
+And unlike the issues that Daniel talked
+about, this one can actually cause a crash.
+
+383
+00:28:07,120 --> 00:28:11,860
+You probably have seen plenty of crash
+reporter logs; here's yet another one.
+
+384
+00:28:11,860 --> 00:28:13,610
+But what makes this one unique?
+
+385
+00:28:13,610 --> 00:28:17,670
+Well, if we look at the crashing thread,
+you'll see that it's dying in objc_msgSend.
+
+386
+00:28:17,670 --> 00:28:25,300
+These can be really hard crashes to debug because
+you don't know what the object was supposed
+
+387
+00:28:25,300 --> 00:28:27,870
+to be at the time of the crash.
+
+388
+00:28:27,870 --> 00:28:29,960
+So how can you get yourself into this situation?
+
+389
+00:28:29,960 --> 00:28:33,370
+Well, it could be because of an overreleased object.
+
+390
+00:28:33,370 --> 00:28:41,620
+In this example, you have an NSString that's
+being allocated and it gets a rough count of 1.
+
+391
+00:28:41,620 --> 00:28:48,120
+If at some point in the future, you release that string,
+its rough count goes to 0, causing it to be deallocated.
+
+392
+00:28:48,120 --> 00:28:55,730
+And then later on, if you pass a message to that
+deallocated object, well, there's your crash.
+
+393
+00:28:55,730 --> 00:28:57,830
+So how can you go about debugging this?
+
+394
+00:28:57,830 --> 00:29:04,600
+Well, Instruments provides you with a very
+useful thing called the Zombies template.
+
+395
+00:29:04,600 --> 00:29:09,610
+And what happens here is a little bit different: you
+allocate your string, you have a rough count of 1;
+
+396
+00:29:09,610 --> 00:29:15,160
+then you do the release and the rough count goes to 0.
+
+397
+00:29:15,160 --> 00:29:20,870
+But instead of deallocating the object,
+you instead turn it into a zombie.
+
+398
+00:29:20,870 --> 00:29:26,510
+And this is really useful because at the later point when
+you actually pass the string by appending format message
+
+399
+00:29:26,510 --> 00:29:33,530
+to that string, you're actually passing it to the zombie,
+which Instruments records and it actually notifies you
+
+400
+00:29:33,530 --> 00:29:38,440
+with this really, really great dialogue that
+comes up and you're one click away from finding
+
+401
+00:29:38,440 --> 00:29:43,200
+out what all the information you
+need to actually fix this crash.
+
+402
+00:29:43,200 --> 00:29:46,760
+So there's no better way to show you
+how this works than with an actual demo.
+
+403
+00:29:46,760 --> 00:29:57,010
+So I'm going to launch Xcode and
+I'm going to bring up my program.
+
+404
+00:29:57,010 --> 00:29:57,730
+It's right here.
+
+405
+00:29:57,730 --> 00:30:00,810
+And -- all right.
+
+406
+00:30:00,810 --> 00:30:06,240
+So I'm going to quickly launch this application.
+
+407
+00:30:06,240 --> 00:30:18,380
+So the demo application is a simple reader, it consists
+of a library of books, each book has an entry with a title
+
+408
+00:30:18,380 --> 00:30:22,760
+and its author and you can go ahead and read the book.
+
+409
+00:30:22,760 --> 00:30:25,230
+My users have been reporting that
+there's been intermittent crashes.
+
+410
+00:30:25,230 --> 00:30:27,990
+Let me see if I can actually reproduce that.
+
+411
+00:30:27,990 --> 00:30:33,960
+Sure enough, there's the crash.
+
+412
+00:30:33,960 --> 00:30:38,350
+And if I look at the debugger, it's
+actually dying in objc_msgSend.
+
+413
+00:30:38,350 --> 00:30:41,320
+It is my crash, great.
+
+414
+00:30:41,320 --> 00:30:47,850
+So but I'm actually going to look at this and find out
+if I can get much more information using Instruments.
+
+415
+00:30:47,850 --> 00:30:51,210
+So let's launch Instruments.
+
+416
+00:30:51,210 --> 00:30:56,030
+There's a whole variety of templates for me to choose from.
+
+417
+00:30:56,030 --> 00:30:58,870
+I'm going to be running this in iPhone simulator.
+
+418
+00:30:58,870 --> 00:31:03,670
+And this is the Zombies template that I'm interested in.
+
+419
+00:31:03,670 --> 00:31:10,440
+So what's interesting here is that the first
+thing you'll notice is that it looks just
+
+420
+00:31:10,440 --> 00:31:16,130
+like I have the Allocations instrument and
+there's no zombies, that's the thing about it.
+
+421
+00:31:16,130 --> 00:31:17,620
+Well, in fact, that's actually not the case.
+
+422
+00:31:17,620 --> 00:31:23,950
+If we look at the inspector, you'll notice that there's two
+extra settings: set one, enable zombie detection turned on,
+
+423
+00:31:23,950 --> 00:31:27,930
+that's great; the other one is right
+here, which is record reference counts.
+
+424
+00:31:27,930 --> 00:31:34,990
+So in this case, we'll not only get the memory history
+that consists of the allocation and the deallocation
+
+425
+00:31:34,990 --> 00:31:40,050
+of the object, but we'll also get all of the
+retain releases and autoreleases in between.
+
+426
+00:31:40,050 --> 00:31:45,210
+And that's exactly all the extra information that
+we really need to be able to debug this well.
+
+427
+00:31:45,210 --> 00:31:48,040
+So let's go ahead and launch our program.
+
+428
+00:31:48,040 --> 00:31:58,170
+OK. Let's see if we can reproduce the crash.
+
+429
+00:31:58,170 --> 00:31:59,000
+Scrolling.
+
+430
+00:31:59,000 --> 00:32:03,350
+Ah ha, there it is, great.
+
+431
+00:32:03,350 --> 00:32:06,090
+So Instruments tells us that a zombie has been messaged --
+
+432
+00:32:06,090 --> 00:32:10,320
+an Objective-C message was sent to your
+deallocated object at this address.
+
+433
+00:32:10,320 --> 00:32:11,520
+And here's the one click away.
+
+434
+00:32:11,520 --> 00:32:14,600
+You just go to the Focus button and you press that
+
+435
+00:32:14,600 --> 00:32:20,400
+and down below you get the complete history
+-- the memory history -- for this object.
+
+436
+00:32:20,400 --> 00:32:23,790
+The first thing to note is that we now
+know actually the type of the object;
+
+437
+00:32:23,790 --> 00:32:27,240
+it's a string and it has 13 memory events.
+
+438
+00:32:27,240 --> 00:32:34,750
+The first one is its allocation, followed by a series of
+autorelease retains and releases that pump the rough count
+
+439
+00:32:34,750 --> 00:32:41,480
+to positive numbers, eventually getting to the point where
+it gets a rough count of zero, which in this case turns it
+
+440
+00:32:41,480 --> 00:32:47,440
+into a zombie and then any later memory event or
+message sent to this object will actually be reported
+
+441
+00:32:47,440 --> 00:32:50,230
+as a zombie event -- that's really useful.
+
+442
+00:32:50,230 --> 00:32:57,720
+So the place to start with debugging this is to actually
+look at the last zombie event and see what it tells us.
+
+443
+00:32:58,870 --> 00:33:02,520
+So I'm going to bring up the extended detail view.
+
+444
+00:33:02,520 --> 00:33:08,590
+And it looks like it's happening on this line.
+
+445
+00:33:08,590 --> 00:33:11,250
+So I'm going to go over here.
+
+446
+00:33:11,250 --> 00:33:16,000
+And just to see this better, let's bring this up in Xcode.
+
+447
+00:33:16,000 --> 00:33:19,180
+OK. OK, so what's going on in this code?
+
+448
+00:33:19,180 --> 00:33:28,170
+OK, it's a method, it's our table view cell selector
+and so every time that we populate one of the cells
+
+449
+00:33:28,170 --> 00:33:30,750
+in our application where this gets called.
+
+450
+00:33:30,750 --> 00:33:36,730
+But what's so special about it -- oh, right, I added this
+special code so that when you're displaying the author,
+
+451
+00:33:36,730 --> 00:33:41,970
+it actually checks to see if it has a last
+name because we don't want to ship any books
+
+452
+00:33:41,970 --> 00:33:44,550
+that the authors are forgetting their last name.
+
+453
+00:33:44,550 --> 00:33:51,490
+So I'm putting this really ugly string, "X X incomplete
+author names" so that QA catches this before we ship.
+
+454
+00:33:51,490 --> 00:33:55,470
+Well, this sounds like a good feature,
+but unfortunately it's causing a crash.
+
+455
+00:33:55,470 --> 00:33:57,110
+Well, why is it causing a crash?
+
+456
+00:33:57,110 --> 00:34:03,630
+Well, it looks like the author variable is
+being passed the stringByAppendingFormat message
+
+457
+00:34:03,630 --> 00:34:06,380
+and this is the zombie right here.
+
+458
+00:34:06,380 --> 00:34:14,400
+So let's go back and find out where we got the author's
+variable from -- it's the author field of the book class.
+
+459
+00:34:14,400 --> 00:34:16,420
+Well, let's jump to that definition.
+
+460
+00:34:16,420 --> 00:34:23,200
+Uh-oh. Ah, there we go.
+
+461
+00:34:23,200 --> 00:34:29,930
+And I want to go to the header because
+I'm interested in the declaration.
+
+462
+00:34:29,930 --> 00:34:35,400
+Sure, it's a string -- we already knew that -- but
+looking down below, there's more important information,
+
+463
+00:34:35,400 --> 00:34:39,380
+it's actually a property and it's been
+declared as nonatomic and retained.
+
+464
+00:34:39,380 --> 00:34:45,130
+That means that every time that you set that property, its
+old value gets released and the new value gets retained.
+
+465
+00:34:45,130 --> 00:34:47,460
+That might be useful information.
+
+466
+00:34:47,460 --> 00:34:51,810
+OK. Now that we know where we got this
+value from, let's go back to Instruments.
+
+467
+00:34:51,810 --> 00:34:58,880
+And let's go back to the history and see
+how we should continue debugging this.
+
+468
+00:34:58,880 --> 00:35:08,210
+So we got to ask ourselves a few questions:
+first of all, what could be going wrong?
+
+469
+00:35:08,210 --> 00:35:11,200
+Well, the first thing I could think
+of is this is an overreleased object.
+
+470
+00:35:11,200 --> 00:35:16,150
+And if this is an overreleased object, the message might
+actually -- that it's crashing on -- should be released.
+
+471
+00:35:16,150 --> 00:35:17,400
+That's not the case.
+
+472
+00:35:17,400 --> 00:35:23,900
+So the next thing to think about is whether
+or not we're correctly protecting that object
+
+473
+00:35:23,900 --> 00:35:26,540
+from being released by another reference to it.
+
+474
+00:35:26,540 --> 00:35:32,400
+And the best way to find that out is to go through all the
+releases and see if any of them point to anything wrong.
+
+475
+00:35:32,400 --> 00:35:36,950
+So I'm going to go to this release,
+I'm going to see where it's happening.
+
+476
+00:35:36,950 --> 00:35:38,400
+Oh, that's not that interesting.
+
+477
+00:35:38,400 --> 00:35:47,760
+It's just simply the synthesized setter for the author,
+although we do know already something about that.
+
+478
+00:35:47,760 --> 00:35:51,120
+And then -- uh-oh, this is actually
+happening on the previous line.
+
+479
+00:35:51,120 --> 00:35:53,590
+Oh, right, here's the book.
+
+480
+00:35:53,590 --> 00:35:59,400
+Whenever we set the author property, it
+ends up releasing its previous value,
+
+481
+00:35:59,400 --> 00:36:02,380
+which is what the author variable's pointing to.
+
+482
+00:36:02,380 --> 00:36:05,270
+So sure enough, this is the bug.
+
+483
+00:36:05,270 --> 00:36:08,570
+So let me go ahead and fix that.
+
+484
+00:36:08,570 --> 00:36:10,370
+I should protect my variable.
+
+485
+00:36:10,370 --> 00:36:18,610
+So one way of fixing this would be to
+retain it before and after its use.
+
+486
+00:36:18,610 --> 00:36:21,310
+If I could type.
+
+487
+00:36:21,310 --> 00:36:22,440
+There we go.
+
+488
+00:36:22,440 --> 00:36:31,380
+But in fact, actually, this isn't even necessary because
+we know that the book.author is going to be set right here
+
+489
+00:36:31,380 --> 00:36:40,520
+so why don't we just get rid of book.author.nil --
+equal nil -- which is redundant and do all of this?
+
+490
+00:36:40,520 --> 00:36:43,480
+Save that and try running it again.
+
+491
+00:36:43,480 --> 00:36:52,190
+I'm going to build and I'm going to try running
+it again and see if I get a zombie again.
+
+492
+00:36:52,190 --> 00:36:56,250
+So I'm going to follow my same steps.
+
+493
+00:36:56,250 --> 00:37:00,120
+Oh and sure enough -- look, I can scroll all the
+way to the bottom and the crash has gone away.
+
+494
+00:37:00,120 --> 00:37:00,740
+[ Applause ]
+
+495
+00:37:00,740 --> 00:37:08,600
+So what have you seen there?
+
+496
+00:37:08,600 --> 00:37:12,850
+You've seen that the Zombie template
+instrument is a great tool for being able
+
+497
+00:37:12,850 --> 00:37:18,520
+to debug crashes associated with deallocated objects.
+
+498
+00:37:18,520 --> 00:37:24,930
+I want to point out a particular quote from the
+reference guide that Daniel referred to earlier,
+
+499
+00:37:24,930 --> 00:37:29,060
+the "Memory Management Programming Guide" because
+it talks specifically about this scenario:
+
+500
+00:37:29,060 --> 00:37:33,880
+"A received object is normally guaranteed to
+remain valid within the method it was received
+
+501
+00:37:33,880 --> 00:37:37,410
+in (exceptions include multithreaded applications
+
+502
+00:37:37,410 --> 00:37:43,230
+and in some Distributed Objects situations although
+you must also take care if you modify an object
+
+503
+00:37:43,230 --> 00:37:47,430
+from which you received another
+object)," exactly the crash that I hit.
+
+504
+00:37:47,430 --> 00:37:53,410
+We modified the book and that ended up
+modifying the author string that we got
+
+505
+00:37:53,410 --> 00:37:56,520
+from it; we need to be really careful about this.
+
+506
+00:37:56,520 --> 00:37:59,950
+So what else do you need to know about the Zombies template?
+
+507
+00:37:59,950 --> 00:38:03,070
+Well, first of all, it causes a lot of memory growth
+
+508
+00:38:03,070 --> 00:38:07,500
+because those objects never get
+deallocated, they just stay around as zombies.
+
+509
+00:38:07,500 --> 00:38:16,740
+So you need to use the iPhone and iPad simulator to debug
+this because the memory constraints on the other devices.
+
+510
+00:38:16,740 --> 00:38:22,860
+Also, it's not suitable to use with leaks
+because everything will show up as a leak.
+
+511
+00:38:22,860 --> 00:38:28,420
+And finally, really important take-home message
+for this kind of crash: it's not always the fault
+
+512
+00:38:28,420 --> 00:38:35,220
+of that last objc_msgSend that's causing the crash, it
+could be any of the releases beforehand and you need
+
+513
+00:38:35,220 --> 00:38:39,330
+to know its full memory history to
+find out how to debug this crash.
+
+514
+00:38:39,330 --> 00:38:42,150
+OK, moving along.
+
+515
+00:38:42,150 --> 00:38:46,930
+The next issue we're going to be talking
+about is responding to memory warnings.
+
+516
+00:38:46,930 --> 00:38:51,310
+Memory warnings are a simple fact of life on iPhone OS.
+
+517
+00:38:51,310 --> 00:38:55,680
+When the system needs memory, notifications
+go out to all the applications.
+
+518
+00:38:55,680 --> 00:39:02,950
+This is even more common now that there's multitasking, so
+there's going to be more contention for the same memory.
+
+519
+00:39:02,950 --> 00:39:06,610
+Your application needs to respond or be terminated.
+
+520
+00:39:06,610 --> 00:39:12,140
+And there's a variety of ways of writing the
+codes to handle all these memory notifications.
+
+521
+00:39:12,140 --> 00:39:13,200
+Here's two examples.
+
+522
+00:39:13,200 --> 00:39:16,270
+But one of the things that can be
+really tricky to find out is, well,
+
+523
+00:39:16,270 --> 00:39:19,930
+what are you supposed to actually do during that function?
+
+524
+00:39:19,930 --> 00:39:26,610
+Well, it's really simple: to decide what memory
+to free, you just simply need to know what pages
+
+525
+00:39:26,610 --> 00:39:29,970
+in your virtual memory are resonant and dirty.
+
+526
+00:39:29,970 --> 00:39:33,190
+And Instruments helps you identify these pages.
+
+527
+00:39:33,190 --> 00:39:37,510
+So first, let's be explicit about this: what
+are we talking about with resident dirty pages?
+
+528
+00:39:37,510 --> 00:39:42,290
+Your application, it's going to
+display and edit this Tokyo photograph.
+
+529
+00:39:42,290 --> 00:39:50,470
+It maps it in initially and the protection is
+read/write and it's been loaded copy-on-write.
+
+530
+00:39:50,470 --> 00:39:56,190
+So if at any point you read it,
+that makes the memory resident.
+
+531
+00:39:56,190 --> 00:40:00,250
+And then at a later point, when you decide to write it,
+
+532
+00:40:00,250 --> 00:40:05,860
+the page that you wrote has now become
+dirty; that's resident dirty pages.
+
+533
+00:40:05,860 --> 00:40:11,000
+So how do you find out what pages are resident and dirty?
+
+534
+00:40:11,000 --> 00:40:16,060
+Well, you watch your virtual memory
+using the VM Tracker instrument.
+
+535
+00:40:16,060 --> 00:40:19,980
+The VM Tracker instrument takes
+snapshots of your virtual memory.
+
+536
+00:40:19,980 --> 00:40:25,310
+You can think of it as a visual
+depiction of the vmmap command line tool.
+
+537
+00:40:25,310 --> 00:40:32,570
+And it provides more granularity than Activity Monitor
+because it doesn't tell you the accumulated statistics
+
+538
+00:40:32,570 --> 00:40:39,520
+for the whole program, but instead it gives you information
+for each region and each page of your virtual memory.
+
+539
+00:40:39,520 --> 00:40:46,430
+For each of those, it tells you the type of the
+memory, it identifies what kind of protection you have,
+
+540
+00:40:46,430 --> 00:40:50,240
+and more importantly, it reports if it's resident and dirty.
+
+541
+00:40:50,240 --> 00:40:56,630
+There's another really good thing about using VM
+Tracker, which is it helps you check your work.
+
+542
+00:40:56,630 --> 00:41:06,060
+You need to be proactive about checking to see that
+your memory warning handler actually does its job.
+
+543
+00:41:06,060 --> 00:41:11,100
+And what you can do is you can use the
+simulator to manually trigger a memory warning
+
+544
+00:41:11,100 --> 00:41:17,740
+and then watch your virtual memory usage
+using VM Tracker to see how your app responds.
+
+545
+00:41:17,740 --> 00:41:21,960
+And it's time to show you a demo to see how to do this.
+
+546
+00:41:21,960 --> 00:41:25,340
+OK, so we're back at the demo machine.
+
+547
+00:41:25,340 --> 00:41:30,060
+Let me quit this.
+
+548
+00:41:30,060 --> 00:41:32,290
+All right.
+
+549
+00:41:32,290 --> 00:41:36,440
+So my -- here we go.
+
+550
+00:41:36,440 --> 00:41:44,160
+So in the same reader application, I have
+my delegate, which is where I'm supposed
+
+551
+00:41:44,160 --> 00:41:52,910
+to implement my memory warning handler, but as you can
+see it's blank; I don't know what I'm supposed to release.
+
+552
+00:41:52,910 --> 00:41:59,480
+So let's run it inside of Instruments to find out.
+
+553
+00:41:59,480 --> 00:42:08,420
+The Allocations template's the one you're going to want
+to use because it also includes the VM Tracker instrument.
+
+554
+00:42:08,420 --> 00:42:11,240
+So I'm going to choose that one.
+
+555
+00:42:11,240 --> 00:42:16,640
+And you'll notice that it's initially
+not giving you any data.
+
+556
+00:42:16,640 --> 00:42:22,630
+Well, the reason is because it's set up to manually
+take snapshots or you can actually tell it to do
+
+557
+00:42:22,630 --> 00:42:26,720
+that automatically and you can even
+change the interval at which it does that.
+
+558
+00:42:26,720 --> 00:42:30,320
+Great. Look, it just populated that
+and it gave me this information.
+
+559
+00:42:30,320 --> 00:42:32,290
+Well, this is the summary review.
+
+560
+00:42:32,290 --> 00:42:42,220
+It tells you for all the different types of memory how
+much of it is resident and how much of it is virtual
+
+561
+00:42:42,220 --> 00:42:47,250
+and also its protection and more importantly, look right
+down here, it actually tells you how much of it is dirty.
+
+562
+00:42:47,250 --> 00:42:49,120
+But this isn't the granularity you want.
+
+563
+00:42:49,120 --> 00:42:50,870
+You want even more granularity.
+
+564
+00:42:50,870 --> 00:42:56,970
+So you go to the regions map and here, for every
+single region it tells you that information,
+
+565
+00:42:56,970 --> 00:43:04,580
+specifically it tells you for each range how many
+bytes are dirty, how many bytes are resonant,
+
+566
+00:43:04,580 --> 00:43:07,860
+what's the total size, and also once again, its protections.
+
+567
+00:43:07,860 --> 00:43:12,400
+And it also tells you the associated
+file with each of those ranges.
+
+568
+00:43:12,400 --> 00:43:13,860
+That's really, really useful.
+
+569
+00:43:13,860 --> 00:43:18,410
+You can see it starts off with your
+application, followed by all of its libraries.
+
+570
+00:43:18,410 --> 00:43:22,630
+And if we keep on scrolling down,
+we know that this is a reader app
+
+571
+00:43:22,630 --> 00:43:28,010
+so we should eventually see the text files
+associated with the books we're reading.
+
+572
+00:43:28,010 --> 00:43:29,060
+Where are they?
+
+573
+00:43:29,060 --> 00:43:31,650
+There they are, great.
+
+574
+00:43:31,650 --> 00:43:35,900
+So I'm going to highlight "History of the United States".
+
+575
+00:43:35,900 --> 00:43:41,830
+You see that we have -- it's a memory-mapped
+file and that currently the dirty size is zero.
+
+576
+00:43:41,830 --> 00:43:46,690
+That makes sense because all we've done is actually
+loaded it to be able to get the author and the title
+
+577
+00:43:46,690 --> 00:43:50,900
+out of the text file but we actually
+haven't displayed it yet.
+
+578
+00:43:50,900 --> 00:43:54,880
+And it turns out that our application
+is not just displaying it,
+
+579
+00:43:54,880 --> 00:43:58,920
+but it's actually decrypting the
+encrypted version that we have on disk.
+
+580
+00:43:58,920 --> 00:44:03,570
+So once we actually display it, it's going to
+have write the decrypted part back to memory.
+
+581
+00:44:03,570 --> 00:44:05,920
+So let's actually watch it do that.
+
+582
+00:44:05,920 --> 00:44:11,090
+So I'm going to focus in on that file and it's on FBCC.
+
+583
+00:44:11,090 --> 00:44:15,440
+Great there it is -- "History of the United States".
+
+584
+00:44:15,440 --> 00:44:20,300
+And I'll watch what happens when I actually click on this.
+
+585
+00:44:20,300 --> 00:44:27,830
+Sure enough, I'll focus and you will see that at that
+address range, it changed from map to VM allocated
+
+586
+00:44:27,830 --> 00:44:32,510
+because it was loaded on copy-on-write
+and all of it became dirty.
+
+587
+00:44:32,510 --> 00:44:36,660
+This is exactly the sort of memory we should be cleaning up.
+
+588
+00:44:36,660 --> 00:44:41,890
+But I haven't actually implemented
+anything -- the memory handler.
+
+589
+00:44:41,890 --> 00:44:45,730
+So I need to go ahead and do that.
+
+590
+00:44:45,730 --> 00:44:52,700
+So let me stop this, quit it, and
+-- so what should I do here?
+
+591
+00:44:52,700 --> 00:44:59,710
+Well, I basically need to tell the library to
+give back to the system all memory associated
+
+592
+00:44:59,710 --> 00:45:02,030
+with the books that I'm not currently looking at.
+
+593
+00:45:02,030 --> 00:45:07,160
+Well, sure enough, I've already written
+a convenience routine that does that
+
+594
+00:45:07,160 --> 00:45:11,140
+and I have it right here and I'll just implement that.
+
+595
+00:45:12,430 --> 00:45:16,820
+Great. Let me build it.
+
+596
+00:45:16,820 --> 00:45:21,170
+And I'm going to run it again in the exact same way.
+
+597
+00:45:21,170 --> 00:45:27,390
+OK. So I switch over to the VM Tracker.
+
+598
+00:45:27,390 --> 00:45:29,230
+I do a snapshot.
+
+599
+00:45:31,050 --> 00:45:32,780
+There we go.
+
+600
+00:45:32,780 --> 00:45:37,040
+I switch the region's map and I'm
+going to go back down to my text files.
+
+601
+00:45:37,040 --> 00:45:39,710
+I'm going to follow all the same steps.
+
+602
+00:45:39,710 --> 00:45:41,040
+"History of the United States".
+
+603
+00:45:41,040 --> 00:45:44,070
+This time it's a 104D.
+
+604
+00:45:44,070 --> 00:45:46,840
+There it is.
+
+605
+00:45:46,840 --> 00:45:51,650
+Once I click on it, I'm going to see
+that memory switch to VM allocated.
+
+606
+00:45:51,650 --> 00:45:53,780
+And I'm now going to go back.
+
+607
+00:45:53,780 --> 00:46:01,560
+At this point, if I receive a memory warning,
+I should give that memory back to the system.
+
+608
+00:46:01,560 --> 00:46:04,370
+Now, the next step is to actually
+simulate the memory warning.
+
+609
+00:46:04,370 --> 00:46:06,730
+Well, it's right here in the iPhone simulator.
+
+610
+00:46:06,730 --> 00:46:07,740
+I do that.
+
+611
+00:46:07,740 --> 00:46:12,410
+And what I want to see, actually, is I want
+the memory to go and sure enough it has.
+
+612
+00:46:12,410 --> 00:46:14,980
+That's how you can check your work.
+
+613
+00:46:14,980 --> 00:46:26,310
+So VM Tracker is a great -- [applause] -- so VM Tracker
+is a great tool for helping you identify all the pages
+
+614
+00:46:26,310 --> 00:46:31,040
+that are resident and dirty in your
+application and also check your work
+
+615
+00:46:31,040 --> 00:46:33,710
+after the fact that you've actually done a correct job.
+
+616
+00:46:33,710 --> 00:46:42,840
+And with that, I'd like to invite Daniel back
+on stage to talk about our last memory issue.
+
+617
+00:46:42,840 --> 00:46:43,060
+[ Applause ]
+
+618
+00:46:43,060 --> 00:46:44,540
+>> Daniel Delwood: Thank you very much, Victor.
+
+619
+00:46:44,540 --> 00:46:49,070
+Last thing I want to talk about is using autorelease
+properly and give you some tips and tricks.
+
+620
+00:46:49,070 --> 00:46:53,350
+So first of all, memory high-water mark
+really does matter in your application.
+
+621
+00:46:53,350 --> 00:46:56,350
+If you're on a Mac, this means
+that you're going to cause paging,
+
+622
+00:46:56,350 --> 00:46:59,620
+on iPhone we've already spoken about memory warnings.
+
+623
+00:46:59,620 --> 00:47:03,590
+So you can use the Allocations and
+VM Tracker instruments graphs --
+
+624
+00:47:03,590 --> 00:47:06,980
+those graphs that we showed -- to
+identify spikes in your memory usage.
+
+625
+00:47:06,980 --> 00:47:08,250
+Now, what do they look like?
+
+626
+00:47:08,250 --> 00:47:10,060
+Something like this.
+
+627
+00:47:10,060 --> 00:47:16,140
+And so if you see it in really big spikes like this,
+you'll notice that maybe it's using 10.6 megabytes.
+
+628
+00:47:16,140 --> 00:47:17,240
+Well, that's a lot of memory.
+
+629
+00:47:17,240 --> 00:47:23,000
+And many images loading and that sort of thing
+will actually cause it to spike even higher.
+
+630
+00:47:23,000 --> 00:47:26,930
+So what you really want to do is
+lower those spikes as much as possible
+
+631
+00:47:26,930 --> 00:47:29,830
+and keep your memory usage as steady as possible.
+
+632
+00:47:29,830 --> 00:47:32,420
+Better would be a graph that looks like this.
+
+633
+00:47:32,420 --> 00:47:39,840
+Now, you can accomplish this by using more
+granular autorelease pools by nesting them
+
+634
+00:47:39,840 --> 00:47:45,880
+and perhaps even avoid autorelease objects at some points.
+
+635
+00:47:45,880 --> 00:47:49,470
+Now, there's definitely good places to
+use autorelease objects when you have
+
+636
+00:47:49,470 --> 00:47:52,470
+to return values from methods and things like that.
+
+637
+00:47:52,470 --> 00:47:56,170
+But the key is being smart about it.
+
+638
+00:47:56,170 --> 00:47:58,750
+So let's talk about loops.
+
+639
+00:47:58,750 --> 00:48:04,780
+Loops are a really good place to be careful of this.
+
+640
+00:48:04,780 --> 00:48:09,530
+So in this example, what we have is we have a database
+of employees and all we're doing is we're looping through
+
+641
+00:48:09,530 --> 00:48:13,150
+and trying to separate out the employees by their group ID.
+
+642
+00:48:13,150 --> 00:48:15,450
+Great, it's a simple idea.
+
+643
+00:48:15,450 --> 00:48:20,240
+But you'll notice that the loop invariance,
+database.lastEmployee.number, well,
+
+644
+00:48:20,240 --> 00:48:23,590
+that's actually calling a property on the object.
+
+645
+00:48:23,590 --> 00:48:27,350
+And lastEmployee could be a new autorelease
+object every time, especially if you're loading it
+
+646
+00:48:27,350 --> 00:48:31,820
+from a SQLite database, you know, it's something
+you need to be aware of and be careful of.
+
+647
+00:48:31,820 --> 00:48:35,470
+In this case, it's really easy to fix
+-- you just move that loop invariance
+
+648
+00:48:35,470 --> 00:48:40,540
+up a line right before the loop and
+don't call it every single time.
+
+649
+00:48:40,540 --> 00:48:46,570
+Another one, some things like selectedRowIndexes
+on table view.
+
+650
+00:48:46,570 --> 00:48:50,120
+Well, the table view can keep its
+selected indexes any way it wants.
+
+651
+00:48:50,120 --> 00:48:55,240
+It can keep it in malloc buffer, it can keep them in
+immutable index array, that's an implementation detail.
+
+652
+00:48:55,240 --> 00:49:02,130
+But the key is: however it does keep it, it probably
+will need to return you an autoreleased immutable copy
+
+653
+00:49:02,130 --> 00:49:05,180
+so that you don't mess with its internal data.
+
+654
+00:49:05,180 --> 00:49:13,960
+So in that case, calling selectedRowIndexes is returning
+you a new NSIndex set every single time you call it.
+
+655
+00:49:13,960 --> 00:49:18,150
+Now, in this case, we're not even actually
+modifying the table's selected rows.
+
+656
+00:49:18,150 --> 00:49:20,840
+So we can also move that up and out of the loop.
+
+657
+00:49:20,840 --> 00:49:28,620
+And finally, one very, very common thing that you can
+do and very easy thing that you can do is to avoid some
+
+658
+00:49:28,620 --> 00:49:31,720
+of these convenience methods inside of loops.
+
+659
+00:49:31,720 --> 00:49:38,530
+So numberWithInt, date, those sort of things off
+the class will return you an autoreleased value
+
+660
+00:49:38,530 --> 00:49:40,380
+and that will grow your pool.
+
+661
+00:49:40,380 --> 00:49:45,320
+If you run this loop 10,000 times, that's 10,000 NSNumbers.
+
+662
+00:49:45,320 --> 00:49:52,350
+And so since we're just using it as key here, what we could
+do, the line before say number equals number alloc init
+
+663
+00:49:52,350 --> 00:49:59,680
+with group ID and the right below our use of
+it in objectForKey, just say "number release."
+
+664
+00:49:59,680 --> 00:50:06,680
+So it's taking a little bit more control of our memory
+management based on the spikes that we see in those graphs
+
+665
+00:50:06,680 --> 00:50:10,750
+and even the statistics you can see
+in the Object Allocations instrument.
+
+666
+00:50:10,750 --> 00:50:15,440
+Finally, I want to point out that there's no
+magic here; this is just a delayed release.
+
+667
+00:50:15,440 --> 00:50:20,820
+Autorelease isn't doing anything under the covers
+that's special and you can even see this in Instruments
+
+668
+00:50:20,820 --> 00:50:22,790
+when you look at the rough counting histories.
+
+669
+00:50:22,790 --> 00:50:28,490
+So, highlighted here is an autorelease event
+but you'll notice that just in the bottom right,
+
+670
+00:50:28,490 --> 00:50:33,590
+there's a release event two down and that's
+where the autorelease pool gets drained.
+
+671
+00:50:33,590 --> 00:50:40,220
+And so this is how you can sort of see when your
+autorelease pools pop and fine-tune your usage better.
+
+672
+00:50:40,220 --> 00:50:47,690
+All right to summarize: memory's a limited
+resource -- you know this but it's also very, very,
+
+673
+00:50:47,690 --> 00:50:53,900
+very important that you pay attention to it;
+Instruments can help you and is a great tool,
+
+674
+00:50:53,900 --> 00:51:00,350
+lots of different facilities inside there; and you
+should really work to avoid wasting and misusing memory
+
+675
+00:51:00,350 --> 00:51:05,260
+and even in the case of abandoned memory, you're going to
+have to actually put in some work to get those scenarios
+
+676
+00:51:05,260 --> 00:51:08,610
+and make sure what you think is happening actually is.
+
+677
+00:51:08,610 --> 00:51:12,880
+And finally, please be proactive -- profile
+your app before the problems happen.
+
+678
+00:51:12,880 --> 00:51:18,600
+Now, before you tune out, I'd like to direct you to
+our Developer Tools Evangelist for more information,
+
+679
+00:51:18,600 --> 00:51:21,920
+the Instruments documentation, and
+really plug the developer forum --
+
+680
+00:51:21,920 --> 00:51:27,520
+this is a lot people who have gone through the
+same problems, faced the same challenges you have,
+
+681
+00:51:27,520 --> 00:51:34,400
+and they're very, very helpful and give advice on these
+forums, and we also hang out there when we have time.
+
+682
+00:51:34,400 --> 00:51:38,210
+And finally, for related sessions -- you
+might need a time machine for some of these --
+
+683
+00:51:38,210 --> 00:51:42,370
+but the last ones, the performance optimization on iPhone OS
+
+684
+00:51:42,370 --> 00:51:48,830
+and the automated user testing are coming
+up, well, actually the last one isn't.
+
+685
+00:51:48,830 --> 00:51:49,530
+That is all.
+
+686
+00:51:49,530 --> 00:51:50,260
+Thank you very much for coming.
+
+687
+00:51:50,260 --> 00:52:01,710
+[ Applause ]
+

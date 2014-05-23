@@ -1,0 +1,2642 @@
+1
+00:00:06,570 --> 00:00:07,800
+>> Good afternoon everybody.
+
+2
+00:00:07,800 --> 00:00:13,240
+My name is Ted Kremenek and
+welcome to the LVM Technologies in DEV session.
+
+3
+00:00:13,240 --> 00:00:17,890
+This afternoon we're going to talk to
+you how LVM is playing an intrinsic role
+
+4
+00:00:17,890 --> 00:00:23,780
+in both the new Xcode 4 tools release
+and in various uses in Mac OS X.
+
+5
+00:00:23,780 --> 00:00:26,480
+So roughly the talk is divided into two parts.
+
+6
+00:00:26,480 --> 00:00:30,310
+I'm going to talk about how the Clang front
+end which is the part of the LVM compiler
+
+7
+00:00:30,310 --> 00:00:35,190
+that understands your C and Objective-C now C++ source code.
+
+8
+00:00:35,190 --> 00:00:40,700
+It's used to drive new features like code completion,
+new Fix It feature we saw on State of the Union
+
+9
+00:00:40,700 --> 00:00:43,600
+and of course indexing and edit all in scope.
+
+10
+00:00:43,600 --> 00:00:47,930
+Then I'm going to hand the reigns over to my counterpart
+on the Compiler Code Generation Team, Evan Chang,
+
+11
+00:00:47,930 --> 00:00:50,940
+and he's going to talk to you about
+the new LVM based debugger,
+
+12
+00:00:50,940 --> 00:00:57,320
+LLDB and a new integrated assembler
+which is part of an LVM compiler.
+
+13
+00:00:57,320 --> 00:01:00,650
+So it's an exciting session I hope you enjoy it.
+
+14
+00:01:00,650 --> 00:01:05,210
+So let's first talk about Clang being used inside Xcode 4.
+
+15
+00:01:05,210 --> 00:01:12,150
+So Clang as I said is the compiler front end, it's the
+part of the compiler that understands your source code
+
+16
+00:01:12,150 --> 00:01:19,820
+and so what we've done is literally taken it and put it
+inside Xcode 4 and so before I talk a little bit more
+
+17
+00:01:19,820 --> 00:01:27,200
+about what that actually means, I wanted to step back
+and kind of explain why on earth we decided to do this
+
+18
+00:01:27,200 --> 00:01:31,540
+in the first place because this is actually taking a very
+large and complicated piece of software and putting it
+
+19
+00:01:31,540 --> 00:01:36,660
+in another complicated piece of software
+so what are we trying to achieve here?
+
+20
+00:01:36,660 --> 00:01:42,880
+So essentially a couple of years ago when we started working
+on Clang and the new LVM compiler we were just looking
+
+21
+00:01:42,880 --> 00:01:50,800
+at the set of you know C, Objective-C and C++ source tools
+that were out there, like the landscape of tools IDEs
+
+22
+00:01:50,800 --> 00:01:57,420
+and document generation tools and whatever, and there's
+really you know despite a lot of valiant efforts
+
+23
+00:01:57,420 --> 00:02:04,310
+to build great tools there's just a lot of mediocrity
+and the question is why right and the reason is
+
+24
+00:02:04,310 --> 00:02:09,170
+that these languages are just beasts
+to build great tools around.
+
+25
+00:02:09,170 --> 00:02:12,570
+I mean if you consider features like
+you know the preprocessor you know
+
+26
+00:02:12,570 --> 00:02:18,920
+like macros they just fundamentally change what the
+code means you know just by having a pound define,
+
+27
+00:02:18,920 --> 00:02:25,710
+or if you consider C++ features like function overloading,
+or operator overloading what you type and what it means,
+
+28
+00:02:25,710 --> 00:02:31,360
+means completely different things depending on the context
+and just you know how you might have uttered something
+
+29
+00:02:31,360 --> 00:02:37,070
+and this just requires more than just raw syntactic
+analysis to extract meaning from what your program means.
+
+30
+00:02:37,070 --> 00:02:42,360
+You have things like name spaces or the
+really needy features C++ templates,
+
+31
+00:02:42,360 --> 00:02:45,130
+most source code rules just like fall over on this right.
+
+32
+00:02:45,130 --> 00:02:52,430
+This is just our experience is that these tools just don't
+feel like they understand our code as much as they can
+
+33
+00:02:52,430 --> 00:02:58,210
+and any intelligence that has been built in has been through
+heuristics and any time your code just kind of deviates
+
+34
+00:02:58,210 --> 00:03:04,340
+from that they feel like they just go off a cliff and
+this is just not ideal we're building real great software
+
+35
+00:03:04,340 --> 00:03:10,800
+with these languages still and we will for a
+long time so we want great tools to match that.
+
+36
+00:03:10,800 --> 00:03:15,600
+So let's take a look at the Xcode 3
+tools release and kind of like why are we
+
+37
+00:03:15,600 --> 00:03:18,340
+in this position and how can we improve it?
+
+38
+00:03:18,340 --> 00:03:24,540
+The Xcode 3 tools release is a great tools release
+and Xcode 3 is great, co-completion is awesome
+
+39
+00:03:24,540 --> 00:03:29,730
+but there's a lot more we can do and like what
+is the fundamental problems we have to address?
+
+40
+00:03:29,730 --> 00:03:36,450
+And if you just look at this diagram here on the right you
+can kind of see what is like a fundamental design problem.
+
+41
+00:03:36,450 --> 00:03:45,600
+Here I have 3 separate tools: The compiler, the Xcode ID
+itself and the debugger GDB and if you notice each one
+
+42
+00:03:45,600 --> 00:03:52,100
+of them has a separate C parser because each one of
+them needs to understand the C language at some level.
+
+43
+00:03:52,100 --> 00:03:56,950
+The compiler needs to compile your code, Xcode
+3 has to actually be syntax highlighting,
+
+44
+00:03:56,950 --> 00:04:03,210
+indexing you know it does things with your code to try
+and understand it and then GDB does expression parsing
+
+45
+00:04:03,210 --> 00:04:08,680
+and so forth so that you know it can give you
+intelligent results you know from your debugging session.
+
+46
+00:04:08,680 --> 00:04:09,930
+So there's a ton of replication here.
+
+47
+00:04:09,930 --> 00:04:18,440
+There's no overlap in any of these implementations
+and these are complicated languages so replicating all
+
+48
+00:04:18,440 --> 00:04:25,970
+of this work is really air prone and the debugger it's
+just not really and the ID is not really in the business
+
+49
+00:04:25,970 --> 00:04:33,410
+of being a compiler right I mean these making a front end
+to handle these languages is hard, there's a lot of work
+
+50
+00:04:33,410 --> 00:04:40,410
+and so what we've experienced is it's been very air
+prone to try and replicate building all the understanding
+
+51
+00:04:40,410 --> 00:04:46,530
+of our languages into all these tools in a way that
+makes sense and then you just get inconsistencies
+
+52
+00:04:46,530 --> 00:04:50,880
+where one tool thinks your code means one
+thing and another thinks it means another.
+
+53
+00:04:50,880 --> 00:04:52,980
+So this just sucks.
+
+54
+00:04:52,980 --> 00:04:57,170
+So we really wanted to you know go
+beyond this and have a unified experience
+
+55
+00:04:57,170 --> 00:05:00,560
+that all your tools look at your code in the same way.
+
+56
+00:05:02,010 --> 00:05:09,960
+So the natural question is why can't we just reuse
+the compiler's parser in all of these tools right?
+
+57
+00:05:09,960 --> 00:05:14,380
+Fundamentally the compiler is the ultimate
+source of truth of what your code actually means.
+
+58
+00:05:14,380 --> 00:05:18,080
+When you hit build who decides
+what your code actually means?
+
+59
+00:05:18,080 --> 00:05:25,830
+It's the compiler and so if it decides
+what's true can't we just recycle it?
+
+60
+00:05:25,830 --> 00:05:27,880
+And the benefits obviously are obvious.
+
+61
+00:05:27,880 --> 00:05:31,940
+You're going to get very precise
+results, think of it as your debugger
+
+62
+00:05:31,940 --> 00:05:34,530
+or the ID saw your code in the same way as the compiler.
+
+63
+00:05:34,530 --> 00:05:40,790
+It's going to have this consistency with the compiler
+that means every time that we add new language features
+
+64
+00:05:40,790 --> 00:05:45,050
+or we change things in the compiler these
+tools just automatically pick up those changes.
+
+65
+00:05:45,050 --> 00:05:49,050
+There's just none of these weird bugs are there.
+
+66
+00:05:49,050 --> 00:05:53,350
+But if this was so easy to do people would
+have obviously done it already right?
+
+67
+00:05:53,350 --> 00:05:58,720
+They don't want to necessarily replicate all of
+this and so the problem is that compilers have been
+
+68
+00:05:58,720 --> 00:06:02,380
+around for a long time and they tend to be very monolithic.
+
+69
+00:06:02,380 --> 00:06:09,210
+They have a very singular purpose in mind that they
+just take your code, suck it in and build an executable
+
+70
+00:06:09,210 --> 00:06:12,290
+and so they're not really engineered
+to be reused in this way
+
+71
+00:06:12,290 --> 00:06:16,650
+because you can't break them apart
+and use the pieces that you want.
+
+72
+00:06:16,650 --> 00:06:23,060
+Second, because they have this singular purpose they often
+drop many pieces of important information on the floor
+
+73
+00:06:23,060 --> 00:06:25,730
+that you would need to build other tools.
+
+74
+00:06:25,730 --> 00:06:32,390
+So if you look at GCC the preprocessor is not integrated
+so all the macro information is not actually seen
+
+75
+00:06:32,390 --> 00:06:36,850
+by the compiler, or accurate line and column
+information, if you wanted to build syntax highlighting
+
+76
+00:06:36,850 --> 00:06:40,230
+to IDE need great ranges and things like that.
+
+77
+00:06:40,230 --> 00:06:46,390
+So all this needs to be there in order to build a great
+tool experience and finally you need all that support,
+
+78
+00:06:46,390 --> 00:06:50,000
+you need all that modularity but
+the parser needs to be wicked fast
+
+79
+00:06:50,000 --> 00:06:53,700
+so you can have these very responsive UI experiences.
+
+80
+00:06:53,700 --> 00:07:00,980
+So this is really the challenges that we saw when we
+wanted to go out and build Clang so what we've done
+
+81
+00:07:00,980 --> 00:07:08,330
+in Xcode 4 is we've taken the Clang front end which is
+fast, modular, it can be reused in a variety of ways
+
+82
+00:07:08,330 --> 00:07:17,000
+and we put it inside the Xcode 4 ID and we're using it
+to help power in conjunction with Xcode these features
+
+83
+00:07:17,000 --> 00:07:23,010
+like source code indexing, syntax highlighting,
+code completion, and edit all in the scope
+
+84
+00:07:23,010 --> 00:07:27,640
+and the end result is you're going to get a huge
+amplitude in the precision of these features
+
+85
+00:07:27,640 --> 00:07:33,330
+and that makes all the difference in the world and
+because we've taken all the brains of the compiler
+
+86
+00:07:33,330 --> 00:07:38,860
+and put it inside the IDE you've going to be able to
+do more advanced features, much more easily things
+
+87
+00:07:38,860 --> 00:07:44,100
+that you just wouldn't have thought of doing before like
+the Live Morning and Fix It feature that is now in Xcode 4.
+
+88
+00:07:44,100 --> 00:07:49,860
+So I'm going to talk about these features and
+how they actually work in the Xcode 4 release.
+
+89
+00:07:49,860 --> 00:07:56,600
+So the first step of taking the power of the
+compiler and putting it inside the IDE is think
+
+90
+00:07:56,600 --> 00:08:01,490
+about how is this integration actually mechanically work?
+
+91
+00:08:01,490 --> 00:08:06,880
+And so what we've done is we've taken the Clang
+front end and packaged it up as a dynamic library.
+
+92
+00:08:06,880 --> 00:08:16,660
+It sits within the same process of as the Xcode IDE and so
+if we want to do some analysis on some source code Xcode,
+
+93
+00:08:16,660 --> 00:08:23,630
+the IDE which is managing you know your open editors and so
+forth passes the source information over to the Clang dialer
+
+94
+00:08:23,630 --> 00:08:29,210
+for processing but there's some
+other key element that's needed here.
+
+95
+00:08:29,210 --> 00:08:37,270
+Xcode, being an IDE that can actually go and build all
+your code knows how your code is meant to be compiled.
+
+96
+00:08:37,270 --> 00:08:41,310
+Right all the bill flags, the include
+paths, all the macro definitions,
+
+97
+00:08:41,310 --> 00:08:44,170
+were flagged to change the meaning of the various types.
+
+98
+00:08:44,170 --> 00:08:45,480
+These are all really important.
+
+99
+00:08:45,480 --> 00:08:48,720
+When you think about C it's not
+just the raw text that you type.
+
+100
+00:08:48,720 --> 00:08:53,500
+It's all that extra stuff that changes what
+the meaning of your source code actually is
+
+101
+00:08:53,500 --> 00:08:56,910
+and this is extremely important for
+building a rich tool experience.
+
+102
+00:08:56,910 --> 00:09:00,400
+If you think about a standalone editor
+it just doesn't have this information
+
+103
+00:09:00,400 --> 00:09:02,840
+because it's not integrated with the build system.
+
+104
+00:09:02,840 --> 00:09:07,840
+So we have the really the capability of doing
+something truly fantastic here that can't be replicated
+
+105
+00:09:07,840 --> 00:09:12,010
+in a different setting so all this
+information is very crucial
+
+106
+00:09:12,010 --> 00:09:16,540
+for building a rich source code analysis, source code tools.
+
+107
+00:09:16,540 --> 00:09:23,070
+So after the sources and that information is passed to
+Clang, Clang generates a rich semantic representation
+
+108
+00:09:23,070 --> 00:09:28,400
+of your source called an abstract syntax
+tree that contains things like line numbers,
+
+109
+00:09:28,400 --> 00:09:34,160
+type information on your expressions and so forth and
+then this information is then passed back to Xcode
+
+110
+00:09:34,160 --> 00:09:37,970
+which can then just go over, extract
+the symbol information that it needs
+
+111
+00:09:37,970 --> 00:09:40,890
+and then power things like syntax highlighting.
+
+112
+00:09:40,890 --> 00:09:45,040
+So we're going to talk about those kinds
+of features in a little bit more detail.
+
+113
+00:09:45,040 --> 00:09:50,230
+So the first feature I want to talk
+to you about is code completion
+
+114
+00:09:50,230 --> 00:09:54,410
+and how it actually works being driven by the compiler.
+
+115
+00:09:54,410 --> 00:09:59,490
+Code completion in Xcode 3 is actually pretty
+good, well not actually it's very good,
+
+116
+00:09:59,490 --> 00:10:03,120
+especially for Objective-C but
+it's been tuned over many years.
+
+117
+00:10:03,120 --> 00:10:07,600
+But there's a lot of cases where it just
+doesn't have the precision that we want
+
+118
+00:10:07,600 --> 00:10:11,510
+because it's missing important
+semantic information from the compiler.
+
+119
+00:10:11,510 --> 00:10:15,970
+Right definitions about structs
+and so forth and some things just only make sense
+
+120
+00:10:15,970 --> 00:10:19,990
+in certain contexts and if you're a C
+++ programmer you especially know this
+
+121
+00:10:19,990 --> 00:10:22,640
+because that's just how the language works.
+
+122
+00:10:22,640 --> 00:10:28,960
+So we had some pretty strong goals about
+bringing Clang based code completion to Xcode 4.
+
+123
+00:10:28,960 --> 00:10:34,650
+First, we need to provide some very accurate
+typer information for expressions in order
+
+124
+00:10:34,650 --> 00:10:42,360
+to compute reliable code completions and you'll see what
+this actually means on the next few slides but essentially
+
+125
+00:10:42,360 --> 00:10:46,650
+as you're typing something right you're typing
+some expression and you want to complete it the set
+
+126
+00:10:46,650 --> 00:10:51,650
+of available completions that only make sense just
+depend on the types of the you know the remaining part
+
+127
+00:10:51,650 --> 00:10:58,550
+of the expression right and if you type something that
+would not compile that's not a good code completion right.
+
+128
+00:10:58,550 --> 00:11:04,470
+So the compiler has all of that information
+and we want to use it in this context.
+
+129
+00:11:04,470 --> 00:11:12,510
+Second, in order to build a great feature like this that
+AST, that semantic representation of your source has
+
+130
+00:11:12,510 --> 00:11:19,050
+to represent the language with high fidelity and this
+gets back to the whole thing about C++ and you know C
+
+131
+00:11:19,050 --> 00:11:23,450
+in general is they're hard languages,
+they have a lot of rich features
+
+132
+00:11:23,450 --> 00:11:30,550
+and if your ad hoc parser just doesn't handle everything
+it's just going to fall over in some corner cases.
+
+133
+00:11:31,940 --> 00:11:36,230
+And finally, we wanted to be able to handle
+really the cases where code completion
+
+134
+00:11:36,230 --> 00:11:39,240
+and Xcode just doesn't work really well at all.
+
+135
+00:11:39,240 --> 00:11:44,450
+Think about overloaded operators or overloaded
+functions in C++, more templates right.
+
+136
+00:11:44,450 --> 00:11:46,140
+I mean this is a first class language feature.
+
+137
+00:11:46,140 --> 00:11:50,470
+Our IDE should be able to handle this just fine.
+
+138
+00:11:50,470 --> 00:11:57,230
+So let's step through an actual code completion example
+and how the Clang front end actually processes it.
+
+139
+00:11:57,230 --> 00:12:06,740
+Now this is C++ and the reason I'm showing C++ is because it
+really shows where the semantics of the compiler are needed
+
+140
+00:12:06,740 --> 00:12:11,160
+in a very small example and it illustrates
+all of the points I've just mentioned.
+
+141
+00:12:11,160 --> 00:12:19,000
+The precision improvement also applies equally well to
+Objective-C or C apps, you will notice the different
+
+142
+00:12:19,000 --> 00:12:23,920
+but this particular example Xcode 3 wouldn't
+really give you any great results at all.
+
+143
+00:12:25,150 --> 00:12:31,730
+So here we have 2 classes named Wow and Foo and we have this function which is passed
+
+144
+00:12:31,730 --> 00:12:36,460
+in a template list, an STD list
+of type with Foo as the elements.
+
+145
+00:12:36,460 --> 00:12:40,850
+We're just iterating over the loop,
+iterating over the list and we want
+
+146
+00:12:40,850 --> 00:12:44,480
+to do something to each of the elements in that list.
+
+147
+00:12:44,480 --> 00:12:49,730
+So we're typing this and so only certain things
+would actually make sense in this context.
+
+148
+00:12:49,730 --> 00:12:55,940
+So what would the Clang front end need to do
+to actually give you a meaningful completion?
+
+149
+00:12:55,940 --> 00:13:01,710
+So what we do is we actually we parse our
+code as normal and so what is involved to get
+
+150
+00:13:01,710 --> 00:13:04,160
+to the point right before the character I?
+
+151
+00:13:04,160 --> 00:13:12,000
+We have to actually have parsed the definition for Wow
+and Foo, know what their fields and members are right?
+
+152
+00:13:12,000 --> 00:13:15,510
+I mean we actually understand what these things mean.
+
+153
+00:13:15,510 --> 00:13:19,710
+We have to have instantiated the
+template, STD list for the type Foo.
+
+154
+00:13:19,710 --> 00:13:23,880
+I mean this is important because it affects what
+types are actually available in the type system
+
+155
+00:13:23,880 --> 00:13:28,860
+and what you know methods and fields are
+available and then we also need to figure
+
+156
+00:13:28,860 --> 00:13:34,810
+out what this iterator type is
+and what does it actually mean.
+
+157
+00:13:34,810 --> 00:13:42,290
+Then we keep on going we see this I token and
+so we have to figure out what does this mean?
+
+158
+00:13:42,290 --> 00:13:47,090
+It could be a type you know it could be some
+variable, it could be the variable in the current scope
+
+159
+00:13:47,090 --> 00:13:51,830
+or some name space I mean it could be in a whole bunch
+of places right there's a lot of things that goes
+
+160
+00:13:51,830 --> 00:14:00,730
+on when your code is actually compiled by the compiler and
+so after doing all of that work, the result is that I is
+
+161
+00:14:00,730 --> 00:14:06,650
+and only is the variable that was
+declared in this local scope.
+
+162
+00:14:06,650 --> 00:14:13,830
+The next thing when you do is figure out what this
+arrow operator actually means and if this is straight C
+
+163
+00:14:13,830 --> 00:14:20,690
+or Objective-C well this would be a pointer reference
+so we'd have to go and look if I evaluated to a pointer
+
+164
+00:14:20,690 --> 00:14:28,690
+if that made sense and what it actually means but if it's
+a C++ this could be an overloaded operator so we need to go
+
+165
+00:14:28,690 --> 00:14:33,010
+and figure out if there is a related
+operator method and in this case there is,
+
+166
+00:14:33,010 --> 00:14:41,350
+we can see it's from the STD list iterator class and that's
+and the compiler just knows this and so by the time we get
+
+167
+00:14:41,350 --> 00:14:46,380
+to the code completion we know that whatever
+we're going to complete is based on the result
+
+168
+00:14:46,380 --> 00:14:49,100
+of calling that overloaded operator function.
+
+169
+00:14:49,100 --> 00:14:54,080
+We know it returns a pointer to Foo and
+we know the only things that we can access
+
+170
+00:14:54,080 --> 00:15:01,800
+from Foo are well we know its methods and so in this case
+the only results you're going to get is the method bar
+
+171
+00:15:01,800 --> 00:15:08,340
+and you could explicitly call the destructor for Foo;
+very precise results, these are operator overloading
+
+172
+00:15:08,340 --> 00:15:14,510
+and templates, this is something that you could just not
+do in Xcode 3 without the precision from the compiler.
+
+173
+00:15:14,510 --> 00:15:21,310
+[ applause ]
+
+174
+00:15:21,310 --> 00:15:22,520
+and so I could keep on typing.
+
+175
+00:15:22,520 --> 00:15:28,310
+I could type bar; I could do another code completion,
+the same exact procedure would happen as before.
+
+176
+00:15:28,310 --> 00:15:34,520
+In this case we see that the overloaded the arrow means
+a pointer reference and then we see the actual results
+
+177
+00:15:34,520 --> 00:15:43,030
+from the Wow class, so very precise and it
+acts just as you would expect so I'll go ahead
+
+178
+00:15:43,030 --> 00:15:47,910
+and completed this example, we'll return to it in a second.
+
+179
+00:15:47,910 --> 00:15:55,460
+So let's talk about Fix it right Fix It is this
+great new feature in Xcode 4 and it rides off
+
+180
+00:15:55,460 --> 00:15:59,040
+of the way we've implemented code completion.
+
+181
+00:15:59,040 --> 00:16:03,750
+So let me first talk about what
+Fix It is kind of meant to address.
+
+182
+00:16:03,750 --> 00:16:09,650
+As the compiler is parsing your code right
+we want it to be able to handle cases
+
+183
+00:16:09,650 --> 00:16:14,610
+where your code isn't completely correct and
+this is especially important for the case
+
+184
+00:16:14,610 --> 00:16:17,790
+of using it for things like syntax highlighting.
+
+185
+00:16:17,790 --> 00:16:24,820
+I mean often as you're typing your code isn't just ready to
+be built and so we want the front end to be able to recover
+
+186
+00:16:24,820 --> 00:16:30,990
+in cases where it encounters something that doesn't
+look quite right and so part of that recovery
+
+187
+00:16:30,990 --> 00:16:37,500
+and part of that mechanism is the compiler has to
+decide well you uttered something that's nonsense
+
+188
+00:16:37,500 --> 00:16:44,090
+but chances are it's close to something that did make sense
+and so I'm going to try and think what that is and if I come
+
+189
+00:16:44,090 --> 00:16:48,910
+up with a good guess I can use that to
+keep on going, pretending that's there
+
+190
+00:16:48,910 --> 00:16:52,530
+but if the guess is you know seems
+unambiguous why not just suggest
+
+191
+00:16:52,530 --> 00:16:55,980
+that to the user right I mean like
+a missing a semicolon for example.
+
+192
+00:16:55,980 --> 00:17:04,390
+Right I mean it's just obvious and so Fix Its falls out
+from the natural recovery logic of the compiler and so what
+
+193
+00:17:04,390 --> 00:17:10,230
+that means is that they aren't some you know great way to
+find all the bugs or fix all of the bugs in your program,
+
+194
+00:17:10,230 --> 00:17:17,970
+it's not some Google refactoring mechanism, it's these very
+localized choices made by the compiler parser just to figure
+
+195
+00:17:17,970 --> 00:17:21,270
+out what your code is doing wrong in a very localized sense.
+
+196
+00:17:21,270 --> 00:17:26,530
+And so the suggestions will be very local in
+nature, they're part of the hot path of the compiler
+
+197
+00:17:26,530 --> 00:17:32,290
+and they don't necessarily involve a tremendous
+amount of you know artificial intelligence to figure
+
+198
+00:17:32,290 --> 00:17:38,010
+out what you know your program is
+meant to do in the grand scheme.
+
+199
+00:17:38,010 --> 00:17:42,640
+So with this feature like any other is like
+code completion we had some very strong goals
+
+200
+00:17:42,640 --> 00:17:44,750
+or else it's not useful to you.
+
+201
+00:17:44,750 --> 00:17:50,680
+First the air recovery in the parser it needs to
+be great in order to determine the fix it right
+
+202
+00:17:50,680 --> 00:17:56,020
+if we suggest some garbage to you that's not useful at all.
+
+203
+00:17:56,020 --> 00:18:03,020
+Second, in order to actually power this feature we need
+really precise accurate line and column information so that
+
+204
+00:18:03,020 --> 00:18:08,810
+when the front end tells Xcode look
+this is what I think needs to be fixed;
+
+205
+00:18:08,810 --> 00:18:11,430
+Xcode is going to go and edit your source code.
+
+206
+00:18:11,430 --> 00:18:15,260
+Right I mean how scary is that if
+that information wasn't correct?
+
+207
+00:18:15,260 --> 00:18:24,270
+And this includes you know taking to account that there
+could be macros involved; we need to do the right thing.
+
+208
+00:18:24,270 --> 00:18:25,810
+So how does a Fix It actually work?
+
+209
+00:18:25,810 --> 00:18:30,470
+Well it actually rides off of the
+same mechanism for code completion.
+
+210
+00:18:30,470 --> 00:18:37,390
+As we're doing code completions we could be detecting errors
+and those errors can be sent over to Xcode for reporting.
+
+211
+00:18:37,390 --> 00:18:44,250
+This is the same code fragment as before and what
+I'm going to do is remove some of these characters
+
+212
+00:18:44,250 --> 00:18:49,510
+so let's say I just decided to type very
+quickly, I omitted the R in the bar call
+
+213
+00:18:49,510 --> 00:18:52,670
+and I also left off the parenthesis right.
+
+214
+00:18:52,670 --> 00:18:58,280
+So this is the resulting code and
+if I ran this you know I hit build,
+
+215
+00:18:58,280 --> 00:19:00,910
+this is the actual diagnostics would be emitted by compiler.
+
+216
+00:19:00,910 --> 00:19:06,360
+So if you actually look at the build transcript in
+Xcode 4 you will see these are the actual raw output
+
+217
+00:19:06,360 --> 00:19:12,320
+from the compiler, the green text is the
+Fix It output from the compiler itself
+
+218
+00:19:12,320 --> 00:19:17,590
+and so you see it actually detected 2 errors
+and it figured out that you meant to call bar
+
+219
+00:19:17,590 --> 00:19:20,540
+and that well there you know there
+was a missing parenthesis here
+
+220
+00:19:20,540 --> 00:19:24,050
+to actually do the function call so it's 2 separate errors.
+
+221
+00:19:24,050 --> 00:19:28,690
+So how did it actually figure this out?
+
+222
+00:19:28,690 --> 00:19:33,120
+So just like with code completion
+we're going through the code.
+
+223
+00:19:33,120 --> 00:19:37,670
+When Clang hits this token that's "ba"
+it has to figure out what it means.
+
+224
+00:19:37,670 --> 00:19:39,250
+You know is it an identifier?
+
+225
+00:19:39,250 --> 00:19:40,350
+Is it a type?
+
+226
+00:19:40,350 --> 00:19:42,180
+You know is it some variable on the current scope?
+
+227
+00:19:42,180 --> 00:19:48,960
+So the interesting thing that's different from the example
+I showed before is what if it doesn't find anything?
+
+228
+00:19:48,960 --> 00:19:53,110
+Right so this is where the whole Fix It recover comes in.
+
+229
+00:19:53,110 --> 00:19:58,950
+What we do is we have a list of available
+identifiers that makes sense in the current context
+
+230
+00:19:58,950 --> 00:20:03,940
+and we compute an edit distance between what
+we saw in the code and those identifiers
+
+231
+00:20:03,940 --> 00:20:07,570
+and that edit distance takes into
+account insertions and deletions.
+
+232
+00:20:07,570 --> 00:20:14,900
+If we unambiguously find a matching identifier with
+essentially the minimum edit distance that's what we use
+
+233
+00:20:14,900 --> 00:20:20,860
+as the suggestion and so in that case we
+will suggest the fix it of "bar" to the user
+
+234
+00:20:20,860 --> 00:20:26,720
+and the front end will then pretend that bar
+was actually what we saw and continue parsing.
+
+235
+00:20:26,720 --> 00:20:36,870
+When we hit the arrow token we have to then decide
+you know does this semantically makes sense?
+
+236
+00:20:36,870 --> 00:20:42,930
+Well in this case we pretended that
+bar is actually what we saw so looks
+
+237
+00:20:42,930 --> 00:20:47,860
+like we're applying the error operator
+to a method in the class.
+
+238
+00:20:47,860 --> 00:20:52,890
+This doesn't mean anything at all so we have
+to recover, this is an actual error right?
+
+239
+00:20:52,890 --> 00:21:00,640
+We saw the diagnostics earlier but this is a common
+mistake right we know that this we can see that the type
+
+240
+00:21:00,640 --> 00:21:07,460
+of bar is a method so chances are they meant to
+actually call it so let's just pretend that they did,
+
+241
+00:21:07,460 --> 00:21:13,070
+report that fix it to the user and then
+continue parsing as if we saw that.
+
+242
+00:21:13,070 --> 00:21:17,620
+And so by the time we hit the token
+member everything is fine.
+
+243
+00:21:17,620 --> 00:21:23,850
+Right that we had recovered perfectly the code is
+semantically correct and we could keep on going.
+
+244
+00:21:23,850 --> 00:21:25,980
+Now of course these were all educated guesses right?
+
+245
+00:21:25,980 --> 00:21:29,830
+This is all heuristics but it's all based
+on patterns that either we see in real code
+
+246
+00:21:29,830 --> 00:21:33,610
+and that's really just kind of
+how the magic of this feature.
+
+247
+00:21:33,610 --> 00:21:38,190
+So very localized intelligent guesses
+that just work really well in practice.
+
+248
+00:21:39,710 --> 00:21:44,990
+So the last feature that I want to talk
+to you about that's powered by Clang
+
+249
+00:21:44,990 --> 00:21:50,230
+in Xcode is Clang based source code indexing.
+
+250
+00:21:50,230 --> 00:21:57,620
+For those of you who are not familiar with the index
+in Xcode it's essentially Xcode tries to build a corpus
+
+251
+00:21:57,620 --> 00:22:04,240
+of all the symbols in your project, you know all the
+variables, all the functions and it uses this power
+
+252
+00:22:04,240 --> 00:22:09,340
+of variety of features you know very quick navigation
+so you can use the Jump to Definition feature to jump
+
+253
+00:22:09,340 --> 00:22:14,380
+to the definition of a function call,
+or it ties in with the quick help.
+
+254
+00:22:14,380 --> 00:22:19,920
+In Xcode 4 you can you know you can say you point
+to an utterance of NS object and it will show
+
+255
+00:22:19,920 --> 00:22:24,490
+in the quick help the actual definition
+or the information about that class.
+
+256
+00:22:24,490 --> 00:22:30,460
+This all ties in with the index and then there's
+this great Edit All in Scope feature which allows you
+
+257
+00:22:30,460 --> 00:22:35,000
+to do these batch semantic edits within a single
+source file so you see it's like some utterance
+
+258
+00:22:35,000 --> 00:22:41,020
+of a variable you just want to let's say you wanted
+to rename that you just say edit all in a scope,
+
+259
+00:22:41,020 --> 00:22:48,590
+you just start typing in the new name and it edits
+all the places where that occurs in the source file.
+
+260
+00:22:48,590 --> 00:22:50,590
+This is all based on the index.
+
+261
+00:22:50,590 --> 00:22:55,890
+But clearly the power of these features it
+just depends on the precision of the index,
+
+262
+00:22:55,890 --> 00:22:59,830
+if the index is imprecise, these
+features aren't very useful.
+
+263
+00:22:59,830 --> 00:23:08,370
+So what we bring to the table in Xcode 4 is a new indexing
+mechanism that uses the Clang front end to extract all
+
+264
+00:23:08,370 --> 00:23:13,480
+of that reassemble information and
+it's far more precise than Xcode 3.
+
+265
+00:23:13,480 --> 00:23:21,170
+Xcode 3 has a custom C parser, it's pretty
+good but it just can't handle so many cases
+
+266
+00:23:21,170 --> 00:23:28,440
+and that precision is just really important when dealing
+with real projects and it's so good that I strongly believe
+
+267
+00:23:28,440 --> 00:23:31,620
+that it's going to actually aid
+in understanding large code bases.
+
+268
+00:23:31,620 --> 00:23:35,350
+Remember when I talked before about
+wanting us to build great tools right?
+
+269
+00:23:35,350 --> 00:23:41,310
+Great tools is more than just something that just kind
+of gets us by or can kind of let us skip around our code,
+
+270
+00:23:41,310 --> 00:23:48,440
+if it's truly great it will help us understand our code in
+new and interesting ways and that's really the goal here.
+
+271
+00:23:49,960 --> 00:23:55,240
+So what are our goals with Clang based indexing?
+
+272
+00:23:56,260 --> 00:24:01,230
+First precision: This is the reason we're doing this.
+
+273
+00:24:01,230 --> 00:24:06,490
+We want to especially handle the cases that we can't
+do well in Xcode 3 because of design limitations.
+
+274
+00:24:06,490 --> 00:24:13,150
+This involves ambiguities such as you know
+overloaded functions, operators and so on.
+
+275
+00:24:13,150 --> 00:24:17,610
+We want good indexing results even
+if your code contains errors in it.
+
+276
+00:24:17,610 --> 00:24:22,750
+You might just be typing and you haven't hit
+build yet and there's this problems there we need
+
+277
+00:24:22,750 --> 00:24:27,770
+to give you reliable results despite
+the fact that there's problems.
+
+278
+00:24:27,770 --> 00:24:30,910
+Just like with Fix It we need accurate
+line and column information.
+
+279
+00:24:30,910 --> 00:24:39,080
+If you say jump to a definition you want to get taken
+exactly to that definition and nowhere else and finally
+
+280
+00:24:39,080 --> 00:24:44,680
+and this is really important is that we
+need really great understanding of macros.
+
+281
+00:24:44,680 --> 00:24:50,160
+Alright macros whether you love them or hate
+them are our first class entity in language
+
+282
+00:24:50,160 --> 00:24:57,780
+and Clang has an integrated preprocessor this is different
+from the approach taken in GCC so we actually in addition
+
+283
+00:24:57,780 --> 00:25:03,390
+to the line and call information have the full
+inclusion stack in our source and line information.
+
+284
+00:25:03,390 --> 00:25:06,760
+We know whether something was instantiated
+from a macro we can use all
+
+285
+00:25:06,760 --> 00:25:11,140
+of this information to generate very precise index results.
+
+286
+00:25:12,530 --> 00:25:19,100
+To kind of explain how this precision works I'm
+going to show you an example again it's C++ code
+
+287
+00:25:19,100 --> 00:25:25,000
+but it's the same idea even if you're using
+Objective-C, a code that contains ambiguities.
+
+288
+00:25:26,200 --> 00:25:29,340
+So here I have a couple of things,
+I have overloaded functions,
+
+289
+00:25:29,340 --> 00:25:38,200
+methods so at the very top we have two different functions,
+the same name but they have arguments of different types
+
+290
+00:25:38,200 --> 00:25:43,830
+and then on the following line we have a
+call to one of those overloaded functions.
+
+291
+00:25:43,830 --> 00:25:48,050
+In this case because we know the argument is of
+type int it would be the function to find
+
+292
+00:25:48,050 --> 00:25:51,370
+at the top is what we're actually calling.
+
+293
+00:25:51,370 --> 00:25:57,360
+Then we have this shape class which has two methods that
+are overloaded one because it has this cons qualifier
+
+294
+00:25:57,360 --> 00:26:05,230
+so the second method would be called if you were
+calling it through a cons pointer to that class.
+
+295
+00:26:05,230 --> 00:26:14,300
+Then we also have another class that also has a draw method
+but it has no relation at all to the shape class, like none.
+
+296
+00:26:14,300 --> 00:26:18,560
+Finally we have a call to draw
+through a cons pointer to shape.
+
+297
+00:26:18,560 --> 00:26:24,050
+So what would the results look like in Xcode 3?
+
+298
+00:26:25,250 --> 00:26:32,100
+Well with overloaded functions the theme here
+is that you're going to see what we can only do
+
+299
+00:26:32,100 --> 00:26:35,810
+with mainly lexical analysis with
+something that just isn't really getting
+
+300
+00:26:35,810 --> 00:26:39,470
+into the deep precise meaning of what these functions are.
+
+301
+00:26:39,470 --> 00:26:41,970
+Both of these print functions are not distinguished,
+
+302
+00:26:41,970 --> 00:26:45,590
+essentially they're collided in
+the index with the same name.
+
+303
+00:26:45,590 --> 00:26:52,090
+So that means if you said jump to definition on the print
+call Xcode 3 would give you a list of all the functions
+
+304
+00:26:52,090 --> 00:26:58,570
+in your project that are named print and I mean that's
+just not very I mean if you think about a large code base
+
+305
+00:26:58,570 --> 00:27:01,750
+where you might implement this many
+times that's just not very useful.
+
+306
+00:27:01,750 --> 00:27:07,170
+Let's look at the shape class with
+these methods that are named the same.
+
+307
+00:27:07,170 --> 00:27:12,790
+Well here you have the same problem but we throw
+the information away of you know the closing class,
+
+308
+00:27:12,790 --> 00:27:19,210
+the name space you know all the qualifier all that's
+thrown away so that means when you say jump the definition
+
+309
+00:27:19,210 --> 00:27:26,940
+on the draw method below you're going to get a popup
+that says ok these are all the possible draw methods.
+
+310
+00:27:26,940 --> 00:27:30,770
+I mean that's just not very useful.
+
+311
+00:27:30,770 --> 00:27:32,900
+So what is it with Xcode 4?
+
+312
+00:27:32,900 --> 00:27:40,850
+With the overloaded functions we're going to give
+them what we call different symbol resolutions,
+
+313
+00:27:40,850 --> 00:27:45,810
+this is essentially a key generated by the
+Clang front end that the index is going to use
+
+314
+00:27:45,810 --> 00:27:50,740
+to identify these different functions in that
+database and that symbol resolution takes
+
+315
+00:27:50,740 --> 00:27:55,940
+into account the argument types, the name spaces,
+basically everything that would need to be used
+
+316
+00:27:55,940 --> 00:28:01,680
+to distinguish the middle linker and so that means when
+you say jump to definition on this call to print it's going
+
+317
+00:28:01,680 --> 00:28:08,340
+to unambiguously take you to the definition at the top
+and it's not going to give you a popup it's just going
+
+318
+00:28:08,340 --> 00:28:12,440
+to immediately take you there just as you would expect.
+
+319
+00:28:12,440 --> 00:28:14,510
+Similarly yes
+
+320
+00:28:14,510 --> 00:28:20,090
+[ applause ]
+
+321
+00:28:20,090 --> 00:28:27,620
+Similarly with the draw methods right where before we
+had a collision with these methods weren't distinguished,
+
+322
+00:28:27,620 --> 00:28:32,810
+we take into account with the symbol resolution
+the qualifiers you know cants, volatile, whatever,
+
+323
+00:28:32,810 --> 00:28:37,710
+whether it's static or non static, the enclosing class
+even the name space, just all that information which goes
+
+324
+00:28:37,710 --> 00:28:43,510
+into naming what these things actually are and so
+that means when you say jump the definition on draw
+
+325
+00:28:43,510 --> 00:28:50,730
+at the very bottom you get 1 result, it immediately
+takes you to the cons draw in the shape class,
+
+326
+00:28:50,730 --> 00:28:54,590
+you don't get this ambiguity, it just works as expected.
+
+327
+00:28:54,590 --> 00:28:59,080
+And so if you're a C++ programmer you will
+notice the difference in experience here,
+
+328
+00:28:59,080 --> 00:29:04,720
+it's just an order of magnitude better and for C and
+Objective-C programmers the difference it just shows
+
+329
+00:29:04,720 --> 00:29:12,650
+up all the time in the same kind of ways and so we're
+really excited about just you know just improving this,
+
+330
+00:29:12,650 --> 00:29:19,010
+this is such a fundamental part of your work flow but
+they're so many other exciting things we can build
+
+331
+00:29:19,010 --> 00:29:23,110
+by having the power of the compiler inside the IDE itself.
+
+332
+00:29:23,110 --> 00:29:29,020
+So we think we're really on a fantastic trajectory
+of building some really exciting features
+
+333
+00:29:29,020 --> 00:29:33,230
+into the Xcode IDE to make your experience just awesome.
+
+334
+00:29:33,230 --> 00:29:39,950
+So with that I want to hand the reigns over to Evan who
+will talk more about how LVM is being used in other context
+
+335
+00:29:39,950 --> 00:29:42,460
+in both the Xcode 4 release and in Mac OS X.
+
+336
+00:29:42,460 --> 00:29:42,860
+[ Applause ]
+
+337
+00:29:42,860 --> 00:29:44,410
+>> Thank you Ted.
+
+338
+00:29:45,510 --> 00:29:51,360
+[ applause ]
+
+339
+00:29:51,360 --> 00:29:53,700
+>> Here at Apple we're really excited about LVM.
+
+340
+00:29:53,700 --> 00:29:58,840
+Think about a modular compiler technology
+and all the things we can use to build on top
+
+341
+00:29:58,840 --> 00:30:01,750
+and build all kinds of incredible technologies.
+
+342
+00:30:01,750 --> 00:30:05,620
+So in the second part of the talk we're
+going to talk about some of the client LVM.
+
+343
+00:30:05,620 --> 00:30:11,340
+You know hopefully you'll find some
+of these interesting or inspiring.
+
+344
+00:30:11,340 --> 00:30:16,260
+So one first clients you might find interesting Mac OS X.
+
+345
+00:30:16,260 --> 00:30:21,100
+It turns out Mac OS X has been leveraging
+the LVM technology for the last few years.
+
+346
+00:30:21,100 --> 00:30:24,790
+We're building a lot of interesting things on top of it.
+
+347
+00:30:24,790 --> 00:30:27,380
+Last year we introduced OpenCL.
+
+348
+00:30:27,380 --> 00:30:31,310
+OpenCL is this new programming technology.
+
+349
+00:30:31,310 --> 00:30:40,360
+You can use it to write C-like code and that will
+tap into your power sub GPUs as well as CPUs.
+
+350
+00:30:40,360 --> 00:30:45,700
+I'm not going to go into a lot of details but
+OpenCL usesboth the client parsing technology
+
+351
+00:30:45,700 --> 00:30:49,410
+as well as LVM's code generation technology.
+
+352
+00:30:49,410 --> 00:30:51,300
+The results were astonishing.
+
+353
+00:30:51,300 --> 00:30:56,830
+We sped up the core image by over 25%.
+
+354
+00:30:56,830 --> 00:30:59,910
+There's a couple of other clients in Mac OS X.
+
+355
+00:30:59,910 --> 00:31:07,810
+OpenGL has been using LVM for several years now
+since the Tiger 10.4 timeframe and there's Mac Ruby
+
+356
+00:31:07,810 --> 00:31:14,320
+which is the open source ruby implementation
+that's pushed by LVM I mean is driven by Apple,
+
+357
+00:31:14,320 --> 00:31:17,200
+it's also building on top of LVM technologies.
+
+358
+00:31:17,200 --> 00:31:26,410
+But today we're going to talk more about all the
+several low level tools that come with Xcode 4.
+
+359
+00:31:26,410 --> 00:31:29,510
+The first one you may have heard about is LDB.
+
+360
+00:31:29,510 --> 00:31:36,050
+[ applause ]
+
+361
+00:31:36,050 --> 00:31:42,160
+LDB is a new debugger and we have a
+lot of interesting ideas about it.
+
+362
+00:31:42,160 --> 00:31:43,460
+What is LDB?
+
+363
+00:31:43,460 --> 00:31:48,870
+It's a modern compiler that we want to
+design using the same LVM philosophy.
+
+364
+00:31:48,870 --> 00:31:53,820
+We want to build not just one application;
+we want to build a lot of libraries
+
+365
+00:31:53,820 --> 00:31:57,130
+which can be used to embed in other kinds of technologies.
+
+366
+00:31:57,130 --> 00:32:00,320
+We want to be modular, we want to be speedy.
+
+367
+00:32:00,320 --> 00:32:05,570
+Well we want it to perform well when loading
+a large application it should load right away.
+
+368
+00:32:05,570 --> 00:32:10,350
+You know if you're debugging something you should
+just get out of way and let you do your work.
+
+369
+00:32:10,350 --> 00:32:16,410
+We wanted to handle all of the languages
+constructs C, C++, everything, templates.
+
+370
+00:32:16,410 --> 00:32:20,410
+Have you ever tried to debug something
+that involved templates in GDB?
+
+371
+00:32:20,410 --> 00:32:22,110
+It's not a good experience.
+
+372
+00:32:22,110 --> 00:32:23,200
+We want to do a lot better.
+
+373
+00:32:23,200 --> 00:32:26,100
+We want to handle everything.
+
+374
+00:32:26,100 --> 00:32:30,330
+We want to give you a better experience
+when you're debugging multithread code.
+
+375
+00:32:30,330 --> 00:32:35,160
+We want to just utilizing a lot
+existing compiler technologies.
+
+376
+00:32:35,160 --> 00:32:39,840
+The key things here is we want the other
+tools to stop trying to be compiler
+
+377
+00:32:39,840 --> 00:32:42,650
+because like they say the compiler is the truth.
+
+378
+00:32:42,650 --> 00:32:47,770
+You know there's no other tools out there that can
+understand your programs as well as the compiler
+
+379
+00:32:47,770 --> 00:32:54,390
+so the debugger should you know just rely on
+the compiler to do a lot of deep analysis.
+
+380
+00:32:54,390 --> 00:32:57,810
+Another great thing about LDB it's totally open sourced.
+
+381
+00:32:57,810 --> 00:33:00,330
+You know it's open sourced under LVM umbrella.
+
+382
+00:33:00,330 --> 00:33:09,240
+If you're interested in contributing to it,
+or just curious you can go to LDB.LVM.org.
+
+383
+00:33:09,240 --> 00:33:14,570
+Well [laughter] how about making GDB better?
+
+384
+00:33:14,570 --> 00:33:16,510
+We've been trying.
+
+385
+00:33:16,510 --> 00:33:22,440
+[ applause ]
+
+386
+00:33:22,440 --> 00:33:25,980
+Yeah it's a quick picture I'm sorry [laughter].
+
+387
+00:33:25,980 --> 00:33:34,590
+GDB is being built upon we've been adding a lot of
+stuff to GDB; we've been just doing the best we can.
+
+388
+00:33:34,590 --> 00:33:36,350
+It's time to move on.
+
+389
+00:33:36,350 --> 00:33:39,740
+It's a large code base, it's old, it's hard to maintain,
+
+390
+00:33:39,740 --> 00:33:44,950
+it's hard to add new features and
+it's got its own C, C++ parser.
+
+391
+00:33:44,950 --> 00:33:50,510
+It's got its own disassembler,
+it's got a lot of stuff in it.
+
+392
+00:33:50,510 --> 00:33:54,640
+We think we can do better.
+
+393
+00:33:54,640 --> 00:34:00,400
+Well why does a debugger need its own parser?
+
+394
+00:34:00,400 --> 00:34:03,920
+Well let's take a look at one example.
+
+395
+00:34:03,920 --> 00:34:09,420
+This is probably something you do every day, you know
+debugger you want to evaluate expression in the debugger.
+
+396
+00:34:09,420 --> 00:34:16,460
+This looks really simple to you where it's
+turned out it involves a lot analysis.
+
+397
+00:34:16,460 --> 00:34:20,270
+Expression printing in GDB is complicated.
+
+398
+00:34:20,270 --> 00:34:28,760
+It uses its own C, C++ expression parser; you know it
+needs to understand what exactly do you mean by this?
+
+399
+00:34:28,760 --> 00:34:29,930
+What's my shape?
+
+400
+00:34:29,930 --> 00:34:31,260
+What's this type?
+
+401
+00:34:31,260 --> 00:34:36,100
+You know so its type is to implement its own C type system.
+
+402
+00:34:36,100 --> 00:34:39,210
+It needs its own type checking logic.
+
+403
+00:34:39,210 --> 00:34:42,110
+Is this even a valid expression?
+
+404
+00:34:42,110 --> 00:34:44,710
+What is argument type of scale?
+
+405
+00:34:44,710 --> 00:34:46,180
+Is it a double?
+
+406
+00:34:46,180 --> 00:34:51,560
+In that case then debugger needs to know
+how to convert an integer 4 into a double.
+
+407
+00:34:51,560 --> 00:34:54,070
+There are many things it needs to know.
+
+408
+00:34:54,070 --> 00:35:00,410
+So the cost of this is pretty obvious
+right you know the GDB is not a compiler.
+
+409
+00:35:00,410 --> 00:35:03,870
+It's not going to be 100% correct.
+
+410
+00:35:03,870 --> 00:35:11,800
+It's not going to be 100% precise and you can
+appreciate how difficult it is to test compiler.
+
+411
+00:35:11,800 --> 00:35:15,290
+Think about testing a compiler
+that's embedded in another tool.
+
+412
+00:35:15,290 --> 00:35:20,970
+That's difficult and think about all the
+new features we get adding to the language.
+
+413
+00:35:20,970 --> 00:35:27,610
+You know C we're adding blocks, you know then C++ is
+all kinds of new stuff is coming out in the pipeline.
+
+414
+00:35:27,610 --> 00:35:29,830
+You know new C++ standard.
+
+415
+00:35:29,830 --> 00:35:33,490
+Then we're going to have to implement
+these new features in the debugger.
+
+416
+00:35:33,490 --> 00:35:38,800
+That's a lot of engineering efforts and it's very difficult.
+
+417
+00:35:38,800 --> 00:35:42,650
+So we can do better but how is LDB different?
+
+418
+00:35:42,650 --> 00:35:48,110
+How is it implementing the same feature you know better?
+
+419
+00:35:48,110 --> 00:35:54,070
+Well first, we know LDB is leveraging the LVM technologies;
+
+420
+00:35:54,070 --> 00:35:58,930
+it's leveraging the Clang front
+end for parsing, semantic analysis.
+
+421
+00:35:58,930 --> 00:36:04,720
+It's using LVM's code generator in interesting
+ways we're going to get to in a bit.
+
+422
+00:36:04,720 --> 00:36:09,350
+It's also using its LVM disassembler
+you know that's just sort
+
+423
+00:36:09,350 --> 00:36:14,580
+of the obvious you know by-product
+leveraging existing technology.
+
+424
+00:36:15,650 --> 00:36:21,400
+LVM based expression printing is very, very different.
+
+425
+00:36:21,400 --> 00:36:23,360
+We have a lot of strong goals for it.
+
+426
+00:36:23,360 --> 00:36:25,300
+We want high fidelity.
+
+427
+00:36:25,300 --> 00:36:29,240
+We want it to be always correct, always precise.
+
+428
+00:36:29,240 --> 00:36:35,410
+The last thing you want is the debugger
+lying to you or being incorrect.
+
+429
+00:36:35,410 --> 00:36:37,800
+We want to support all the features.
+
+430
+00:36:37,800 --> 00:36:40,960
+Think about auto pointer.
+
+431
+00:36:40,960 --> 00:36:44,060
+Think about calling a function.
+
+432
+00:36:44,060 --> 00:36:47,140
+Think about anything involving in
+multiple inheritance, template instantiation.
+
+433
+00:36:47,140 --> 00:36:55,870
+GDB if you try to debug anything you know
+evaluate expression involving anything like that
+
+434
+00:36:55,870 --> 00:37:03,010
+in GDB it's likely you're not getting a very
+accurate result or sometimes it doesn't work at all.
+
+435
+00:37:03,010 --> 00:37:07,990
+We also want debugger to have a lot
+less platform specific technology.
+
+436
+00:37:07,990 --> 00:37:11,990
+Let's get to that a little bit later.
+
+437
+00:37:11,990 --> 00:37:20,610
+So expression printing is sort of a
+work using both LDB client parsing
+
+438
+00:37:20,610 --> 00:37:23,180
+to provide parsing and submitting information.
+
+439
+00:37:23,180 --> 00:37:29,790
+It is also relying on LDB to kind of
+examine the program it's currently running.
+
+440
+00:37:29,790 --> 00:37:36,390
+The first thing when we try to do this
+expressing evaluation is look up My Shape.
+
+441
+00:37:36,390 --> 00:37:37,440
+What is My Shape?
+
+442
+00:37:37,440 --> 00:37:39,870
+Is it variable or is it type?
+
+443
+00:37:39,870 --> 00:37:41,690
+What kind of type is it?
+
+444
+00:37:41,690 --> 00:37:43,770
+What kind of variable is it?
+
+445
+00:37:43,770 --> 00:37:47,550
+Step one is just name look up.
+
+446
+00:37:47,550 --> 00:37:54,050
+So name look up relies on the LDB's knowledge
+of the current program that's being run.
+
+447
+00:37:54,050 --> 00:37:59,780
+Clang will actually talk to the
+LDB core say hey what's My Shape?
+
+448
+00:37:59,780 --> 00:38:01,270
+Please tell me.
+
+449
+00:38:01,270 --> 00:38:05,850
+LDB say let me go look up the debug information on the disk.
+
+450
+00:38:05,850 --> 00:38:12,310
+So debug information is encoding this thing
+somewhat politically incorrect term dwarf
+
+451
+00:38:12,310 --> 00:38:16,740
+as a debug format that's great for debugger to understand.
+
+452
+00:38:16,740 --> 00:38:20,570
+Debugger is the standard, every debugger understand dwarf.
+
+453
+00:38:20,570 --> 00:38:28,240
+However, this is not a format that
+Clang understands so LDB actually have
+
+454
+00:38:28,240 --> 00:38:32,570
+to do some work here to convert dwarf to the Clang AST tree.
+
+455
+00:38:32,570 --> 00:38:38,820
+It's going to tell it ok yes My Shape is a
+variable decoration so this type of shape.
+
+456
+00:38:38,820 --> 00:38:42,130
+So where's the AST information being passed back to Clang?
+
+457
+00:38:42,130 --> 00:38:44,510
+We can now continue as processing.
+
+458
+00:38:44,510 --> 00:38:50,010
+The parser will finish and create an
+actual syntax tree that tells exactly
+
+459
+00:38:50,010 --> 00:38:55,200
+about all the semantic information you need
+about the expression you're evaluating.
+
+460
+00:38:55,200 --> 00:39:00,580
+If it's simple, for example, if you're
+evaluating looking up a value or variable
+
+461
+00:39:00,580 --> 00:39:06,240
+or you've been doing simple arithmetics the debugger
+can just simply go interpret the information
+
+462
+00:39:06,240 --> 00:39:08,220
+and get you the result.
+
+463
+00:39:08,220 --> 00:39:12,390
+In this particular case this is actually a C++ method call.
+
+464
+00:39:12,390 --> 00:39:14,230
+This is a lot more complicated.
+
+465
+00:39:14,230 --> 00:39:20,820
+Turns out the only way to evaluate
+a call is actually to make the call.
+
+466
+00:39:20,820 --> 00:39:24,720
+Well so this gets complicated.
+
+467
+00:39:24,720 --> 00:39:33,820
+If you're debugging on your Mac and your program
+is a Mac applicationthen you know you can say 66,
+
+468
+00:39:33,820 --> 00:39:40,660
+32 bits you may say ok the argument
+for has to be passed on the stack.
+
+469
+00:39:40,660 --> 00:39:45,440
+If it's 64 then you'd know ok it
+has to be passed in registers.
+
+470
+00:39:45,440 --> 00:39:50,650
+You know if it's more complicated than
+that there are all kinds of ABI tools.
+
+471
+00:39:50,650 --> 00:39:57,490
+However if you're debugging on your Mac or you're debugging
+iPhone application, iOS application then it needs to know
+
+472
+00:39:57,490 --> 00:40:00,670
+about the arm ABI and calling conventions.
+
+473
+00:40:00,670 --> 00:40:06,120
+So the debugger needs to know a lot about
+the platforms, the application you know
+
+474
+00:40:06,120 --> 00:40:08,790
+about the application and about the platform.
+
+475
+00:40:08,790 --> 00:40:14,430
+Again this is asking the debugger to be too
+much like a compiler and if the compiler
+
+476
+00:40:14,430 --> 00:40:16,040
+and debugger have a different understanding
+
+477
+00:40:16,040 --> 00:40:21,330
+about the ABI calling convention you
+get incorrect results in the debugger.
+
+478
+00:40:21,330 --> 00:40:25,730
+Fortunately, LVM will help with this problem.
+
+479
+00:40:25,730 --> 00:40:36,180
+LVM has adjusting time compilation technology so all
+that LDB has to do is feed the AST tree to the front end
+
+480
+00:40:36,180 --> 00:40:40,650
+and goes through code generation then
+goes through the LVN jig compiler
+
+481
+00:40:40,650 --> 00:40:46,040
+and out comes machine code then LDV can actually
+download the machine code onto the device
+
+482
+00:40:46,040 --> 00:40:49,880
+and actually just make the call
+and get the accurate results.
+
+483
+00:40:49,880 --> 00:40:55,830
+So the benefits I hope you can appreciate the benefits.
+
+484
+00:40:55,830 --> 00:41:00,230
+We're going to have really high fidelity
+for expression parsing in variation
+
+485
+00:41:00,230 --> 00:41:03,760
+because it's leveraging the compiler technology.
+
+486
+00:41:03,760 --> 00:41:08,240
+It's going to support all the language
+features because it's using the compiler
+
+487
+00:41:08,240 --> 00:41:13,190
+for expression parsing and the type system.
+
+488
+00:41:13,190 --> 00:41:22,780
+We're going to evaluate all the complex language constructs
+and we can get all the language new features for free.
+
+489
+00:41:22,780 --> 00:41:27,930
+When the compiler implemented debugger gets it for free.
+
+490
+00:41:27,930 --> 00:41:30,940
+Also we talk about platform specific knowledge.
+
+491
+00:41:30,940 --> 00:41:35,030
+Debugger needs to know a lot less
+about all the different platforms
+
+492
+00:41:35,030 --> 00:41:38,540
+because the compiler is there to provide information.
+
+493
+00:41:38,540 --> 00:41:46,510
+And you can think about all the other benefits wouldn't you
+love to have Fix It or code completion in your debugger?
+
+494
+00:41:46,510 --> 00:41:52,050
+[ applause ]
+
+495
+00:41:52,050 --> 00:41:54,600
+So let's move onto the next low level tool.
+
+496
+00:41:54,600 --> 00:42:01,100
+Assemble it: Well here's a simplified
+view of the stage of compilation.
+
+497
+00:42:01,100 --> 00:42:06,150
+You have source code coming in the front end
+and the code comes out the backend, very simple.
+
+498
+00:42:06,150 --> 00:42:09,450
+Well in fact that's not quite so simple.
+
+499
+00:42:09,450 --> 00:42:12,780
+Even disregard all the passes inside your compiler,
+
+500
+00:42:12,780 --> 00:42:17,930
+one thing you have to understand is the
+compiler's actually outputting the assembly file,
+
+501
+00:42:17,930 --> 00:42:26,500
+a big assembly file then feed the assembly file back
+into the assembler, then that converted into binary code.
+
+502
+00:42:26,500 --> 00:42:33,530
+This is true with LVM compiler 1.5, LVM GCC, GCC 4-2.
+
+503
+00:42:33,530 --> 00:42:36,090
+This makes no sense.
+
+504
+00:42:36,090 --> 00:42:40,250
+We just talked about LVM has jig compiling technology.
+
+505
+00:42:40,250 --> 00:42:45,150
+LVM knows how to convert code directly into binary code.
+
+506
+00:42:45,150 --> 00:42:52,140
+Why do we need to output a big text file you
+know formatted perfectly and parse it back?
+
+507
+00:42:52,140 --> 00:42:55,470
+This is taking up time.
+
+508
+00:42:55,470 --> 00:43:00,510
+So with LVM 2.0 we now have an integrated assembler.
+
+509
+00:43:00,510 --> 00:43:07,310
+[ applause ]
+
+510
+00:43:07,310 --> 00:43:15,950
+This is the pure LVM compiler that does everything
+with LVM technology from source code to a dot O file.
+
+511
+00:43:15,950 --> 00:43:22,960
+The benefit of this approach should
+be well there's several benefits.
+
+512
+00:43:22,960 --> 00:43:30,120
+The first one you may not realize but if you
+have ever written inline assembly you might know.
+
+513
+00:43:30,120 --> 00:43:39,600
+If you write inline assembly you know it's one of the
+most well documented features in GCC, it's complicated.
+
+514
+00:43:39,600 --> 00:43:40,860
+I know I can't do it right.
+
+515
+00:43:40,860 --> 00:43:47,200
+The first time I tried to write inline assembly of
+anything I get it wrong and this is what GCC will tell me.
+
+516
+00:43:47,200 --> 00:43:54,810
+It's going to tell me you have incorrect code and it's going
+to point to a file that has already been deleted [laughter].
+
+517
+00:43:54,810 --> 00:44:02,180
+So then I have to say ok where is this
+exactly, let me try to figure it out.
+
+518
+00:44:02,180 --> 00:44:08,210
+You probably do some kind of binary research, trial by error
+until you figure out ah ha this is where it goes wrong.
+
+519
+00:44:08,210 --> 00:44:14,730
+Well with Clang because we integrated the
+assembler into the compiler, Clang is actually going
+
+520
+00:44:14,730 --> 00:44:22,360
+to tell you this is incorrect inline assembly and
+it's going to tell you where you should fix it.
+
+521
+00:44:22,360 --> 00:44:26,320
+So this is better error message for your inline assembly.
+
+522
+00:44:26,320 --> 00:44:32,750
+So the other benefit [applause] thank you.
+
+523
+00:44:32,750 --> 00:44:38,650
+So the other benefit well I don't know
+about you I love reading assembly code.
+
+524
+00:44:38,650 --> 00:44:48,880
+It has so much information, so for those of you who look at
+assembly code to try to get the last 10% of the performance
+
+525
+00:44:48,880 --> 00:44:57,160
+out of your application, you may want some help
+because the assembly just lots of lots of instructions,
+
+526
+00:44:57,160 --> 00:45:00,130
+it doesn't tell you anything about
+the structure of your code.
+
+527
+00:45:00,130 --> 00:45:08,340
+Well now that we have taken the assembly time
+from you know assembly time no longer matters.
+
+528
+00:45:08,340 --> 00:45:14,330
+We can actually provide you with better assembly, richer
+assembly when you need it, so in this case you can see
+
+529
+00:45:14,330 --> 00:45:21,370
+that in the assembly output we have some comments, tell
+you you know what's this bits that you're looking at.
+
+530
+00:45:21,370 --> 00:45:23,350
+Where is the loop?
+
+531
+00:45:23,350 --> 00:45:25,150
+Where is the starting point of your loop?
+
+532
+00:45:25,150 --> 00:45:29,610
+How come my loop is not performing as well
+as I thought would be because you know
+
+533
+00:45:29,610 --> 00:45:33,660
+in this case it's additional loads and stores in your loop.
+
+534
+00:45:33,660 --> 00:45:40,790
+You know this allow you to go tune your code to
+the you know the highest possible performance
+
+535
+00:45:40,790 --> 00:45:43,060
+by providing you with more information.
+
+536
+00:45:43,060 --> 00:45:45,450
+So LVM now has integrated assembler.
+
+537
+00:45:45,450 --> 00:45:47,970
+It has several benefits.
+
+538
+00:45:47,970 --> 00:45:56,110
+It's fast because we no longer need
+to do more text printing and parsing.
+
+539
+00:45:56,110 --> 00:45:59,470
+It's roughly about 10% for your debug builds.
+
+540
+00:45:59,470 --> 00:46:04,750
+We have tested this on a variety of applications
+internally, that's roughly what we're getting,
+
+541
+00:46:04,750 --> 00:46:09,670
+depending not for Hello World anything
+that's kind of sizeable application.
+
+542
+00:46:09,670 --> 00:46:11,920
+We're going to give you a better error message.
+
+543
+00:46:11,920 --> 00:46:19,700
+If you write inline assembly you really shouldn't be
+doing that but if you do you're going to appreciate this
+
+544
+00:46:19,700 --> 00:46:25,720
+and we're going to give you better, more
+useful assembly output if you need it.
+
+545
+00:46:25,720 --> 00:46:34,700
+So we're very, very confident about this new assembler
+so in the LVM compiler 2.0 this is enabled by default.
+
+546
+00:46:34,700 --> 00:46:41,230
+In case you run into any problems please let us know, we
+like to get it perfectly right by the time it GM's.
+
+547
+00:46:41,230 --> 00:46:44,380
+but you're not going to run into too many problems.
+
+548
+00:46:44,380 --> 00:46:53,950
+If you run into problem you can work around
+the problem by this option -nointegrated-AS.
+
+549
+00:46:53,950 --> 00:46:59,250
+So that's sum up what we have talked about today.
+
+550
+00:46:59,250 --> 00:47:02,000
+So LVM is enabling technology.
+
+551
+00:47:02,000 --> 00:47:05,580
+We're really really excited about it
+in case you haven't noticed already.
+
+552
+00:47:05,580 --> 00:47:09,820
+We are really using it a lot inside Apple universe.
+
+553
+00:47:09,820 --> 00:47:16,520
+You know we're enabling new exciting technology in Mac OS X.
+
+554
+00:47:16,520 --> 00:47:21,900
+You know OpenCL, OpenGL, Mac Ruby you know they all use LVM.
+
+555
+00:47:21,900 --> 00:47:26,580
+There are many other things probably coming later who knows.
+
+556
+00:47:26,580 --> 00:47:40,270
+In Clang I mean in Xcode 4 we have integrated the Clang
+parser into the Xcode ID so that allow us to do a better job
+
+557
+00:47:40,270 --> 00:47:46,250
+with co-completion, give you new
+features such as Fix It, give you much,
+
+558
+00:47:46,250 --> 00:47:51,660
+much better indexing support and added in scope.
+
+559
+00:47:51,660 --> 00:47:58,740
+So we also look at several other clients at LVM,
+LDB being this exciting new debugger we're building
+
+560
+00:47:58,740 --> 00:48:02,770
+and we talk about the integrated assembler.
+
+561
+00:48:02,770 --> 00:48:10,790
+So LVM really is a very exciting technology and
+it's open source so if you want more information,
+
+562
+00:48:10,790 --> 00:48:17,310
+you want to participate in the LVM development
+by all means please go to the LVM project website
+
+563
+00:48:17,310 --> 00:48:20,860
+and sign up and look up what we're doing every day.
+
+564
+00:48:20,860 --> 00:48:28,560
+Or if you want to talk to Apple you can talk to our
+Developer Tools Evangelist Michael Jurewitz or talk to us
+
+565
+00:48:28,560 --> 00:48:32,610
+about you know LVM in the Apple Developer Forum.
+
+566
+00:48:32,610 --> 00:48:40,540
+If you want to learn more about LDB tomorrow 9:00
+there's a session Debugging with Xcode 4 and LDB.
+

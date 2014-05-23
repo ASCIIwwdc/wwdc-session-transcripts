@@ -1,0 +1,2544 @@
+1
+00:00:06,760 --> 00:00:09,910
+>> Jason Beaver: Welcome to the
+Mastering Table Views session.
+
+2
+00:00:09,910 --> 00:00:11,150
+My name is Jason Beaver.
+
+3
+00:00:11,150 --> 00:00:14,720
+I am an engineer on the iPhone Frameworks
+Team, and I will be joined in a little bit
+
+4
+00:00:14,720 --> 00:00:16,730
+by Luke who will run us through some demos.
+
+5
+00:00:16,730 --> 00:00:21,100
+Well, we have an quick introduction.
+
+6
+00:00:21,100 --> 00:00:24,600
+This is going to be a relatively advanced session.
+
+7
+00:00:24,600 --> 00:00:29,740
+We're not going to cover any of the sort of basic things
+of loading the table view, how to get content into it,
+
+8
+00:00:29,740 --> 00:00:31,800
+how to customize cells, things like that.
+
+9
+00:00:31,800 --> 00:00:34,020
+We're going to touch on a couple of
+issues that we haven't had a chance
+
+10
+00:00:34,020 --> 00:00:37,600
+to really focus on over the past couple of years.
+
+11
+00:00:37,600 --> 00:00:42,240
+And hopefully it will allow you
+to sort of add a level of polish
+
+12
+00:00:42,240 --> 00:00:44,270
+to your application that your users will really enjoy.
+
+13
+00:00:44,270 --> 00:00:48,710
+So we're going to cover a handful of things today.
+
+14
+00:00:48,710 --> 00:00:53,160
+We're going the talk about the update mechanism built
+into Table View that allows you to change the contents
+
+15
+00:00:53,160 --> 00:00:56,810
+of the Table View without completely reloading it.
+
+16
+00:00:56,810 --> 00:01:01,090
+We're going to talk about how to
+combine this with an editing transition.
+
+17
+00:01:01,090 --> 00:01:06,410
+If you're familiar with the context application and you
+go into editing mode, you'll know that there's some rows
+
+18
+00:01:06,410 --> 00:01:10,640
+that are added to allow you to add fields
+to the contact, and when you come back out,
+
+19
+00:01:10,640 --> 00:01:14,260
+we delete those rows so that you don't have to see them.
+
+20
+00:01:14,260 --> 00:01:16,710
+And notice all those animations are synchronized.
+
+21
+00:01:16,710 --> 00:01:18,590
+We'll talk about how to do that.
+
+22
+00:01:18,590 --> 00:01:22,810
+We now have the iPad for you guys to deal with, so
+we're going to talk about some differences with regard
+
+23
+00:01:22,810 --> 00:01:25,590
+to the table view between iPhone and iPad.
+
+24
+00:01:25,590 --> 00:01:33,070
+And we're going to talk about if you need to do some sort
+of background loading in your application, for example,
+
+25
+00:01:33,070 --> 00:01:36,990
+like the YouTube application loads,
+thumbnails in the background,
+
+26
+00:01:36,990 --> 00:01:39,190
+we'll talk about how you do that with Table View.
+
+27
+00:01:39,190 --> 00:01:45,160
+We're not going to talk about background loading
+itself, but how that relates to the table view.
+
+28
+00:01:45,160 --> 00:01:52,900
+And finally, we're going the talk about using the new
+UIGestureRecognizerTechnology that was introduced in 3.2
+
+29
+00:01:52,900 --> 00:01:57,140
+with table views and how you can do some neat things
+to allow users to interact with your table views.
+
+30
+00:01:57,140 --> 00:01:58,850
+All right.
+
+31
+00:01:58,850 --> 00:02:02,920
+So let's jump into updating the contents of your table view.
+
+32
+00:02:02,920 --> 00:02:04,950
+So first of all, why do we want to do this?
+
+33
+00:02:04,950 --> 00:02:07,870
+Why not just reload the table view every time?
+
+34
+00:02:07,870 --> 00:02:11,570
+Well, there's one reason, it's
+improves performance, it's expensive,
+
+35
+00:02:11,570 --> 00:02:14,660
+or somewhat expensive to completely reload a table view.
+
+36
+00:02:14,660 --> 00:02:21,090
+And these are limited performance devices, so just
+replacing the content that's changing will make the app
+
+37
+00:02:21,090 --> 00:02:22,620
+more performant.
+
+38
+00:02:22,620 --> 00:02:27,390
+But the bigger reason is that it's easier
+for the user to understand what just changed.
+
+39
+00:02:27,390 --> 00:02:34,690
+There's some sort of context shift in your application, and
+an animated interface helps the user track what happened.
+
+40
+00:02:34,690 --> 00:02:38,950
+We're going to look at a couple of simple
+examples here where in the one on the left,
+
+41
+00:02:38,950 --> 00:02:42,890
+we're just going to reload the table view,
+and you'll see the content just changed.
+
+42
+00:02:42,890 --> 00:02:43,910
+It was rather jarring.
+
+43
+00:02:43,910 --> 00:02:49,280
+The user has to look at it for a moment and sort of try
+to figure out what's old and what's new, and typically,
+
+44
+00:02:49,280 --> 00:02:54,530
+in your case, it's not going to say "new," so
+that'll a little harder for the user to figure out.
+
+45
+00:02:54,530 --> 00:03:00,130
+But in the example on the right, now we're going to
+do this in an animated fashion, and when you walk in,
+
+46
+00:03:00,130 --> 00:03:03,520
+you can see a set of rows were deleted,
+you see which rows were inserted.
+
+47
+00:03:03,520 --> 00:03:08,160
+It was a lot easier for the user
+to understand what just changed.
+
+48
+00:03:12,250 --> 00:03:19,290
+[PAUSE] Table View provides a mechanism to update
+individual rows as well as entire sections.
+
+49
+00:03:19,290 --> 00:03:27,260
+The methods to do individual rows are insertRowsAtIndexPath
+withRowAnimation, and similar deleteRows and reloadRows.
+
+50
+00:03:27,260 --> 00:03:33,310
+There's a corresponding set of methods to do
+the same sort of operations on entire sections.
+
+51
+00:03:33,310 --> 00:03:38,100
+Those are insertSections withRowAnimation,
+deleteSections and reloadSections.
+
+52
+00:03:38,100 --> 00:03:44,280
+So a high level, the way it needs to work in your
+application is, you have a model, it has some set of objects
+
+53
+00:03:44,280 --> 00:03:46,420
+in it that you want displayed to the table view.
+
+54
+00:03:46,420 --> 00:03:55,270
+You have a data source, which is there to bind your model to
+the table view, and then you have a table view with one cell
+
+55
+00:03:55,270 --> 00:03:57,960
+for each of the objects in your
+model that needs to be displayed.
+
+56
+00:03:57,960 --> 00:04:01,770
+And the way you handle this update is
+you first have to update your model.
+
+57
+00:04:01,770 --> 00:04:05,150
+So in this case, we're going to delete a row.
+
+58
+00:04:05,150 --> 00:04:09,930
+So you'll do that, your model will get
+updated, so now your model just has 4 rows.
+
+59
+00:04:09,930 --> 00:04:13,850
+And then subsequently, you need to tell the
+table view about the change to your model.
+
+60
+00:04:13,850 --> 00:04:17,830
+At this point, they're sort of out synch,
+and if the table view asks for something
+
+61
+00:04:17,830 --> 00:04:21,530
+that might not be in your -- not be in your model.
+
+62
+00:04:21,530 --> 00:04:24,790
+So you tell the table, "Yo, hey, we deleted some row."
+
+63
+00:04:24,790 --> 00:04:29,510
+The table view will then take care of the deleting
+the road and animating all of the other rows in place
+
+64
+00:04:29,510 --> 00:04:34,010
+to now put the table view in synch with your model.
+
+65
+00:04:34,010 --> 00:04:38,140
+But sometimes it's not as simple as
+just a single row insertion or deletion.
+
+66
+00:04:38,140 --> 00:04:40,280
+You have a bunch of changes to make.
+
+67
+00:04:40,280 --> 00:04:42,500
+Well, Table View supports batching these.
+
+68
+00:04:42,500 --> 00:04:50,700
+It -- all you need to do to batch is to wrap all of
+those update methods in calls to begin and end updates.
+
+69
+00:04:50,700 --> 00:04:54,480
+So let's go back to sort of our high level view of this.
+
+70
+00:04:54,480 --> 00:04:59,590
+We've got a model with some objects, and
+again, the data source and Table View.
+
+71
+00:04:59,590 --> 00:05:07,630
+And now we're going to, you know, delete an object,
+and then we'll maybe insert one at a different index.
+
+72
+00:05:07,630 --> 00:05:11,220
+And now we need to tell the table
+view about all those changes.
+
+73
+00:05:11,220 --> 00:05:16,030
+So we will message it a table view,
+we'll set it to begin updates,
+
+74
+00:05:16,030 --> 00:05:19,540
+and then we'll tell it about the rows we've deleted,
+we'll tell it about the rows we've inserted.
+
+75
+00:05:19,540 --> 00:05:22,750
+And then we'll call endUpdates.
+
+76
+00:05:22,750 --> 00:05:26,870
+At that point, the table view will
+go to the model and try to figure
+
+77
+00:05:26,870 --> 00:05:30,050
+out what the new state is and then perform the update.
+
+78
+00:05:30,050 --> 00:05:35,500
+In this case, we'll see that the row that was in
+Index 2, right in the center, will be deleted,
+
+79
+00:05:35,500 --> 00:05:39,440
+a new one will get inserted at Index
+1, and the one that was formerly
+
+80
+00:05:39,440 --> 00:05:42,460
+at Index 1 will actually animate
+to its new spot in the table view.
+
+81
+00:05:42,460 --> 00:05:45,590
+The table view will take care of that automatically.
+
+82
+00:05:45,590 --> 00:05:48,470
+So there's a couple of important points.
+
+83
+00:05:48,470 --> 00:05:53,740
+One is that the order inside that
+update block doesn't matter.
+
+84
+00:05:53,740 --> 00:05:58,870
+The order that you specify the inserts versus
+deletes or even the order of the inserts
+
+85
+00:05:58,870 --> 00:06:02,900
+if you needed a multiple inserts,
+you can specify those in any order
+
+86
+00:06:02,900 --> 00:06:05,250
+within the update block and will treat them all as a group.
+
+87
+00:06:05,250 --> 00:06:09,180
+We'll go into a little more detail here in a moment.
+
+88
+00:06:09,180 --> 00:06:13,470
+So, here's a simple example where
+we're going to insert a couple of rows,
+
+89
+00:06:13,470 --> 00:06:15,630
+and although we could have specified
+these in a single array,.
+
+90
+00:06:15,630 --> 00:06:17,920
+for example, we split this out into two arrays.
+
+91
+00:06:17,920 --> 00:06:20,310
+We're going to call it beginUpdates.
+
+92
+00:06:20,310 --> 00:06:25,920
+We'll make a couple of calls to insert rows
+at index paths, and then we'll endUpdates.
+
+93
+00:06:25,920 --> 00:06:30,230
+And the important to this is here that I can
+reverse the order of these two arguments;
+
+94
+00:06:30,230 --> 00:06:33,510
+the table view is going to do exactly the same thing.
+
+95
+00:06:36,710 --> 00:06:44,180
+The second is that the table view state when you're doing
+batched updates is not updated until the call to endUpdates.
+
+96
+00:06:44,180 --> 00:06:50,500
+So when you make that call to insert a row
+or delete a row, your model doesn't have
+
+97
+00:06:50,500 --> 00:06:53,030
+to necessarily have already reflected that.
+
+98
+00:06:53,030 --> 00:06:57,720
+Basically, the model has to be changed, though,
+by the time you make the call to endUpdates.
+
+99
+00:06:57,720 --> 00:07:04,800
+So, now let's talk a little bit about the
+first argument to those various methods,
+
+100
+00:07:04,800 --> 00:07:08,600
+how we actually specify what gets inserted or deleted.
+
+101
+00:07:08,600 --> 00:07:13,010
+We'll start with deletes.
+
+102
+00:07:13,010 --> 00:07:19,470
+Deletes simply specify all of the current rows
+in the table view which should be removed.
+
+103
+00:07:19,470 --> 00:07:22,590
+So here, for example, we have a table view with seven rows.
+
+104
+00:07:22,590 --> 00:07:25,640
+We want to move to a new state.
+
+105
+00:07:25,640 --> 00:07:29,600
+If you notice, there's Rows 1, 3 and 5 are missing.
+
+106
+00:07:29,600 --> 00:07:32,320
+All we need to do is tell the table view "delete Rows 1,
+
+107
+00:07:32,320 --> 00:07:37,060
+3 and 5" because those are the indexes
+in the current state of the table view.
+
+108
+00:07:37,060 --> 00:07:43,420
+And all of the remaining rows will just
+automatically animate to their new spots.
+
+109
+00:07:45,890 --> 00:07:50,150
+Conversely, inserts specify all of the rows which are new.
+
+110
+00:07:50,150 --> 00:07:56,180
+So here, we're going to start with our table view in the
+same state it was at the end of the previous animation.
+
+111
+00:07:56,180 --> 00:07:58,360
+We want to move back to sort of the original state.
+
+112
+00:07:58,360 --> 00:08:02,120
+In this case, Rows 1, 3 and 5 are the new ones.
+
+113
+00:08:02,120 --> 00:08:05,450
+So all we need to do is tell the
+table view "insert 1, 3 and 5."
+
+114
+00:08:05,450 --> 00:08:06,550
+And, again, we can do that in any order.
+
+115
+00:08:06,550 --> 00:08:14,120
+We can say "insert 5, insert 1," as long as they're all in
+an update block, we'll treat those in exactly the same way.
+
+116
+00:08:14,120 --> 00:08:21,450
+And just like before, all of the
+remaining rows will animate into position.
+
+117
+00:08:21,450 --> 00:08:24,860
+Reloads are specified just like deletes.
+
+118
+00:08:24,860 --> 00:08:28,410
+They specify all of the current
+rows which need to be reloaded.
+
+119
+00:08:28,410 --> 00:08:34,840
+Here, we're going to start with our table view
+at 7 rows, we want to reload Rows 1, 3 and 5.
+
+120
+00:08:34,840 --> 00:08:38,370
+We just tell the table view "reload Rows 1, 3 and 5."
+
+121
+00:08:38,370 --> 00:08:40,840
+And just like before, the remaining rows animate.
+
+122
+00:08:40,840 --> 00:08:43,040
+On this case, there's not much to animate.
+
+123
+00:08:43,040 --> 00:08:46,360
+But the more interesting thing is
+what happens when you combine them.
+
+124
+00:08:46,360 --> 00:08:48,960
+This is the area that we've seen a
+lot of people get into trouble with,
+
+125
+00:08:48,960 --> 00:08:52,920
+and they get confused about what
+exact indexes they need to pass.
+
+126
+00:08:52,920 --> 00:08:55,800
+But as long as you follow those
+basic rules, it all works out.
+
+127
+00:08:55,800 --> 00:08:59,260
+So here, we're going to start with our
+table view in exactly the same state.
+
+128
+00:08:59,260 --> 00:09:00,760
+We're going to move to a new state.
+
+129
+00:09:00,760 --> 00:09:03,420
+And if you notice, there is some
+-- a few rows that are missing,
+
+130
+00:09:03,420 --> 00:09:06,170
+and there's a couple of new rows, there's a reloaded row.
+
+131
+00:09:06,170 --> 00:09:10,090
+So how do we actually specify what changed here?
+
+132
+00:09:10,090 --> 00:09:14,550
+Well, the first thing to know that in the new
+state of the table view, Rows 1 and 5 are gone.
+
+133
+00:09:14,550 --> 00:09:19,400
+So we need to tell the table view "delete Rows 1 and 5."
+
+134
+00:09:19,400 --> 00:09:27,850
+In the new state of the table view, Rows 2 and 3 are new, so
+we need to table view, "Hey, you can insert Rows 2 and 3."
+
+135
+00:09:27,850 --> 00:09:35,160
+And finally, 4 was reloaded and notice that its index
+changed in the new state, but we don't care about that.
+
+136
+00:09:35,160 --> 00:09:40,560
+We specify what load or reload in
+the former state of the table view.
+
+137
+00:09:40,560 --> 00:09:44,260
+And just like before, all the other
+rows will take care of animating
+
+138
+00:09:44,260 --> 00:09:47,090
+where they need to to make room for these new rows.
+
+139
+00:09:47,090 --> 00:09:52,970
+So let's talk a little bit about
+what happens under the covers.
+
+140
+00:09:52,970 --> 00:09:59,990
+You can understand why sometimes things
+fail, and you'll get notifications of that.
+
+141
+00:09:59,990 --> 00:10:02,790
+The first thing that happens is a sanity check.
+
+142
+00:10:02,790 --> 00:10:08,830
+When that endUpdates call comes in, or even
+if you just do one of the individual insert,
+
+143
+00:10:08,830 --> 00:10:14,560
+delete or reload by itself outside of an update block,
+we're going to go through and just sanity check it.
+
+144
+00:10:14,560 --> 00:10:19,690
+Well, the first thing we're going to do is
+we're going to eliminate redundant updates.
+
+145
+00:10:19,690 --> 00:10:24,810
+What I mean by redundant updates are if
+you've told us to insert an entire section,
+
+146
+00:10:24,810 --> 00:10:30,540
+and you also tell us to insert a row within that
+section, well, that's implicit because that's part
+
+147
+00:10:30,540 --> 00:10:32,490
+of the operation of inserting the entire section.
+
+148
+00:10:32,490 --> 00:10:35,210
+It means insert all the rows in that section.
+
+149
+00:10:35,210 --> 00:10:38,460
+And so, we'll go ahead and just take
+out the individual row insertion.
+
+150
+00:10:38,460 --> 00:10:41,270
+We'll do a similar thing on Deletes
+and a similar thing on Reloads.
+
+151
+00:10:41,270 --> 00:10:46,750
+So what we're sort of left with is just sort
+of the essential changes that need to be made.
+
+152
+00:10:46,750 --> 00:10:52,500
+The next thing we're going to do is call your data
+source, and we're going to ask for the number of sections
+
+153
+00:10:52,500 --> 00:10:55,710
+in the table view and then the number
+of rows in each of those sections.
+
+154
+00:10:55,710 --> 00:11:02,850
+And then finally, we're going to
+verify that versus what we computed.
+
+155
+00:11:02,850 --> 00:11:06,740
+So if the former state of the table
+view has 10 rows and you say it --
+
+156
+00:11:06,740 --> 00:11:10,660
+tell us to insert a couple of rows and maybe delete one row.
+
+157
+00:11:10,660 --> 00:11:15,300
+When we ask you for the number of rows, you
+better tell us "11," right, because it's --
+
+158
+00:11:15,300 --> 00:11:19,140
+if you tell us any other number, we can't
+figure out how to get from the old state
+
+159
+00:11:19,140 --> 00:11:23,470
+of the table view to the new state of the table view.
+
+160
+00:11:23,470 --> 00:11:29,930
+The next thing we do is actually
+rebuild the table view's geometry.
+
+161
+00:11:29,930 --> 00:11:35,100
+We do this by recalling the delegate methods
+to figure out all of the row heights,
+
+162
+00:11:35,100 --> 00:11:38,700
+all of the header and footer heights, things like that.
+
+163
+00:11:38,700 --> 00:11:42,280
+And we'll use that to animate to the new position.
+
+164
+00:11:42,280 --> 00:11:47,910
+One subtlety here that's kind of interesting is
+that you can actually return different heights here,
+
+165
+00:11:47,910 --> 00:11:50,950
+and we'll take care of animating those new heights.
+
+166
+00:11:50,950 --> 00:11:55,500
+So if you want to just change your -- the height of
+the rows in your table view, it's an easy way to do it.
+
+167
+00:11:55,500 --> 00:12:00,480
+You can do that in conjunction with a
+change of the rows in your table view.
+
+168
+00:12:00,480 --> 00:12:04,610
+You can also actually just do a simple Empty Update Block.
+
+169
+00:12:04,610 --> 00:12:09,610
+You can call it beginUpdates immediately followed by
+endUpdates with no actual changes to your table view.
+
+170
+00:12:09,610 --> 00:12:11,960
+We'll go through all the same steps here.
+
+171
+00:12:11,960 --> 00:12:16,460
+The whole first sanity check bit won't really do
+anything because you haven't told us any changes,
+
+172
+00:12:16,460 --> 00:12:22,160
+but we'll still rebuild and animate the geometry, which
+means if you simply want to rechange the row heights
+
+173
+00:12:22,160 --> 00:12:25,590
+in your table view, you can do
+that with an Empty Update Block.
+
+174
+00:12:25,590 --> 00:12:31,410
+An example where we use this is if you look at the S
+and S application and go into or out of editing mode,
+
+175
+00:12:31,410 --> 00:12:34,880
+you'll notice all of the rows get a little
+bit taller as they gain a separator.
+
+176
+00:12:34,880 --> 00:12:37,460
+When they're in any mode, that's exactly how we do this.
+
+177
+00:12:37,460 --> 00:12:44,080
+So that's the first argument to all
+of those various update methods.
+
+178
+00:12:44,080 --> 00:12:49,650
+The second argument to all of those
+is a row animation argument,
+
+179
+00:12:49,650 --> 00:12:54,380
+and that let's you specify the animation
+style for the row that's getting updated.
+
+180
+00:12:54,380 --> 00:13:01,200
+So that's done with an [inaudible] UITableViewRowAnimation.
+
+181
+00:13:01,200 --> 00:13:05,070
+And there's a handful we're going to talk about here.
+
+182
+00:13:05,070 --> 00:13:07,780
+The first one is the fade animation.
+
+183
+00:13:07,780 --> 00:13:12,620
+The fade animation simply makes the new
+cell that's going to be implemented fade in
+
+184
+00:13:12,620 --> 00:13:16,030
+and out as the other rows slide in or out of the way.
+
+185
+00:13:16,030 --> 00:13:21,330
+So we're going to insert a row here right
+above where it says "Section 0, Row 3."
+
+186
+00:13:21,330 --> 00:13:26,040
+And we'll see, if you look at it
+carefully, you see that that row faded in,
+
+187
+00:13:26,040 --> 00:13:31,310
+and now as it's deleted, you'll see it fade out.
+
+188
+00:13:31,310 --> 00:13:37,100
+We also support sliding the row that's being inserted
+or deleted in one of the four cardinal directions.
+
+189
+00:13:37,100 --> 00:13:41,480
+So for right, for example, in the same spot,
+we'll see a row slide in from the right,
+
+190
+00:13:41,480 --> 00:13:46,070
+and when it's deleted, slide back out to the right.
+
+191
+00:13:46,070 --> 00:13:49,320
+We support a similar thing for left.
+
+192
+00:13:49,320 --> 00:13:53,810
+You can see it slide in from the left
+and then again back out to the left.
+
+193
+00:13:53,810 --> 00:13:58,390
+And notice it's also fading as it's doing this.
+
+194
+00:13:58,390 --> 00:14:00,520
+We also support sliding to the top and bottom.
+
+195
+00:14:00,520 --> 00:14:07,760
+If you watch it from the top, it'll look like the
+row will slide out from underneath the row above it,
+
+196
+00:14:07,760 --> 00:14:10,740
+and then on the delete, will slide back underneath that row.
+
+197
+00:14:10,740 --> 00:14:15,250
+And then for Bottom, it looks like the row will just slide
+
+198
+00:14:15,250 --> 00:14:20,830
+out from underneath the row below it,
+and, again, slide back underneath there.
+
+199
+00:14:20,830 --> 00:14:23,140
+So you have quite a lot of flexibility
+to sort of make things move
+
+200
+00:14:23,140 --> 00:14:25,790
+in the direction that you need in your application.
+
+201
+00:14:25,790 --> 00:14:29,830
+You can also specify None.
+
+202
+00:14:29,830 --> 00:14:34,260
+Now, some people have the mistaken
+perception that this means there's not going
+
+203
+00:14:34,260 --> 00:14:38,210
+to be any animations in the entire update block.
+
+204
+00:14:38,210 --> 00:14:42,390
+Again, this just specifies how the rows that
+are being inserted, deleted or reloaded animate.
+
+205
+00:14:42,390 --> 00:14:46,240
+The remaining rows will always slide to their new position.
+
+206
+00:14:46,240 --> 00:14:48,180
+So here, we'll see that same row.
+
+207
+00:14:48,180 --> 00:14:50,040
+Notice it's already fully opaque.
+
+208
+00:14:50,040 --> 00:14:50,990
+It's fixed in position.
+
+209
+00:14:50,990 --> 00:14:52,540
+It's not animating.
+
+210
+00:14:52,540 --> 00:14:58,110
+The remaining rows still animate around it, though.
+
+211
+00:14:58,110 --> 00:15:02,220
+Finally, in 3.2, we added a new style called Middle.
+
+212
+00:15:02,220 --> 00:15:09,880
+Middle will attempt to keep the cell that's being
+inserted or deleted centered in that gap that's opening
+
+213
+00:15:09,880 --> 00:15:12,810
+up as we're inserting or deleting a cell.
+
+214
+00:15:12,810 --> 00:15:17,220
+And in the plain-style table view, it'll also add
+some shadows there and sort of give the illusion
+
+215
+00:15:17,220 --> 00:15:19,050
+that that cell the behind the other rows.
+
+216
+00:15:19,050 --> 00:15:24,220
+So if we watch that here, you can sort of
+see there's some shadows showing and covering
+
+217
+00:15:24,220 --> 00:15:27,260
+up that cell, and as it deletes, we run those again.
+
+218
+00:15:27,260 --> 00:15:36,640
+A couple of things to mention, we don't expect that you
+should use all of these styles in all circumstances.
+
+219
+00:15:36,640 --> 00:15:42,640
+For example, in Group Style Table Views, each
+section is surrounded by a rounded rectangle.
+
+220
+00:15:42,640 --> 00:15:46,380
+Right, if you're familiar with settings
+application, you know what this looks like.
+
+221
+00:15:46,380 --> 00:15:50,420
+And we want to give the illusion
+that that's an unbroken, you know,
+
+222
+00:15:50,420 --> 00:15:53,780
+rectangle around all of those cells
+as you insert and delete things.
+
+223
+00:15:53,780 --> 00:15:58,600
+So if you use the left and right animation
+styles, obviously, you sort of break that line.
+
+224
+00:15:58,600 --> 00:16:02,440
+So we don't really anticipate you
+to use those, although it will work.
+
+225
+00:16:02,440 --> 00:16:05,470
+So top and bottom or middle are generally better for that.
+
+226
+00:16:05,470 --> 00:16:10,500
+The middle in the group style case actually
+will not display those shadows, because, again,
+
+227
+00:16:10,500 --> 00:16:12,340
+it sort of looks funny with that rounded rectangle.
+
+228
+00:16:12,340 --> 00:16:14,020
+All right.
+
+229
+00:16:16,390 --> 00:16:18,510
+So that's how to actually to do the updates.
+
+230
+00:16:18,510 --> 00:16:22,110
+What if we want to combine it with an editing transition?
+
+231
+00:16:22,110 --> 00:16:29,340
+Well, all we need to do to do that is put the call
+to change the editing state inside that update block.
+
+232
+00:16:29,340 --> 00:16:33,600
+So here, we'll call to beginUpdates.
+
+233
+00:16:33,600 --> 00:16:40,390
+We'll do some amount of modifications to the
+table view, and then we'll simply call setEditing
+
+234
+00:16:40,390 --> 00:16:46,070
+with whatever the new editing state
+is and then the call to endUpdates.
+
+235
+00:16:46,070 --> 00:16:50,090
+We actually will do the transition
+in the call to endUpdates.
+
+236
+00:16:50,090 --> 00:16:55,840
+It won't actually happen immediately when you make
+the call, and that'll be the point that we re-query
+
+237
+00:16:55,840 --> 00:17:00,460
+for the editing styles for all of
+the new rows that have come in.
+
+238
+00:17:01,690 --> 00:17:09,510
+So now, let's bring Luke up and take a
+quick demo of what we've seen so far.
+
+239
+00:17:09,510 --> 00:17:14,570
+[ Applause ]
+
+240
+00:17:14,570 --> 00:17:15,370
+>> Luke the Hiesterman: All right.
+
+241
+00:17:15,370 --> 00:17:16,670
+Thanks, Jason.
+
+242
+00:17:16,670 --> 00:17:25,170
+I'd like to follow-up on all that information Jason
+just gave you by giving you an example of an application
+
+243
+00:17:25,170 --> 00:17:33,010
+that can be greatly enhanced and user experience made
+much smoother by using animated updates to table view.
+
+244
+00:17:33,010 --> 00:17:39,380
+So the application that I'm going to give you an example
+of is very simple RSS Reader using the table view
+
+245
+00:17:39,380 --> 00:17:46,540
+where each section of the RSS Reader represents an
+RSS Feed, and we have them one of them open at a time.
+
+246
+00:17:46,540 --> 00:17:53,130
+So I'll begin by giving you an overview
+of the application architecture.
+
+247
+00:17:53,130 --> 00:17:59,620
+We, of course, have an application and that
+application has an application delegate,
+
+248
+00:17:59,620 --> 00:18:04,710
+and that application delegate displays
+a table view controller.
+
+249
+00:18:04,710 --> 00:18:09,890
+That table view controller has a data source, of course,
+as you're used to, which, for the purposes of this demo,
+
+250
+00:18:09,890 --> 00:18:12,260
+will be opaque, and we won't really
+talk about how that works.
+
+251
+00:18:12,260 --> 00:18:18,050
+I assume you know how to control a
+model and put data into your table view.
+
+252
+00:18:18,050 --> 00:18:23,790
+So that table view controller naturally
+has a table view, and that looks like this.
+
+253
+00:18:23,790 --> 00:18:32,550
+And that table view has a custom section have a view
+that you can see there, and it also has custom cells.
+
+254
+00:18:32,550 --> 00:18:35,070
+Now, most of this stuff, we're not
+really going to talk about today.
+
+255
+00:18:35,070 --> 00:18:41,180
+What we're going to focus on is the table view controller
+and what you can do in that table view controller
+
+256
+00:18:41,180 --> 00:18:52,860
+to customize your table view's behavior, specifically using
+animated updates and making things flow better for the user.
+
+257
+00:18:52,860 --> 00:18:58,140
+OK. So let's first look at the application actually running.
+
+258
+00:18:58,140 --> 00:19:02,080
+And this is my RSS reader.
+
+259
+00:19:02,080 --> 00:19:07,290
+Now, if I tap on this little button here
+on the side, I can actually open a section.
+
+260
+00:19:07,290 --> 00:19:12,770
+One thing you'll notice is that section snapped
+to its new open stage, so these cells just appear.
+
+261
+00:19:12,770 --> 00:19:16,180
+Likewise, if I close it, they just suddenly disappear.
+
+262
+00:19:16,180 --> 00:19:19,510
+I can open it again, open a new section.
+
+263
+00:19:19,510 --> 00:19:24,220
+And you see the table view just immediately
+snaps to the new state with the new cells.
+
+264
+00:19:24,220 --> 00:19:30,140
+So what I'd like to do is open these sections and
+close them and change sections in an animated fashion
+
+265
+00:19:30,140 --> 00:19:36,060
+so that the user really sees what's going on, and
+everything just looks much more smooth and polished.
+
+266
+00:19:36,060 --> 00:19:41,170
+So if we go to the code, I have two methods
+that are going to be important here.
+
+267
+00:19:41,170 --> 00:19:44,600
+These handle opening and closing the sections.
+
+268
+00:19:44,600 --> 00:19:49,940
+They are Section Header, Section
+Opened and conversely, Section Closed.
+
+269
+00:19:49,940 --> 00:19:52,540
+And right now, they're both very simple.
+
+270
+00:19:52,540 --> 00:19:58,100
+All they do is update my model and then they call
+Reload Data, and that pops us to a new state.
+
+271
+00:19:58,100 --> 00:20:04,470
+But what we want to do is get rid of this Reload Data
+because that's what's causing us to pop to the new state
+
+272
+00:20:04,470 --> 00:20:07,400
+because we're just reloading the entire table view.
+
+273
+00:20:07,400 --> 00:20:12,190
+Instead, we want to use animated
+updates to get to the new state.
+
+274
+00:20:12,190 --> 00:20:19,910
+So let's just start over, and we'll start seeing
+what we have to do to use animated updates.
+
+275
+00:20:19,910 --> 00:20:24,480
+So the first thing we need to do is figure
+out what are the rows that we want to insert,
+
+276
+00:20:24,480 --> 00:20:28,630
+what colors to insert, index paths to insert?
+
+277
+00:20:28,630 --> 00:20:35,910
+And so we query and get that, and then we
+figure out what are index paths to delete?
+
+278
+00:20:35,910 --> 00:20:40,600
+OK. So now we know the rows that we're
+going to get rid of which are whatever rows
+
+279
+00:20:40,600 --> 00:20:45,590
+in the currently open section and
+what rows we're going to insert.
+
+280
+00:20:45,590 --> 00:20:54,030
+The next parameter, of course, to the insert
+and delete rows methods is an animation type.
+
+281
+00:20:54,030 --> 00:20:58,670
+So we have an Insert Animation and a Delete Animation.
+
+282
+00:20:58,670 --> 00:21:03,040
+Now, generally, when you're deleting
+rows and inserting rows at the same time,
+
+283
+00:21:03,040 --> 00:21:07,740
+if you're going to use a cardinal direction
+animation, you want to use opposite ones.
+
+284
+00:21:07,740 --> 00:21:14,810
+If you're inserting from the left, say, you want to delete
+to the right; that way you get a flow to the inserts
+
+285
+00:21:14,810 --> 00:21:17,490
+and deletes and there's a sort of a velocity effect.
+
+286
+00:21:17,490 --> 00:21:18,880
+So here, I'm using top and bottom.
+
+287
+00:21:18,880 --> 00:21:24,190
+I'm inserting from the top and likewise,
+I want to delete out the bottom.
+
+288
+00:21:24,190 --> 00:21:28,520
+So everything is going to sort of flow down the
+screen, and there'll be a velocity that way.
+
+289
+00:21:28,520 --> 00:21:36,160
+OK. So I have my IndexPaths that I want to insert, I have
+my IndexPaths I want to delete, I have animation styles,
+
+290
+00:21:36,160 --> 00:21:39,610
+I'm just about ready to do my update block.
+
+291
+00:21:39,610 --> 00:21:43,140
+Of course, before I do that, I
+want to actually update my model.
+
+292
+00:21:43,140 --> 00:21:44,320
+So I do that.
+
+293
+00:21:44,320 --> 00:21:50,570
+Of course, do this before the update block or at least
+before the call to endUpates, is the important thing.
+
+294
+00:21:50,570 --> 00:21:56,080
+And so now I do beginUpdates and I'm going
+to send in the index paths I want to insert.
+
+295
+00:21:56,080 --> 00:22:02,950
+I do that with insertRowsAtIndexPaths:withRowAnimation
+using the row animation that I determined before.
+
+296
+00:22:02,950 --> 00:22:07,430
+And likewise, I want to deleteRowsAtIndexPath.
+
+297
+00:22:07,430 --> 00:22:11,390
+And that's the end of my update block.
+
+298
+00:22:11,390 --> 00:22:17,940
+OK. So, that's the -- that's all the code
+that I need for my section opened method.
+
+299
+00:22:17,940 --> 00:22:23,800
+I just need to mirror some of this for my section closed
+method that will only have the logic for index paths
+
+300
+00:22:23,800 --> 00:22:26,290
+to delete because this is what happens when I tap
+
+301
+00:22:26,290 --> 00:22:30,640
+on the section that's already opened,
+and all I need to do is close it.
+
+302
+00:22:30,640 --> 00:22:41,250
+So once again, I will just compute my index paths to delete,
+go ahead and update my model, and this time I'm just going
+
+303
+00:22:41,250 --> 00:22:45,900
+to call self.tableView DeleteRowsAtIndexPaths
+without an update block.
+
+304
+00:22:45,900 --> 00:22:53,050
+I could use an update block, and it would behave exactly
+the same, but in this case, I only have one action to do,
+
+305
+00:22:53,050 --> 00:23:00,490
+so there's no batch operation happening, and
+that call will do everything I need right there.
+
+306
+00:23:00,490 --> 00:23:05,600
+OK. So let's run this, and see what we've got.
+
+307
+00:23:05,600 --> 00:23:12,040
+When I tap on my button here to open the section
+now, notice the rows smoothly animate into place,
+
+308
+00:23:12,040 --> 00:23:16,730
+and there's not the snapping sudden action
+that happened when I used Reload Data.
+
+309
+00:23:16,730 --> 00:23:22,630
+Likewise, when I close the section,
+the rows smoothly animate out of place.
+
+310
+00:23:22,630 --> 00:23:25,600
+There is one caveat to this current implementation.
+
+311
+00:23:25,600 --> 00:23:35,530
+You'll notice if I open this other section while
+Hot News is open, the animation looks rather odd.
+
+312
+00:23:35,530 --> 00:23:42,530
+Remember, I said before that using top animation for
+insert and bottom animation for delete causes this sort
+
+313
+00:23:42,530 --> 00:23:47,090
+of downward motion effect in the animation of the cells.
+
+314
+00:23:47,090 --> 00:23:53,070
+Well, that's fine, and that even
+looks OK if I open Hot News right now.
+
+315
+00:23:53,070 --> 00:23:59,660
+But this doesn't look good in this case when I open
+the section that's below the currently opened section
+
+316
+00:23:59,660 --> 00:24:02,760
+because the section header appears to animate upwards.
+
+317
+00:24:02,760 --> 00:24:05,220
+In fact, it does animate upwards.
+
+318
+00:24:05,220 --> 00:24:10,090
+So, sort of the moral of this story is
+sometimes we need to put some thought
+
+319
+00:24:10,090 --> 00:24:15,370
+into exactly what row animation styles
+we need, and I'm going to do that here
+
+320
+00:24:15,370 --> 00:24:21,390
+by actually conditionalizing the
+row animation styles I use based
+
+321
+00:24:21,390 --> 00:24:26,730
+on what section I'm opening relative
+to the currently open section.
+
+322
+00:24:26,730 --> 00:24:34,760
+So I'll just get rid of this.
+
+323
+00:24:34,760 --> 00:24:42,880
+[PAUSE] And I'm going to use that same paradigm as before,
+inserting from the top and deleting from the bottom only
+
+324
+00:24:42,880 --> 00:24:50,830
+if I'm opening the first section or if the section
+that I'm opening is above the currently open section.
+
+325
+00:24:50,830 --> 00:24:57,080
+But in the other case, when the new
+section that's being opened is below,
+
+326
+00:24:57,080 --> 00:25:01,840
+like we saw before where the animation was weird,
+I'm going to flip those animation parameters.
+
+327
+00:25:01,840 --> 00:25:07,220
+So now, I will insert with bottom
+animation and delete with top animation.
+
+328
+00:25:07,220 --> 00:25:14,270
+This will cause all the rows to appear to animate
+upwards, which will flow smoothly with the section header.
+
+329
+00:25:15,300 --> 00:25:18,210
+So, let's give this one more shot.
+
+330
+00:25:18,210 --> 00:25:21,180
+OK. That looks good.
+
+331
+00:25:21,180 --> 00:25:22,950
+Now what happens when I open this section.
+
+332
+00:25:22,950 --> 00:25:30,410
+The whole thing seems to animate upwards, and everything
+looks smooth and the same thing happens going this way.
+
+333
+00:25:30,410 --> 00:25:38,920
+So now I've successfully used Table View Animations
+to add a significant level of polish to my application
+
+334
+00:25:38,920 --> 00:25:43,090
+with just a little bit of code that
+got away from using reload data.
+
+335
+00:25:43,090 --> 00:25:49,530
+And more than that, my user as significant
+contextual information that they didn't used to have.
+
+336
+00:25:49,530 --> 00:25:55,270
+So, that's using animated updates and UITableView
+and I'll hand it the floor back to Jason.
+
+337
+00:25:55,270 --> 00:25:56,410
+Thank you very much.
+
+338
+00:25:56,410 --> 00:25:59,460
+[ Applause ]
+
+339
+00:25:59,460 --> 00:26:01,360
+OK. Thank you again, Jason.
+
+340
+00:26:01,360 --> 00:26:08,320
+So, as Jason said, there are lots of views in the table
+view that are potential fodder for gesture recognizers.
+
+341
+00:26:08,320 --> 00:26:17,490
+The table view itself is a view, the section headers and
+the section footers are all views, the cells are views, and,
+
+342
+00:26:17,490 --> 00:26:21,010
+of course, the table view has a table view
+header and a table view for themselves.
+
+343
+00:26:21,010 --> 00:26:26,950
+And these are all potential fodder for gestures, so
+there's lots of interesting things you can potentially do,
+
+344
+00:26:26,950 --> 00:26:30,540
+lots of places you can do gesture recognition.
+
+345
+00:26:30,540 --> 00:26:35,950
+I'd like to take a look at the RSS Reader
+app that we developed in the last demo
+
+346
+00:26:35,950 --> 00:26:44,410
+and look at three ways we can add gestures to views in that
+application to enhance the user experience end product.
+
+347
+00:26:44,410 --> 00:26:49,400
+So the first one we're going to look
+at is a pinch gesture recognizer.
+
+348
+00:26:49,400 --> 00:26:55,230
+That's not actually the first, but that will -- that's
+one that will be attached to the table view itself.
+
+349
+00:26:55,230 --> 00:27:01,400
+We're also going to look at tap gesture
+recognizer that will attach to the section headers.
+
+350
+00:27:01,400 --> 00:27:08,970
+And finally, we'll look at a long press gesture
+recognizer that we will put on the cells themselves.
+
+351
+00:27:08,970 --> 00:27:14,100
+So we've got one that will go on the table view, one that go
+on the section headers, and one that will go on the cells.
+
+352
+00:27:14,100 --> 00:27:20,180
+So all of the views in our app we're
+going to be using for gesture recognizers.
+
+353
+00:27:20,180 --> 00:27:24,910
+OK. So to the code.
+
+354
+00:27:24,910 --> 00:27:29,010
+The first one we want to implement
+is a tap gesture recognizer.
+
+355
+00:27:29,010 --> 00:27:35,130
+And the reason we're going to do that is if we run
+our app again, we can tap on this little button here,
+
+356
+00:27:35,130 --> 00:27:39,290
+and that opens our sections and that's great.
+
+357
+00:27:39,290 --> 00:27:44,560
+But if these are misses, this relatively
+small button or taps anywhere over here,
+
+358
+00:27:44,560 --> 00:27:47,790
+the touch is wasted, and it doesn't do anything.
+
+359
+00:27:47,790 --> 00:27:51,770
+We've got all this wasted space that
+we could be using for touch handling.
+
+360
+00:27:51,770 --> 00:27:57,440
+So I want to add a tap that will be
+handled anywhere in the Section Header View
+
+361
+00:27:57,440 --> 00:28:00,980
+that will do the same thing as the button does now.
+
+362
+00:28:00,980 --> 00:28:05,690
+So we'll see just how easy it is to do that.
+
+363
+00:28:05,690 --> 00:28:11,080
+I'm going to go to the code for my
+section header and it has an ended method.
+
+364
+00:28:11,080 --> 00:28:18,510
+And in that ended method, I'm simply going
+do set up a UI Tap Gesture Recognizer.
+
+365
+00:28:18,510 --> 00:28:26,480
+So I do that by [inaudible] and I give it -- the
+gesture recognizers use a target action pattern,
+
+366
+00:28:26,480 --> 00:28:34,660
+so I give it the target of Self and the selectors toggle
+open which is actually the same method that I used
+
+367
+00:28:34,660 --> 00:28:41,140
+as the action for the button that is currently
+used in the Table View Section Header,
+
+368
+00:28:41,140 --> 00:28:44,200
+which means I don't have to rewrite that code at all.
+
+369
+00:28:44,200 --> 00:28:49,520
+I already have all the code that handles the
+opening and closing of the section headers,
+
+370
+00:28:49,520 --> 00:28:55,970
+and I'll just give it the same action
+to the gesture recognizer, and I'm done.
+
+371
+00:28:55,970 --> 00:29:05,990
+So all I have to do now is attach this gesture
+recognizer to the -- that went a little oddly.
+
+372
+00:29:05,990 --> 00:29:11,780
+Oh, OK. Excuse me.
+
+373
+00:29:11,780 --> 00:29:16,970
+I inserted that in a bad spot.
+
+374
+00:29:16,970 --> 00:29:21,120
+OK. So now I just need to add the
+gesture recognizer to the view
+
+375
+00:29:21,120 --> 00:29:25,870
+which is the Section Header View, and I can just release it.
+
+376
+00:29:25,870 --> 00:29:32,030
+And with those three lines of code,
+I can now run my project.
+
+377
+00:29:32,030 --> 00:29:38,320
+And now I can tap anywhere in the section
+header, and it works just as before.
+
+378
+00:29:38,320 --> 00:29:39,640
+That easy.
+
+379
+00:29:39,640 --> 00:29:39,850
+[ Applause ]
+
+380
+00:29:39,850 --> 00:29:40,230
+Thank you.
+
+381
+00:29:40,230 --> 00:29:53,510
+OK. So the second one I want to look at is a
+pinch gesture recognizer on the table view.
+
+382
+00:29:53,510 --> 00:29:54,950
+And why do I want to do this?
+
+383
+00:29:54,950 --> 00:30:02,000
+I want to do this because when you look at this application,
+it's very easy to see that there's a lot more text
+
+384
+00:30:02,000 --> 00:30:05,670
+that can be displayed in these
+cells than fits at the current size.
+
+385
+00:30:05,670 --> 00:30:10,980
+I could just blow up all the cell
+heights and have huge rows in my table.
+
+386
+00:30:10,980 --> 00:30:12,350
+I don't really want to do that.
+
+387
+00:30:12,350 --> 00:30:18,090
+What I want to do is let the user decide
+if they want to make a cell bigger.
+
+388
+00:30:18,090 --> 00:30:25,500
+And I'm going to have them do that by actually pinching
+the table view and resizing rows in the table view.
+
+389
+00:30:25,500 --> 00:30:28,860
+So, let's see how we can do that.
+
+390
+00:30:28,860 --> 00:30:32,820
+Let me go to the interface of my table view,
+
+391
+00:30:32,820 --> 00:30:37,300
+and I'm actually going to add a couple
+of ivars so that we'll use for pinching.
+
+392
+00:30:37,300 --> 00:30:43,170
+And those are pinched index path and initial index path.
+
+393
+00:30:43,170 --> 00:30:47,710
+So when I -- when the user starts a
+pinch, I'm going to store that index path.
+
+394
+00:30:47,710 --> 00:30:52,200
+That's going to be the pinched index path so
+I know which row they're actually resizing.
+
+395
+00:30:52,200 --> 00:30:55,660
+And I'm also going to store the initial
+height of that row when they start pinching,
+
+396
+00:30:55,660 --> 00:31:01,090
+and I'm going to use that to compute how
+big I should make the cell as they pinch.
+
+397
+00:31:01,090 --> 00:31:04,390
+OK. So I got my ivars in place.
+
+398
+00:31:04,390 --> 00:31:07,830
+I'm going to go to the init method
+from my table view controller.
+
+399
+00:31:07,830 --> 00:31:16,050
+I'm going to set up a pinch gesture recognizer just like
+I set up the tap gesture recognizer in the section header.
+
+400
+00:31:16,050 --> 00:31:22,190
+So once again, this is an [inaudible] and I end it with
+target of self, which is the table view controller.
+
+401
+00:31:22,190 --> 00:31:28,130
+And this time I give it a handle pinch as the
+action, which I obviously didn't have any resizing
+
+402
+00:31:28,130 --> 00:31:33,400
+of rows functionality before, so this is a new
+method that I'm going to have to write in a second.
+
+403
+00:31:33,400 --> 00:31:37,760
+But then just as before, I add the
+gesture to the view, which, in this case,
+
+404
+00:31:37,760 --> 00:31:41,230
+is the table view, and then I can release it.
+
+405
+00:31:41,230 --> 00:31:46,560
+And with those three lines, I've added a
+pinch gesture recognizer to the table view.
+
+406
+00:31:46,560 --> 00:31:51,820
+But I need to go implement handle
+pinch so that pinching does something.
+
+407
+00:31:51,820 --> 00:31:52,920
+All right.
+
+408
+00:31:52,920 --> 00:31:54,010
+Let's do that.
+
+409
+00:31:54,010 --> 00:32:00,220
+So hopefully you went to the gesture
+recognizer sessions yesterday.
+
+410
+00:32:00,220 --> 00:32:10,150
+But if not, as a quick introduction, gesture recognizers
+fire their actions and they can have one of several states
+
+411
+00:32:10,150 --> 00:32:14,940
+from possible, began, changed, cancelled and ended.
+
+412
+00:32:14,940 --> 00:32:20,040
+And we're going to deal with a few of
+those in our action method, Handle Pinch.
+
+413
+00:32:20,040 --> 00:32:27,020
+So this is the outline of the method, and we're
+going to do something for when the gesture begins
+
+414
+00:32:27,020 --> 00:32:31,700
+and UIGestureRecognizer state began, and
+we're going to handle the changed state
+
+415
+00:32:31,700 --> 00:32:37,660
+which we get constant change updates as the
+user continues to pinch inward or outward.
+
+416
+00:32:37,660 --> 00:32:41,500
+And we'll also clean out any cancelled or ended state.
+
+417
+00:32:41,500 --> 00:32:44,300
+So let's start with the began state.
+
+418
+00:32:44,300 --> 00:32:48,160
+First thing we want to know is where the user's pinching.
+
+419
+00:32:48,160 --> 00:32:54,650
+We can get this from a property in
+UIGestureRecognizer that is location end view.
+
+420
+00:32:54,650 --> 00:32:58,840
+So we get that from the gesture
+recognizer, and we can use that point
+
+421
+00:32:58,840 --> 00:33:05,180
+to ask the table view what self,
+what index path is at this point?
+
+422
+00:33:05,180 --> 00:33:13,050
+So we call self.TableViewIndexPathForRow and give it the
+pinch location that we got from the gesture recognizer.
+
+423
+00:33:13,050 --> 00:33:14,830
+All right.
+
+424
+00:33:14,830 --> 00:33:23,240
+So now we can set our initial pinch height, which we do by
+querying our model for what is the height of this row now?
+
+425
+00:33:23,240 --> 00:33:24,060
+We have the row.
+
+426
+00:33:24,060 --> 00:33:25,940
+We ask our model what is the height of it?
+
+427
+00:33:25,940 --> 00:33:29,370
+And we'll just save that off as our
+initial pinch height so we can use it
+
+428
+00:33:29,370 --> 00:33:32,820
+for calculating changes in the pinch height later.
+
+429
+00:33:32,820 --> 00:33:37,370
+The last thing we need to do is call
+a method that we'll write in a second,
+
+430
+00:33:37,370 --> 00:33:41,850
+which is called Update Pinch For
+Scale and send it in index path.
+
+431
+00:33:41,850 --> 00:33:45,470
+The first parameter is scale we
+get from the gesture recognizer,
+
+432
+00:33:45,470 --> 00:33:53,410
+and that represents how much the user has pinched where
+1.0 is the value when the user puts their two fingers
+
+433
+00:33:53,410 --> 00:33:58,830
+on the screen, and it gets bigger as they
+pinch outward and smaller as they pinch inward.
+
+434
+00:33:58,830 --> 00:34:01,180
+So we'll write that method in a second.
+
+435
+00:34:01,180 --> 00:34:06,150
+We deal with the changed state by simply doing the
+same thing we did at the end of the began state
+
+436
+00:34:06,150 --> 00:34:10,090
+and calling our update method, Update Pinch For Scale.
+
+437
+00:34:10,090 --> 00:34:20,110
+And when the gesture cancels or ends, we just have the clean
+up after ourselves by releasing our pinched index path.
+
+438
+00:34:20,110 --> 00:34:23,820
+So, all the work happens in Update Pinch For Scale.
+
+439
+00:34:23,820 --> 00:34:28,360
+And let's write that now.
+
+440
+00:34:28,360 --> 00:34:32,030
+So first thing we do is simply
+validate the index path that was sent.
+
+441
+00:34:32,030 --> 00:34:34,600
+And then after that, we need to do some math.
+
+442
+00:34:34,600 --> 00:34:38,800
+And we'll do that using our initial
+pinch height value and the value
+
+443
+00:34:38,800 --> 00:34:42,180
+of the scale that we get from the gesture recognizer.
+
+444
+00:34:42,180 --> 00:34:48,530
+So we take the initial pinch height and we multiply
+it by scale, and that's how we get our new height,
+
+445
+00:34:48,530 --> 00:34:53,720
+and we also pin it to a default minimum height, which we
+call Default Row Height, and that's the height of the row
+
+446
+00:34:53,720 --> 00:35:01,670
+that you see in the application as we run it now,
+because we don't rows getting unreasonably small.
+
+447
+00:35:01,670 --> 00:35:03,480
+So we have the new height.
+
+448
+00:35:03,480 --> 00:35:10,440
+We need to update our model with that new height, so
+we do that with I call the self-set height for row.
+
+449
+00:35:10,440 --> 00:35:17,730
+And now that we've updated our model, we can take
+advantage of what Jason said earlier which is
+
+450
+00:35:17,730 --> 00:35:23,840
+that using an empty update block, we can
+actually change the geometry of our table view.
+
+451
+00:35:23,840 --> 00:35:29,570
+We've already changed the geometry of our model
+and now we just need to use an empty update block,
+
+452
+00:35:29,570 --> 00:35:34,010
+beginUpdates immediately followed by
+endUpdates and that will cause the table view
+
+453
+00:35:34,010 --> 00:35:39,310
+to animate to that -- to the new row heights.
+
+454
+00:35:39,310 --> 00:35:45,570
+So we call beginUpdates and endUpdates and that's it.
+
+455
+00:35:45,570 --> 00:35:52,770
+Now, there's one problem with this implementation, and that
+is we don't really want to animate to the new positions,
+
+456
+00:35:52,770 --> 00:35:58,190
+and that's because the gesture recognizer
+gives us constant updates as we pinch.
+
+457
+00:35:58,190 --> 00:36:05,250
+So table view, of course, automatically
+and by default animates all the cells
+
+458
+00:36:05,250 --> 00:36:08,470
+to their new positions when we do an update block.
+
+459
+00:36:08,470 --> 00:36:11,420
+But, we want to disable that.
+
+460
+00:36:11,420 --> 00:36:20,050
+We can disable UIView animations with a class method on
+UIView, and we'll do that first by finding the current state
+
+461
+00:36:20,050 --> 00:36:26,360
+of animations enabled, and then we
+can set Animations Enabled to No.
+
+462
+00:36:26,360 --> 00:36:30,590
+And because we're a good citizen, we're
+going to restore Animations Enabled
+
+463
+00:36:30,590 --> 00:36:33,560
+to the value it was before this animation block.
+
+464
+00:36:33,560 --> 00:36:42,820
+So by doing that, by wrapping our animation block
+or rather our update block in Animations Enabled No,
+
+465
+00:36:42,820 --> 00:36:49,110
+that tells us when we go to the new row heights, that
+we've specified and that we've put into our model,
+
+466
+00:36:49,110 --> 00:36:51,190
+we don't want the table view to actually animate.
+
+467
+00:36:51,190 --> 00:36:55,700
+That'll just -- it'll go right to that, and that's
+fine because we'll be doing this very quickly
+
+468
+00:36:55,700 --> 00:37:00,170
+and often as the user changes their pinch.
+
+469
+00:37:00,170 --> 00:37:03,080
+So let's run this.
+
+470
+00:37:03,080 --> 00:37:11,250
+And now, I can actually pinch if I want
+to relieve -- read more about Safari 5.
+
+471
+00:37:11,250 --> 00:37:17,020
+And as I expand my fingers or my virtual
+fingers, the height of the row expands.
+
+472
+00:37:17,020 --> 00:37:24,500
+And likewise, I can bring it back, and with a pinch,
+the user can now change the height of the row.
+
+473
+00:37:24,500 --> 00:37:25,510
+That's awesome!
+
+474
+00:37:25,510 --> 00:37:31,480
+[ Applause ]
+
+475
+00:37:31,480 --> 00:37:36,650
+Thanks. So there's one other way
+that we can go at the same idea.
+
+476
+00:37:36,650 --> 00:37:41,180
+Maybe we want to use the pinch
+instead to resize an individual row.
+
+477
+00:37:41,180 --> 00:37:46,770
+Maybe we want to act as sort of a zoom on the
+entire table view and resize all the rows.
+
+478
+00:37:46,770 --> 00:37:50,050
+So that's a pretty simple code change.
+
+479
+00:37:50,050 --> 00:37:54,990
+Right now, the row heights are
+specified in our model individually.
+
+480
+00:37:54,990 --> 00:37:58,490
+We have a value in the model for every row's height.
+
+481
+00:37:58,490 --> 00:38:05,990
+And we can actually just override that by
+adding a new ivar that we'll call Row Heights.
+
+482
+00:38:05,990 --> 00:38:13,790
+And this will override our current model and just
+set all row heights, all the heights of every row
+
+483
+00:38:13,790 --> 00:38:17,800
+to the value that we have in our ivar row heights.
+
+484
+00:38:17,800 --> 00:38:25,750
+So let's take this, and we'll initialize it, and
+I'll end it with Style Method to our default value.
+
+485
+00:38:25,750 --> 00:38:34,070
+And here, I've got a couple of methods that handle my
+model for setting height and getting a height for a row.
+
+486
+00:38:34,070 --> 00:38:40,890
+And these have some kind of scary looking code that
+sets each of the individual row heights in an array.
+
+487
+00:38:40,890 --> 00:38:45,810
+I'm just going to get rid of that and
+make it much simpler so when I set Height,
+
+488
+00:38:45,810 --> 00:38:49,340
+all I'm going to set is the height of my new ivar.
+
+489
+00:38:49,340 --> 00:38:52,470
+And likewise, when I query for the height,
+I'm just going to turn my new ivar.
+
+490
+00:38:52,470 --> 00:38:55,620
+And I'm not going to run it again.
+
+491
+00:38:55,620 --> 00:38:59,620
+We're going give an entirely other effect.
+
+492
+00:38:59,620 --> 00:39:04,840
+Now when I pinch, every row increases its height.
+
+493
+00:39:04,840 --> 00:39:06,930
+And I can even go.
+
+494
+00:39:06,930 --> 00:39:11,490
+And now the user can increase the
+size of every row with a simple pinch.
+
+495
+00:39:11,490 --> 00:39:14,510
+That's pretty cool.
+
+496
+00:39:14,510 --> 00:39:19,350
+[ Applause ]
+
+497
+00:39:19,350 --> 00:39:25,130
+OK. Let's look at one last gesture, and
+that's going to be a long pressed gesture.
+
+498
+00:39:25,130 --> 00:39:27,140
+Let's take a look at the app again.
+
+499
+00:39:27,140 --> 00:39:32,950
+What I want to do is actually add a long pressed gesture
+recognizer to the table view cell so that the user can tap
+
+500
+00:39:32,950 --> 00:39:39,100
+and hold on a cell and will pop up a menu that allows
+them to e-mail a story to one of their friends.
+
+501
+00:39:39,100 --> 00:39:47,050
+So, we're going to go to everyone's favorite
+method, TableViewCellForRowatIndexPath.
+
+502
+00:39:47,050 --> 00:39:52,380
+And when we create a new cell, we're going
+to attach a gesture recognizer to it.
+
+503
+00:39:52,380 --> 00:39:56,120
+So we're going to use the same three
+lines you're familiar with by now
+
+504
+00:39:56,120 --> 00:39:58,990
+in creating a gesture recognizer
+and attaching it to the view.
+
+505
+00:39:58,990 --> 00:40:03,650
+This one's a long press, and we
+give it target Self and our action,
+
+506
+00:40:03,650 --> 00:40:08,010
+in this case is Hand the Long Press,
+and we add it to the cell this time.
+
+507
+00:40:08,010 --> 00:40:18,220
+The entire thing, as you see, is enclosed in a
+check to see if this device actually can send mail.
+
+508
+00:40:18,220 --> 00:40:24,710
+And now I need to implement long press.
+
+509
+00:40:29,750 --> 00:40:36,500
+So with Handle Pinch, we had to deal with several
+different states; began, changed and ended.
+
+510
+00:40:36,500 --> 00:40:41,620
+With the long press, all we really care about is the
+began state because that's we've begun the long press
+
+511
+00:40:41,620 --> 00:40:46,130
+when the user has tapped and held on something
+long enough for it to become a long press.
+
+512
+00:40:46,130 --> 00:40:49,960
+So all we need to do in this case is very
+similar to the pinch gesture recognizer,
+
+513
+00:40:49,960 --> 00:40:54,770
+we get the location in the table view and
+we get that from the gesture recognizer.
+
+514
+00:40:54,770 --> 00:41:00,450
+And then, again, we query the table
+view for the index path at that point.
+
+515
+00:41:00,450 --> 00:41:07,880
+And now we're just going to fire off a method that
+sets up an e-mail menu item for that index path.
+
+516
+00:41:07,880 --> 00:41:12,330
+And we can see that run now.
+
+517
+00:41:13,550 --> 00:41:17,530
+We press and hold, and now we get an e-mail menu item.
+
+518
+00:41:17,530 --> 00:41:21,860
+So that's -- it's another way we can add
+a gesture recognizer to another view.
+
+519
+00:41:21,860 --> 00:41:27,640
+In this case, the cell and gives the user
+another way to interact with our table view.
+
+520
+00:41:27,640 --> 00:41:32,660
+So, we've added three ways for the user to interact with
+the table view, and we've done that by gesture recognizers
+
+521
+00:41:32,660 --> 00:41:34,920
+on three different parts of the table view.
+
+522
+00:41:34,920 --> 00:41:41,600
+We, again -- we added the tap gesture to the Section
+Header View, and that gave the user much greater ability
+
+523
+00:41:41,600 --> 00:41:46,630
+to tap anywhere in the section, and it's much
+more difficult for them to miss their target.
+
+524
+00:41:46,630 --> 00:41:49,990
+We added a pinch gesture that, of course,
+gave them a great new way to interact
+
+525
+00:41:49,990 --> 00:41:53,010
+with the table view in resizing row heights.
+
+526
+00:41:53,010 --> 00:42:00,580
+And we also gave them an ability to send an e-mail simply
+by long pressing on a table view cell, tapping and holding,
+
+527
+00:42:00,580 --> 00:42:04,420
+and we've added all this great
+interaction with just a little bit of code
+
+528
+00:42:04,420 --> 00:42:06,870
+and gesture recognizers in the table view.
+
+529
+00:42:06,870 --> 00:42:11,350
+So I hope that gives you an idea of how you
+can use gesture recognizers in your table view.
+
+530
+00:42:11,350 --> 00:42:16,610
+And thank you for checking out these examples,
+and I'll hand the floor to Jason for a conclusion.
+
+531
+00:42:16,610 --> 00:42:17,510
+Thanks.
+
+532
+00:42:17,510 --> 00:42:24,770
+[ Applause ]
+
+533
+00:42:24,770 --> 00:42:27,070
+>> Jason: Thanks, Luke.
+
+534
+00:42:27,070 --> 00:42:34,400
+Well, if you've never tried to add support like that to an
+app before, you have no idea how much of a nightmare it is
+
+535
+00:42:34,400 --> 00:42:38,750
+to try to add some sort of a complex
+gesture recognition on top of something
+
+536
+00:42:38,750 --> 00:42:41,250
+that already has a bunch of defined behavior.
+
+537
+00:42:41,250 --> 00:42:43,120
+We did all of that without breaking anything --
+
+538
+00:42:43,120 --> 00:42:47,760
+what table view does normally scrolling,
+selecting any of that kind of stuff.
+
+539
+00:42:47,760 --> 00:42:53,730
+If you tried to do this the old way with touch handling,
+it's really easy to just break some bit other functionality
+
+540
+00:42:53,730 --> 00:42:58,000
+in the amount of state that you
+need to track is really quite huge.
+
+541
+00:42:58,000 --> 00:43:04,340
+So if you have any more information, our
+Application Frameworks Evangelist is Bill Dudney.
+
+542
+00:43:04,340 --> 00:43:06,520
+His contact info's up here.
+
+543
+00:43:06,520 --> 00:43:12,050
+There's a bunch of documentation on the table view and
+there's some great forums where a bunch of us participate,
+
+544
+00:43:12,050 --> 00:43:17,490
+and there's a lot of other engineers like you
+guys who can help each other answer questions.
+
+545
+00:43:19,340 --> 00:43:23,690
+We referred yesterday -- or to the
+sessions yesterday on gesture recognizers.
+
+546
+00:43:23,690 --> 00:43:26,480
+If you didn't see them, I highly
+encourage you to take a look at them.
+
+547
+00:43:26,480 --> 00:43:27,620
+Some great content there.
+
+548
+00:43:27,620 --> 00:43:34,470
+So, in summary, definitely use animated updates to your
+table views and play around with gesture recognizers.
+
+549
+00:43:34,470 --> 00:43:37,890
+See if you can come up with some interesting
+ways for users to interact with your content.
+

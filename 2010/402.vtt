@@ -1,0 +1,3471 @@
+1
+00:00:06,850 --> 00:00:13,200
+>> Graeme: Welcome to the second session on
+Game Design and Development for the iPhone OS.
+
+2
+00:00:13,200 --> 00:00:17,100
+In, well, I really hope you attended Part One.
+
+3
+00:00:17,100 --> 00:00:18,510
+Did you all attend Part One?
+
+4
+00:00:18,510 --> 00:00:21,040
+[ Applause ]
+
+5
+00:00:21,040 --> 00:00:23,430
+Good game designers.
+
+6
+00:00:23,430 --> 00:00:27,710
+This session is all about the technical
+aspects of how we made Quest and we're going
+
+7
+00:00:27,710 --> 00:00:31,890
+to go a lot into optimizing for the platforms.
+
+8
+00:00:31,890 --> 00:00:35,530
+As I said in the first session there is
+more than one platform now and optimizing
+
+9
+00:00:35,530 --> 00:00:37,520
+for each of them requires a little thought.
+
+10
+00:00:37,520 --> 00:00:39,120
+We're going to talk about that.
+
+11
+00:00:39,120 --> 00:00:42,590
+We're going to talk about our lighting
+algorithm and how we lit the dungeon
+
+12
+00:00:42,590 --> 00:00:45,550
+and how we actually got to 30 fps and higher.
+
+13
+00:00:45,550 --> 00:00:47,790
+Our game actually runs at a high frame rate.
+
+14
+00:00:47,790 --> 00:00:51,290
+We're going to take a, check in with our art department.
+
+15
+00:00:51,290 --> 00:00:57,650
+Pete will talk about the artwork at Quest and how the
+art pipeline even made a tremendous difference in getting
+
+16
+00:00:57,650 --> 00:01:01,060
+to the higher frame rates that we see in the game.
+
+17
+00:01:01,060 --> 00:01:06,850
+Finally we're going to talk about the one dozen things
+that we think will make a tremendous difference to you
+
+18
+00:01:06,850 --> 00:01:12,160
+in your game development and hopefully you'll
+get to apply some of that tonight to your games
+
+19
+00:01:12,160 --> 00:01:15,120
+so you can talk to us about it in our labs tomorrow.
+
+20
+00:01:15,120 --> 00:01:25,170
+So to quickly reiterate Quest was written in two months by
+three programmers and one artist who really were passionate
+
+21
+00:01:25,170 --> 00:01:35,230
+about making a highly performing application to
+show off on the iPad, the iPod Touch and the iPhone.
+
+22
+00:01:35,230 --> 00:01:37,840
+Let's have another quick demo, take
+a look technically at some stuff.
+
+23
+00:01:37,840 --> 00:01:40,910
+I'd like to invite Jeff to the stage
+for a little talk through that.
+
+24
+00:01:40,910 --> 00:01:43,140
+[ Applause ]
+
+25
+00:01:43,140 --> 00:01:48,670
+>> Jeff: So this demo will be more of a technical
+programmer look at it, sort of look behind the curtain.
+
+26
+00:01:48,670 --> 00:01:57,240
+So, what you see here is our dungeon level
+exported via Open Collada from our 3D art package.
+
+27
+00:01:57,240 --> 00:02:05,580
+You see in this frame as you, it varies as he runs
+around but it's around 45 to 50,000 polygons a frame
+
+28
+00:02:05,580 --> 00:02:11,180
+and we should be doing around 40 frames a second
+so go ahead and bring up the console and change
+
+29
+00:02:11,180 --> 00:02:17,150
+to the perf
+display so we can see what's going on,
+
+30
+00:02:20,060 --> 00:02:24,640
+50 and 45 so you know you can do the
+math and we're pushing lots of polygons.
+
+31
+00:02:24,640 --> 00:02:26,380
+These devices are super awesome.
+
+32
+00:02:26,380 --> 00:02:32,920
+This is an iPad running 1024x768 and
+pushing tons and tons of polygons.
+
+33
+00:02:32,920 --> 00:02:37,940
+It was so much fun making this game
+on the iPad and on the iPhone 4.
+
+34
+00:02:37,940 --> 00:02:40,410
+These devices are just awesome to play with.
+
+35
+00:02:40,410 --> 00:02:44,830
+So we can see he's going through the light and we'll talk
+
+36
+00:02:44,830 --> 00:02:47,120
+about how we do the per pixel lighting here.
+
+37
+00:02:47,120 --> 00:02:54,930
+We'll show you the shader that did that but as
+you've seen us kill the demon over and over again,
+
+38
+00:02:54,930 --> 00:02:57,760
+there's been some stuff that's been bothering
+me so let's just go kill the demon real quick
+
+39
+00:02:57,760 --> 00:03:01,840
+and kind of describe what the problem is.
+
+40
+00:03:01,840 --> 00:03:07,190
+So as he's fighting you can kind of see that the hero is
+way up in the demon's kitchen a little bit like we need to
+
+41
+00:03:07,190 --> 00:03:07,960
+[ Laughter ]
+
+42
+00:03:07,960 --> 00:03:09,930
+We need to back him out.
+
+43
+00:03:09,930 --> 00:03:13,100
+I mean the demon is just engulfing him right?
+
+44
+00:03:13,100 --> 00:03:17,280
+So one way we can do that is bring up the
+console and we can change the runtime,
+
+45
+00:03:17,280 --> 00:03:20,080
+the character collision radius of the hero.
+
+46
+00:03:20,080 --> 00:03:27,410
+By default it is 100 world units so if we
+back that out a little bit, let's say 150
+
+47
+00:03:27,410 --> 00:03:32,200
+and we fight again, we can kind of see the instant change.
+
+48
+00:03:32,200 --> 00:03:34,040
+So it's better.
+
+49
+00:03:34,040 --> 00:03:35,190
+Nice crit.
+
+50
+00:03:35,190 --> 00:03:38,250
+But still, still let's back it out.
+
+51
+00:03:38,250 --> 00:03:39,180
+Let's try 200.
+
+52
+00:03:39,180 --> 00:03:50,760
+So as you can see we're changing variables
+in real time without doing another build.
+
+53
+00:03:50,760 --> 00:03:53,790
+We're on device and we're making
+this loop as tight as we can.
+
+54
+00:03:53,790 --> 00:03:55,700
+We can change as fast as we can.
+
+55
+00:03:55,700 --> 00:03:57,150
+So let's see how that looks.
+
+56
+00:03:57,150 --> 00:03:59,440
+Alright that looks a little bit better.
+
+57
+00:03:59,440 --> 00:04:05,970
+That looks I would send that out the door.
+
+58
+00:04:05,970 --> 00:04:08,130
+Alright. OK one, a couple more things I want
+
+59
+00:04:08,130 --> 00:04:14,660
+to show you before we leave this demo
+is let's show you the facade of Quest.
+
+60
+00:04:14,660 --> 00:04:16,510
+So, let's turn on rotation.
+
+61
+00:04:16,510 --> 00:04:20,820
+Let's kind of rotate around the dungeon a little bit.
+
+62
+00:04:20,820 --> 00:04:22,950
+Toggle rotation.
+
+63
+00:04:22,950 --> 00:04:28,890
+This is the part where you don't want to run over
+and grab it from him and start typing it yourself.
+
+64
+00:04:28,890 --> 00:04:34,540
+So as we rotate around you can kind of see we don't have any
+polygons where you can't see from our default camera view.
+
+65
+00:04:34,540 --> 00:04:36,760
+We don't have anything down the stairs.
+
+66
+00:04:36,760 --> 00:04:40,700
+We don't have anything behind the
+hall of lights for example.
+
+67
+00:04:40,700 --> 00:04:46,170
+We cut out everything that the camera won't see
+as a final post process to help our frame rate.
+
+68
+00:04:46,170 --> 00:04:48,820
+We don't need to render triangles that you're never seeing.
+
+69
+00:04:48,820 --> 00:04:49,560
+You know, it's a game.
+
+70
+00:04:49,560 --> 00:04:50,490
+It's a Hollywood set.
+
+71
+00:04:50,490 --> 00:04:53,120
+We don't, we're not making the most realistic dungeon.
+
+72
+00:04:53,120 --> 00:05:01,030
+I've never seen a real dungeon so it's
+fake and now we're showing how we cheat
+
+73
+00:05:01,030 --> 00:05:08,270
+and as a final step let's turn off the diffuse map
+because we're going to show off lighting right away.
+
+74
+00:05:15,360 --> 00:05:17,590
+So this is our lightmap for the dungeon.
+
+75
+00:05:17,590 --> 00:05:25,120
+You can see as he walks this lightmap is shading our
+guy so as he walks through the red, you see it gets red
+
+76
+00:05:25,120 --> 00:05:33,500
+and as he walks out of the red he doesn't and
+so we'll go into how we made this lightmap next.
+
+77
+00:05:33,500 --> 00:05:39,160
+[ Applause ]
+
+78
+00:05:39,160 --> 00:05:42,330
+So, OK. First quiz of the day.
+
+79
+00:05:42,330 --> 00:05:47,450
+How many people here see this and
+see 10 lights in the scene?
+
+80
+00:05:47,450 --> 00:05:52,550
+10? Alright, how about choice of B, how about 20?
+
+81
+00:05:52,550 --> 00:05:53,800
+Couple? Alright.
+
+82
+00:05:53,800 --> 00:05:57,140
+How about multiple choice C, which is always correct, 0?
+
+83
+00:05:57,140 --> 00:05:59,770
+How many people see 0 lights in the scene?
+
+84
+00:05:59,770 --> 00:06:04,320
+Alright. Yes and then the final D
+answer to throw you all off, 50.
+
+85
+00:06:04,320 --> 00:06:06,400
+Anybody see 50?
+
+86
+00:06:06,400 --> 00:06:07,800
+Yes. Alright.
+
+87
+00:06:07,800 --> 00:06:09,780
+Everyone's correct.
+
+88
+00:06:09,780 --> 00:06:12,380
+So what we do in Quest is we lighten up our dungeon.
+
+89
+00:06:12,380 --> 00:06:18,770
+We start off with our diffuse map which is just
+our detail and our base color and then we go
+
+90
+00:06:18,770 --> 00:06:22,650
+into our art package and we put in lots and lots of lights.
+
+91
+00:06:22,650 --> 00:06:24,240
+Static lights.
+
+92
+00:06:24,240 --> 00:06:28,750
+In this scene we have over 50 static lights so
+if you raised your hand on D, you were correct.
+
+93
+00:06:28,750 --> 00:06:33,270
+But we also have no dynamic lights so
+if you chose 0 you are also correct.
+
+94
+00:06:33,270 --> 00:06:39,780
+Our first pass at this was your standard take
+your diffuse, multiply it times the lightmap
+
+95
+00:06:39,780 --> 00:06:43,700
+and you get this result and it was muddy.
+
+96
+00:06:43,700 --> 00:06:50,000
+Our artist Pete looked at it and he said yeah
+that's great but it doesn't look very good so he
+
+97
+00:06:50,000 --> 00:06:54,560
+and he said what I want is the
+hard light shader from Photoshop.
+
+98
+00:06:54,560 --> 00:07:02,640
+I want the shadows to be darker and I want the highlights of
+the frame to be brighter and so, you know, I'm a programmer.
+
+99
+00:07:02,640 --> 00:07:03,570
+I know math.
+
+100
+00:07:03,570 --> 00:07:05,370
+I'm like yeah and I have shaders.
+
+101
+00:07:05,370 --> 00:07:07,320
+Let's do it in a shader, you know.
+
+102
+00:07:07,320 --> 00:07:12,960
+Let me go look up the hardlight math and put it all
+in the shader because shaders solve all problems.
+
+103
+00:07:12,960 --> 00:07:14,550
+So we did that.
+
+104
+00:07:14,550 --> 00:07:17,650
+Looks great, 12 frames a second.
+
+105
+00:07:17,650 --> 00:07:20,000
+It was terrible.
+
+106
+00:07:20,000 --> 00:07:23,340
+It was very, very slow.
+
+107
+00:07:23,340 --> 00:07:24,650
+So not only do we have.
+
+108
+00:07:24,650 --> 00:07:25,340
+We have two problems now.
+
+109
+00:07:25,340 --> 00:07:33,050
+We have one, we have an unhappy artist because it's slow and
+we've also taken all the power out of our, out of his hand.
+
+110
+00:07:33,050 --> 00:07:35,180
+He doesn't have any control over the final frame any more.
+
+111
+00:07:35,180 --> 00:07:37,450
+We do all the fancy math in the shader.
+
+112
+00:07:37,450 --> 00:07:45,000
+So, we needed to go back to the drawing board
+and kind of think of a different way to do this.
+
+113
+00:07:45,000 --> 00:07:49,500
+So, one way to do this was to pre-compute
+what the hardlight does ahead of time.
+
+114
+00:07:49,500 --> 00:07:55,920
+What we did is we pre-computed the brightening part of
+the hardlight shader in the diffuse map ahead of time
+
+115
+00:07:55,920 --> 00:08:01,940
+and then we do our final multiply with the
+lightmap and our dungeon is now fast again,
+
+116
+00:08:01,940 --> 00:08:06,580
+running very, very fast using a very simple shader.
+
+117
+00:08:06,580 --> 00:08:10,080
+So we're now fast and we also have
+the power back in the artist's hands.
+
+118
+00:08:10,080 --> 00:08:12,240
+He now controls both sides of the equation.
+
+119
+00:08:12,240 --> 00:08:17,930
+He can brighten up the lightmap, the diffuse map in
+Photoshop, he can level it, and he can saturate it.
+
+120
+00:08:17,930 --> 00:08:24,670
+It's up to him and then he also generates
+the lightmap for us and we just render it.
+
+121
+00:08:24,670 --> 00:08:29,930
+So here's the hardlight textbook version of the fragment
+shader that was super slow and I'll kind of walk you
+
+122
+00:08:29,930 --> 00:08:34,660
+through it and it's going to take a long
+time because it's a very, very slow shader.
+
+123
+00:08:34,660 --> 00:08:38,580
+First we sampled the diffuse map and scale it.
+
+124
+00:08:38,580 --> 00:08:44,080
+Then we sampled the lightmap and then we
+start messing with the diffuse color -1
+
+125
+00:08:44,080 --> 00:08:47,330
+so we get it from the range of 0 to 1 to -1 to 1.
+
+126
+00:08:47,330 --> 00:08:55,400
+Next we have to start prepping the left and right sides of
+the equation for our mix and then we figure out our step
+
+127
+00:08:55,400 --> 00:08:58,800
+and then we do our mix and we finally step on the FragColor
+
+128
+00:08:58,800 --> 00:09:05,320
+and you know the vertex shader is probably still rendering
+them even though I've taken this long to explain it
+
+129
+00:09:05,320 --> 00:09:13,240
+and as a final don't do this ever, you can see that
+in all these vec4's there are no precision qualifiers.
+
+130
+00:09:13,240 --> 00:09:16,440
+There's no lowp or mediump or highp anywhere in the shader
+
+131
+00:09:16,440 --> 00:09:22,910
+so we've given the shader compiler nothing
+to go on to help optimize it for us.
+
+132
+00:09:22,910 --> 00:09:26,120
+So, what you see is what you get, very, very slow here.
+
+133
+00:09:26,120 --> 00:09:28,980
+Here's the final fragment shader.
+
+134
+00:09:28,980 --> 00:09:36,720
+It's your standard lightmapping shader, sample
+and diffuse multiply it times the lightmap,
+
+135
+00:09:36,720 --> 00:09:39,970
+stuff it in the fragment color and you're off and running.
+
+136
+00:09:39,970 --> 00:09:47,770
+So now that we have the dungeon lit
+how do we load it in, in a fast way.
+
+137
+00:09:47,770 --> 00:09:54,500
+The first version we tried was let's do the first
+very naive way to do it, load it all in at once.
+
+138
+00:09:54,500 --> 00:10:02,350
+So what you see here is our top down or 3/4 view of the
+dungeon and this was maybe 130,000 polygons at once.
+
+139
+00:10:02,350 --> 00:10:06,370
+This final version I think ended
+up to be about 85,000 polygons.
+
+140
+00:10:06,370 --> 00:10:06,840
+So we did that.
+
+141
+00:10:06,840 --> 00:10:09,380
+We did the first thing which was a very quick thing to do.
+
+142
+00:10:09,380 --> 00:10:14,420
+We wanted to iterate as fast as we could so we loaded
+it all up in memory and that caused a big problem.
+
+143
+00:10:14,420 --> 00:10:22,280
+It took 5 or 6 seconds to get to that Play button so we've
+already broken that rule of getting to game play as fast
+
+144
+00:10:22,280 --> 00:10:27,350
+as we can so we needed to come up with a different way.
+
+145
+00:10:27,350 --> 00:10:31,510
+The way we finally ended up doing it
+is we split it into logical sections.
+
+146
+00:10:31,510 --> 00:10:34,640
+The first thing we load is just
+what you see at the main menu.
+
+147
+00:10:34,640 --> 00:10:39,050
+Then as you walk down the hallway we
+start pulling those objects back in.
+
+148
+00:10:39,050 --> 00:10:45,420
+Now this also helped us be a good citizen
+in Open jail because there is a limit
+
+149
+00:10:45,420 --> 00:10:50,650
+on how many triangles that you can index per 1 drawl call.
+
+150
+00:10:50,650 --> 00:10:58,590
+So breaking this up into logical sections got us
+around that and then finally, look at your game design
+
+151
+00:10:58,590 --> 00:11:01,430
+and think about ways you can optimize your level loading.
+
+152
+00:11:01,430 --> 00:11:05,540
+For example, in Quest, we didn't end up doing
+this but we could have if we had designed one
+
+153
+00:11:05,540 --> 00:11:07,330
+of those gates to shut after you walk through.
+
+154
+00:11:07,330 --> 00:11:10,600
+You reach a checkpoint and the gate shuts behind you.
+
+155
+00:11:10,600 --> 00:11:12,710
+You know you consider dropping off the first two sections.
+
+156
+00:11:12,710 --> 00:11:14,430
+You don't need that any more.
+
+157
+00:11:14,430 --> 00:11:18,450
+You might need the memory for particles
+and all sorts of fun stuff.
+
+158
+00:11:18,450 --> 00:11:24,610
+So, drop those old sections if you can but the
+main takeaway is, think about your game design
+
+159
+00:11:24,610 --> 00:11:27,860
+and what about your game design can allow
+you to take these shortcuts you know.
+
+160
+00:11:27,860 --> 00:11:28,590
+You're making a game.
+
+161
+00:11:28,590 --> 00:11:36,190
+This is the best and most fun thing you can do as a
+programmer is find those shortcuts and exploit them.
+
+162
+00:11:36,190 --> 00:11:44,500
+Finally, this is the part of the geometry that you don't
+see in a game because given our camera point of view
+
+163
+00:11:44,500 --> 00:11:49,530
+and you don't rotate in our game play, you'd
+never see these triangles so we never export them.
+
+164
+00:11:49,530 --> 00:11:50,510
+They're never in our binary.
+
+165
+00:11:50,510 --> 00:11:52,740
+It makes it small over.
+
+166
+00:11:52,740 --> 00:11:54,890
+It's faster to load.
+
+167
+00:11:54,890 --> 00:11:59,080
+Another important thing is we keep this around
+on the art side because we use these polygons
+
+168
+00:11:59,080 --> 00:12:01,570
+to cast shadows and generate the lightmap.
+
+169
+00:12:01,570 --> 00:12:04,500
+So don't delete them entirely.
+
+170
+00:12:04,500 --> 00:12:09,690
+Keep them on the art side of the design side because
+you might need to use them for some use later.
+
+171
+00:12:09,690 --> 00:12:15,900
+So, now that we've got the dungeon lit and
+we're loading it let's throw the character in.
+
+172
+00:12:15,900 --> 00:12:18,350
+Our first pass at this was not good.
+
+173
+00:12:18,350 --> 00:12:19,970
+We threw down the guy.
+
+174
+00:12:19,970 --> 00:12:23,440
+He's got a diffuse texture, no shadow.
+
+175
+00:12:23,440 --> 00:12:27,970
+He sticks out like a sore thumb, doesn't look like he
+fits at all but we also have another bigger problem
+
+176
+00:12:27,970 --> 00:12:32,720
+which is well we chose to statically
+light our dungeon with no dynamic lights.
+
+177
+00:12:32,720 --> 00:12:40,150
+How are we going to light this guy so that
+he fits in our world in a fast way given
+
+178
+00:12:40,150 --> 00:12:42,970
+that we've already chosen to take
+static lighting into account?
+
+179
+00:12:42,970 --> 00:12:48,740
+One way you can do it is to take the minimap and drape
+it over him as an environment map so as he's walking
+
+180
+00:12:48,740 --> 00:12:54,220
+around you know where he's in world space on the
+minimap because you already done that for the game,
+
+181
+00:12:54,220 --> 00:12:57,210
+so you sample the texture and then you think well,
+
+182
+00:12:57,210 --> 00:13:02,280
+we're just going to distend our
+lightmapping algorithm as he walks around.
+
+183
+00:13:02,280 --> 00:13:04,820
+This worked great and when we first thought of it we were
+
+184
+00:13:04,820 --> 00:13:08,200
+like you know it's not accurate
+but it's going to look pretty good.
+
+185
+00:13:08,200 --> 00:13:11,200
+It will keep our frame rate pretty
+high and it's going to be fun.
+
+186
+00:13:11,200 --> 00:13:13,060
+Right. It'll be fun enough.
+
+187
+00:13:13,060 --> 00:13:16,570
+So this worked great for about a second.
+
+188
+00:13:16,570 --> 00:13:22,580
+Right. You can see as we walked over that beautiful
+grate that has light underneath it shining up,
+
+189
+00:13:22,580 --> 00:13:25,550
+he's now being shadowed by something
+he's standing on top of.
+
+190
+00:13:25,550 --> 00:13:26,360
+Yeah. I laughed.
+
+191
+00:13:26,360 --> 00:13:33,480
+It was a good laugh but I also felt pretty stupid but
+I knew I was on the right path because it looked cool
+
+192
+00:13:33,480 --> 00:13:37,510
+but something was; it just needed an extra little step.
+
+193
+00:13:37,510 --> 00:13:41,590
+So as I said being a game programmer
+we can take some shortcuts here.
+
+194
+00:13:41,590 --> 00:13:43,390
+We're going to fake it.
+
+195
+00:13:43,390 --> 00:13:46,870
+We're going to not use the actual 1024x1024 minimap.
+
+196
+00:13:46,870 --> 00:13:51,130
+We're going to make a new one and this time
+when we generate this lightmap we're not going
+
+197
+00:13:51,130 --> 00:13:54,320
+to take any information that's below his knees.
+
+198
+00:13:54,320 --> 00:13:57,030
+We're just going to take any light that's
+above him because that's what we really want.
+
+199
+00:13:57,030 --> 00:14:04,630
+We really just want the lights from above him to shine and
+we don't, our camera view we'll never see underneath him.
+
+200
+00:14:04,630 --> 00:14:11,450
+So this is the final lightmap that we
+came up with and this is the final render.
+
+201
+00:14:11,450 --> 00:14:17,040
+Now when he was walking down the hall of lights and he was
+all red and he walked into the darkness and it looked cool
+
+202
+00:14:17,040 --> 00:14:20,740
+but he was, he got kind of chameleoned into the background.
+
+203
+00:14:20,740 --> 00:14:22,210
+We lost him in the frame.
+
+204
+00:14:22,210 --> 00:14:29,600
+Now when he was moving it's easier to see but if you take
+a screenshot and you send out a mail, people look at it
+
+205
+00:14:29,600 --> 00:14:34,820
+and they go well, yeah, he's shadowed but I can't see him.
+
+206
+00:14:34,820 --> 00:14:39,950
+One way to make him pop off the screen
+is to add one dynamic rim light.
+
+207
+00:14:39,950 --> 00:14:45,860
+Now a rim light is one that we put on
+the camera and we wanted the effect
+
+208
+00:14:45,860 --> 00:14:51,200
+of if the vertex normal is exactly perpendicular
+to our camera, we want that to be fully bright
+
+209
+00:14:51,200 --> 00:14:56,620
+and as the vertex normal gets closer and closer
+to the camera we want that to fall off to 0.
+
+210
+00:14:56,620 --> 00:14:58,720
+You can see that on the demon's shoulder.
+
+211
+00:14:58,720 --> 00:15:04,430
+The back of his shoulder is our fully bright value and then
+as it gets closer and closer to the camera, it falls off.
+
+212
+00:15:04,430 --> 00:15:08,360
+So here's how we did that in the vertex shader.
+
+213
+00:15:08,360 --> 00:15:09,880
+First we set up a varying.
+
+214
+00:15:09,880 --> 00:15:18,280
+We need a place to store our result value and then
+we get the normal from the camera to the vertex,
+
+215
+00:15:18,280 --> 00:15:22,120
+dot it with the vertex normal and then we smoothstep it.
+
+216
+00:15:22,120 --> 00:15:29,410
+Smoothstepping is basically a nice little quadratic blend
+that we wanted to do between values between .5 and 1
+
+217
+00:15:29,410 --> 00:15:34,230
+and that final rim value you stuff into that
+varying that we created at the very top.
+
+218
+00:15:34,230 --> 00:15:42,450
+Now as an exercise for you guys, this is a great place
+to stop and think can I give my artist a knob here
+
+219
+00:15:42,450 --> 00:15:44,620
+to turn because artists love knobs to turn.
+
+220
+00:15:44,620 --> 00:15:45,440
+They love it.
+
+221
+00:15:45,440 --> 00:15:49,520
+Give them as many knobs and things to play with as possible.
+
+222
+00:15:49,520 --> 00:15:55,970
+So one way you can give an artist some love here
+is to add an attribute called rim light color.
+
+223
+00:15:55,970 --> 00:16:03,960
+Let them set the color in your 3D world so that when they're
+walking down the red hall of lights maybe he wants the light
+
+224
+00:16:03,960 --> 00:16:06,920
+to be tinted a little orange, blue, or whatever.
+
+225
+00:16:06,920 --> 00:16:09,590
+It's up to him right he's the artist.
+
+226
+00:16:09,590 --> 00:16:13,330
+Or another way you might want to
+use this is in a very dramatic way.
+
+227
+00:16:13,330 --> 00:16:17,360
+If we roll a critten
+and the hero hits the demon for that frame
+
+228
+00:16:17,360 --> 00:16:22,840
+and for the next few frames we can pump that red to
+be fully red I mean pump that light to be fully red
+
+229
+00:16:22,840 --> 00:16:26,030
+and you know he'll flash red for a
+second and it'll be you know dramatic.
+
+230
+00:16:26,030 --> 00:16:27,730
+So there's ways that you can play with this.
+
+231
+00:16:27,730 --> 00:16:30,520
+This is just the base case.
+
+232
+00:16:30,520 --> 00:16:34,380
+So we send that rim light over to
+the fragment shader and you can see
+
+233
+00:16:34,380 --> 00:16:37,440
+that this fragment shader looks a
+lot like our dungeon fragment shader.
+
+234
+00:16:37,440 --> 00:16:43,410
+Sample the diffuse multiply it times a
+lightmap and simply add in the rim light
+
+235
+00:16:43,410 --> 00:16:46,450
+and then stuff it in the fragment color and you're off.
+
+236
+00:16:46,450 --> 00:16:50,420
+Let's talk about how we animated our guy.
+
+237
+00:16:50,420 --> 00:16:52,920
+There are two types of animations we considered.
+
+238
+00:16:52,920 --> 00:16:55,980
+We could have done skeletal animation or mesh animation.
+
+239
+00:16:55,980 --> 00:17:00,370
+Mesh animation is one of the older
+techniques where at every key frame
+
+240
+00:17:00,370 --> 00:17:03,900
+in the animation you record the position of every vertex.
+
+241
+00:17:03,900 --> 00:17:15,090
+Given that our guy when we started was 3200 polygons
+that information gets big fast, on disk and in RAM.
+
+242
+00:17:15,090 --> 00:17:17,010
+So we chose skeletal animation.
+
+243
+00:17:17,010 --> 00:17:20,480
+Skeletal animation is simply what you see here.
+
+244
+00:17:20,480 --> 00:17:28,840
+This stack of bones which is our matrix transformations and
+then you also have a mapping of every vertex to each bone
+
+245
+00:17:28,840 --> 00:17:30,960
+or maybe a vertex matched to multiple bones.
+
+246
+00:17:30,960 --> 00:17:38,900
+For example if you have an elbow, this vertex on your elbow
+might map to the lower arm and the upper arm equally 50%.
+
+247
+00:17:38,900 --> 00:17:43,760
+So you have this mapping and then when you
+animate the bones because in your animation
+
+248
+00:17:43,760 --> 00:17:51,040
+for every key frame you're only storing the
+bone transformations you then can draw your guy
+
+249
+00:17:51,040 --> 00:17:52,660
+and it looks correct.
+
+250
+00:17:52,660 --> 00:17:53,990
+So we chose skeletal.
+
+251
+00:17:53,990 --> 00:17:57,190
+Now there's two ways that you can
+do this in a performant way.
+
+252
+00:17:57,190 --> 00:18:01,660
+The first way you should choose is you should look
+at the GPU first because the GPU is very, very fast.
+
+253
+00:18:01,660 --> 00:18:04,580
+There are some tradeoffs to using the GPU though.
+
+254
+00:18:04,580 --> 00:18:12,020
+Let's say that your game is pegging the GPU fully, you have
+no space left and but you still want to do some skinning so
+
+255
+00:18:12,020 --> 00:18:14,980
+but then you look at your CPU and you're
+like oh look I have some space there.
+
+256
+00:18:14,980 --> 00:18:17,030
+Consider moving it back to the CPU.
+
+257
+00:18:17,030 --> 00:18:18,480
+You have two there you get to play with.
+
+258
+00:18:18,480 --> 00:18:21,380
+It's a balancing act.
+
+259
+00:18:21,380 --> 00:18:28,810
+Another reason you might want to do it on the CPU is
+if you need at any time to know the vertex position
+
+260
+00:18:28,810 --> 00:18:31,190
+in the middle of the animation for, like in the swing.
+
+261
+00:18:31,190 --> 00:18:36,270
+If you even know that vertex position exactly you need
+to do that on the CPU because once you send the GPU
+
+262
+00:18:36,270 --> 00:18:40,010
+down to render your stuff it's, you can't
+get that back in any sort of performant way.
+
+263
+00:18:40,010 --> 00:18:42,490
+So it's a mix and match.
+
+264
+00:18:42,490 --> 00:18:43,000
+It's a game.
+
+265
+00:18:43,000 --> 00:18:45,100
+It's a game within a game.
+
+266
+00:18:45,100 --> 00:18:51,390
+So as I said before our first Sergeant Shock was one
+that we made just to get in the game as fast as possible.
+
+267
+00:18:51,390 --> 00:18:57,290
+It had 3200ish polygons, 60 bones, tongue bone, eyelid bone.
+
+268
+00:18:57,290 --> 00:19:02,060
+I mean it was a lot right; 4 weights per vertex.
+
+269
+00:19:02,060 --> 00:19:05,610
+It was just done to get him in the game as fast as possible.
+
+270
+00:19:05,610 --> 00:19:09,850
+Now from our camera view there's really
+no difference between a 60-bone guy
+
+271
+00:19:09,850 --> 00:19:14,750
+with 4 weights per vertex and a 2
+weights per vertex, 20-bone guy.
+
+272
+00:19:14,750 --> 00:19:21,030
+There was no visual quality difference so
+making that optimization was a great win for us.
+
+273
+00:19:21,030 --> 00:19:25,140
+Do less, your game will run faster.
+
+274
+00:19:25,140 --> 00:19:28,840
+It works for Quest but it might not work for your
+game because you're doing a first-person shooter.
+
+275
+00:19:28,840 --> 00:19:30,980
+One solution does not fit all here.
+
+276
+00:19:30,980 --> 00:19:39,550
+It's up to you to test, play-test, redo the art assets again
+and again and again until you find one that works for you.
+
+277
+00:19:39,550 --> 00:19:43,130
+Alright. Let's get to the console.
+
+278
+00:19:43,130 --> 00:19:51,620
+A typical game loop that I've been involved in and guilty of
+is a designer will come to me, you know or Graeme will come
+
+279
+00:19:51,620 --> 00:19:54,820
+to me and say let's make the hero 100 HitPoints.
+
+280
+00:19:54,820 --> 00:20:02,890
+I'll be just typing away in my, making my best
+feature ever, I'm like yeah, yeah I'll do it.
+
+281
+00:20:02,890 --> 00:20:12,070
+Then I go to lunch and then I'll go to the bathroom and
+I'll go to the meeting, I'll forget about it you know.
+
+282
+00:20:12,070 --> 00:20:13,830
+I'll finally make him a build.
+
+283
+00:20:13,830 --> 00:20:17,930
+A couple hours later I finally give it to him.
+
+284
+00:20:17,930 --> 00:20:18,920
+He plays it.
+
+285
+00:20:18,920 --> 00:20:20,780
+He's like ah you know what 100 is not fun.
+
+286
+00:20:20,780 --> 00:20:22,440
+Let's make it 200.
+
+287
+00:20:22,440 --> 00:20:28,590
+By that time I've gone to bed and he's still late at the
+office and he'll send the email and the loop just continues.
+
+288
+00:20:28,590 --> 00:20:30,810
+The loop is very, very slow.
+
+289
+00:20:30,810 --> 00:20:35,560
+The best way that we've found to manufacture
+fun is to make that loop as tight as possible.
+
+290
+00:20:35,560 --> 00:20:40,590
+Stay on device in game like we showed in the demo.
+
+291
+00:20:40,590 --> 00:20:42,320
+So here's the fastest way to do it.
+
+292
+00:20:42,320 --> 00:20:49,580
+Designer sets it to be 100 in game, he play-tests
+right there on the device, changes it to 200
+
+293
+00:20:49,580 --> 00:20:52,040
+and does it again and again and again and again.
+
+294
+00:20:52,040 --> 00:20:54,330
+One way you can do this is to data drive your engine.
+
+295
+00:20:54,330 --> 00:21:00,190
+Expose as many knobs and variables as you can to your
+designer, to your artist, to your other programmers.
+
+296
+00:21:00,190 --> 00:21:04,690
+Now we've chosen to use the game console as the throwback.
+
+297
+00:21:04,690 --> 00:21:08,590
+There's many ways that you can
+expose variables to your designers.
+
+298
+00:21:08,590 --> 00:21:10,050
+This is just one example.
+
+299
+00:21:10,050 --> 00:21:12,470
+Here's how we did it in code.
+
+300
+00:21:12,470 --> 00:21:14,100
+So this is one type of way you can do it.
+
+301
+00:21:14,100 --> 00:21:17,710
+You can say at the start of time you
+can say addConfigVariable heroHitPoints
+
+302
+00:21:17,710 --> 00:21:20,350
+with a default value of 100 and a callback.
+
+303
+00:21:20,350 --> 00:21:26,260
+So when they bring up the console, type in
+heroHitPoints = 100, you get this callback.
+
+304
+00:21:26,260 --> 00:21:26,860
+You get the value.
+
+305
+00:21:26,860 --> 00:21:28,530
+You can do whatever you want with it.
+
+306
+00:21:28,530 --> 00:21:29,160
+You can log it.
+
+307
+00:21:29,160 --> 00:21:31,900
+You can set the heroHitPoints to 100.
+
+308
+00:21:31,900 --> 00:21:33,970
+It's up to you.
+
+309
+00:21:33,970 --> 00:21:37,210
+Another pattern is to use a console command.
+
+310
+00:21:37,210 --> 00:21:40,600
+Console command is one it's just like a
+variable but it doesn't really have a value.
+
+311
+00:21:40,600 --> 00:21:43,920
+So for example, like the toggle diffuse that you saw.
+
+312
+00:21:43,920 --> 00:21:45,230
+ToggleBBox here.
+
+313
+00:21:45,230 --> 00:21:49,260
+AddConsoleCommand toggleBBox withCallback and then
+
+314
+00:21:49,260 --> 00:21:52,980
+when they toggle the BBox you get the
+callback and you can do whatever you want.
+
+315
+00:21:52,980 --> 00:21:57,870
+You can toggle your BBox rendering
+or you can reload your assets.
+
+316
+00:21:57,870 --> 00:21:59,350
+You can do whatever you want.
+
+317
+00:21:59,350 --> 00:22:06,220
+But the point is that you are in
+game and not reloading the game.
+
+318
+00:22:06,220 --> 00:22:08,770
+Here's one I like to use a lot.
+
+319
+00:22:08,770 --> 00:22:14,560
+Let's say that you get inspired one night and you start
+working all night long and you've got this awesome feature
+
+320
+00:22:14,560 --> 00:22:17,300
+that you're going to do, 6:00 a.m. you're done.
+
+321
+00:22:17,300 --> 00:22:21,010
+Checking all your stuff, send out
+the build email, all proud.
+
+322
+00:22:21,010 --> 00:22:21,840
+Check out my new feature.
+
+323
+00:22:21,840 --> 00:22:22,850
+This is awesome.
+
+324
+00:22:22,850 --> 00:22:24,380
+I'm going to bed.
+
+325
+00:22:24,380 --> 00:22:25,800
+Come in at 2:00.
+
+326
+00:22:25,800 --> 00:22:27,090
+Find out that you broke it.
+
+327
+00:22:27,090 --> 00:22:27,990
+You didn't check for an all.
+
+328
+00:22:27,990 --> 00:22:32,230
+You didn't, something's wrong and now you're the goat.
+
+329
+00:22:32,230 --> 00:22:34,780
+Anybody? Yeah.
+
+330
+00:22:34,780 --> 00:22:36,190
+I've done it.
+
+331
+00:22:36,190 --> 00:22:44,820
+How about if you send that email off at 6:00 and
+then you get on a transcontinental flight to Maui.
+
+332
+00:22:44,820 --> 00:22:48,860
+Yeah. Here's how you save yourself from doing this.
+
+333
+00:22:48,860 --> 00:22:49,980
+You add a ConfigVariable.
+
+334
+00:22:49,980 --> 00:22:55,240
+Let's call it JeffsCrazyFeature
+and I'll turn it off by default.
+
+335
+00:22:55,240 --> 00:23:00,390
+I'll send out the email and I'll say if you want
+to see my feature, turn on this ConfigVariable
+
+336
+00:23:00,390 --> 00:23:09,570
+and at runtime they can turn on features, turn off features,
+turn on debug features and you can get on that plane to Maui
+
+337
+00:23:09,570 --> 00:23:11,850
+and feel confident that you haven't broken the build
+
+338
+00:23:11,850 --> 00:23:16,470
+and if you did break the build they can just
+turn it off and their work is not blocked.
+
+339
+00:23:16,470 --> 00:23:22,940
+So, you can get a sample of this
+console code at the attendee website.
+
+340
+00:23:22,940 --> 00:23:23,880
+It's locked.
+
+341
+00:23:23,880 --> 00:23:29,800
+It's a sample of the console hooked into the
+default OpenGL sample that comes with Xcode.
+
+342
+00:23:29,800 --> 00:23:32,320
+I encourage you to use it.
+
+343
+00:23:32,320 --> 00:23:34,190
+Figure out new ways to use it.
+
+344
+00:23:34,190 --> 00:23:35,480
+Extend it.
+
+345
+00:23:35,480 --> 00:23:42,770
+Use it in your games to data drive your experience, to
+give your designers every knob possible to let them design
+
+346
+00:23:42,770 --> 00:23:46,760
+and every artist to let them just make great art, you know.
+
+347
+00:23:46,760 --> 00:23:48,990
+Let them do what they do best.
+
+348
+00:23:48,990 --> 00:23:50,430
+Thank you for your time.
+
+349
+00:23:50,430 --> 00:23:53,030
+I'd like to bring up Pete to talk about game art.
+
+350
+00:23:53,030 --> 00:23:55,450
+[ Applause ]
+
+351
+00:23:55,450 --> 00:23:56,690
+>> Pete: Hi everybody.
+
+352
+00:23:56,690 --> 00:23:57,390
+My name is Pete.
+
+353
+00:23:57,390 --> 00:24:00,300
+I'm an artist on Quest.
+
+354
+00:24:00,300 --> 00:24:07,520
+So today I'm going to talk about art, the art style that
+we chose for Quest, how we built the art assets for Quest
+
+355
+00:24:07,520 --> 00:24:14,470
+and the steps that we took to optimize the artwork to
+make it run really fast, way over 30 frames a second.
+
+356
+00:24:14,470 --> 00:24:18,260
+So to get started let's talk about style.
+
+357
+00:24:18,260 --> 00:24:24,140
+We really wanted to pick a style in
+Quest that showed off really well
+
+358
+00:24:24,140 --> 00:24:27,960
+on all the Apple platforms whether it
+was the smaller screen on the iPhone,
+
+359
+00:24:27,960 --> 00:24:31,550
+the larger screen on the iPad we
+wanted to see the characters.
+
+360
+00:24:31,550 --> 00:24:32,930
+We wanted to know what they were doing.
+
+361
+00:24:32,930 --> 00:24:38,760
+We wanted to relate to the world and we
+really wanted that style to be cohesive.
+
+362
+00:24:38,760 --> 00:24:44,380
+We wanted it to feel exactly like you're seeing the
+exact same game whether you were looking at the UI,
+
+363
+00:24:44,380 --> 00:24:49,100
+the characters, the dungeon and because
+we only had two months to create this,
+
+364
+00:24:49,100 --> 00:24:53,140
+we picked a style that was achievable
+in that amount of time.
+
+365
+00:24:53,140 --> 00:24:57,440
+We didn't have a lot of time to do high polynomial mapping.
+
+366
+00:24:57,440 --> 00:25:03,930
+We wanted it to look good but we really needed
+to make sure that we were doing the right thing.
+
+367
+00:25:03,930 --> 00:25:08,240
+So when you're designing your game,
+style is also very important.
+
+368
+00:25:08,240 --> 00:25:11,500
+You want to pick a style that's really
+going to speak to your audience.
+
+369
+00:25:11,500 --> 00:25:18,730
+If you're designing a history-based game starring Abraham
+Lincoln you probably don't want to render him looking
+
+370
+00:25:18,730 --> 00:25:21,180
+like an animated character with a bazooka.
+
+371
+00:25:21,180 --> 00:25:25,220
+You're going to alienate a large portion
+well maybe that's the greatest idea ever
+
+372
+00:25:25,220 --> 00:25:25,950
+[ Laughter ]
+
+373
+00:25:25,950 --> 00:25:33,530
+But the people who are coming to your game
+are going to have an expectation of the style
+
+374
+00:25:33,530 --> 00:25:37,360
+and they want to relate to it and love it.
+
+375
+00:25:37,360 --> 00:25:43,250
+So let's start getting into it a
+little bit about how we created Quest.
+
+376
+00:25:43,250 --> 00:25:46,430
+The. How many people out there know what a texture atlas is?
+
+377
+00:25:46,430 --> 00:25:51,820
+How many people are currently using
+texture atlases in their applications?
+
+378
+00:25:51,820 --> 00:25:59,860
+So this is a great way to really optimize your
+game and get a lot of really good performance.
+
+379
+00:25:59,860 --> 00:26:09,790
+You might be surprised to know that this one texture,
+this 1024 texture accounts for 80 to 90% of our dungeon.
+
+380
+00:26:09,790 --> 00:26:12,290
+We're loading one texture.
+
+381
+00:26:12,290 --> 00:26:18,780
+So if out there if you don't know what a texture
+atlas is basically instead of taking all of this,
+
+382
+00:26:18,780 --> 00:26:21,960
+these small little textures and
+setting them to the GPU to get rendered
+
+383
+00:26:21,960 --> 00:26:26,370
+and having all these draw call saying
+render me, render me, render me, render me,
+
+384
+00:26:26,370 --> 00:26:29,870
+we're combining all of these little
+textures into one larger texture
+
+385
+00:26:29,870 --> 00:26:32,960
+and you're sending one time to get rendered, one draw call.
+
+386
+00:26:32,960 --> 00:26:34,910
+It's a lot more efficient.
+
+387
+00:26:34,910 --> 00:26:39,130
+Now as a programmer you're looking at
+this and you're saying that's great.
+
+388
+00:26:39,130 --> 00:26:43,020
+You know we get a lot of really good
+efficiency and it's a great way to work.
+
+389
+00:26:43,020 --> 00:26:49,350
+As an artist if there are any artists out
+there, you might think this is insane.
+
+390
+00:26:49,350 --> 00:26:51,560
+You might have never worked like this before.
+
+391
+00:26:51,560 --> 00:26:58,590
+You're asking yourself why do I want to work this way and
+I kind of had that opinion at first but I actually learned
+
+392
+00:26:58,590 --> 00:27:05,610
+to love it because one thing it does
+is it keeps your artwork unified.
+
+393
+00:27:05,610 --> 00:27:07,530
+The style of the dungeon is very unified.
+
+394
+00:27:07,530 --> 00:27:10,760
+When I'm working on the dungeon I bring up this one texture.
+
+395
+00:27:10,760 --> 00:27:17,830
+I know where all the pieces are going and I can
+start looking at the colors and looking at the values
+
+396
+00:27:17,830 --> 00:27:23,650
+of everything and unifying it so it
+all looks like one cohesive piece.
+
+397
+00:27:23,650 --> 00:27:28,890
+You can see in the upper-left hand corner
+that's our tileable texture for our floor.
+
+398
+00:27:28,890 --> 00:27:31,590
+To the right of that is our tileable texture for our wall.
+
+399
+00:27:31,590 --> 00:27:37,760
+You can see we have pieces for the banner, more organic
+pieces on the right-hand side for our sculptural pieces
+
+400
+00:27:37,760 --> 00:27:45,590
+like the Gargoyle head or the sculpture
+of the knight holding a sword.
+
+401
+00:27:45,590 --> 00:27:52,010
+Bottom left-hand corner we have pieces that
+we're constantly reusing on doorways, on bridges,
+
+402
+00:27:52,010 --> 00:27:56,590
+so when we start to make a new piece
+we can take all of these things
+
+403
+00:27:56,590 --> 00:27:58,590
+and know that we have a little bit of the stairs.
+
+404
+00:27:58,590 --> 00:27:59,810
+We have a little bit of wall.
+
+405
+00:27:59,810 --> 00:28:07,130
+We can combine them all into one object and load
+that game and it's very fast and very efficient.
+
+406
+00:28:07,130 --> 00:28:10,480
+I'm a little bit obsessive about building on the grid.
+
+407
+00:28:10,480 --> 00:28:15,130
+It's a very efficient way to do
+both 2D artwork and 3D artwork.
+
+408
+00:28:15,130 --> 00:28:22,970
+We use the grid for our interface, for a lot of our
+models, for how we put our texture libraries together,
+
+409
+00:28:22,970 --> 00:28:29,450
+our texture atlases together so you can see this is
+all on a power of 2 grid or the majority of it is
+
+410
+00:28:29,450 --> 00:28:34,770
+and one of the reasons why we do this is
+to optimize our texture as much as we can.
+
+411
+00:28:34,770 --> 00:28:37,310
+We don't want a lot of wasted space in our texture.
+
+412
+00:28:37,310 --> 00:28:42,910
+Every time you waste space in a texture you're
+losing an opportunity to make your game cooler.
+
+413
+00:28:42,910 --> 00:28:47,500
+So we've tried to use almost every single
+pixel we possibly can in this texture
+
+414
+00:28:47,500 --> 00:28:49,590
+because it's going to be loaded into our game.
+
+415
+00:28:49,590 --> 00:28:59,010
+We also build on the grid to get a
+consistent texel density in our dungeon.
+
+416
+00:28:59,010 --> 00:29:04,050
+So when you see a doorway next to a wall
+that has the exact same texel density
+
+417
+00:29:04,050 --> 00:29:07,450
+so the details are going to match up exactly.
+
+418
+00:29:07,450 --> 00:29:10,860
+So you can see on the upper left, that is a 2D texture.
+
+419
+00:29:10,860 --> 00:29:12,630
+It's on a 256x256 grid.
+
+420
+00:29:12,630 --> 00:29:14,300
+It's from our texture atlas.
+
+421
+00:29:14,300 --> 00:29:21,630
+We're applying that to a polygon that's in our
+3D art package that's also on a 256x256 grid
+
+422
+00:29:21,630 --> 00:29:29,770
+and that's being rendered in the world at
+approximately 256x256 pixels on screen.
+
+423
+00:29:29,770 --> 00:29:32,130
+This is very efficient.
+
+424
+00:29:32,130 --> 00:29:38,290
+This is a great way to work because you're
+not putting a super large texture in an area
+
+425
+00:29:38,290 --> 00:29:41,260
+where you're going to waste that resolution.
+
+426
+00:29:41,260 --> 00:29:50,500
+So if we were to map our floor with a 2048x2048 texture
+and you're only going to see that on screen at 256x256,
+
+427
+00:29:50,500 --> 00:29:52,440
+then that's a lot of memory that's wasted.
+
+428
+00:29:52,440 --> 00:29:58,460
+Now given that this is a 3D environment,
+a 3D world you're not going
+
+429
+00:29:58,460 --> 00:30:03,310
+to always be rendering stuff on
+screen at that exact texel density.
+
+430
+00:30:03,310 --> 00:30:08,790
+When things go farther away from the camera you're,
+they're going to get more, they're going to get tighter
+
+431
+00:30:08,790 --> 00:30:11,050
+when they get closer to the camera they're
+going to get a little bit blurrier.
+
+432
+00:30:11,050 --> 00:30:18,890
+So this is just a good rule of thumb to use so you're
+not putting an exit sign on a doorway that 2048
+
+433
+00:30:18,890 --> 00:30:23,170
+and you're basically wasting a lot of your memory.
+
+434
+00:30:23,170 --> 00:30:25,740
+So let's start building a dungeon.
+
+435
+00:30:25,740 --> 00:30:31,280
+This was one of the first textures and the first
+pieces that we built when we were building the dungeon.
+
+436
+00:30:31,280 --> 00:30:33,250
+It's on a 256x256 grid.
+
+437
+00:30:33,250 --> 00:30:37,480
+It's 256x256 and it's one of our floor textures.
+
+438
+00:30:37,480 --> 00:30:40,720
+We took it and we started tiling it.
+
+439
+00:30:40,720 --> 00:30:47,060
+Because it's geometry we can flip it, we can
+rotate it and we can orient it in such a way
+
+440
+00:30:47,060 --> 00:30:50,710
+that we're getting rid of a lot of that tiling pattern.
+
+441
+00:30:50,710 --> 00:30:53,890
+We're going to add some baseboard trim.
+
+442
+00:30:53,890 --> 00:30:59,360
+This is going to be used to kind of soften
+the transition between the floor and the wall.
+
+443
+00:30:59,360 --> 00:31:07,420
+It's also on the grid, a little bit crazy about
+the grid and we're going to add some walls.
+
+444
+00:31:07,420 --> 00:31:14,530
+We, because these pieces are tileable, we can make as
+big of a room as we want, as small a room as we want
+
+445
+00:31:14,530 --> 00:31:19,870
+and later on I'll show you even more of the
+pieces we use to add a lot of variation.
+
+446
+00:31:19,870 --> 00:31:22,620
+This is just an outline of how the pieces fit together.
+
+447
+00:31:22,620 --> 00:31:28,920
+Because again we're also, we have all of our vertices on
+the grid because these pieces fit together in such a way
+
+448
+00:31:28,920 --> 00:31:31,810
+like puzzle pieces we don't see any gaps.
+
+449
+00:31:31,810 --> 00:31:34,240
+We don't see any holes in our geometry.
+
+450
+00:31:34,240 --> 00:31:36,890
+There's no weird, rendering artifacts.
+
+451
+00:31:36,890 --> 00:31:38,580
+It just all comes together.
+
+452
+00:31:38,580 --> 00:31:43,260
+Now the grid is also just a suggestion.
+
+453
+00:31:43,260 --> 00:31:53,700
+Because we're building a very you know square very man-made
+structure like a dungeon it makes sense to build on a grid.
+
+454
+00:31:53,700 --> 00:32:01,550
+Other things like sculptures, stairs, the broken
+pieces on the stairs; they're not on the grid.
+
+455
+00:32:01,550 --> 00:32:03,650
+They don't need to be on the grid.
+
+456
+00:32:03,650 --> 00:32:08,470
+We wanted to kind of give more of an organic feel
+to some of the areas so those are completely off.
+
+457
+00:32:08,470 --> 00:32:13,780
+Although the main structure of the stairs,
+the height and width of the stairs is
+
+458
+00:32:13,780 --> 00:32:16,140
+on the grid and that's for animation purposes.
+
+459
+00:32:16,140 --> 00:32:22,600
+If we had an animator who wanted to animate a
+character walking up the stairs instead of doing a lot
+
+460
+00:32:22,600 --> 00:32:27,780
+of kinematics we can basically tell him
+the width, tell him or her the width
+
+461
+00:32:27,780 --> 00:32:30,690
+of the stairs and they can animate to that scale.
+
+462
+00:32:30,690 --> 00:32:36,850
+If we were to make an entire game, if we had that
+constant scale of stairs, we could use it on everything,
+
+463
+00:32:36,850 --> 00:32:39,920
+even though the look will change,
+the animation will always sync up.
+
+464
+00:32:39,920 --> 00:32:41,740
+You won't see any clipping.
+
+465
+00:32:41,740 --> 00:32:43,830
+It'll look pretty good.
+
+466
+00:32:43,830 --> 00:32:48,630
+So here is just a shot of a few of the
+pieces that we used to build the dungeon.
+
+467
+00:32:48,630 --> 00:32:56,020
+You can see some grates on the floor, some
+doors, doorways, parts of our sculpture.
+
+468
+00:32:56,020 --> 00:33:01,160
+Initially when we were building these pieces we
+were thinking especially with Jeff and Graeme
+
+469
+00:33:01,160 --> 00:33:09,900
+that we would take these and do a random map dungeon where
+we'd apply a set of rules through code and hit a button
+
+470
+00:33:09,900 --> 00:33:14,760
+and it would give us our own unique dungeon
+for that time when we started the game.
+
+471
+00:33:14,760 --> 00:33:20,490
+We didn't have enough time to implement that but
+it might be an idea that we use in the future.
+
+472
+00:33:20,490 --> 00:33:22,930
+Art efficiency.
+
+473
+00:33:22,930 --> 00:33:28,800
+Like Jeff said earlier the initial character that we
+did, we did pretty fast and it was way above 3,000 polys.
+
+474
+00:33:28,800 --> 00:33:32,360
+It had way too many bones, actually had
+individual fingers that could animate.
+
+475
+00:33:32,360 --> 00:33:33,490
+He had a tongue.
+
+476
+00:33:33,490 --> 00:33:38,690
+He had some teeth, eyeballs and it was way too much.
+
+477
+00:33:38,690 --> 00:33:40,530
+It was overkill.
+
+478
+00:33:40,530 --> 00:33:48,190
+On our devices it looked beautiful but given the camera
+view of our game you're not going to see any of it.
+
+479
+00:33:48,190 --> 00:33:51,930
+So we took another pass on him
+and we just got rid of it all.
+
+480
+00:33:51,930 --> 00:33:54,400
+We took polygons out of the face.
+
+481
+00:33:54,400 --> 00:33:56,540
+We got rid of his fingers.
+
+482
+00:33:56,540 --> 00:34:04,170
+We tried to give the player the maximum amount of
+quality in art with the minimum amount of resources.
+
+483
+00:34:04,170 --> 00:34:12,210
+Efficiency is always important even if you had an
+unlimited amount of RAM and video memory and whatever,
+
+484
+00:34:12,210 --> 00:34:14,330
+you still have to take the time to create this.
+
+485
+00:34:14,330 --> 00:34:22,570
+So, working with resolutions that are a little bit
+lower, it's actually will save you a lot of time as well.
+
+486
+00:34:22,570 --> 00:34:27,410
+Here's a shot of a hand where and it's
+kind of hard to see but you can see
+
+487
+00:34:27,410 --> 00:34:30,500
+where we just completely cut out all the fingers.
+
+488
+00:34:30,500 --> 00:34:32,750
+Our hero grabs a sword.
+
+489
+00:34:32,750 --> 00:34:35,970
+He doesn't do any pointing barely any waving.
+
+490
+00:34:35,970 --> 00:34:40,930
+He needed a mitt and that's all the player's
+going to notice is that mitt of that character.
+
+491
+00:34:40,930 --> 00:34:45,340
+So, got rid of all those polys
+and made it a lot more efficient.
+
+492
+00:34:45,340 --> 00:34:49,450
+Next gen graphics are awesome.
+
+493
+00:34:49,450 --> 00:34:50,710
+I love them.
+
+494
+00:34:50,710 --> 00:34:56,470
+They make games look amazing but
+they also come with a huge tradeoff.
+
+495
+00:34:56,470 --> 00:35:02,020
+If you want to cut your texture memory in
+half, then you might be able to add more maps
+
+496
+00:35:02,020 --> 00:35:08,350
+and that might make your game look awesome but you have
+to understand these tradeoffs before you start jumping
+
+497
+00:35:08,350 --> 00:35:12,030
+in to using things like norm maps or ambient occlusion maps
+
+498
+00:35:12,030 --> 00:35:19,330
+or realtime mesh displacement,
+dynamic lighting, dynamic shadows.
+
+499
+00:35:19,330 --> 00:35:24,170
+Some of the most successful games out there
+right now are using very little technology.
+
+500
+00:35:24,170 --> 00:35:28,310
+Now, it's not to say that there's not a lot of
+really awesome games that use a lot of technology too
+
+501
+00:35:28,310 --> 00:35:35,930
+but you really need to pick what's best for your game and
+what your audience is going to notice is if it's very subtle
+
+502
+00:35:35,930 --> 00:35:40,240
+like a subtle specular map and it's
+causing you a lot of frame right issues,
+
+503
+00:35:40,240 --> 00:35:47,160
+then maybe that feature is just
+not that important for your game.
+
+504
+00:35:47,160 --> 00:35:53,980
+So in closing I'd just like to say that a lot
+of the stuff that we've talked about is not new.
+
+505
+00:35:53,980 --> 00:35:56,820
+The gaming industry has been using it for many, many years.
+
+506
+00:35:56,820 --> 00:36:03,560
+It's tried and true methods and at the same time we're
+not saying that this is how you have to make games.
+
+507
+00:36:03,560 --> 00:36:09,070
+These are just some ideas that might help you
+optimize, might help you make better games.
+
+508
+00:36:09,070 --> 00:36:17,210
+If you were making a Gumby surfing game building on
+the grid might not make any sense at all but hopefully
+
+509
+00:36:17,210 --> 00:36:20,870
+that we've given you a little bit of
+information so that you can continue
+
+510
+00:36:20,870 --> 00:36:23,100
+to make awesome games and we can continue playing them.
+
+511
+00:36:23,100 --> 00:36:25,500
+So, thanks for your time.
+
+512
+00:36:25,500 --> 00:36:28,360
+[ Applause ]
+
+513
+00:36:28,360 --> 00:36:28,890
+>> Graeme: Thanks Pete.
+
+514
+00:36:28,890 --> 00:36:32,180
+I think you did awesome, huh?
+
+515
+00:36:32,180 --> 00:36:41,690
+So the one dozen things that we learnt whilst we were
+making Quest that I think can really apply into your game
+
+516
+00:36:41,690 --> 00:36:47,480
+that I think you can take home tonight and hopefully
+come and talk to us in the labs tomorrow about.
+
+517
+00:36:47,480 --> 00:36:49,180
+Number one is optimizing assets.
+
+518
+00:36:49,180 --> 00:36:55,580
+As Pete just showed, optimizing your assets not only
+increases your frame rate, it decreases your load time
+
+519
+00:36:55,580 --> 00:37:01,550
+and it makes a tremendous difference to the final
+frame rate and your right production schedule.
+
+520
+00:37:01,550 --> 00:37:07,230
+If you're making polygon, you know, 3,200 polygon
+seismic shocks, it's going to take a little while longer
+
+521
+00:37:07,230 --> 00:37:11,330
+to keep going with all the characters if
+that's the resolution that you choose.
+
+522
+00:37:11,330 --> 00:37:12,890
+Choose a careful resolution.
+
+523
+00:37:12,890 --> 00:37:14,460
+Stick to it.
+
+524
+00:37:14,460 --> 00:37:20,840
+Optimization also extends out to things like texture
+atlases and being able to use a single texture for most
+
+525
+00:37:20,840 --> 00:37:28,810
+of your level and as Pete pointed out texture
+atlas that is full, is a happy texture atlas.
+
+526
+00:37:28,810 --> 00:37:31,900
+Optimization also applies to shaders.
+
+527
+00:37:31,900 --> 00:37:33,440
+Our first shader was awesome.
+
+528
+00:37:33,440 --> 00:37:36,080
+We could have stuck with it.
+
+529
+00:37:36,080 --> 00:37:42,190
+We really could have cut down number of polygons and
+finally got that thing up to 30 Hertz and we'd have ended
+
+530
+00:37:42,190 --> 00:37:45,740
+up with BoxQuest but we didn't stop there.
+
+531
+00:37:45,740 --> 00:37:46,860
+We optimized.
+
+532
+00:37:46,860 --> 00:37:53,740
+We came up with a way to produce lightmaps that
+were actually could work with a simple multiply.
+
+533
+00:37:53,740 --> 00:37:58,050
+The challenge is never in really getting the right results.
+
+534
+00:37:58,050 --> 00:37:59,660
+The right result is always there.
+
+535
+00:37:59,660 --> 00:38:05,810
+The challenge to game developers is always to think
+about how can I get to kind of the right result quickly.
+
+536
+00:38:05,810 --> 00:38:13,000
+So by ramping up our diffuse map and making it much, much
+brighter in the very beginning we were able to do a lot
+
+537
+00:38:13,000 --> 00:38:21,190
+of the pre-computing ahead of time and that made a
+difference in our shader, bringing it down from the 8 lines
+
+538
+00:38:21,190 --> 00:38:26,910
+of code to 3 lines of code that it finally
+was and increased our frame rate dramatically.
+
+539
+00:38:26,910 --> 00:38:36,960
+Also, giving the control back to the artist who can then
+go and go crazy at the higher value diffused texture.
+
+540
+00:38:36,960 --> 00:38:38,670
+Something else is it's a game.
+
+541
+00:38:38,670 --> 00:38:45,580
+Now if you have been to Hollywood or seen a Hollywood
+set you know that Hollywood sets are just these facades.
+
+542
+00:38:45,580 --> 00:38:50,120
+They're just there to be put in front
+of the camera and what a lot of us do
+
+543
+00:38:50,120 --> 00:38:55,470
+when we make our world is we make these fantastic
+3D worlds that you could really walk around
+
+544
+00:38:55,470 --> 00:38:57,250
+and look in any direction and there's stuff there.
+
+545
+00:38:57,250 --> 00:38:58,460
+There's trees behind me.
+
+546
+00:38:58,460 --> 00:39:05,850
+There's all sorts of things going on and you have
+to remember that just a facade means just a facade.
+
+547
+00:39:05,850 --> 00:39:11,730
+Build only what the camera sees and in
+Quest we built only what the camera sees.
+
+548
+00:39:11,730 --> 00:39:15,170
+If there's a door, there are no
+polygons on the other side of the door.
+
+549
+00:39:15,170 --> 00:39:19,880
+If there's a wall that you can't see
+the ground, that wall is not even there.
+
+550
+00:39:19,880 --> 00:39:24,530
+It doesn't matter that it's not even there
+because your game players will never even see it.
+
+551
+00:39:24,530 --> 00:39:30,080
+It does matter and make a tremendous difference
+to your bottom line and your frame rate.
+
+552
+00:39:30,080 --> 00:39:35,460
+So optimizing, always think about
+your level as a Hollywood set.
+
+553
+00:39:35,460 --> 00:39:38,770
+It's completely and utterly fake.
+
+554
+00:39:38,770 --> 00:39:42,450
+Memory is something that's on your device.
+
+555
+00:39:42,450 --> 00:39:46,290
+I want to have the most wonderful
+looking game in front of me.
+
+556
+00:39:46,290 --> 00:39:48,740
+I want my menu to be great.
+
+557
+00:39:48,740 --> 00:39:51,040
+I want a large Quest logo on the screen.
+
+558
+00:39:51,040 --> 00:39:53,910
+I want to use an interface that looks beautiful.
+
+559
+00:39:53,910 --> 00:39:59,560
+I also want to stream my level in so that
+my level has the most polygons I can get
+
+560
+00:39:59,560 --> 00:40:02,100
+onto it in a particular part of the level.
+
+561
+00:40:02,100 --> 00:40:04,960
+It doesn't matter that it's going
+to be gone in the next thing.
+
+562
+00:40:04,960 --> 00:40:07,510
+I'm going to get rid of it and eject to out of memory.
+
+563
+00:40:07,510 --> 00:40:11,730
+As soon as this first user interface
+is gone I'm getting rid of it.
+
+564
+00:40:11,730 --> 00:40:12,930
+I'm freeing it.
+
+565
+00:40:12,930 --> 00:40:15,470
+I want that memory back so I can have particle systems.
+
+566
+00:40:15,470 --> 00:40:18,440
+I want that memory back so I can have two more bad guys.
+
+567
+00:40:18,440 --> 00:40:22,580
+Purge assets which are not in use,
+reload them when you need them again.
+
+568
+00:40:22,580 --> 00:40:28,370
+It lets you be a much more, much better memory
+citizen and get a lot more into your game.
+
+569
+00:40:28,370 --> 00:40:32,640
+If you were trying to load your entire
+game at once, then use UIs and all,
+
+570
+00:40:32,640 --> 00:40:36,110
+you know that wonderful settings
+screen the user only ever sees once
+
+571
+00:40:36,110 --> 00:40:40,610
+and you're not doing your game or your players any service.
+
+572
+00:40:40,610 --> 00:40:43,090
+This also applies to texture size.
+
+573
+00:40:43,090 --> 00:40:49,350
+As Pete said the number of times that we see textures
+which are 1024x1024 hidden in the end of the level
+
+574
+00:40:49,350 --> 00:40:54,640
+that just shows a little exit sign, I've actually seen
+that and it's taking up all this memory and it's taking
+
+575
+00:40:54,640 --> 00:41:00,150
+up all this bandwidth as it's rendered because the
+renderer is going through it because he didn't,
+
+576
+00:41:00,150 --> 00:41:06,390
+bitmaps and bitmaps are made to even using more
+memory because it's 1024x1024 is ridiculous.
+
+577
+00:41:06,390 --> 00:41:11,390
+Look at how your game is being
+rendered and look at that texel density.
+
+578
+00:41:11,390 --> 00:41:14,090
+Texel density is tremendously important.
+
+579
+00:41:14,090 --> 00:41:22,750
+You want your texture map to be represented in
+your 3D world as your artist has authored it.
+
+580
+00:41:22,750 --> 00:41:30,730
+One way that you can really optimize both memory
+and loading time is to use compressed textures.
+
+581
+00:41:30,730 --> 00:41:38,070
+Compressed textures are 1/16th the size of the uncompressed
+texture and as you can see here on our wall texture,
+
+582
+00:41:38,070 --> 00:41:44,640
+the uncompressed versus the 4-bits per pixel versus
+the 2-bits per pixel there's almost no difference
+
+583
+00:41:44,640 --> 00:41:49,910
+and something else that's key here with our texture is
+we are going to take this and we are going to multiply it
+
+584
+00:41:49,910 --> 00:41:55,250
+by some random lightmap value that's between 0 and 1.
+
+585
+00:41:55,250 --> 00:42:01,260
+We're going to abolish it so just in the name
+of making something that looks good in the game
+
+586
+00:42:01,260 --> 00:42:06,700
+so this will not even be seen in the
+game world even once we're finally there.
+
+587
+00:42:06,700 --> 00:42:11,200
+Texture compression is a great way to
+load assets faster and to be able to get
+
+588
+00:42:11,200 --> 00:42:14,950
+into your game quicker and saving a whole bunch of memory.
+
+589
+00:42:14,950 --> 00:42:24,820
+We talked about gameloops and how important
+it is to do the gameloop in the right order.
+
+590
+00:42:24,820 --> 00:42:27,470
+Load up that GPU.
+
+591
+00:42:27,470 --> 00:42:29,320
+Then handle user input.
+
+592
+00:42:29,320 --> 00:42:37,000
+Then let the aliens update and invade the world because you
+prepositioned your little base to fire back just in time.
+
+593
+00:42:37,000 --> 00:42:38,860
+Multiple devices.
+
+594
+00:42:38,860 --> 00:42:46,270
+You might think that screen size and resolution mean exactly
+the same thing but in fact it means two different things.
+
+595
+00:42:46,270 --> 00:42:49,160
+Screen size on our devices is different.
+
+596
+00:42:49,160 --> 00:42:56,710
+I'm going to hold the iPad in my hand very differently
+than I'm going to hold the phone or the iPod Touch.
+
+597
+00:42:56,710 --> 00:42:59,330
+I might hold one in one hand and one in two hands.
+
+598
+00:42:59,330 --> 00:43:04,540
+You have to be thinking about how what
+that means into your game design for you
+
+599
+00:43:04,540 --> 00:43:08,550
+to actually implement the same game on different devices.
+
+600
+00:43:08,550 --> 00:43:10,540
+It's going to mean different interfaces.
+
+601
+00:43:10,540 --> 00:43:12,490
+It's going to mean that different user interfaces.
+
+602
+00:43:12,490 --> 00:43:15,220
+It's going to mean different controls.
+
+603
+00:43:15,220 --> 00:43:18,980
+The resolution difference is also
+something you're going to have to deal with.
+
+604
+00:43:18,980 --> 00:43:29,030
+A low-resolution game running on the iPod Touch needs to
+be up rest and look fantastic on the iPhone 4 and I have
+
+605
+00:43:29,030 --> 00:43:34,660
+to tell you the full resolution game on the
+iPhone 4 is like nothing you've ever seen.
+
+606
+00:43:34,660 --> 00:43:40,560
+When you hold that in your hands,
+oh my God, that thing's a kicker.
+
+607
+00:43:40,560 --> 00:43:44,960
+Absolutely the most beautiful thing
+I have ever worked on in my life.
+
+608
+00:43:44,960 --> 00:43:52,110
+Then the iPad, an amazing device but I hold it
+differently and I play games on that for longer than I play
+
+609
+00:43:52,110 --> 00:43:55,030
+because I'm sitting on my couch
+and my wife's watching House.
+
+610
+00:43:55,030 --> 00:44:00,340
+I don't like House because there's blood and
+I'm going to play a game for a whole hour.
+
+611
+00:44:00,340 --> 00:44:02,650
+I'm not the only one that does that.
+
+612
+00:44:02,650 --> 00:44:04,630
+I know that.
+
+613
+00:44:04,630 --> 00:44:07,520
+So games play very different on devices too.
+
+614
+00:44:07,520 --> 00:44:09,950
+Think about the capabilities.
+
+615
+00:44:09,950 --> 00:44:15,240
+Now I already gave you my little rant on
+playtesting so I'm not going to reiterate my rant on.
+
+616
+00:44:15,240 --> 00:44:18,190
+I am. I'm going to reiterate my rant.
+
+617
+00:44:19,250 --> 00:44:21,630
+Watch other people play your game.
+
+618
+00:44:21,630 --> 00:44:23,330
+Exceptionally important.
+
+619
+00:44:23,330 --> 00:44:26,340
+Take their input and apply it to your game.
+
+620
+00:44:26,340 --> 00:44:32,220
+Always remember that you are not there
+when someone else buys your application.
+
+621
+00:44:32,220 --> 00:44:33,740
+They're going to buy your application.
+
+622
+00:44:33,740 --> 00:44:39,770
+They're going to hit the button and they're going to wonder
+what to do so you might as well get that feedback ahead
+
+623
+00:44:39,770 --> 00:44:42,730
+of time and watch someone play your game.
+
+624
+00:44:42,730 --> 00:44:45,160
+Do that constantly.
+
+625
+00:44:45,160 --> 00:44:51,380
+One of the things that game developers strive for
+is reality and oh my God we're so big on that.
+
+626
+00:44:51,380 --> 00:44:58,150
+We must have real physics in our games with 3D rigid bodies
+and inverse kinematics and all these fantastic things
+
+627
+00:44:58,150 --> 00:45:02,200
+that we can put into games now with, you know
+because it goes into the back of the box right?
+
+628
+00:45:02,200 --> 00:45:04,200
+It goes in the iTunes store description.
+
+629
+00:45:04,200 --> 00:45:06,020
+Real 3D physics.
+
+630
+00:45:06,020 --> 00:45:06,770
+Real lighting.
+
+631
+00:45:06,770 --> 00:45:14,120
+I want the perfect full photon pacer that does accurate
+lighting on my environment and makes a tremendous difference
+
+632
+00:45:14,120 --> 00:45:19,520
+to what how my character looks and does the whole diffuse
+shadow behind me that spreads out with the right thing
+
+633
+00:45:19,520 --> 00:45:23,070
+on stage with you know all kinds of cool shadows.
+
+634
+00:45:23,070 --> 00:45:25,310
+Games are not reality.
+
+635
+00:45:25,310 --> 00:45:26,540
+That's all fabulous.
+
+636
+00:45:26,540 --> 00:45:30,730
+I'm here to tell you that's all fabulous
+but if your game runs at 4 frames a second
+
+637
+00:45:30,730 --> 00:45:36,460
+because you have 3D physics running with absolutely
+fantastic lighting with super realistic shadows, guess what.
+
+638
+00:45:36,460 --> 00:45:38,750
+Your game's not fun.
+
+639
+00:45:38,750 --> 00:45:43,720
+Games are like Hollywood and like Hollywood
+movies they need bright lights shone
+
+640
+00:45:43,720 --> 00:45:46,500
+onto them to look dramatic and look cool.
+
+641
+00:45:46,500 --> 00:45:52,430
+You need to be thinking about physics
+that operate within your game environment.
+
+642
+00:45:52,430 --> 00:45:56,780
+If we were to apply that to Quest, one of
+the things you may have noticed in Quest,
+
+643
+00:45:56,780 --> 00:46:00,370
+I'm walking on a flat plane ground the whole time.
+
+644
+00:46:00,370 --> 00:46:04,570
+So therefore a 2-dimentional physics
+system would actually probably do me fine.
+
+645
+00:46:04,570 --> 00:46:06,720
+I really don't need a 3D physics system.
+
+646
+00:46:06,720 --> 00:46:15,870
+2D physics would actually do fine and even what I would
+try because I like frame rate, is I'd try to get my artist
+
+647
+00:46:15,870 --> 00:46:20,330
+to animate something to fake physics
+completely so there is no physics in my game
+
+648
+00:46:20,330 --> 00:46:23,170
+but it sure as heck looks like I have it.
+
+649
+00:46:23,170 --> 00:46:29,560
+Lighting I think as we showed, until you saw how the
+shader worked I think a lot of you thought oh boy,
+
+650
+00:46:29,560 --> 00:46:31,340
+they have real perfect pixel in their games.
+
+651
+00:46:31,340 --> 00:46:33,190
+That's absolutely fantastic.
+
+652
+00:46:33,190 --> 00:46:40,730
+You couldn't tell the difference at our angle and
+our gameplay what our lighting algorithm actually was
+
+653
+00:46:40,730 --> 00:46:43,410
+but it looked real and that's all that matters.
+
+654
+00:46:43,410 --> 00:46:44,930
+It's an illusion.
+
+655
+00:46:44,930 --> 00:46:47,300
+Real lighting in some games makes a tremendous difference
+
+656
+00:46:47,300 --> 00:46:52,310
+if I was a first-person you know version
+of Quest I would be thinking wow.
+
+657
+00:46:52,310 --> 00:46:56,580
+Maybe I'll get real lighting algorithm here with
+real shadows to make a real dramatic difference.
+
+658
+00:46:56,580 --> 00:46:57,450
+You know what?
+
+659
+00:46:57,450 --> 00:46:59,470
+My polygon count is very different there.
+
+660
+00:46:59,470 --> 00:47:04,300
+My. The way our memory in the world and the aim
+I'm going for emotionally, exceptionally different.
+
+661
+00:47:04,300 --> 00:47:08,330
+So always remember games are not reality.
+
+662
+00:47:08,330 --> 00:47:12,160
+What you're faking needs to be fake.
+
+663
+00:47:12,160 --> 00:47:13,930
+Rendering the world.
+
+664
+00:47:13,930 --> 00:47:22,270
+We see an awful lot of people take 10,000 draw calls per
+frame and wonder why they're app goes at 4 frames a second.
+
+665
+00:47:22,270 --> 00:47:27,700
+They have you know have tens of thousands
+of draw calls they do to cause into GL
+
+666
+00:47:27,700 --> 00:47:31,380
+and think that their app should run at 60.
+
+667
+00:47:31,380 --> 00:47:35,440
+Well I'm here to tell you you're orders of magnitude off.
+
+668
+00:47:35,440 --> 00:47:39,640
+You should be thinking in terms of 10 draw calls per frame.
+
+669
+00:47:39,640 --> 00:47:41,640
+How many of you have 10 draw calls per frame in your game?
+
+670
+00:47:41,640 --> 00:47:44,390
+How many of you have more than 100?
+
+671
+00:47:44,390 --> 00:47:49,850
+The more than 100 crowd got some work to do.
+
+672
+00:47:49,850 --> 00:47:57,330
+Ten draw calls a frame is how you're going to bring
+your game frame rate up to where it needs to be.
+
+673
+00:47:57,330 --> 00:48:01,820
+You need to be looking at the tricks we
+have told you today with texture atlases.
+
+674
+00:48:01,820 --> 00:48:10,550
+You need to be looking at how you can load your level and
+use GL draw arrays as a huge boost to actually get all
+
+675
+00:48:10,550 --> 00:48:14,990
+of your as many polygons on screen as possible
+using all the features that everyone's going
+
+676
+00:48:14,990 --> 00:48:19,350
+to be telling you about this week in the GL lessons.
+
+677
+00:48:19,350 --> 00:48:23,830
+We did a lot right in Quest I think
+given that we had two months.
+
+678
+00:48:23,830 --> 00:48:27,480
+One of the things that really proved
+out was our data driven pipeline.
+
+679
+00:48:27,480 --> 00:48:30,710
+We had to change our variables on the fly.
+
+680
+00:48:30,710 --> 00:48:36,280
+Getting that power to the artist, giving that power to
+the game designer to be able to load things on the fly,
+
+681
+00:48:36,280 --> 00:48:43,220
+drop assets in, data driving our game pipeline made a
+tremendous difference towards us getting this game finished
+
+682
+00:48:43,220 --> 00:48:45,080
+on time.
+
+683
+00:48:45,080 --> 00:48:52,090
+Collada was a fantastic format to export our
+3D assets in and load them on the devices.
+
+684
+00:48:52,090 --> 00:48:55,430
+Collada is easy to parse, easy to manipulate
+
+685
+00:48:55,430 --> 00:49:00,960
+and it made writing scene graph based 3D
+system that we used for Quest really easy.
+
+686
+00:49:00,960 --> 00:49:02,620
+We cheated in the right places.
+
+687
+00:49:02,620 --> 00:49:04,090
+We cheated with the lights.
+
+688
+00:49:04,090 --> 00:49:06,030
+We cheated with the lightmaps.
+
+689
+00:49:06,030 --> 00:49:09,930
+We cheated in the right places to achieve the right effect.
+
+690
+00:49:09,930 --> 00:49:11,840
+Finally we used Apple technologies.
+
+691
+00:49:11,840 --> 00:49:19,020
+We trusted the UIKit and AVFoundation,
+OpenGL 2.0, game kits;
+
+692
+00:49:19,020 --> 00:49:23,020
+that all those fantastic frameworks
+would work as advertised and guess what?
+
+693
+00:49:23,020 --> 00:49:28,690
+They do. Of course it was not all roses.
+
+694
+00:49:28,690 --> 00:49:31,750
+There were many late nights on this project.
+
+695
+00:49:31,750 --> 00:49:38,730
+One of the things that we initially did was we promised
+Pete, our artist, we're going to give you fantastic tools.
+
+696
+00:49:38,730 --> 00:49:41,800
+Well, the number of tools we came up with was exactly zero
+
+697
+00:49:41,800 --> 00:49:47,240
+and we probably should have spent
+a little bit more time on tools.
+
+698
+00:49:47,240 --> 00:49:52,980
+We had wrote a fantastic particle system, a parametric
+particle system that you just had to pass time in
+
+699
+00:49:52,980 --> 00:49:58,480
+and it would render out these fire things, splines and
+everything and I thought my programmer art looked good
+
+700
+00:49:58,480 --> 00:50:05,030
+but Pete tells me it was really bad but and we wrote
+this world space particle system where foibles could pass
+
+701
+00:50:05,030 --> 00:50:10,480
+in the sky and just reflect in the ground but we didn't
+provide Pete with a tool in order to edit particles.
+
+702
+00:50:10,480 --> 00:50:16,820
+We should have spent more time upfront writing
+tools and thinking about our asset pipeline.
+
+703
+00:50:16,820 --> 00:50:19,820
+Our asset pipeline is still not perfect.
+
+704
+00:50:19,820 --> 00:50:25,000
+If we had written those tools maybe we would have started
+to write something that loaded the particles directly
+
+705
+00:50:25,000 --> 00:50:28,920
+into the game and dropped them via
+the HTTP line that we did build.
+
+706
+00:50:28,920 --> 00:50:34,690
+We started to build the HTTP connection but
+we didn't actually go ahead and complete that.
+
+707
+00:50:34,690 --> 00:50:42,840
+We probably scoped a little bit on the impossible side but
+this is one of the things I actually liked about doing.
+
+708
+00:50:42,840 --> 00:50:45,070
+The challenge was exciting.
+
+709
+00:50:45,070 --> 00:50:52,430
+Make something that looks super fantastic,
+sexy in two months and we did it.
+
+710
+00:50:52,430 --> 00:50:56,440
+So I'm going to say that we did that right
+but it was frightening let me tell you.
+
+711
+00:50:56,440 --> 00:51:01,520
+When you drive home at night and saying well
+we're going to make Quest in two months.
+
+712
+00:51:01,520 --> 00:51:06,520
+Finally, a lot of people ask us are we
+going to make this into a real game?
+
+713
+00:51:06,520 --> 00:51:10,170
+And the answer to that is no.
+
+714
+00:51:10,170 --> 00:51:11,300
+We're not.
+
+715
+00:51:11,300 --> 00:51:19,010
+Quest was only made to be shown here this morning to all of
+you and to be used for the sessions here throughout the week
+
+716
+00:51:19,010 --> 00:51:22,530
+and we'll be repeating on Friday so I guess that counts.
+
+717
+00:51:22,530 --> 00:51:24,400
+We're already onto the next thing.
+
+718
+00:51:24,400 --> 00:51:29,970
+We're onto our next two months and I've
+got to tell you that's even better.
+
+719
+00:51:29,970 --> 00:51:31,560
+We read a few books and magazines.
+
+720
+00:51:31,560 --> 00:51:34,070
+We want to share a few of those with you.
+
+721
+00:51:34,070 --> 00:51:35,660
+Game Developer Magazine.
+
+722
+00:51:35,660 --> 00:51:37,920
+How many of you read that?
+
+723
+00:51:37,920 --> 00:51:44,860
+It has these fantastic post-mortems in every single
+month of games coming out on all the platforms
+
+724
+00:51:44,860 --> 00:51:49,510
+and we modeled our talk today a little
+bit on those post-mortem series.
+
+725
+00:51:49,510 --> 00:51:56,980
+I love that it tells the story of what went right, what went
+wrong, the approach they took to managing their project,
+
+726
+00:51:56,980 --> 00:52:00,110
+the approach they took to getting
+the thing out in the store,
+
+727
+00:52:00,110 --> 00:52:03,540
+game design elements that work,
+game design elements that didn't.
+
+728
+00:52:03,540 --> 00:52:09,430
+That is a fantastic series and worth getting
+that magazine monthly just for that alone.
+
+729
+00:52:09,430 --> 00:52:16,150
+If you're a programmer you should have the
+Graphics Gems series right there on your shelf.
+
+730
+00:52:16,150 --> 00:52:21,800
+If you want fast rays intersection
+you know that's in Graphics Gems 1.
+
+731
+00:52:21,800 --> 00:52:27,200
+If you want you know fast access align boundary box
+to boundary box, Graphics Gems 2.
+
+732
+00:52:27,200 --> 00:52:30,750
+You kind of learn where those tricks are.
+
+733
+00:52:30,750 --> 00:52:35,260
+Those fast algorithms, you want to get
+those books, have them on your shelves.
+
+734
+00:52:35,260 --> 00:52:40,090
+Same thing applies to the Games Programming Gems
+which kind of has much larger systems in it.
+
+735
+00:52:40,090 --> 00:52:42,170
+If you want to think about terrain systems.
+
+736
+00:52:42,170 --> 00:52:46,530
+If you want to think about you
+know BSP rendering environments.
+
+737
+00:52:46,530 --> 00:52:52,300
+A lot of that is in there and a lot of those stories in
+there are also very good about the games they play too.
+
+738
+00:52:52,300 --> 00:52:57,170
+We recommend a whole bunch of sessions for you to go to so,
+
+739
+00:52:57,170 --> 00:53:00,520
+especially the Game Center sessions,
+learning about that framework.
+
+740
+00:53:00,520 --> 00:53:08,420
+It is going to become extremely applicable later this year
+when millions of people have access to sign up accounts
+
+741
+00:53:08,420 --> 00:53:12,760
+and make Game Center their homes for their games.
+
+742
+00:53:12,760 --> 00:53:17,150
+A lot of the OpenGL sessions this
+week are absolutely fantastic,
+
+743
+00:53:17,150 --> 00:53:21,000
+absolutely incredible stuff is happening out of--
+
+744
+00:53:21,000 --> 00:53:24,230
+If you go to those you'll see something incredible.
+
+745
+00:53:24,230 --> 00:53:31,530
+Core Animation was used for everything in our game to drive
+IUI, to drive our characters, to drive anything animated.
+
+746
+00:53:31,530 --> 00:53:34,430
+It's a fantastic framework.
+
+747
+00:53:34,430 --> 00:53:41,690
+The AVFoundation, being able to use that for
+augmented reality applications as well as sound.
+
+748
+00:53:41,690 --> 00:53:48,680
+I mean just the access you get from
+AVFoundation in iPhone OS4 absolutely incredible.
+
+749
+00:53:48,680 --> 00:53:56,720
+But the most important thing I can tell you is to have fun.
+
+750
+00:53:56,720 --> 00:54:03,390
+If you are a game developer and you are not
+having fun, you are in the wrong industry.
+
+751
+00:54:03,390 --> 00:54:05,210
+Let me tell you.
+
+752
+00:54:05,210 --> 00:54:13,040
+If you're not coming to work and thinking this is the
+best thing ever, what the heck are you doing making a game
+
+753
+00:54:13,040 --> 00:54:18,560
+because your game isn't going to end up as
+fun and you're not going to make any money.
+
+754
+00:54:18,560 --> 00:54:23,380
+Make something that you think is fun
+and that you are passionate about.
+
+755
+00:54:23,380 --> 00:54:27,460
+You have to be thinking every single day oh
+my God I'm working on the coolest thing ever!
+
+756
+00:54:27,460 --> 00:54:31,990
+Look! I want you to show me that
+stuff in the last of our and I want
+
+757
+00:54:31,990 --> 00:54:36,830
+to see how excited you all are
+about making games on our devices.
+
+758
+00:54:36,830 --> 00:54:42,010
+You need to be the only way you're going to get the
+extra little bit of magic into your games is by having
+
+759
+00:54:42,010 --> 00:54:46,020
+that passion and by really applying
+that passion into the games.
+
+760
+00:54:46,020 --> 00:54:51,220
+That extra little 5% you had because you had fun
+making the game and you had fun playtesting it
+
+761
+00:54:51,220 --> 00:54:54,580
+and you had fun showing it off makes a difference.
+
+762
+00:54:54,580 --> 00:54:59,530
+It's the difference between an application that
+falls flat and an application that sparkles.
+
+763
+00:54:59,530 --> 00:55:06,270
+So if you're in the game industry make sure you
+have fun making games and absolutely finally,
+
+764
+00:55:06,270 --> 00:55:14,470
+if you have any questions please send an email to our
+Graphics and Game Technologies Evangelist Allan Schaffer.
+
+765
+00:55:14,470 --> 00:55:15,150
+Thank you.
+
+766
+00:55:15,150 --> 00:55:16,990
+It's been great talking to you today.
+
+767
+00:55:16,990 --> 00:55:28,360
+[ Applause ]
+
