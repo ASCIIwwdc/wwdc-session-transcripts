@@ -1,0 +1,3533 @@
+1
+00:00:06,290 --> 00:00:12,810
+>> My name is Ian Ollmann and I'm the first speaker
+in a series that will talk to you about OpenCL.
+
+2
+00:00:12,810 --> 00:00:21,480
+OpenCL is Snow Leopard technology which was
+just released a couple of months ago, this fall.
+
+3
+00:00:21,480 --> 00:00:27,740
+And, I wanted to give you an overview of what OpenCL is
+all about before we get started on the more in-depth talks.
+
+4
+00:00:27,740 --> 00:00:32,820
+So, first I want to discuss OpenCL design and philosophy,
+
+5
+00:00:32,820 --> 00:00:37,510
+and then explore some common developer questions
+about, that have emerged over the last year.
+
+6
+00:00:37,510 --> 00:00:40,870
+Some of you may have seen them on the developer forums.
+
+7
+00:00:40,870 --> 00:00:46,180
+And then, offer up a few debugging tips about
+how we go about to tune our OpenCL kernels.
+
+8
+00:00:46,180 --> 00:00:51,930
+Now, since OpenCL has been out for awhile, I'm going
+to assume that many of you have already played with it.
+
+9
+00:00:51,930 --> 00:00:57,110
+Maybe you've downloaded some of the sample
+code and looked at it, read through the spec,
+
+10
+00:00:57,110 --> 00:01:00,410
+maybe even tried to write a few applications of your own.
+
+11
+00:01:00,410 --> 00:01:08,940
+And so, what I wanted to do is provide an overview to kind
+of tie it all back together, because there are a lot of APIs
+
+12
+00:01:08,940 --> 00:01:15,460
+and a lot of spec to read, and sometimes seeing
+the forest for the trees is a little tricky.
+
+13
+00:01:15,460 --> 00:01:22,510
+So, when we set out to build OpenCL, what we wanted to do is
+bring programmability to all of the devices on your system.
+
+14
+00:01:22,510 --> 00:01:26,250
+One API to bind them all; CPU, GPU.
+
+15
+00:01:26,250 --> 00:01:29,560
+If we had them, you could also program an accelerator.
+
+16
+00:01:29,560 --> 00:01:34,750
+And, this brings in new problems
+into the programming paradigms.
+
+17
+00:01:34,750 --> 00:01:40,250
+Some of these devices may have their own memory attached
+to them, which sit off in a separate address space
+
+18
+00:01:40,250 --> 00:01:46,340
+and do not fit together contiguously with
+the RAM you're used to using on your system
+
+19
+00:01:46,340 --> 00:01:48,990
+in your ordinary C or C++ or Objective-C program.
+
+20
+00:01:48,990 --> 00:01:56,080
+Many of these devices run on a different instruction
+set than the Intel instruction set that you're used to.
+
+21
+00:01:56,080 --> 00:01:59,950
+So, we have to overcome these problems when we build OpenCL.
+
+22
+00:01:59,950 --> 00:02:06,480
+So, OpenCL, in a nutshell, is sort of the
+minimum set of objects that you would need
+
+23
+00:02:06,480 --> 00:02:09,950
+to encapsulate this information and make it all work.
+
+24
+00:02:09,950 --> 00:02:12,570
+We have an object which represents a device.
+
+25
+00:02:12,570 --> 00:02:15,370
+This might be a CPU or a GPU.
+
+26
+00:02:15,370 --> 00:02:22,280
+We have a context, which does not do very much;
+it's just a sandbox to hold everything else.
+
+27
+00:02:22,280 --> 00:02:23,530
+This serves two purposes.
+
+28
+00:02:23,530 --> 00:02:31,020
+It allows you to keep the damage localized if something
+goes horribly wrong, which we hope won't happen.
+
+29
+00:02:31,020 --> 00:02:40,730
+And also, if you're doing data sharing between OpenCL and
+OpenGL, it acts as a counterpart to the CGL share group.
+
+30
+00:02:40,730 --> 00:02:42,850
+You'll want to put your data into something.
+
+31
+00:02:42,850 --> 00:02:48,030
+Because we have to copy the data up to a device
+sometimes, we need to know how big your data is,
+
+32
+00:02:48,030 --> 00:02:50,830
+so a simple C pointer is not enough; we need an extent.
+
+33
+00:02:50,830 --> 00:02:53,880
+So, the object's designed to encapsulate your data.
+
+34
+00:02:53,880 --> 00:02:55,770
+There are two kinds.
+
+35
+00:02:55,770 --> 00:02:59,620
+There is a buffer, which is almost exactly
+like what you'd get out of malloc .
+
+36
+00:02:59,620 --> 00:03:05,680
+When you call malloc, it's essentially a range
+of bytes; what you put it in is up to you.
+
+37
+00:03:05,680 --> 00:03:13,690
+And then, there's image data type, which is
+useful for sample data in a regularly spaced grid,
+
+38
+00:03:13,690 --> 00:03:18,400
+and images are designed to be used by the GPU texture unit,
+
+39
+00:03:18,400 --> 00:03:23,390
+which has hardware to make sampling
+out of the image much faster.
+
+40
+00:03:23,390 --> 00:03:27,000
+Collectively, these things are called MemObjects.
+
+41
+00:03:27,000 --> 00:03:32,410
+You also want to write code, so OpenCL
+provides a C like programming language.
+
+42
+00:03:32,410 --> 00:03:41,720
+We essentially started with C99, and then we tagged on a
+few extra features, like vectors and vector intrinsics,
+
+43
+00:03:41,720 --> 00:03:47,730
+and we stripped out a little bit of the C standard
+library that didn't make any sense for GPUs.
+
+44
+00:03:47,730 --> 00:03:53,460
+And then, so you'll build a program against
+multiple devices, and then you'll need some sort
+
+45
+00:03:53,460 --> 00:03:56,950
+of function pointer-like thing to go
+find the functions within that program
+
+46
+00:03:56,950 --> 00:04:01,040
+or compilation unit, and these things are called kernels.
+
+47
+00:04:01,040 --> 00:04:08,220
+And, you can make many kernels for the same function if
+you want, and that actually turns out to be quite useful.
+
+48
+00:04:08,220 --> 00:04:13,550
+Finally, we have to have some verbs in this
+sentence, and those are the command queues.
+
+49
+00:04:13,550 --> 00:04:18,140
+You can queue commands into the queue to
+make all of these objects start doing things.
+
+50
+00:04:18,140 --> 00:04:21,990
+They might be to copy data from one place to another.
+
+51
+00:04:21,990 --> 00:04:26,800
+They might be to run a program on some of your data.
+
+52
+00:04:26,800 --> 00:04:28,480
+And, that's basically it in a nutshell.
+
+53
+00:04:28,480 --> 00:04:32,980
+The important thing with the command queues though,
+is that these are fully asynchronous queues.
+
+54
+00:04:32,980 --> 00:04:37,710
+So, when the device is finished with command one,
+it's going to want to go straight to command two,
+
+55
+00:04:37,710 --> 00:04:42,930
+and if there isn't a command two, then it's going to
+sit and be idle, and you're not taking full advantage
+
+56
+00:04:42,930 --> 00:04:47,040
+of the computational horsepower of your
+entire system when they're sitting idle.
+
+57
+00:04:47,040 --> 00:04:52,150
+So, what you really want to do is enqueue
+a pile of stuff into the command queues
+
+58
+00:04:52,150 --> 00:04:56,620
+and let it take off and run in asynchronous fashion.
+
+59
+00:04:56,620 --> 00:05:03,010
+As an example of how these things
+work, here I have, at top left,
+
+60
+00:05:03,010 --> 00:05:06,980
+some data that you might have allocated,
+called My Buffer or My Image.
+
+61
+00:05:06,980 --> 00:05:10,860
+And then, in your program somewhere; I
+put it in Main, but it can be anywhere,
+
+62
+00:05:10,860 --> 00:05:15,180
+you'd start enqueueing commands
+to then operate on that data.
+
+63
+00:05:15,180 --> 00:05:19,180
+We might start with an enqueue to write
+a buffer, and what this does is copy data
+
+64
+00:05:19,180 --> 00:05:22,960
+from your buffer into OpenCL's counterpart.
+
+65
+00:05:22,960 --> 00:05:27,350
+You might call EnqueueWriteImage, which
+will do the same thing for images.
+
+66
+00:05:27,350 --> 00:05:31,300
+And then, you can call EnqueueNDRangeKernel,
+which will copy all of that data automatically
+
+67
+00:05:31,300 --> 00:05:33,700
+up to whatever device you enqueue it for.
+
+68
+00:05:33,700 --> 00:05:37,480
+The device will run your program, and something will happen.
+
+69
+00:05:37,480 --> 00:05:38,980
+You could have some results.
+
+70
+00:05:38,980 --> 00:05:49,010
+And then finally, you might enqueue a read buffer to copy
+the data back to your thing, and proceed in that way.
+
+71
+00:05:49,010 --> 00:05:52,810
+The OpenCL API itself is very consistent.
+
+72
+00:05:52,810 --> 00:06:01,100
+We have about eight object types and they all have
+the same set of functions that are used with them.
+
+73
+00:06:01,100 --> 00:06:03,970
+They have a creation function;
+it's used to create the object.
+
+74
+00:06:03,970 --> 00:06:07,450
+We turn the object out the left
+side and enter out of the right.
+
+75
+00:06:07,450 --> 00:06:11,550
+These things follow Core Foundation
+reference counting semantics,
+
+76
+00:06:11,550 --> 00:06:14,720
+so you'll find that familiar probably
+with retain and release.
+
+77
+00:06:14,720 --> 00:06:20,400
+When the reference count goes to zero, the object
+is then destroyed in the background by OpenCL.
+
+78
+00:06:20,400 --> 00:06:26,640
+We have getters and setters in the standard object
+paradigm to get information in and out of the object.
+
+79
+00:06:26,640 --> 00:06:28,620
+Almost all of the objects have getters.
+
+80
+00:06:28,620 --> 00:06:33,690
+Only a very few of them have setters, because
+that introduces mutable state into the object,
+
+81
+00:06:33,690 --> 00:06:37,570
+which makes it harder to make a thread safe back in.
+
+82
+00:06:37,570 --> 00:06:42,680
+So, and then finally, if you want to
+queue a command, we have a clEnqueue
+
+83
+00:06:42,680 --> 00:06:47,490
+and then some command type that--a bunch of functions like that.
+
+84
+00:06:48,570 --> 00:06:52,350
+So, the next question is; OK, I've
+got this object infrastructure,
+
+85
+00:06:52,350 --> 00:06:54,990
+but I don't really understand, like how I write code for it.
+
+86
+00:06:54,990 --> 00:06:58,050
+I mean, what does the code I actually write look like?
+
+87
+00:06:58,050 --> 00:07:03,430
+And, this is the code I mean that you run on the
+device, not the thing running in your regular C program.
+
+88
+00:07:03,430 --> 00:07:10,210
+So, we have to find some way to split
+up lots and lots of parallelism in a way
+
+89
+00:07:10,210 --> 00:07:13,170
+that you write your code where it still makes sense to you.
+
+90
+00:07:13,170 --> 00:07:16,910
+So, a traditional way to do that would
+be to invoke task level parallelism.
+
+91
+00:07:16,910 --> 00:07:23,070
+This is something you might have done yourself,
+you know, using Pthreads or NSThread or something,
+
+92
+00:07:23,070 --> 00:07:24,860
+where you divide the work up into different tasks.
+
+93
+00:07:24,860 --> 00:07:30,030
+So, if we take a mail reader app as an example, we
+might have a thread to get the mail from the server,
+
+94
+00:07:30,030 --> 00:07:34,290
+another one to scan through the results
+and identify junk mail as it comes in,
+
+95
+00:07:34,290 --> 00:07:41,080
+another one that might run mail filters, a thread
+to draw the UI, a thread to get keyboard input,
+
+96
+00:07:41,080 --> 00:07:45,080
+a thread to play the audio if you
+want to make a little beeping noise.
+
+97
+00:07:45,080 --> 00:07:48,990
+You know, we can divide up many such tasks like
+that and, you know, usually you come up with five
+
+98
+00:07:48,990 --> 00:07:54,040
+or ten different things you can do, and that's great when
+you've got five or ten different processors to work with,
+
+99
+00:07:54,040 --> 00:08:00,820
+because you can get a five- or a ten-way parallelism if
+you can manage to stack those things all up concurrently.
+
+100
+00:08:00,820 --> 00:08:04,340
+But, in OpenCL we're really targeting
+a much more parallel system than that.
+
+101
+00:08:04,340 --> 00:08:08,100
+We're going after many core systems, you know,
+that might have hundreds or thousands of cores,
+
+102
+00:08:08,100 --> 00:08:13,540
+so how do you break up your workload in a way
+that's more amenable to those kinds of systems?
+
+103
+00:08:13,540 --> 00:08:19,970
+And, what we can do is just learn from standard
+shader languages, like OpenGL shader language,
+
+104
+00:08:19,970 --> 00:08:24,500
+and take advantage of data-level parallelism; that
+is, rather than breaking things up by different kinds
+
+105
+00:08:24,500 --> 00:08:28,030
+of tasks, we break things along data boundaries.
+
+106
+00:08:28,030 --> 00:08:33,600
+So, if we continue our example with the email reader,
+you might have a separate thread for each email.
+
+107
+00:08:33,600 --> 00:08:39,610
+So, if you're like me and you come in in the morning and
+you have 200 emails waiting for you to waste a good part
+
+108
+00:08:39,610 --> 00:08:46,610
+of your morning, then you know, this would be a great
+way to get 200 way parallelism out of your system.
+
+109
+00:08:46,610 --> 00:08:52,250
+And, hopefully these kinds of computations that you're doing
+on the different data elements are largely independent.
+
+110
+00:08:52,250 --> 00:08:57,990
+You know, in my case, what happens to one email probably
+doesn't influence much what happens to another one.
+
+111
+00:08:57,990 --> 00:09:04,890
+And, assuming you have enough data, then you can
+presumably get your 1,000 way parallelism potential.
+
+112
+00:09:04,890 --> 00:09:09,500
+Or, better yet, you know, find a
+million way parallelism in there.
+
+113
+00:09:09,500 --> 00:09:12,940
+And, this is exactly the sort of problem
+that OpenCL is set up to go after,
+
+114
+00:09:12,940 --> 00:09:17,510
+is where you can just get massive
+parallelism in your computation.
+
+115
+00:09:17,510 --> 00:09:22,300
+[ Silence ]
+
+116
+00:09:22,300 --> 00:09:25,630
+So, as an example of a way to break
+things down, let's take this image.
+
+117
+00:09:25,630 --> 00:09:27,960
+This is an old OpenCL logo.
+
+118
+00:09:27,960 --> 00:09:34,080
+And, I've broken it down so that you
+can see each pixel outlined in the grid,
+
+119
+00:09:34,080 --> 00:09:40,090
+and each pixel we would call a workitem, and we
+would run a single function against that pixel.
+
+120
+00:09:40,090 --> 00:09:46,440
+So, for even a very small image of, you know, one kilopixels
+by one kilopixels, which is much smaller than you can get
+
+121
+00:09:46,440 --> 00:09:51,960
+out of most cameras today, you still easily
+see I could get a million workitems out of this
+
+122
+00:09:51,960 --> 00:09:54,730
+and you can get a great deal of parallelism.
+
+123
+00:09:54,730 --> 00:09:58,940
+And, what OpenCL will do is essentially
+implement the outer loop for you and go through
+
+124
+00:09:58,940 --> 00:10:03,170
+and call the function in turn for
+each one of these workitems.
+
+125
+00:10:03,170 --> 00:10:07,530
+And then, in your function, when you get called,
+you call a little get_global_id function,
+
+126
+00:10:07,530 --> 00:10:13,110
+which tells you which one you are,
+and then you go operate on that one.
+
+127
+00:10:13,110 --> 00:10:19,930
+And then, just to be complete, it's not really required
+that your dimensions of your problem map directly
+
+128
+00:10:19,930 --> 00:10:25,650
+to the workitem dimensions that you've called with
+OpenCL; it can be another dimension heading off
+
+129
+00:10:25,650 --> 00:10:31,360
+in a orthogonal space and you can map it back,
+and I'll talk more about that in a minute.
+
+130
+00:10:31,360 --> 00:10:33,790
+However, there is a little bit of a complication here.
+
+131
+00:10:33,790 --> 00:10:42,640
+It turns out that modern silicon is generally not a vast array
+of very simple scalar processors all running in parallel.
+
+132
+00:10:42,640 --> 00:10:47,640
+Over the last few decades, as you know, we've been
+adding all sorts of ways to get instruction level
+
+133
+00:10:47,640 --> 00:10:50,700
+and data level parallelism into
+the single instruction stream.
+
+134
+00:10:50,700 --> 00:10:55,300
+We have super scalar processors, symmetric multi-threading.
+
+135
+00:10:55,300 --> 00:11:01,100
+You can do a lot of work at the same time
+in a SIMD fashion using vector units.
+
+136
+00:11:01,100 --> 00:11:05,150
+And, it turns out that if we actually look
+at the possibility for doing concurrent work
+
+137
+00:11:05,150 --> 00:11:13,030
+on general modern cores, these things are capable of running
+many, and sometimes a great many, workitems concurrently.
+
+138
+00:11:13,030 --> 00:11:20,010
+So, what we do is we take our giant grid of workitems,
+and we break it out into little groups, called workgroups.
+
+139
+00:11:20,010 --> 00:11:23,950
+And, here I've outlined them in yellow,
+in one way of breaking down the problem.
+
+140
+00:11:23,950 --> 00:11:29,220
+And, we run a workgroup on a particular core, and
+all of the workitems in that workgroup will run
+
+141
+00:11:29,220 --> 00:11:33,980
+as roughly concurrently, more or less, on that core.
+
+142
+00:11:33,980 --> 00:11:41,950
+And this is actually a very convenient motif, because it
+means that you have spatially adjacent data working together
+
+143
+00:11:41,950 --> 00:11:45,040
+at roughly the same time, which
+means you get great cachetilization.
+
+144
+00:11:45,040 --> 00:11:48,840
+You can share resources, like local memory.
+
+145
+00:11:48,840 --> 00:11:54,550
+If one workitem accesses a piece of memory and another one
+right next to it accesses the piece of memory right next
+
+146
+00:11:54,550 --> 00:12:00,430
+to it and so on down the line, the compiler might be smart
+enough to spot; hey, you just loaded a continuous range
+
+147
+00:12:00,430 --> 00:12:04,120
+of data, and turn that into one big load
+rather than doing it in smaller loads.
+
+148
+00:12:04,120 --> 00:12:08,770
+So, that's called a coalesced load,
+or you can do it with storage, too.
+
+149
+00:12:08,770 --> 00:12:10,540
+It's also very cheap to synchronize.
+
+150
+00:12:10,540 --> 00:12:14,930
+It could be as cheap as a NoOP to get
+all of those things to work together,
+
+151
+00:12:14,930 --> 00:12:17,580
+because you're essentially doing it all in software.
+
+152
+00:12:17,580 --> 00:12:21,850
+Or, it could be a little hardware
+interlock within a single core.
+
+153
+00:12:21,850 --> 00:12:26,290
+What's really hard to do though, is to synchronize
+between workgroups, because they're running
+
+154
+00:12:26,290 --> 00:12:29,650
+on different cores, which might be far apart on the silicon.
+
+155
+00:12:29,650 --> 00:12:34,980
+There's actually sort of speed-of-light
+information travel problems to get from one core
+
+156
+00:12:34,980 --> 00:12:38,070
+to another, so communication can be slow.
+
+157
+00:12:38,070 --> 00:12:43,350
+It would add complexity to the chip to
+have each core capable of being interrupted
+
+158
+00:12:43,350 --> 00:12:45,570
+by every other core, in sort of an N-squared fashion.
+
+159
+00:12:45,570 --> 00:12:48,770
+And then finally, you run up into sort of a memory limit.
+
+160
+00:12:48,770 --> 00:12:54,470
+If we imagine that we have a relatively small image,
+say a million pixels, and we make a little stack
+
+161
+00:12:54,470 --> 00:12:57,860
+for each workitem, which is four
+kilobytes, again very modest.
+
+162
+00:12:57,860 --> 00:13:03,040
+Multiply that and quickly you just realize you've
+just exhausted your address space in a 32-bit process.
+
+163
+00:13:03,040 --> 00:13:08,230
+So, we can't actually have all of
+those stacks living at the same time.
+
+164
+00:13:08,230 --> 00:13:14,750
+So, it's not possible to say, put a barrier in the middle
+of your code, have all million workitems come up to
+
+165
+00:13:14,750 --> 00:13:17,740
+that barrier, then once they get there they all continue.
+
+166
+00:13:17,740 --> 00:13:18,990
+It just doesn't work.
+
+167
+00:13:18,990 --> 00:13:23,820
+So, how do we map workitems directly to hardware?
+
+168
+00:13:23,820 --> 00:13:26,050
+There are varieties of ways to do this.
+
+169
+00:13:26,050 --> 00:13:30,350
+One way is a simple, direct model, and this
+is what we do on a CPU today in Snow Leopard,
+
+170
+00:13:30,350 --> 00:13:35,620
+where essentially one workitem is one hardware
+thread running there, just like a Pthread.
+
+171
+00:13:35,620 --> 00:13:43,090
+And, in this model, you have to vectorize your code if
+you want to get full use out of the hardware available,
+
+172
+00:13:43,090 --> 00:13:49,790
+and then there might be other sources of parallelism
+on the core that you might want to take advantage of,
+
+173
+00:13:49,790 --> 00:13:55,630
+like superscalerism or try to use the reorder
+buffers to get more to happen concurrently.
+
+174
+00:13:56,660 --> 00:14:00,610
+But, there are other ways to do
+it in a more GPU-like fashion.
+
+175
+00:14:00,610 --> 00:14:06,140
+We can parallelize our work items through the SIMD
+engine, and here we run a separate workitem down each lane
+
+176
+00:14:06,140 --> 00:14:10,070
+of the vector register in the vector unit.
+
+177
+00:14:10,070 --> 00:14:11,660
+We can go further than that.
+
+178
+00:14:11,660 --> 00:14:18,330
+We can write a software loop to do multiple vectors at
+a time; meaning, in this case, 32 workitems at a time.
+
+179
+00:14:18,330 --> 00:14:21,370
+And of course, since it's a loop, we
+can turn the loop over many, many times,
+
+180
+00:14:21,370 --> 00:14:26,610
+and pretty soon you can see how you can end up with a
+workgroup that's hundreds or thousands of workitems in size,
+
+181
+00:14:26,610 --> 00:14:31,070
+all running on the same piece of parallel hardware.
+
+182
+00:14:31,070 --> 00:14:36,520
+And finally, we can parallelize this in a different
+way, using SMT on each one of these vector things
+
+183
+00:14:36,520 --> 00:14:41,490
+down through a symmetric multi-threading engine,
+and use hardware to do all of the scheduling.
+
+184
+00:14:41,490 --> 00:14:45,660
+So, these are just simple examples of how it might happen.
+
+185
+00:14:45,660 --> 00:14:48,300
+There are some ways to synchronize within a workgroup.
+
+186
+00:14:48,300 --> 00:14:50,690
+The simplest is mem_fence.
+
+187
+00:14:50,690 --> 00:14:54,190
+That actually synchronizes within a single workitem.
+
+188
+00:14:54,190 --> 00:14:59,390
+And, it's mostly there just for hardware
+that has really weak memory ordering.
+
+189
+00:14:59,390 --> 00:15:04,440
+This is largely unnecessary on Mac OS X, because all
+of our hardware is more strongly ordered than that.
+
+190
+00:15:04,440 --> 00:15:08,000
+So, you should not need to use mem_fence.
+
+191
+00:15:08,000 --> 00:15:09,670
+Barrier is very important, however.
+
+192
+00:15:09,670 --> 00:15:14,970
+If you are working with local memory, you'll
+find that you will want to copy data over.
+
+193
+00:15:14,970 --> 00:15:19,000
+Make sure all of the copies are done,
+issue a barrier, and then proceed forward.
+
+194
+00:15:19,000 --> 00:15:21,740
+Now you can use the data that's in local memory.
+
+195
+00:15:21,740 --> 00:15:25,080
+But, barriers only work across a single
+workgroup for the reasons I mentioned before.
+
+196
+00:15:25,080 --> 00:15:30,910
+Then finally, there's a call, wait_group_events,
+which is a barrier-like synchronization,
+
+197
+00:15:30,910 --> 00:15:37,330
+but it works with an asynchronous sort of switch that
+copies data around, called async_workgroup_copy.
+
+198
+00:15:37,330 --> 00:15:42,330
+There is also a problem with figuring out
+how many workitems to put in your workgroup.
+
+199
+00:15:42,330 --> 00:15:45,970
+You can pick just about any number, as
+long as the hardware will swallow it.
+
+200
+00:15:45,970 --> 00:15:47,500
+So, what will the hardware swallow?
+
+201
+00:15:47,500 --> 00:15:49,390
+Well, it depends on the hardware.
+
+202
+00:15:49,390 --> 00:15:53,680
+OpenCL provides quite a diversity of
+different interfaces to try to figure that out.
+
+203
+00:15:53,680 --> 00:15:55,980
+You can see I have eight of them here.
+
+204
+00:15:55,980 --> 00:16:01,890
+Six of them are APIs and there's also some constraints
+in the standard; the dimensions of your workgroup have
+
+205
+00:16:01,890 --> 00:16:06,580
+to divide evenly into the total problem
+size and it might turn out that you need
+
+206
+00:16:06,580 --> 00:16:09,760
+so much local memory per workitem in order to do your work.
+
+207
+00:16:09,760 --> 00:16:14,190
+There's only so much local memory on the system, so
+that kind of can limit the size of your workgroup, too.
+
+208
+00:16:14,190 --> 00:16:15,860
+So, that's the bottom entry.
+
+209
+00:16:15,860 --> 00:16:20,480
+So, how do you wade through all of this and try to
+figure out how big your workgroup can or should be?
+
+210
+00:16:20,480 --> 00:16:23,230
+Well, the first solution is to give up.
+
+211
+00:16:23,230 --> 00:16:25,440
+You can pass in NULL with the workgroup size.
+
+212
+00:16:25,440 --> 00:16:26,750
+We'll swallow that.
+
+213
+00:16:26,750 --> 00:16:29,960
+You can hopefully, you know, do some magic, which we'll try.
+
+214
+00:16:29,960 --> 00:16:37,010
+We'll do the best we can, and magic is wonderful stuff,
+but unfortunately it's not real grounded in reality,
+
+215
+00:16:37,010 --> 00:16:41,980
+so we may not get it right for
+reasons I will describe in a minute.
+
+216
+00:16:41,980 --> 00:16:47,500
+So, in cases where you have more information then you
+guess we do, it's often best to handle this yourself.
+
+217
+00:16:47,500 --> 00:16:53,570
+So, another approach is divide and conquer,
+which is the standard technique, of course.
+
+218
+00:16:53,570 --> 00:17:00,150
+And, you just go through and sort the information you're
+getting back from OpenCL according to dimensionality.
+
+219
+00:17:00,150 --> 00:17:02,670
+So, you won't need to call all of these interfaces.
+
+220
+00:17:02,670 --> 00:17:06,190
+You'll quickly realize that only some of
+them really apply to your particular problem.
+
+221
+00:17:06,190 --> 00:17:11,510
+But, you'll get a number of one-dimensional
+limits that you might have to take the minimum of;
+
+222
+00:17:11,510 --> 00:17:14,080
+we can't have any more workitems than this.
+
+223
+00:17:14,080 --> 00:17:20,990
+And then, there's a couple of APIs that will give you a
+3D shape, which will constrain the size of your workgroup,
+
+224
+00:17:20,990 --> 00:17:24,240
+and this is required because there are
+devices out there that are only able
+
+225
+00:17:24,240 --> 00:17:28,470
+to vectorize in one dimension and not all three.
+
+226
+00:17:28,470 --> 00:17:32,070
+So, these APIs can be used to do that, and then, of course,
+
+227
+00:17:32,070 --> 00:17:39,450
+the overall size of your global problem set will constrain
+your data shape because it's got to divide evenly
+
+228
+00:17:39,450 --> 00:17:43,170
+into your workgroup size, or by your workgroup size.
+
+229
+00:17:43,170 --> 00:17:45,640
+You can run into problems when the
+global work size is a prime number.
+
+230
+00:17:45,640 --> 00:17:47,080
+What divides into a prime number?
+
+231
+00:17:47,080 --> 00:17:50,840
+Well, the only thing that divides
+into it is one and the prime number.
+
+232
+00:17:50,840 --> 00:17:53,000
+Prime number's not going to work; it's too big.
+
+233
+00:17:53,000 --> 00:17:57,750
+One means we're only running one workitem per
+core; you're not going to get any parallelism
+
+234
+00:17:57,750 --> 00:18:00,250
+that way, so it's going to perform terribly.
+
+235
+00:18:00,250 --> 00:18:01,470
+So, what do you do?
+
+236
+00:18:01,470 --> 00:18:06,840
+Well, one thing you can do is just make
+your problem demand a little bigger.
+
+237
+00:18:06,840 --> 00:18:13,710
+And then, in your kernel, when you go write your
+code and you go get, you know, what problem am I,
+
+238
+00:18:13,710 --> 00:18:17,400
+if you have to be outside the original
+problem size, then you just have an early out.
+
+239
+00:18:17,400 --> 00:18:24,860
+So, that will let you solve the local size
+must divide into the global size problem
+
+240
+00:18:24,860 --> 00:18:29,550
+and run on a prime number workgroup of global size.
+
+241
+00:18:29,550 --> 00:18:35,800
+Another thing you can do, as I mentioned earlier, is
+enumerate your workitems out into some abstract dimension.
+
+242
+00:18:35,800 --> 00:18:41,970
+And then, you write a little function such as this
+where you take in my global ID in the abstract dimension
+
+243
+00:18:41,970 --> 00:18:45,820
+and map it back to something more
+real, like your X or Y position.
+
+244
+00:18:45,820 --> 00:18:52,760
+So, these are all things that you can just do yourself in
+code and, you know, it's limited only by your imagination.
+
+245
+00:18:53,840 --> 00:18:57,740
+So, I wanted to work through a few
+developer questions we've had over the years.
+
+246
+00:18:58,810 --> 00:19:01,970
+They come from a variety of topics.
+
+247
+00:19:01,970 --> 00:19:08,520
+Many of you have noticed that we've added half precision
+to the spec. This is a 16-bit floating point number.
+
+248
+00:19:08,520 --> 00:19:11,490
+And, it's easy to get quite excited
+about that; ooh, what is this thing?
+
+249
+00:19:11,490 --> 00:19:13,110
+You know; ooh, I have a new float to work with.
+
+250
+00:19:13,110 --> 00:19:15,870
+It's not quite that.
+
+251
+00:19:15,870 --> 00:19:22,440
+It's a storage-only format, which means that it only
+exists as a 16-bit floating point number in memory.
+
+252
+00:19:22,440 --> 00:19:24,910
+As soon as you pick it up and start trying to work on it,
+
+253
+00:19:24,910 --> 00:19:27,680
+the first thing OpenCL does is
+convert it to single precision number.
+
+254
+00:19:27,680 --> 00:19:31,670
+You do all of your arithmetic in single
+precision, and then when you go to store it back
+
+255
+00:19:31,670 --> 00:19:34,610
+out somewhere, then it gets converted back.
+
+256
+00:19:34,610 --> 00:19:39,440
+Which interface you use to load and store your data
+depends on whether you're working with buffers or images.
+
+257
+00:19:39,440 --> 00:19:47,480
+Buffers will use vload_halfn/vstore_halfn; images will use
+read_imagef or write_imagef, as for other pixel formats.
+
+258
+00:19:47,480 --> 00:19:51,530
+There is an extension you'll see in the
+end of the spec, which is cl_khr_fp16,
+
+259
+00:19:51,530 --> 00:19:55,530
+which actually specifies half precision direct arithmetic.
+
+260
+00:19:55,530 --> 00:19:58,110
+That's not supported on our platform.
+
+261
+00:19:58,110 --> 00:19:59,920
+There's a couple of good reasons for that.
+
+262
+00:19:59,920 --> 00:20:03,270
+The native hardware doesn't do it;
+we'd have to emulate it in software,
+
+263
+00:20:03,270 --> 00:20:06,000
+which would be a lot slower than
+doing it in single precision.
+
+264
+00:20:06,000 --> 00:20:10,220
+And, the other problem is, of course, half precision
+only has about 11 bits of precision if you do enough
+
+265
+00:20:10,220 --> 00:20:12,240
+in multiplies and adds and whatever else.
+
+266
+00:20:12,240 --> 00:20:16,000
+You're going to start losing bits and you'll
+be down to eight, seven, six bits of precision
+
+267
+00:20:16,000 --> 00:20:20,840
+and for most algorithms, that's just not enough.
+
+268
+00:20:20,840 --> 00:20:26,720
+Many people see that; oh, OpenCL has four address
+spaces, which are sort of disjoined places to put memory.
+
+269
+00:20:26,720 --> 00:20:28,150
+What's that all about?
+
+270
+00:20:28,150 --> 00:20:31,900
+We have global, which is akin to
+the main system memory used to use.
+
+271
+00:20:31,900 --> 00:20:37,680
+We have local, which is a little, user
+managed cache tied to your compute unit.
+
+272
+00:20:37,680 --> 00:20:43,390
+We also have a constant memory space, and private, which
+is just local storage for your particular workitem.
+
+273
+00:20:43,390 --> 00:20:47,480
+And, the confusing one is, what is local memory?
+
+274
+00:20:47,480 --> 00:20:55,020
+It's just a user managed cache, and the way you use it
+is you either explicity or using a convenience function,
+
+275
+00:20:55,020 --> 00:20:59,960
+like async_workgroup_copy, just pick up the
+data from global memory and write it over there.
+
+276
+00:20:59,960 --> 00:21:05,470
+So, it's as simple as, you know, just doing an
+assignment from A to B in your OpenCL C code.
+
+277
+00:21:05,470 --> 00:21:12,740
+So, what you want to do is have all of your workitems
+work together to copy in the data from global to local,
+
+278
+00:21:12,740 --> 00:21:18,750
+then issue a barrier to make sure everyone's done so that
+we don't try to read any of it before any of them are done.
+
+279
+00:21:18,750 --> 00:21:22,400
+And now, the data you know is resident in local
+memory and you can read that out much quicker
+
+280
+00:21:22,400 --> 00:21:27,160
+than it would have taken to access it from global.
+
+281
+00:21:27,160 --> 00:21:35,190
+Now, a key point about local memory is that it only
+really works if you touch the data more than once.
+
+282
+00:21:35,190 --> 00:21:38,510
+If you just touched it once, then you would
+essentially be reading it once, copying it over here
+
+283
+00:21:38,510 --> 00:21:39,800
+and then reading it back from over there.
+
+284
+00:21:39,800 --> 00:21:41,830
+You didn't save yourself any time.
+
+285
+00:21:41,830 --> 00:21:44,330
+You want to be in a situation where
+you read it once here, put it over here
+
+286
+00:21:44,330 --> 00:21:47,890
+and then all sorts of different people use this over time.
+
+287
+00:21:47,890 --> 00:21:53,680
+So, if it turns out that you only plan to use your data
+once, let's say in My Image, I'm just converting RGB to YUV,
+
+288
+00:21:53,680 --> 00:21:58,680
+so each pixel is largely independent
+and I only touch it once.
+
+289
+00:21:58,680 --> 00:22:03,490
+Then we wanted to use a variety of different
+approaches, depending on what kind of hurdle you're on.
+
+290
+00:22:03,490 --> 00:22:09,300
+On a GPU, there's a texture cache designed
+to accelerate that kind of read-once access,
+
+291
+00:22:09,300 --> 00:22:13,170
+and that is backed up by the image
+data type, so you'd want to use that.
+
+292
+00:22:13,170 --> 00:22:23,790
+On the CPU, there is a global cache backing up buffers,
+so as long as your data has good spatial locality,
+
+293
+00:22:23,790 --> 00:22:27,700
+then you should get some acceleration out of the caches.
+
+294
+00:22:29,100 --> 00:22:33,720
+I should note that local memory, while it
+seems like a predominantly GPU technology,
+
+295
+00:22:33,720 --> 00:22:36,210
+we have found that it's actually quite helpful on the CPU.
+
+296
+00:22:36,210 --> 00:22:39,080
+It can make vectorization easier.
+
+297
+00:22:39,080 --> 00:22:44,850
+It also can avoid polluting your caches,
+and what I mean in that sense is,
+
+298
+00:22:44,850 --> 00:22:48,360
+let's say your global data structures
+are an Array of Structures, data type.
+
+299
+00:22:48,360 --> 00:22:51,690
+Here I have an AoS strapped with
+x, y and z in it and then some
+
+300
+00:22:51,690 --> 00:22:54,210
+of these telephone numbers, some unrelated piece of data.
+
+301
+00:22:54,210 --> 00:22:57,600
+And, I know many of you just love doing code like that.
+
+302
+00:22:57,600 --> 00:22:58,740
+I've seen it everywhere.
+
+303
+00:22:58,740 --> 00:23:04,200
+And, this might be an array in your buffer, but
+when you go actually work on it in your kernel,
+
+304
+00:23:04,200 --> 00:23:07,830
+it can be quite useful to then
+transpose that around into an array
+
+305
+00:23:07,830 --> 00:23:10,520
+of x's followed by an array of y's and an array of z's.
+
+306
+00:23:10,520 --> 00:23:14,770
+If you only intended to work on x, y and z, and
+you didn't care about the telephone numbers,
+
+307
+00:23:14,770 --> 00:23:18,540
+then you end up compacting the data
+down into a much smaller space.
+
+308
+00:23:18,540 --> 00:23:22,390
+Also, because it's plainer in orientation,
+it's much easier to vectorize.
+
+309
+00:23:22,390 --> 00:23:27,500
+The GPUs have a watchdog timer.
+
+310
+00:23:27,500 --> 00:23:28,720
+And, what is a watchdog timer?
+
+311
+00:23:28,720 --> 00:23:32,540
+It's somebody looking over your shoulder to make
+sure you don't monopolize the GPU for too long.
+
+312
+00:23:32,540 --> 00:23:38,480
+And, the reason for that is the UI will not
+interact as long as you're busy on the GPU.
+
+313
+00:23:38,480 --> 00:23:44,340
+If you use the GPU for more than a few seconds at a
+time in a single kernel, you'll probably get a message
+
+314
+00:23:44,340 --> 00:23:47,350
+in the console, such as this one shown here.
+
+315
+00:23:47,350 --> 00:23:52,820
+You may see a flash on screen and you definitely
+will not get the right answer out of OpenCL.
+
+316
+00:23:52,820 --> 00:23:54,400
+Your contacts might be invalidated.
+
+317
+00:23:54,400 --> 00:24:01,030
+So, if you start running into this, the simple solution
+is just divide your task up into smaller chunks
+
+318
+00:24:01,030 --> 00:24:05,180
+so that it runs faster and doesn't
+use up quite as much time.
+
+319
+00:24:05,180 --> 00:24:08,760
+You can enqueue them one after another in the
+queue; you know, the second one will start as soon
+
+320
+00:24:08,760 --> 00:24:11,750
+as the first one's done, so you won't waste too much time.
+
+321
+00:24:11,750 --> 00:24:18,140
+You want to be careful though, because the breadth
+of capability between sort of a low-end GTU
+
+322
+00:24:18,140 --> 00:24:21,520
+and a high-end can be quite large
+in order of magnitude, maybe.
+
+323
+00:24:21,520 --> 00:24:28,970
+So, if you are doing this, be sure you're testing out
+a low-end system to make sure that it works everywhere.
+
+324
+00:24:28,970 --> 00:24:35,590
+Some of you have noticed that OpenCL provides a way
+to get out of your kernels compiled as a binary.
+
+325
+00:24:35,590 --> 00:24:39,760
+There's this interface, clGetProgramInfo
+(CL_PROGRAM_BINARIES).
+
+326
+00:24:39,760 --> 00:24:46,360
+And, the intention of this thing is to give
+you a cache, or a way to create your own cache,
+
+327
+00:24:46,360 --> 00:24:49,570
+to avoid having to compile your
+kernels every time your app runs.
+
+328
+00:24:49,570 --> 00:24:54,640
+Some people want to use it for code obfuscation,
+but it's not suitable for that use right now,
+
+329
+00:24:54,640 --> 00:25:00,070
+and the reason for that is that Apple has
+not committed to an API for the kernels.
+
+330
+00:25:00,070 --> 00:25:06,040
+And so, that means that on some future OS we might
+change the API; your binary will not work anymore.
+
+331
+00:25:06,040 --> 00:25:12,590
+When you go try to load it, you have to call clBuildProgram
+before you can actually use it, and that call will fail.
+
+332
+00:25:12,590 --> 00:25:18,660
+If the only thing you shipped with your app was the binary,
+you're now in deep trouble because you have no code to run.
+
+333
+00:25:18,660 --> 00:25:21,730
+So, what you need to do is ship your source.
+
+334
+00:25:21,730 --> 00:25:28,800
+If this happens to you, then you rebuild
+your source fresh and override the cache
+
+335
+00:25:28,800 --> 00:25:34,050
+that you had set up for yourself, and continue on.
+
+336
+00:25:34,050 --> 00:25:38,650
+Some developers are curious; when should
+I use buffers, when should I use images?
+
+337
+00:25:38,650 --> 00:25:41,650
+I think if you're familiar with
+OpenGL, it should be obvious.
+
+338
+00:25:41,650 --> 00:25:46,850
+But, if you're from CPU land, like
+me, then it's not so clear.
+
+339
+00:25:46,850 --> 00:25:51,020
+Buffers are sort of native territory for a CPU.
+
+340
+00:25:51,020 --> 00:25:54,320
+We have caches to back them up; they're very fast.
+
+341
+00:25:54,320 --> 00:25:59,810
+On a GPU, on current generation there's no
+cache to back up global memory accesses,
+
+342
+00:25:59,810 --> 00:26:04,030
+so you're taking essentially a big, long trip;
+several hundred cycles out to get uncached memory.
+
+343
+00:26:04,030 --> 00:26:10,330
+GPU, you'd want to use, copy that data in the local
+memory, which is very close and much faster to use.
+
+344
+00:26:10,330 --> 00:26:17,950
+Or, use coalesced reads wherein multiple workitems are
+reading data from largely contiguous regions of memory.
+
+345
+00:26:17,950 --> 00:26:21,850
+Images are great on the GPU.
+
+346
+00:26:21,850 --> 00:26:26,880
+There's a texture unit to accelerate those
+accesses, if they have great spatial locality.
+
+347
+00:26:26,880 --> 00:26:31,880
+But, on the CPU there's no such hardware, so
+we have to emulate the whole thing in software.
+
+348
+00:26:31,880 --> 00:26:39,270
+So, these things look a lot more complicated than
+you would think just looking at the spec. But,
+
+349
+00:26:39,270 --> 00:26:44,650
+at least the CPU is extremely accurate, so it's good
+for debugging to make sure you're doing the right thing.
+
+350
+00:26:44,650 --> 00:26:50,900
+But, as you can see, this is the implementation of a single
+pixel read using linear sampling; it's 168 instructions.
+
+351
+00:26:50,900 --> 00:26:54,430
+So, I would only want to use the
+read image feature on the CPU
+
+352
+00:26:54,430 --> 00:27:00,470
+if you've budgeted ample CPU time to
+go through and do all of that work.
+
+353
+00:27:00,470 --> 00:27:04,680
+Some developers are wondering; how do
+I use OpenCL in my multi-threaded app?
+
+354
+00:27:04,680 --> 00:27:07,430
+It says it's not completely thread safe.
+
+355
+00:27:07,430 --> 00:27:14,220
+The intended design is to use a separate queue from
+each thread that you intend to enqueue work into OpenCL.
+
+356
+00:27:14,220 --> 00:27:22,190
+The other thing you have to do is make sure you're
+not getting reentrant access into individual objects.
+
+357
+00:27:22,190 --> 00:27:26,280
+And, you can end up in some patterns
+also where you can step on yourself.
+
+358
+00:27:26,280 --> 00:27:32,290
+For example, on this one, I might set the kernel
+argument to be a value and then get interrupted,
+
+359
+00:27:32,290 --> 00:27:37,480
+have another thread which is using the same kernel come
+along and set it to a different value and queue its kernel,
+
+360
+00:27:37,480 --> 00:27:41,310
+then finally I wake up and queue my
+kernel, but it has the wrong argument.
+
+361
+00:27:41,310 --> 00:27:46,390
+So, you want to make sure that you don't get
+these sorts of races happening in your app.
+
+362
+00:27:46,390 --> 00:27:51,910
+Now, you could implement some very fancy locking schemes
+to try to guarantee this, but it's going to be heavy,
+
+363
+00:27:51,910 --> 00:27:56,130
+it's going to damage your concurrency,
+and you're not going to like it.
+
+364
+00:27:56,130 --> 00:28:02,070
+What we are actually thinking that you would do is, if
+you intend to call the same kernel for multiple threads,
+
+365
+00:28:02,070 --> 00:28:06,040
+make multiple kernel objects, all
+pointed back to the same kernel function.
+
+366
+00:28:06,040 --> 00:28:07,080
+That's cheap to do.
+
+367
+00:28:07,080 --> 00:28:14,240
+You don't have to do any locking, because each thread will
+have its own copy of the kernel object, and it's safe to do.
+
+368
+00:28:15,940 --> 00:28:23,530
+Probably the number one thing that I've seen developers do
+is block too much when they're enqueueing stuff into OpenCL.
+
+369
+00:28:23,530 --> 00:28:29,730
+A number of the enqueue APIs have the capacity
+to block until the work is completely done
+
+370
+00:28:29,730 --> 00:28:33,700
+in OpenCL before returning control to you.
+
+371
+00:28:33,700 --> 00:28:38,650
+But, that's extremely insensitive because you don't
+get to do anything while OpenCL's doing stuff,
+
+372
+00:28:38,650 --> 00:28:42,250
+and then once OpenCL is done, then it has to wait for you.
+
+373
+00:28:42,250 --> 00:28:49,010
+And, so you end up losing a lot of your concurrency,
+and I'll show you an example of that a little bit later.
+
+374
+00:28:49,010 --> 00:28:55,500
+So, there's an API entirely intended
+to block your queue, clFinish.
+
+375
+00:28:55,500 --> 00:28:57,550
+You should almost never need to call that.
+
+376
+00:28:57,550 --> 00:29:02,410
+The only time I've seen where it was a good use case of that
+is where somebody wanted to shut down OpenCL completely,
+
+377
+00:29:02,410 --> 00:29:05,580
+wanting to make sure all of the work was done and
+all of the reference counting had resolved itself
+
+378
+00:29:05,580 --> 00:29:08,890
+and all of the objects were freed
+and all of the memory was released.
+
+379
+00:29:08,890 --> 00:29:13,310
+So, that's great use for clFinish, but you
+should otherwise almost never need to do it.
+
+380
+00:29:13,310 --> 00:29:15,930
+Some people just seem to instinctively
+put it in there proactively
+
+381
+00:29:15,930 --> 00:29:20,720
+after every single call, and it's
+killing them, I'll tell you.
+
+382
+00:29:20,720 --> 00:29:24,380
+There are calls to read and write data in and out of OpenCL.
+
+383
+00:29:24,380 --> 00:29:31,700
+These can be made blocking if you want, but you'll
+only need to be blocking on these some of the time.
+
+384
+00:29:31,700 --> 00:29:36,680
+And, you can probably figure out for yourself when
+this is, but often you'll see, like for example;
+
+385
+00:29:36,680 --> 00:29:41,000
+I need to enqueue multiple reads to read back
+results from multiple buffers after my computation.
+
+386
+00:29:41,000 --> 00:29:46,680
+It turns out because the queue is in order, which means
+each job is finished before the next one can start;
+
+387
+00:29:46,680 --> 00:29:52,440
+you only actually need to block on the last one, because
+you know that the other ones have already completed.
+
+388
+00:29:52,440 --> 00:29:58,930
+Likewise, when you're doing writes, the typical pattern
+is write data into OpenCL and queue a bunch of kernels,
+
+389
+00:29:58,930 --> 00:30:01,870
+and then read back the results; the last one is blocking.
+
+390
+00:30:01,870 --> 00:30:07,920
+Well, OK; I know my write finished a long time ago,
+way up here, so no need to block on that either.
+
+391
+00:30:07,920 --> 00:30:14,820
+So, there really, in any, like giant sequence of
+calls, you probably only need one block at the end.
+
+392
+00:30:14,820 --> 00:30:19,250
+People also run into some performance
+pitfalls using half-full vectors.
+
+393
+00:30:19,250 --> 00:30:21,260
+This can come in two forms.
+
+394
+00:30:21,260 --> 00:30:30,170
+On the CPU, the vectors are fixed width, they're all
+16-bytes on SSE, and so if you write, like a float2,
+
+395
+00:30:30,170 --> 00:30:35,920
+which is only an 8-byte type, you're essentially
+issuing a 16-byte instruction work on 16 bytes of data,
+
+396
+00:30:35,920 --> 00:30:40,500
+but you've only populated it half-full,
+and so we end up doing extra work on some,
+
+397
+00:30:40,500 --> 00:30:43,580
+who knows what's in the rest of the register.
+
+398
+00:30:43,580 --> 00:30:44,920
+So, this is bad for two reasons.
+
+399
+00:30:44,920 --> 00:30:47,530
+Obviously, you've wasted half of your potential to do work.
+
+400
+00:30:47,530 --> 00:30:54,560
+But, in floating point, if those lanes in the vector
+happen to get any NaNs or infinities or denormals,
+
+401
+00:30:54,560 --> 00:31:01,990
+you might set yourself up to take a hundred cycle stall
+for each one of those, and that can hit you operation
+
+402
+00:31:01,990 --> 00:31:05,150
+after operation after operation after
+operation, and make your code run,
+
+403
+00:31:05,150 --> 00:31:06,890
+like orders of magnitude slower than it should.
+
+404
+00:31:06,890 --> 00:31:14,860
+So, you want to be sure, when programming for
+the CPU, on the direct model like we have,
+
+405
+00:31:14,860 --> 00:31:19,000
+that you try to make sure you use 16-byte vectors or larger.
+
+406
+00:31:19,000 --> 00:31:22,290
+Larger will actually do a little free unrolling for you,
+
+407
+00:31:22,290 --> 00:31:27,930
+in the compiler is at times a little
+faster than just using the 16-byte vectors.
+
+408
+00:31:27,930 --> 00:31:30,000
+The GPU has sort of the reverse problem.
+
+409
+00:31:30,000 --> 00:31:36,430
+When it's revectorizing your problem along a different
+dimension in the way the GPU would like to do it,
+
+410
+00:31:36,430 --> 00:31:41,900
+you might have a float4, but you've only put data in the
+first two elements and have a bunch of garbage after that
+
+411
+00:31:41,900 --> 00:31:44,660
+because you couldn't figure out what to
+do and you declared it a float4 somewhere.
+
+412
+00:31:44,660 --> 00:31:49,090
+Well, when the GPU vectorizes that, it will make a
+big vector full of x's and a big vector full of y's,
+
+413
+00:31:49,090 --> 00:31:58,730
+and then two big vectors full of junk, which it will then
+go do arithmetic on needlessly, so that just wastes time.
+
+414
+00:31:58,730 --> 00:32:05,300
+Finally, we've noticed that people
+often will make objects, use them once,
+
+415
+00:32:05,300 --> 00:32:07,400
+then delete them; make them, use them once, delete them.
+
+416
+00:32:07,400 --> 00:32:09,310
+And, that can be kind of wasteful.
+
+417
+00:32:09,310 --> 00:32:12,430
+Many OpenCL objects are heavy;
+they're intended to be reused a lot.
+
+418
+00:32:12,430 --> 00:32:19,770
+Like a program, you'd have to compile it each time,
+which can take a big chunk of a second, sometimes.
+
+419
+00:32:19,770 --> 00:32:27,200
+Images and buffers have a big, giant backing store,
+megabytes in size; a bunch of driver calls to set it up,
+
+420
+00:32:27,200 --> 00:32:30,520
+and then there's some state associated
+with who used it last,
+
+421
+00:32:30,520 --> 00:32:33,950
+so we can track which device the
+actual data lives on right now.
+
+422
+00:32:33,950 --> 00:32:42,150
+And then, finally, on any buffers that you make that are new
+on the system are subject to the usual zero full activity
+
+423
+00:32:42,150 --> 00:32:45,030
+that the kernel will do the first time you use it.
+
+424
+00:32:45,030 --> 00:32:52,680
+So, if you reuse them, you save yourself
+this cost the second and later time.
+
+425
+00:32:54,370 --> 00:32:59,330
+However, it's only really useful to reuse things if
+they're about the same size, or in the case of images,
+
+426
+00:32:59,330 --> 00:33:03,280
+exactly the same size as the previous use.
+
+427
+00:33:03,280 --> 00:33:07,060
+Otherwise, OpenCL has no concept of
+only copy part of this buffer up there;
+
+428
+00:33:07,060 --> 00:33:09,500
+it'll copy the whole thing up to the device.
+
+429
+00:33:09,500 --> 00:33:13,480
+So, you only really want to reuse
+them if they're about the same size.
+
+430
+00:33:13,480 --> 00:33:17,140
+So finally, I'd like to talk about a few debugging tips.
+
+431
+00:33:17,140 --> 00:33:23,860
+These are standard techniques we use back in Infinite Loop.
+
+432
+00:33:23,860 --> 00:33:30,650
+Pretty much all of us run with the
+environment variable CL_LOG_ERRORS set all of the time.
+
+433
+00:33:30,650 --> 00:33:33,980
+I just put that in my bashrc.
+
+434
+00:33:33,980 --> 00:33:37,240
+And, you can set this to either standard
+out or standard error or console,
+
+435
+00:33:37,240 --> 00:33:39,470
+depending on where you want the error messages to go.
+
+436
+00:33:39,470 --> 00:33:46,040
+And, what it does is, whenever you call an OpenCL API
+and you manage to miss some little gotcha in the spec,
+
+437
+00:33:46,040 --> 00:33:52,470
+and OpenCL returns an error out, you also get
+spewed to the console or standard error or whatever;
+
+438
+00:33:52,470 --> 00:33:57,750
+some hopefully human understandable English
+message about what exactly you did wrong.
+
+439
+00:33:57,750 --> 00:34:02,040
+So, if you're encountering any problems with
+the API, getting that to do what you want,
+
+440
+00:34:02,040 --> 00:34:04,230
+then CL_LOG_ERRORS is very much your friend.
+
+441
+00:34:04,230 --> 00:34:07,350
+There's also a way to programmably hook into it.
+
+442
+00:34:07,350 --> 00:34:13,640
+You can roll your own function and
+pass it in when the context is created.
+
+443
+00:34:13,640 --> 00:34:20,980
+Finally, when you're working on the CPU, we make heavy
+use out of Shark and Instruments to see what's going
+
+444
+00:34:20,980 --> 00:34:30,630
+on in there, and what I'd like to do is give you
+a quick look at what that process looks like.
+
+445
+00:34:30,630 --> 00:34:32,300
+So, this is an iPhoto.
+
+446
+00:34:32,300 --> 00:34:40,790
+It's unmodified, and as it turns out, iPhoto on Snow
+Leopard for certain things will use OpenCL on the CPU.
+
+447
+00:34:40,790 --> 00:34:44,380
+So, we can take a look at what it's doing.
+
+448
+00:34:44,380 --> 00:34:53,000
+So, we call up our little Adjust panel and we can
+start, you know, adding little filters onto the image,
+
+449
+00:34:53,000 --> 00:34:57,700
+and these are all processed in real time, as you can see.
+
+450
+00:34:57,700 --> 00:35:02,150
+And then, we can go and start jiggling stuff.
+
+451
+00:35:02,150 --> 00:35:10,770
+So, if we run Shark; Shark has a bunch
+of different ways to run samples,
+
+452
+00:35:10,770 --> 00:35:14,960
+but the two most interesting are
+Time Profile and System Trace.
+
+453
+00:35:14,960 --> 00:35:19,320
+I'll run a Time Profile first; I'm
+sure many of you have done this.
+
+454
+00:35:19,320 --> 00:35:23,500
+So, while I'm getting OpenCL to do something
+through iPhoto, here I'm jiggling this thing around.
+
+455
+00:35:23,500 --> 00:35:30,840
+I can hit option escape to get it to record, and what it's
+doing is it's taking a sample server so many milliseconds
+
+456
+00:35:30,840 --> 00:35:36,930
+or microseconds, and records where the CPU
+or CPUs, what instruction they were on.
+
+457
+00:35:36,930 --> 00:35:41,740
+And then later, it puts it all back together,
+backtraces it against which functions they were there,
+
+458
+00:35:41,740 --> 00:35:46,720
+and you can get a breakdown as to where your
+time was going using this stochastic technique.
+
+459
+00:35:46,720 --> 00:35:51,230
+So, you can see it was spending about
+12 percent of its time in this function.
+
+460
+00:35:51,230 --> 00:35:53,750
+This is an OpenCL library.
+
+461
+00:35:53,750 --> 00:35:56,580
+OpenCL provides a number of libraries
+which are strangely named;
+
+462
+00:35:56,580 --> 00:35:59,700
+they look a little bit more like
+pixel formats than libraries.
+
+463
+00:35:59,700 --> 00:36:07,200
+So, if you see this, this is a cost accrued to you
+due to the cost of going to use readImage on the CPU.
+
+464
+00:36:07,200 --> 00:36:11,790
+You will also see lines that say unknown library in them.
+
+465
+00:36:11,790 --> 00:36:13,480
+Well, why doesn't it say OpenCL?
+
+466
+00:36:13,480 --> 00:36:14,780
+Well, this is your code.
+
+467
+00:36:14,780 --> 00:36:17,320
+It doesn't actually exist on disk anywhere.
+
+468
+00:36:17,320 --> 00:36:21,410
+We just built this code, stuck it in the memory and run it.
+
+469
+00:36:21,410 --> 00:36:24,330
+So, Shark doesn't really know what
+it is, so it says unknown library.
+
+470
+00:36:24,330 --> 00:36:28,790
+But, you can still drill down and see all of
+the code that we prepared, and if you're good,
+
+471
+00:36:28,790 --> 00:36:36,160
+you can figure out what parts map onto your
+kernel and see if you got the code you wanted,
+
+472
+00:36:36,160 --> 00:36:41,290
+and if there are large stalls in here, you can
+generally figure out what went wrong in your kernel.
+
+473
+00:36:41,290 --> 00:36:45,740
+I can also show you a system trace, which is very useful
+
+474
+00:36:45,740 --> 00:36:51,990
+for understanding how your interactions
+with the OpenCL queues are progressing.
+
+475
+00:36:51,990 --> 00:36:58,550
+So, if we go back and play with the image a bit more,
+I'll now record a system trace for a second or two.
+
+476
+00:36:58,550 --> 00:37:04,610
+This is a 16-core system, or 8-cores with 2ASMT.
+
+477
+00:37:04,610 --> 00:37:08,730
+So, we have here a bunch of iPhoto threads.
+
+478
+00:37:08,730 --> 00:37:11,560
+I'll just limit it down to iPhoto.
+
+479
+00:37:11,560 --> 00:37:16,710
+And, I'm looking at the timeline, and what you
+can see here; these are threads, horizontally.
+
+480
+00:37:16,710 --> 00:37:24,600
+Regions that are amber is time during the timeline,
+which progresses to the right, when the CPU was active.
+
+481
+00:37:24,600 --> 00:37:27,320
+And, what we can see is that it's single-threaded a lot,
+
+482
+00:37:27,320 --> 00:37:31,290
+but then there are these little
+windows where we're multi-thread.
+
+483
+00:37:31,290 --> 00:37:35,230
+And, these are when OpenCL is running,
+and we can zoom in on these things.
+
+484
+00:37:35,230 --> 00:37:42,620
+These little telephones are system calls, and here
+we can see; here is the main thread on the top
+
+485
+00:37:42,620 --> 00:37:49,370
+and it's running through, making various system calls,
+and we can go look at this and track this back to OpenCL.
+
+486
+00:37:49,370 --> 00:37:52,710
+This is a release_mem_object call
+to release some memory object.
+
+487
+00:37:52,710 --> 00:38:03,090
+This one is enqueue a kernel, and you see a little while
+after a kernel we get a little blip of something happening.
+
+488
+00:38:03,090 --> 00:38:08,400
+And here we enqueue another kernel,
+and then this one's a big one.
+
+489
+00:38:08,400 --> 00:38:11,510
+And, it seems like there is some serial
+process here to kick off each CPU
+
+490
+00:38:11,510 --> 00:38:14,210
+as it goes along, so you can see them all firing up.
+
+491
+00:38:14,210 --> 00:38:19,990
+But, sometime before we manage to get them all
+fired up, we're already done with the work.
+
+492
+00:38:19,990 --> 00:38:26,060
+So, maybe the kernel you enqueued is too small, because we
+didn't actually get all 16 of the threads up and running,
+
+493
+00:38:26,060 --> 00:38:30,670
+the hardware threads, before we ran out of work to do.
+
+494
+00:38:30,670 --> 00:38:31,660
+Well, why did that happen?
+
+495
+00:38:31,660 --> 00:38:33,120
+Well, we can go and look at this one.
+
+496
+00:38:33,120 --> 00:38:34,200
+What's this thing?
+
+497
+00:38:34,200 --> 00:38:37,430
+The main thread wasn't doing anything during
+this time; that's kind of a little strange.
+
+498
+00:38:37,430 --> 00:38:39,190
+We can go track that back.
+
+499
+00:38:39,190 --> 00:38:40,980
+Oh, look! It's a clFinish.
+
+500
+00:38:40,980 --> 00:38:45,950
+Apparently the enqueued a kernel and then
+issued a clFinish to wait for it to be done,
+
+501
+00:38:45,950 --> 00:38:49,550
+and then did some more work and
+then repeated the process again.
+
+502
+00:38:49,550 --> 00:38:52,460
+You can see another clFinish over here.
+
+503
+00:38:52,460 --> 00:38:54,970
+Well, this is quite costly for a number of reasons.
+
+504
+00:38:54,970 --> 00:39:01,010
+For example, let's see if I can zoom in here.
+
+505
+00:39:01,010 --> 00:39:06,200
+While we weren't doing anything here, we probably could
+have been doing this much work in the main thread.
+
+506
+00:39:06,200 --> 00:39:09,700
+It only would have cost OpenCL one thread out of 16.
+
+507
+00:39:09,700 --> 00:39:12,070
+So, it probably wouldn't have slowed down too much.
+
+508
+00:39:12,070 --> 00:39:17,850
+So, you could have gotten this much work done, which meant
+all of this dead time, all down here, would have gone away
+
+509
+00:39:17,850 --> 00:39:25,770
+and we would have compressed the launch-to-launch
+time from here to over here by about that much time.
+
+510
+00:39:25,770 --> 00:39:29,760
+So, you can see, just that clFinish,
+that's what it's costing you.
+
+511
+00:39:29,760 --> 00:39:35,440
+Another thing is, all of the CPUs go back to sleep after
+we're done with this, and I only have to wake them up again.
+
+512
+00:39:35,440 --> 00:39:40,120
+If you didn't have that Finish in there, it's possible
+we would have just picked right up where we left off,
+
+513
+00:39:40,120 --> 00:39:43,870
+and then started running these things, but,
+except all of the CPUs would be awake now.
+
+514
+00:39:43,870 --> 00:39:48,980
+So, rather than getting a little, tiny bit of work out
+of these threads, you might have gotten a full width.
+
+515
+00:39:48,980 --> 00:39:53,750
+So, the whole thing, you know, might
+have been about twice as fast if we go
+
+516
+00:39:53,750 --> 00:39:57,130
+by one-half base times height on this little triangle here.
+
+517
+00:39:57,130 --> 00:40:02,760
+So, you can use Shark to dig right in to how
+much residency you're getting on the CPU.
+
+518
+00:40:02,760 --> 00:40:04,180
+And, the same techniques apply in the GPU.
+
+519
+00:40:04,180 --> 00:40:07,480
+You won't see these little triangles,
+because the work is happening on the GPU,
+
+520
+00:40:07,480 --> 00:40:16,280
+but you will certainly see time that's dead time in your
+main thread, when you could have been doing something else.
+
+521
+00:40:16,280 --> 00:40:21,810
+So, that's Shark with OpenCL in a nutshell.
+
+522
+00:40:21,810 --> 00:40:30,420
+And, what I'd like to do now is invite Abe Stephens up
+to tell you all about how to integrate your workflow
+
+523
+00:40:30,420 --> 00:40:35,560
+between OpenCL and OpenGL, and that
+allows you to quickly and seamlessly,
+
+524
+00:40:35,560 --> 00:40:41,510
+and with a minimum of cost, share data between the two.
+
+525
+00:40:41,510 --> 00:40:47,460
+[ Applause ]
+
+526
+00:40:47,460 --> 00:40:48,430
+>> Abe Stephens: Hi.
+
+527
+00:40:48,430 --> 00:40:51,730
+My name is Abe Stephens and I work
+with the OpenCL Group at Apple.
+
+528
+00:40:51,730 --> 00:40:59,510
+Today I'm going to talk about OpenCL and OpenGL sharing,
+which is a mechanism that allows us to create objects
+
+529
+00:40:59,510 --> 00:41:05,190
+in OpenGL and then import them into
+OpenCL in such a way that the actual data
+
+530
+00:41:05,190 --> 00:41:08,840
+that is operated on by both APIs is the same.
+
+531
+00:41:08,840 --> 00:41:15,140
+So, we can avoid copying data or making duplicate
+copies of the data, and accelerate our programs.
+
+532
+00:41:15,140 --> 00:41:18,940
+The motivation here is that we'd
+like to combine these two APIs.
+
+533
+00:41:18,940 --> 00:41:22,410
+Now, OpenCL and OpenGL are similar in many ways.
+
+534
+00:41:22,410 --> 00:41:26,320
+A lot of programs that are written
+for both APIs run on the GPU.
+
+535
+00:41:26,320 --> 00:41:34,770
+It's possible to write programs for the CPU in OpenCL, and
+that's a little bit less common for OpenGL, but really,
+
+536
+00:41:34,770 --> 00:41:41,660
+we're looking for a mechanism that allows us to
+move data efficiently between these two interfaces.
+
+537
+00:41:41,660 --> 00:41:49,630
+Let's take a look at a simple example; a case where we
+have an application that's going to perform some kind
+
+538
+00:41:49,630 --> 00:41:53,670
+of physical simulation and then visualize the results.
+
+539
+00:41:53,670 --> 00:41:59,180
+The physical simulation part of this example;
+for example, a bunch of objects bouncing
+
+540
+00:41:59,180 --> 00:42:03,320
+around the screen, is a very OpenCL oriented kind of task.
+
+541
+00:42:03,320 --> 00:42:12,390
+It might involve collision detection, computing
+maybe Newtonian mechanics or something like that.
+
+542
+00:42:12,390 --> 00:42:15,710
+And then, it also might involve rendering.
+
+543
+00:42:15,710 --> 00:42:22,410
+We could compute our position and velocity in our
+compute side of the application, and then take that data,
+
+544
+00:42:22,410 --> 00:42:25,130
+move it to graphics, and actually render the scene.
+
+545
+00:42:25,130 --> 00:42:31,510
+Now, this type of task could also
+be performed without OpenCL.
+
+546
+00:42:31,510 --> 00:42:40,570
+We could produce data on the CPU and then transfer it to
+the GPU, and then in the next frame, repeat that process.
+
+547
+00:42:40,570 --> 00:42:47,060
+Alternatively, with a sharing API, with a sharing
+mechanism, we could produce the data in CL on the GPU,
+
+548
+00:42:47,060 --> 00:42:53,520
+and then move it from the CL side to the
+GL side, and use the same data over again.
+
+549
+00:42:53,520 --> 00:42:59,310
+So, let's take a look.
+
+550
+00:42:59,310 --> 00:43:11,620
+In OpenCL, we'll produce a list of vertex data and then
+move that data from CL into OpenGL, where we can provide,
+
+551
+00:43:11,620 --> 00:43:15,750
+or we can implement, some kind of
+sophisticated shading operation.
+
+552
+00:43:15,750 --> 00:43:21,670
+In this example, we've rendered these spheres with
+a refraction shader and some other special effects.
+
+553
+00:43:21,670 --> 00:43:26,680
+That shader operation is obviously best
+suited to graphics, and the physics operation
+
+554
+00:43:26,680 --> 00:43:30,130
+in this case is very well suited to OpenCL.
+
+555
+00:43:30,130 --> 00:43:33,450
+We can also perform the opposite kind of operation.
+
+556
+00:43:33,450 --> 00:43:41,430
+Instead of producing data in OpenCL, we can consume
+the data in OpenCL and produce something in OpenGL.
+
+557
+00:43:41,430 --> 00:43:48,850
+For example, in that previous slide, OpenGL could
+produce data about surface normals and surface positions
+
+558
+00:43:48,850 --> 00:43:55,230
+of fragments, and then that data could be passed
+into OpenGL for some type of post-process.
+
+559
+00:43:55,230 --> 00:44:03,950
+So, for example, in our physics application, we could
+render the spheres using OpenGL to a vertex buffer
+
+560
+00:44:03,950 --> 00:44:11,920
+or to a fragment buffer object, and then take a surface
+of that fragment buffer object, transfer it to OpenCL,
+
+561
+00:44:11,920 --> 00:44:18,780
+where the CL program might use that data as
+input to a ray tracer, trace a caustic effect,
+
+562
+00:44:18,780 --> 00:44:24,670
+and then move that caustic effect back into
+OpenGL for final display and compositing.
+
+563
+00:44:24,670 --> 00:44:33,360
+Now, under the hood, under the hood both of
+these applications, or both of these APIs,
+
+564
+00:44:33,360 --> 00:44:40,480
+operate using similar data structures in the
+driver, and are implemented using shared structures.
+
+565
+00:44:40,480 --> 00:44:48,320
+As you might be familiar, OpenGL selects the devices
+that are used for computing using a pixel format.
+
+566
+00:44:48,320 --> 00:44:54,360
+So, a developer or a programmer sets up
+a pixel format and that format is matched
+
+567
+00:44:54,360 --> 00:44:58,490
+with the rendering devices in the system, GPUs and CPUs.
+
+568
+00:44:58,490 --> 00:45:04,430
+Matching the pixel format to system
+devices and then passing that format
+
+569
+00:45:04,430 --> 00:45:08,190
+to a create function generates an OpenGL context.
+
+570
+00:45:08,190 --> 00:45:13,930
+At this point in setting up a OpenGL
+system, the programmer is done.
+
+571
+00:45:13,930 --> 00:45:17,650
+We can use this OpenGL context to start
+sending draw commands to the system.
+
+572
+00:45:17,650 --> 00:45:25,140
+But, if we wanted to take our program a step further
+and add an OpenCL application or an OpenCL task,
+
+573
+00:45:25,140 --> 00:45:32,680
+we have to take the context and convert it into
+OpenCL, and this is done by extracting the ShareGroup
+
+574
+00:45:32,680 --> 00:45:39,760
+from the GLContext, and then taking that ShareGroup
+and moving the ShareGroup into an OpenCL context.
+
+575
+00:45:39,760 --> 00:45:46,310
+And then, if we looked inside that OpenCL context, we'd
+see that the CLContext contained all of the devices
+
+576
+00:45:46,310 --> 00:45:49,150
+that were originally in that pixel format.
+
+577
+00:45:52,750 --> 00:46:01,560
+Now, the CGL structure, the CGLShareGroup, and the OpenCL
+context both contain very analogous types of structures.
+
+578
+00:46:01,560 --> 00:46:09,190
+The ShareGroup has a list of vertex buffer objects, textures
+and render buffers, and the CLContext has data objects
+
+579
+00:46:09,190 --> 00:46:13,570
+that are wrapped by the cl_mem object type.
+
+580
+00:46:13,570 --> 00:46:21,070
+When we convert the ShareGroup into a CLContext,
+we're making all of those GL data structures available
+
+581
+00:46:21,070 --> 00:46:29,710
+to the CLContext, and then we have to obtain references to
+those structures from the CLContext to use in our program.
+
+582
+00:46:29,710 --> 00:46:38,470
+There's some relationship between the CGLContext that's
+used by OpenGL, and the list of CL devices, although in CL,
+
+583
+00:46:38,470 --> 00:46:41,290
+we have a very explicit representation for the device.
+
+584
+00:46:41,290 --> 00:46:45,390
+In OpenGL, we select a virtual
+screen, or we use another mechanism
+
+585
+00:46:45,390 --> 00:46:48,160
+to select a rendering device that the system will use.
+
+586
+00:46:48,160 --> 00:46:54,350
+So, although there's a relationship,
+the devices aren't exactly analogous.
+
+587
+00:46:54,350 --> 00:47:00,470
+There are five steps for setting up a
+sharing process between OpenGL and OpenCL.
+
+588
+00:47:00,470 --> 00:47:04,950
+We've already looked at the first step,
+which was to obtain that CGLContext.
+
+589
+00:47:04,950 --> 00:47:10,690
+From the Context, we obtain a ShareGroup and
+then use that ShareGroup to create the CLContext
+
+590
+00:47:10,690 --> 00:47:14,220
+with which we'll send commands on the CL side.
+
+591
+00:47:14,220 --> 00:47:20,730
+After the Context has been created, we can
+import data objects from OpenGL to OpenCL.
+
+592
+00:47:20,730 --> 00:47:26,080
+In the first example that we looked at, those
+data objects consisted of a vertex buffer
+
+593
+00:47:26,080 --> 00:47:33,640
+and then in that second post-process example,
+the shared data object was a GL render buffer.
+
+594
+00:47:33,640 --> 00:47:39,720
+After we've imported the data objects, the set-up phase
+of our application is complete, and now we can concentrate
+
+595
+00:47:39,720 --> 00:47:45,920
+on executing commands, and there's a specific flush
+and acquire semantic that we have to use to coordinate
+
+596
+00:47:45,920 --> 00:47:50,000
+between the OpenGL side of the program
+and the OpenCL side of the program.
+
+597
+00:47:50,000 --> 00:47:54,660
+And then, finally, when we're done, we have to tear
+the whole system apart and clean up by making sure
+
+598
+00:47:54,660 --> 00:48:00,250
+to release the objects safely in
+CL before destroying them in GL.
+
+599
+00:48:00,250 --> 00:48:02,900
+So, let's take a look at some source code.
+
+600
+00:48:02,900 --> 00:48:11,850
+The first step is to obtain the CGLShareGroup
+for an application from the CGLContext.
+
+601
+00:48:11,850 --> 00:48:16,330
+And, the example that we'll look at
+will focus on a Cocoa application.
+
+602
+00:48:16,330 --> 00:48:25,030
+In Cocoa, the NSOpenGLView is commonly
+extended to add OpenGL to an application.
+
+603
+00:48:25,030 --> 00:48:31,970
+Within the initialization function of our Cocoa
+program, we can obtain first the CGLContext associated
+
+604
+00:48:31,970 --> 00:48:37,440
+with that OpenGLView, using an accessor function.
+
+605
+00:48:37,440 --> 00:48:47,550
+And then, we use the CGLContext to obtain a CGLShareGroup,
+which is essentially what we'll use to create the CLContext.
+
+606
+00:48:47,550 --> 00:48:54,580
+Now, the second step in our five-step process is to
+take that ShareGroup and use it to create a CLContext.
+
+607
+00:48:54,580 --> 00:48:59,910
+We do this using OpenCL; an OpenCL
+function with a special enumerant,
+
+608
+00:48:59,910 --> 00:49:06,300
+the CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE
+enumerant, which is really hard to forget.
+
+609
+00:49:06,300 --> 00:49:15,670
+And, this is passed in a property list to the
+CLCreateContext function and in this case,
+
+610
+00:49:15,670 --> 00:49:19,800
+without any other arguments except for the error argument.
+
+611
+00:49:19,800 --> 00:49:29,460
+Now that we've created a CLContext, we have to obtain a
+list of CL devices, and if you remember from the slide
+
+612
+00:49:29,460 --> 00:49:34,950
+at the very beginning of the talk, those
+devices will reflect the devices that were used,
+
+613
+00:49:34,950 --> 00:49:41,540
+that were passed in the pixel format when
+that CGLContext was originally created.
+
+614
+00:49:41,540 --> 00:49:46,560
+In a standard Cocoa application, the runtime has
+already taken care of creating a pixel format,
+
+615
+00:49:46,560 --> 00:49:53,720
+and we simply obtained the CGLContext
+that was provided by the runtime.
+
+616
+00:49:53,720 --> 00:50:00,690
+If we wanted to obtain all of the devices that were
+associated with our CGLShareGroup in our CGLContext,
+
+617
+00:50:00,690 --> 00:50:06,940
+we could simply use the existing or the
+standard CL accessor method, clGetContextInfo,
+
+618
+00:50:06,940 --> 00:50:10,940
+passing it the correct enumerant,
+and get a list of all of the devices.
+
+619
+00:50:10,940 --> 00:50:18,300
+However, in that case, we might obtain
+a GPU device that doesn't correspond
+
+620
+00:50:18,300 --> 00:50:23,010
+to the GPU device our Cocoa application
+is currently using for display.
+
+621
+00:50:23,010 --> 00:50:27,980
+If we want to obtain the device that's currently, the
+virtual screen that's currently being used for display,
+
+622
+00:50:27,980 --> 00:50:39,250
+we have to use another special enumerant and another special
+function, clGetGLContextInfoAPPLE, to obtain the CL device
+
+623
+00:50:39,250 --> 00:50:45,070
+that matches the current virtual screen
+that our application's running on.
+
+624
+00:50:45,070 --> 00:50:47,630
+So, let's take a look now at what we've done.
+
+625
+00:50:47,630 --> 00:50:55,560
+We've made our way around this entire figure, and we're
+back to the point where we have a list of CL devices inside
+
+626
+00:50:55,560 --> 00:50:59,980
+of our CLContext; however, if we look at those devices,
+
+627
+00:50:59,980 --> 00:51:07,330
+we'll notice that the CL API has removed the
+CPU device from that initial list of GL devices.
+
+628
+00:51:07,330 --> 00:51:14,780
+If we want to add the CPU device back in; for example,
+if we wanted to run some CL programs or some CL kernels
+
+629
+00:51:14,780 --> 00:51:22,180
+on the CPU, and others on the GPU, when we create our
+CLContext we have to explicitly add the CPU device,
+
+630
+00:51:22,180 --> 00:51:25,000
+as if we were creating a normal CLContext.
+
+631
+00:51:25,000 --> 00:51:36,040
+So, this involves getting a list of device IDs with the
+CPU device type, and then passing that to CLCreateContext.
+
+632
+00:51:36,040 --> 00:51:37,720
+OK, now here's the fun part.
+
+633
+00:51:37,720 --> 00:51:43,320
+Now that we have our Context, our
+CLContext, we have to move data objects,
+
+634
+00:51:43,320 --> 00:51:48,130
+or tell the runtime which data objects
+we'd like to move from OpenGL into OpenCL.
+
+635
+00:51:48,130 --> 00:51:50,890
+We have to import the shared objects.
+
+636
+00:51:50,890 --> 00:51:55,870
+OK, so here are the two ShareGroups
+we'd like to end up with.
+
+637
+00:51:55,870 --> 00:52:04,220
+If we'd like to move that vertex buffer object into
+OpenCL, we use the function clCreateFromGLBuffer,
+
+638
+00:52:04,220 --> 00:52:11,480
+passing it both the CLContext and the
+GLBuffer, and then memory access flags
+
+639
+00:52:11,480 --> 00:52:15,890
+that tell OpenCL how we plan on using that data structure.
+
+640
+00:52:15,890 --> 00:52:22,060
+Now, if we look under the hood, what we've really done
+by sharing the vertex buffer object between OpenGL
+
+641
+00:52:22,060 --> 00:52:29,860
+and OpenCL is we've created a structure within the OpenGL
+runtime and the OpenCL runtime, but those two structures,
+
+642
+00:52:29,860 --> 00:52:35,750
+the VBO and the cl_mem object, actually
+refer to the same piece of driver storage.
+
+643
+00:52:35,750 --> 00:52:43,200
+This piece of driver storage, called a backing store,
+is the actual memory that contains that vertex data,
+
+644
+00:52:43,200 --> 00:52:48,060
+or texture data, or render buffer data,
+and is the piece of memory that is moved
+
+645
+00:52:48,060 --> 00:52:51,510
+between devices as we execute our program.
+
+646
+00:52:51,510 --> 00:52:58,490
+Now, if we execute a command either in GL, like a draw
+command, or if we execute a kernel in CL, the runtime,
+
+647
+00:52:58,490 --> 00:53:06,050
+the driver, will take care of moving a cached copy of
+that data to the device that the command is executed on.
+
+648
+00:53:06,050 --> 00:53:14,150
+So in this case, when I created that mem_object in OpenCL,
+it's not as if I was allocating memory on a device.
+
+649
+00:53:14,150 --> 00:53:21,550
+I was really allocating memory inside of this driver storage
+pool, and then if I execute a command using a device,
+
+650
+00:53:21,550 --> 00:53:27,010
+that memory is cached, in this
+case in Device VRAM, on the GPU.
+
+651
+00:53:27,010 --> 00:53:35,140
+Now, if I execute a command in either API on a different
+GPU, the runtime will take care of moving that data back
+
+652
+00:53:35,140 --> 00:53:38,640
+to the host and then to the other device.
+
+653
+00:53:38,640 --> 00:53:44,890
+Now, OpenCL is a little bit different than OpenGL
+in this respect, in that unlike the GPU, which has;
+
+654
+00:53:44,890 --> 00:53:47,910
+each GPU has its own piece of device VRAM.
+
+655
+00:53:47,910 --> 00:53:52,760
+In OpenCL, the CPU device shares VRAM with driver storage.
+
+656
+00:53:52,760 --> 00:53:59,530
+So, when I execute a command on the CPU in
+OpenCL, this copy operation doesn't occur.
+
+657
+00:53:59,530 --> 00:54:07,900
+The CL kernel is able to use the
+same backing store as the runtime.
+
+658
+00:54:07,900 --> 00:54:12,160
+Now, the operations we've looked at
+so far, and the example in the demo,
+
+659
+00:54:12,160 --> 00:54:16,090
+involve vertex buffer objects or pixel buffer objects.
+
+660
+00:54:16,090 --> 00:54:22,090
+But, there are three other functions we can use
+to create shared data between OpenGL and OpenCL.
+
+661
+00:54:22,090 --> 00:54:26,030
+The first two functions involve textures; 2 and 3D textures.
+
+662
+00:54:26,030 --> 00:54:29,940
+And, the third object allows us to manipulate
+render buffers, which was the structure we used
+
+663
+00:54:29,940 --> 00:54:33,920
+for that post-process example that we saw earlier.
+
+664
+00:54:33,920 --> 00:54:41,020
+After these structures are created in OpenGL and then
+imported into OpenCL, we can do a lot of things with them.
+
+665
+00:54:41,020 --> 00:54:45,580
+In either API we can modify their contents,
+execute commands that use them; but,
+
+666
+00:54:45,580 --> 00:54:48,100
+one thing we can't do is we can't modify their properties.
+
+667
+00:54:48,100 --> 00:54:55,490
+So, after an image is imported from OpenGL into OpenCL,
+we can't change the width and height of the image.
+
+668
+00:54:55,490 --> 00:54:58,570
+We can't change other properties of the image.
+
+669
+00:54:58,570 --> 00:55:05,970
+We'd have to create a new copy in GL and then move it
+back into CL in order to make those sorts of changes.
+
+670
+00:55:05,970 --> 00:55:13,660
+OK, now that we've created the objects and imported it into
+OpenCL, as we're launching commands and executing commands
+
+671
+00:55:13,660 --> 00:55:20,030
+in either API, we have to use a specific
+type of semantic, called Flush and Acquire,
+
+672
+00:55:20,030 --> 00:55:23,940
+in order to coordinate access between the two APIs.
+
+673
+00:55:23,940 --> 00:55:31,770
+Let's take a look at the standard queueing
+system that's used by OpenGL by itself.
+
+674
+00:55:31,770 --> 00:55:39,440
+As I execute commands, they're enqueued in a
+command queue on the host, and at a certain point,
+
+675
+00:55:39,440 --> 00:55:42,350
+those commands are flushed to the device and executed.
+
+676
+00:55:42,350 --> 00:55:48,920
+Now, the order of commands as I call functions
+is sort of maintained by that command queue,
+
+677
+00:55:48,920 --> 00:55:53,330
+and those commands will be executed in the
+same order when they get to the device.
+
+678
+00:55:53,330 --> 00:55:57,370
+And, since I have a single command queue,
+there's no chance of commands being executed
+
+679
+00:55:57,370 --> 00:56:00,860
+in an order other than the one I've specified.
+
+680
+00:56:00,860 --> 00:56:08,160
+However, if I add the OpenCL command queue alongside
+that OpenGL command queue, and then execute a bunch
+
+681
+00:56:08,160 --> 00:56:15,470
+of OpenGL commands in my thread, and then a bunch of OpenCL
+commands in my thread, without any explicit synchronization,
+
+682
+00:56:15,470 --> 00:56:19,860
+I don't have any control over the order that
+those commands get submitted to the device.
+
+683
+00:56:19,860 --> 00:56:27,510
+So, it's very possible that even though I sent the
+two OpenGL functions first, they might be submitted
+
+684
+00:56:27,510 --> 00:56:30,820
+to the device by the runtime in an interleaved order.
+
+685
+00:56:30,820 --> 00:56:37,080
+Now, if there are data dependencies between OpenGL and
+OpenCL such that I had to execute all of those GL operations
+
+686
+00:56:37,080 --> 00:56:42,590
+because I was producing that render buffer
+in OpenGL before I consumed it in OpenCL,
+
+687
+00:56:42,590 --> 00:56:46,280
+this type of unsynchronized execution would cause a problem.
+
+688
+00:56:46,280 --> 00:56:54,020
+Therefore, before we move data, or before we move commands
+between those two APIs and execute work on one side
+
+689
+00:56:54,020 --> 00:57:02,730
+or another, we have to make sure to flush the GL side
+and then that flush operation sends those commands
+
+690
+00:57:02,730 --> 00:57:12,900
+out to the device, and then acquire those shared
+objects on the CL side, then execute our CL commands.
+
+691
+00:57:12,900 --> 00:57:21,500
+Once we then call clEnqueueRelease, our CL commands
+will be flushed to the device after the GL commands.
+
+692
+00:57:21,500 --> 00:57:27,840
+This explicit type of Flush and Acquire semantic
+ensures that those GL commands are in progress
+
+693
+00:57:27,840 --> 00:57:32,590
+on the device before the OpenCL commands
+have a chance to be submitted to the device,
+
+694
+00:57:32,590 --> 00:57:36,990
+and the order between the two APIs will be maintained.
+
+695
+00:57:36,990 --> 00:57:48,730
+OK, now that we've gone over how to create the ShareGroup,
+move the GLShareGroup into OpenCL, then create data objects
+
+696
+00:57:48,730 --> 00:57:54,000
+and import those data objects,
+and then safely execute commands,
+
+697
+00:57:54,000 --> 00:57:57,460
+the very last step is how to safely clean up this system.
+
+698
+00:57:57,460 --> 00:58:02,960
+The key here is that we always release objects
+in the opposite order that we created them.
+
+699
+00:58:02,960 --> 00:58:07,670
+We always release the objects in
+OpenCL, and then destroy them in OpenGL.
+
+700
+00:58:07,670 --> 00:58:14,860
+This ensures that in OpenGL, the OpenGL driver won't take
+objects out from underneath the OpenCL implementation.
+
+701
+00:58:14,860 --> 00:58:21,310
+Now, as you might be aware, OpenGL automatically takes
+care of retaining objects for you, so if you pass a kernel
+
+702
+00:58:21,310 --> 00:58:27,000
+into the runtime, or a data object into the runtime,
+the runtime will make sure that the reference count
+
+703
+00:58:27,000 --> 00:58:30,940
+of that object reflects that the runtime
+is holding onto a pointer for it.
+
+704
+00:58:30,940 --> 00:58:37,150
+So, it's necessary to make sure that after
+you've enqueued commands that use memory objects,
+
+705
+00:58:37,150 --> 00:58:44,080
+those commands have been executed and have
+been completed before OpenGL has an opportunity
+
+706
+00:58:44,080 --> 00:58:47,180
+or might accidentally delete or destroy an object.
+
+707
+00:58:47,180 --> 00:58:53,310
+So, the objects have to be completely released
+by OpenCL before they can be destroyed by OpenGL.
+
+708
+00:58:53,310 --> 00:58:56,600
+And, releasing a mem_object is simple.
+
+709
+00:58:56,600 --> 00:59:00,830
+Essentially, there's one function, regardless
+of whether the mem_object was created
+
+710
+00:59:00,830 --> 00:59:02,750
+on the GL side, whether it's a buffer or an image.
+
+711
+00:59:02,750 --> 00:59:05,930
+We simply call clReleaseMemObject.
+
+712
+00:59:05,930 --> 00:59:12,030
+OK, now I'd like to show you an example; a
+live demo of the example I showed earlier.
+
+713
+00:59:12,030 --> 00:59:17,900
+This is the case where a vertex buffer object
+is created in OpenCL and shared with OpenGL,
+
+714
+00:59:17,900 --> 00:59:26,840
+and then a GLFrame is created, or a GLFBO is created and
+then shared with OpenCL to perform some post-processing.
+
+715
+00:59:26,840 --> 00:59:37,010
+In this example, In this example OpenCL is rendering, OpenCL
+is computing the physics interaction between the spheres
+
+716
+00:59:37,010 --> 00:59:42,000
+that are bouncing around the screen, and
+then OpenGL is rendering the refraction
+
+717
+00:59:42,000 --> 00:59:45,210
+and the reflection on each individual sphere.
+
+718
+00:59:45,210 --> 00:59:53,180
+As OpenGL renders that effect, it also produces a
+buffer which contains the surface normal and position
+
+719
+00:59:53,180 --> 00:59:56,050
+on the surface of various fragments for the spheres.
+
+720
+00:59:56,050 --> 01:00:01,180
+That buffer is passed back to OpenCL
+using a shared render buffer.
+
+721
+01:00:01,180 --> 01:00:06,020
+OpenCL then provides or performs some
+photon tracing to compute the caustic effect
+
+722
+01:00:06,020 --> 01:00:09,220
+that you see towards the bottom of the screen.
+
+723
+01:00:09,220 --> 01:00:12,420
+This is a simple example.
+
+724
+01:00:12,420 --> 01:00:19,830
+The physics that's computed in OpenCL isn't particularly
+sophisticated, but this allows us to perform all
+
+725
+01:00:19,830 --> 01:00:25,920
+of the computation on the GPU, instead of having to
+coordinate between the CPU and the GPU for each frame.
+
+726
+01:00:25,920 --> 01:00:33,980
+So, both the physical simulation and the rendering of the
+spheres can happen on the GPU, and then the photon tracing
+
+727
+01:00:33,980 --> 01:00:42,740
+and the rendering of the caustic
+highlight can also occur on the GPU.
+
+728
+01:00:42,740 --> 01:00:47,650
+OK, so the three steps for that demo
+were simply to update vertex positions,
+
+729
+01:00:47,650 --> 01:00:50,470
+perform the photon trace, and then render the scene.
+
+730
+01:00:50,470 --> 01:00:55,980
+And, by using the sharing API, it was very easy to
+perform all of those operations on a single device.
+
+731
+01:00:55,980 --> 01:01:01,640
+If we had some type of application where we wanted
+to perform, say updating the vertex positions
+
+732
+01:01:01,640 --> 01:01:08,080
+or rendering the photons on the CPU or on another
+device, the OpenCL runtime would have allowed us
+
+733
+01:01:08,080 --> 01:01:11,440
+to automatically move the data back
+and forth between those devices.
+
+734
+01:01:11,440 --> 01:01:17,960
+And so, even if we're not running applications that do all
+of their work on the GPU, it's still possible to use OpenCL
+
+735
+01:01:17,960 --> 01:01:23,960
+and the sharing mechanism to handle
+moving data between the two devices.
+
+736
+01:01:23,960 --> 01:01:28,770
+OK, so five easy steps to shared
+data between OpenGL and OpenCL.
+
+737
+01:01:28,770 --> 01:01:35,010
+The first step is to make sure that we select our pixel
+format and the devices that we're going to use for OpenCL,
+
+738
+01:01:35,010 --> 01:01:44,250
+using that CGLPixelFormat function, and using that
+pixel format to create our CGLContext and ShareGroup.
+
+739
+01:01:44,250 --> 01:01:48,460
+We passed that ShareGroup to CLCreateContext
+in our second step,
+
+740
+01:01:48,460 --> 01:01:52,790
+to produce and initialize a CLContext
+containing those devices.
+
+741
+01:01:52,790 --> 01:01:57,690
+Then we create objects in GL, import them into CL.
+
+742
+01:01:57,690 --> 01:02:07,260
+We use a GLFlush and CLAcquire pattern to handle
+coordination of commands between the two APIs,
+
+743
+01:02:07,260 --> 01:02:17,020
+and then lastly, when we're done, we
+release in CL before destroying in GL.
+
+744
+01:02:17,020 --> 01:02:20,090
+Now, this concludes the CL session.
+
+745
+01:02:20,090 --> 01:02:25,070
+For more information, you should contact
+Allan Schaffer, who's our Evangelist,
+
+746
+01:02:25,070 --> 01:02:27,050
+and of course, look at the Apple developer forums.
+
+747
+01:02:27,050 --> 01:02:33,750
+There's a CL Dev forum and also a GL Dev
+forum that are great ways of getting in touch.
+
+748
+01:02:33,750 --> 01:02:38,930
+There are a number of other sessions this
+week that will address OpenCL and OpenGL.
+
+749
+01:02:38,930 --> 01:02:44,930
+Immediately following this session in this room, we'll
+hear from a number of vendors that will describe how
+
+750
+01:02:44,930 --> 01:02:49,730
+to maximize OpenCL performance for different devices.
+
+751
+01:02:49,730 --> 01:02:55,190
+Tomorrow there's a session on OpenGL for the Mac,
+and then later in the day tomorrow is a session
+
+752
+01:02:55,190 --> 01:03:11,230
+that will describe multi-GPU programming,
+both with OpenGL and OpenCL.
+

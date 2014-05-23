@@ -1,0 +1,3428 @@
+1
+00:00:06,730 --> 00:00:13,590
+>> Gregor Purdy: My name is Gregor and we're going to
+talk about Building a Server-Driven User Experience today.
+
+2
+00:00:13,590 --> 00:00:18,740
+And I'm going to start out with kind of a scenario, maybe
+not all of you will be in this scenario but hopefully,
+
+3
+00:00:18,740 --> 00:00:23,670
+a lot of you are, where the assumption is you've got
+already some sort of a web property, maybe a store,
+
+4
+00:00:23,670 --> 00:00:29,070
+maybe something else, where you've got great content
+already there and somebody is probably going to say
+
+5
+00:00:29,070 --> 00:00:32,170
+at some point "Hey, I know, let's build a mobile app.
+
+6
+00:00:32,170 --> 00:00:33,590
+Won't that be great."
+
+7
+00:00:33,590 --> 00:00:37,380
+And a whole conversation is going to ensue
+about this, lots of ideas will be thrown around
+
+8
+00:00:37,380 --> 00:00:40,660
+and here's a little translation key I put
+together for you about some of the things
+
+9
+00:00:40,660 --> 00:00:43,360
+that will probably come up in that conversation.
+
+10
+00:00:44,930 --> 00:00:49,460
+[Laughter] So we're going to iterate the design,
+change requirements, right, dedicated team,
+
+11
+00:00:49,460 --> 00:00:55,750
+if you're dedicated you're small, tight deadlines
+and you're probably paying for your own soda.
+
+12
+00:00:55,750 --> 00:01:00,960
+But it is going to be great and what we're going to
+talk about today is some things that we've been looking
+
+13
+00:01:00,960 --> 00:01:07,410
+at from some development we've been doing internally for
+both server side and client side for accomplishing this.
+
+14
+00:01:07,410 --> 00:01:10,070
+And so let's start with this idea.
+
+15
+00:01:10,070 --> 00:01:13,680
+Let's say that we have, in this case,
+it's a store, it's a flower store,
+
+16
+00:01:13,680 --> 00:01:16,450
+and we really want to follow this vision, right.
+
+17
+00:01:16,450 --> 00:01:22,770
+Expand our profit by taking our existing content that's
+web content and repurposing it in this new context
+
+18
+00:01:22,770 --> 00:01:29,560
+in a mobile application and-- but let's look
+also at kind of the reality where we're at now.
+
+19
+00:01:29,560 --> 00:01:34,790
+Presumably, if you already have a web property, it'll
+look something like this but not exactly like this.
+
+20
+00:01:34,790 --> 00:01:37,710
+You may have some web services internally.
+
+21
+00:01:37,710 --> 00:01:45,220
+You may even call internally proxies or otherwise out to
+an external web service you're getting from some vendor
+
+22
+00:01:45,220 --> 00:01:50,900
+and you have a web application in the middle
+that what we really want to do is say reuse all
+
+23
+00:01:50,900 --> 00:01:57,450
+that lower-level technology and instead of having a
+web server, a web application in the middle serving
+
+24
+00:01:57,450 --> 00:02:04,370
+up HTML amount to your customers, let's replace that with
+something very similar that's doing a content web service
+
+25
+00:02:04,370 --> 00:02:12,880
+for driving your mobile application and we'll do this in
+order to reduce cost inside the market by leveraging assets
+
+26
+00:02:12,880 --> 00:02:15,730
+that we already have and changing
+the fewest things possible.
+
+27
+00:02:15,730 --> 00:02:20,790
+This again assumes you have a services-oriented
+architecture or you're in the middle of moving to one
+
+28
+00:02:20,790 --> 00:02:25,650
+or if you're building something, you know
+that you're going to build it that way.
+
+29
+00:02:25,650 --> 00:02:29,700
+So what will be some of the requirements
+at a high level for such an application?
+
+30
+00:02:29,700 --> 00:02:34,960
+Well, first, we want to have fresh content that's
+true on the web, true in the mobile space as well.
+
+31
+00:02:34,960 --> 00:02:42,640
+We really want to drive people to come back on an
+ongoing basis to the application both for direct revenue
+
+32
+00:02:42,640 --> 00:02:48,440
+for selling something or making money based upon
+their interaction with the application directly
+
+33
+00:02:48,440 --> 00:02:53,820
+but also if you're using iAds or some
+other way of serving ads indirect revenue
+
+34
+00:02:53,820 --> 00:02:56,110
+by people coming back to the app and doing these things.
+
+35
+00:02:56,110 --> 00:03:00,500
+And so we want to be able to do immediate
+content updates wherever possible
+
+36
+00:03:00,500 --> 00:03:04,690
+where immediate might have different
+definitions depending on each type of content.
+
+37
+00:03:04,690 --> 00:03:06,550
+We'll cover that in a minute.
+
+38
+00:03:06,550 --> 00:03:07,470
+We want to be agile, right.
+
+39
+00:03:07,470 --> 00:03:10,500
+We want to be able to have this
+application that's out in the world.
+
+40
+00:03:10,500 --> 00:03:15,930
+It's in the hands of thousands, hopefully, millions of
+people and we want to be able to have new content types
+
+41
+00:03:15,930 --> 00:03:23,140
+that we can push out to that application without in every
+case having to rewrite the application or rewrite part
+
+42
+00:03:23,140 --> 00:03:24,900
+of it and push and update to the App Store.
+
+43
+00:03:24,900 --> 00:03:28,230
+We'll talk a little bit today about
+some of the techniques for doing that.
+
+44
+00:03:28,230 --> 00:03:31,890
+If we don't rev the app, that's better for everybody.
+
+45
+00:03:31,890 --> 00:03:33,760
+I mean revving app is actually fairly easy, right.
+
+46
+00:03:33,760 --> 00:03:38,930
+The App Store is great, the updates are pretty easy but it's
+better for everyone if you don't have to take that update
+
+47
+00:03:38,930 --> 00:03:40,610
+for every little change that you might make.
+
+48
+00:03:40,610 --> 00:03:47,370
+So what we're going to talk about in order today then
+is we'll talk about service-oriented content delivery,
+
+49
+00:03:47,370 --> 00:03:52,080
+I'll cover with service orchestration, and
+then we'll have Scott come up and he'll talk
+
+50
+00:03:52,080 --> 00:03:56,020
+about designing the client side in a flexible way.
+
+51
+00:03:56,020 --> 00:04:00,120
+We're talking about general enough to represent
+different data types that we've talked about a second ago
+
+52
+00:04:00,120 --> 00:04:06,310
+and what we've been sort of referring to as remote
+controlled but native UI and then we'll have David come up
+
+53
+00:04:06,310 --> 00:04:12,010
+and talk about some core frameworks that you can use to
+manage the data both for efficient client-server in rations
+
+54
+00:04:12,010 --> 00:04:16,290
+but also just managing remote data and
+how you might cache in on your system.
+
+55
+00:04:16,290 --> 00:04:20,030
+I'll come up at the end for a couple other
+points that we'd like to make at the end.
+
+56
+00:04:20,030 --> 00:04:24,690
+This is the picture I showed a second ago just for context
+but there are four main elements that I'd like to share
+
+57
+00:04:24,690 --> 00:04:27,050
+with you today on engineering the solution.
+
+58
+00:04:27,050 --> 00:04:28,990
+They're kind of the design considerations
+that are going to come up.
+
+59
+00:04:28,990 --> 00:04:34,190
+We're going to talk about what are the kinds of content
+and what comes up when you're talking about your content,
+
+60
+00:04:34,190 --> 00:04:36,940
+what are your architectural options for
+actually putting this thing together.
+
+61
+00:04:36,940 --> 00:04:38,820
+There's a couple of different ways of doing it.
+
+62
+00:04:38,820 --> 00:04:43,900
+We'll talk about how the application can
+respond to context of the customer using it
+
+63
+00:04:43,900 --> 00:04:45,730
+and we'll also talk about anticipating change.
+
+64
+00:04:45,730 --> 00:04:47,500
+And there's a little bit of overlap in some of these.
+
+65
+00:04:47,500 --> 00:04:52,820
+There are a couple of things that
+come up a couple of different times.
+
+66
+00:04:52,820 --> 00:04:56,020
+So let's talk first about this content, right.
+
+67
+00:04:56,020 --> 00:04:59,750
+So you might have user-generated content, this
+might be your existing web property, for example,
+
+68
+00:04:59,750 --> 00:05:04,060
+might be something where people are submitting,
+it might be video, it might be audio,
+
+69
+00:05:04,060 --> 00:05:06,640
+it might even be stories, it could be anything.
+
+70
+00:05:06,640 --> 00:05:11,460
+Or you could be talking about user-generated
+content also on your new mobile application.
+
+71
+00:05:11,460 --> 00:05:13,200
+In any case, you might have that.
+
+72
+00:05:13,200 --> 00:05:14,600
+You might also have curated content, right.
+
+73
+00:05:14,600 --> 00:05:15,400
+This could be content.
+
+74
+00:05:15,400 --> 00:05:21,790
+Maybe you're primary business is generating some content
+and it's highly curated and it's great and it's wonderful
+
+75
+00:05:21,790 --> 00:05:25,850
+and people want to come to your app
+specifically to get your content from your brand.
+
+76
+00:05:25,850 --> 00:05:29,680
+It could also be content in this category.
+
+77
+00:05:29,680 --> 00:05:35,240
+Maybe you have a third party vendor that you acquire some
+content from and maybe you mash that up with other content
+
+78
+00:05:35,240 --> 00:05:40,340
+that you get from other parties or that you generate
+internally, but more of a curated experience.
+
+79
+00:05:40,340 --> 00:05:45,960
+But in any case, commonly, but not always,
+this might be accessed by a web service,
+
+80
+00:05:45,960 --> 00:05:51,930
+whether that's a web service provided by a vendor or
+you loading in this content into your own database
+
+81
+00:05:51,930 --> 00:05:55,500
+and vending it out to your own web services.
+
+82
+00:05:55,500 --> 00:06:01,610
+This would be internal or external
+as I said at the very beginning.
+
+83
+00:06:01,610 --> 00:06:05,560
+And having this content vary by
+context, right, so the obvious content--
+
+84
+00:06:05,560 --> 00:06:10,010
+context would be the country the person is in
+that's your customer or could be the language
+
+85
+00:06:10,010 --> 00:06:11,430
+that they're using that they set on their device.
+
+86
+00:06:11,430 --> 00:06:14,620
+These are the two most obvious elements of context.
+
+87
+00:06:14,620 --> 00:06:19,670
+This would come up with in translations, right, so we've
+got English today and now we want to add Spanish and French
+
+88
+00:06:19,670 --> 00:06:22,880
+and German translations of the same content.
+
+89
+00:06:22,880 --> 00:06:26,290
+It might also be not necessarily
+translations of the same content
+
+90
+00:06:26,290 --> 00:06:30,670
+but just different bodies of content in this situation.
+
+91
+00:06:30,670 --> 00:06:34,260
+And finally, in many real applications,
+you know, we don't want people to just come
+
+92
+00:06:34,260 --> 00:06:35,840
+to the app and kind of browse around that stuff.
+
+93
+00:06:35,840 --> 00:06:38,230
+I mean, you can do that if you've got an ad-driven model.
+
+94
+00:06:38,230 --> 00:06:43,570
+But we might want them to do other things like for example,
+manage their accounts, some kind of account with you
+
+95
+00:06:43,570 --> 00:06:50,890
+that content would be used to drive that experience as
+well and you might want different translations overtime
+
+96
+00:06:50,890 --> 00:06:53,380
+and sensitivity to context for those as well.
+
+97
+00:06:53,380 --> 00:07:02,050
+Purchases, right, great direct revenue, in-app purchases
+or purchases if you're doing sort of e-commerce style ad.
+
+98
+00:07:02,050 --> 00:07:06,600
+So, with all these kinds of content that we
+want to be able to vend out wherever we got it
+
+99
+00:07:06,600 --> 00:07:08,900
+from and how we're storing it internally.
+
+100
+00:07:08,900 --> 00:07:13,900
+There's a couple of main ways to be able to
+deliver that content in a mobile application.
+
+101
+00:07:13,900 --> 00:07:16,780
+The first one and actually, this was
+actually a pretty good one and we've talked
+
+102
+00:07:16,780 --> 00:07:20,870
+about it before in previous WWDCs UIWebView.
+
+103
+00:07:20,870 --> 00:07:23,710
+UIWebView is great for fast time to market.
+
+104
+00:07:23,710 --> 00:07:26,870
+You can do almost an entire app this way.
+
+105
+00:07:26,870 --> 00:07:34,100
+You do need to be careful to still be sensitive to the
+UI standards and don't need to do really unusual things
+
+106
+00:07:34,100 --> 00:07:37,320
+that people won't be able to understand
+when they interact with your application
+
+107
+00:07:37,320 --> 00:07:40,480
+but you can do some great things with the UIWebView.
+
+108
+00:07:40,480 --> 00:07:46,870
+It's really a fancy shell around existing web content
+that you may already have and whether that's a big chunk
+
+109
+00:07:46,870 --> 00:07:52,020
+of your application or maybe it's a small piece
+that you get to a certain part of your application
+
+110
+00:07:52,020 --> 00:07:56,850
+and you got some content that you have that
+you're not going to repurpose and rework it.
+
+111
+00:07:56,850 --> 00:07:58,900
+You want to just be able to drop that into the application.
+
+112
+00:07:58,900 --> 00:08:01,560
+You can use the UIWebView and do some great things.
+
+113
+00:08:01,560 --> 00:08:07,430
+Amazing HTML, we've talked-- other people have talked
+about this in sessions at WWDC this year, right?
+
+114
+00:08:07,430 --> 00:08:13,870
+JavaScript, CSS and HTML5 gives you a lot of
+options for doing great stuff in this environment.
+
+115
+00:08:13,870 --> 00:08:17,910
+But the main thing that we're going to talk
+about today is building a native app, right?
+
+116
+00:08:17,910 --> 00:08:22,880
+And this is a great way to get a better user
+experience, kind of native user experience without having
+
+117
+00:08:22,880 --> 00:08:27,860
+to work really hard at it within
+the HTML, CSS and JavaScript.
+
+118
+00:08:27,860 --> 00:08:33,280
+Very easy to meet the customers expectations about what
+it means to navigate in an application and feel right
+
+119
+00:08:33,280 --> 00:08:36,390
+to them given the other applications
+that they've interacted with.
+
+120
+00:08:36,390 --> 00:08:42,570
+And obviously, stateful interactions are much
+easier when you're doing a native application.
+
+121
+00:08:42,570 --> 00:08:48,290
+It's a natural thing to do, maintaining
+state within your Cocoa Touch application.
+
+122
+00:08:48,290 --> 00:08:55,430
+Another great reason to use a native application is you can
+leverage all these great frameworks that we have in a system
+
+123
+00:08:55,430 --> 00:08:59,220
+for things like coordinating calls to multiple web services.
+
+124
+00:08:59,220 --> 00:09:02,310
+There's some security limitations to
+doing this if you're going to do it all
+
+125
+00:09:02,310 --> 00:09:09,750
+within a UIWebView making cross-site scripting sort of ways
+of getting content from multiple places and mashing it up.
+
+126
+00:09:09,750 --> 00:09:15,940
+But when you're in the Objective-C world, it's very natural
+and easy to go make three or four web services calls
+
+127
+00:09:15,940 --> 00:09:19,710
+as you're pulling content to be
+able to show to the customer.
+
+128
+00:09:19,710 --> 00:09:21,820
+Obviously, custom rendering and animation.
+
+129
+00:09:21,820 --> 00:09:27,850
+There's a lot of this, a lot of sessions here at WWDC this
+year that talk about custom views and custom rendering
+
+130
+00:09:27,850 --> 00:09:31,270
+and all those sort of things and Core Animation.
+
+131
+00:09:31,270 --> 00:09:33,790
+And also in-app purchases using the camera, you can--
+
+132
+00:09:33,790 --> 00:09:38,030
+the list goes on and on of things that you can
+do in a native application that are either harder
+
+133
+00:09:38,030 --> 00:09:42,490
+or impossible to try to just leverage a UIWebView.
+
+134
+00:09:42,490 --> 00:09:49,200
+And so, we'll spend the rest of this time talking about
+elements related to building a native application.
+
+135
+00:09:49,200 --> 00:09:57,360
+What I'd like to do now though is talk about in that
+application that we're driving from the server side,
+
+136
+00:09:57,360 --> 00:09:59,380
+how can we respond to the context of the user?
+
+137
+00:09:59,380 --> 00:10:03,880
+We want to select content that is relevant
+to that customer and an obvious way
+
+138
+00:10:03,880 --> 00:10:05,920
+to do this is to use the device country and language.
+
+139
+00:10:05,920 --> 00:10:10,960
+Let's get that piece of information over when
+we're making our web services call to the back-end
+
+140
+00:10:10,960 --> 00:10:15,830
+and let the server side decide given that
+information, what's the best content to give them.
+
+141
+00:10:15,830 --> 00:10:21,230
+If it has French content in there and a French language
+setting then let's go ahead and give that to them,
+
+142
+00:10:21,230 --> 00:10:24,070
+but if we don't have French content, we can
+still try to return them something, right?
+
+143
+00:10:24,070 --> 00:10:27,760
+We can return in English or we can
+decide to say sorry, I don't have French.
+
+144
+00:10:27,760 --> 00:10:30,250
+That decision can be made on the server side.
+
+145
+00:10:30,250 --> 00:10:32,750
+You can use Core Location, right.
+
+146
+00:10:32,750 --> 00:10:38,140
+You can send that information over when you're making
+your web services call to the back-end and use that.
+
+147
+00:10:38,140 --> 00:10:44,870
+If you've got a content that's highly relevant to certain
+locations, given cities or even very small locations
+
+148
+00:10:44,870 --> 00:10:48,800
+where you can use that to drive different content
+that you return, that's a great thing that you can do
+
+149
+00:10:48,800 --> 00:10:52,260
+to select content and be context sensitive.
+
+150
+00:10:52,260 --> 00:10:53,740
+Device type is another great thing, right.
+
+151
+00:10:53,740 --> 00:10:59,130
+So small device, big device, fast device, slow device,
+these kinds of decisions you can take that information
+
+152
+00:10:59,130 --> 00:11:04,360
+of knowing what the device is that the customer is on,
+send that to the server side in your web services call
+
+153
+00:11:04,360 --> 00:11:08,560
+and then use that to be intelligent about what
+kind of content or the format of the content
+
+154
+00:11:08,560 --> 00:11:12,140
+that you're going to return back for display.
+
+155
+00:11:12,140 --> 00:11:16,460
+Another one that may come up as your
+application ages through time is the app version.
+
+156
+00:11:16,460 --> 00:11:20,240
+Version 2 might have different capabilities than
+version 1 and sending that piece of information
+
+157
+00:11:20,240 --> 00:11:25,890
+across in the web services call can keep you out of
+trouble and make it easier to evolve overtime as well.
+
+158
+00:11:25,890 --> 00:11:29,940
+So that you can return, you do not return that
+special piece of content that doesn't work
+
+159
+00:11:29,940 --> 00:11:34,000
+as well in 1.0 when a 1.0 client is calling you.
+
+160
+00:11:34,000 --> 00:11:38,810
+A great way to get started down this path is
+to design your application in the beginning
+
+161
+00:11:38,810 --> 00:11:41,730
+to only have one baked-in URL into the application.
+
+162
+00:11:41,730 --> 00:11:43,690
+Don't bake in a bunch of different
+endpoints that you're going
+
+163
+00:11:43,690 --> 00:11:45,780
+to make different web services calls for different things.
+
+164
+00:11:45,780 --> 00:11:52,670
+Bake-in one, one call that suffices to get
+all the configuration and startup content
+
+165
+00:11:52,670 --> 00:11:58,480
+that your application needs to get going and all the other
+information it needs to know to be able to write URLs
+
+166
+00:11:58,480 --> 00:12:01,640
+to other web services calls that
+it might need to do to do its work.
+
+167
+00:12:01,640 --> 00:12:05,460
+This is also great just internally when you're doing
+your development process, when you kind of switch
+
+168
+00:12:05,460 --> 00:12:10,310
+between you know, pointing at your development servers
+and your QA servers and your production service.
+
+169
+00:12:10,310 --> 00:12:14,740
+If it's one URL in your app and from that
+URL you get everything else that you need.
+
+170
+00:12:14,740 --> 00:12:19,670
+It's very easy to make that so you can kind of
+switch between environments as you're developing.
+
+171
+00:12:19,670 --> 00:12:22,110
+Language fallback, I kind of already
+talked about this a little bit, right.
+
+172
+00:12:22,110 --> 00:12:27,730
+So this is the idea of having somebody's
+telling us they're wanting French
+
+173
+00:12:27,730 --> 00:12:29,510
+but we don't have French so we fallback to English.
+
+174
+00:12:29,510 --> 00:12:34,930
+The nice thing about building your application this way
+where the clients doesn't really know about this is that if
+
+175
+00:12:34,930 --> 00:12:39,950
+on the server side and back in your content
+repository you do eventually get French content.
+
+176
+00:12:39,950 --> 00:12:41,250
+The client never changes, right.
+
+177
+00:12:41,250 --> 00:12:44,420
+You don't have to build a new client
+that's now French aware.
+
+178
+00:12:44,420 --> 00:12:48,260
+It just gets French content because all along
+it's been passing along that piece of context.
+
+179
+00:12:48,260 --> 00:12:50,950
+It's just been getting back not
+French content until you had some.
+
+180
+00:12:50,950 --> 00:12:56,240
+And again, it's the same thing with
+adding new translations overtime.
+
+181
+00:12:56,240 --> 00:12:58,490
+All of this is really gear towards
+what we said at the beginning.
+
+182
+00:12:58,490 --> 00:12:59,690
+Let's try not to rev the app.
+
+183
+00:12:59,690 --> 00:13:02,490
+It's not that it's illegal to rev the app but let's try not
+
+184
+00:13:02,490 --> 00:13:05,610
+to rev the app every time there's some
+little thing that we want to change.
+
+185
+00:13:05,610 --> 00:13:10,310
+And have the least amount of baked-in content as possible.
+
+186
+00:13:10,310 --> 00:13:15,070
+And with all this content that we're talking about
+and we're talking about there's different layers
+
+187
+00:13:15,070 --> 00:13:18,970
+in your architecture where the content might be cached.
+
+188
+00:13:18,970 --> 00:13:21,580
+So having web services at the back-end,
+they're talking to databases.
+
+189
+00:13:21,580 --> 00:13:24,570
+They're probably going to cache some of the content.
+
+190
+00:13:24,570 --> 00:13:27,950
+You're coordinating content web service,
+you kind of stick in front of everything.
+
+191
+00:13:27,950 --> 00:13:33,270
+It might cache things if you're trying to be
+able to be smart about utilization of resources
+
+192
+00:13:33,270 --> 00:13:37,860
+and you might even have a content delivery network that
+sits in front of everything that kind of keep large amounts
+
+193
+00:13:37,860 --> 00:13:41,870
+of traffic off of hitting your servers for repeat traffic.
+
+194
+00:13:41,870 --> 00:13:47,320
+And so, at each one of these layers, there's an opportunity
+for content to be cached or not depending on a policy
+
+195
+00:13:47,320 --> 00:13:51,460
+that you control and that really
+depends on how you want to set that.
+
+196
+00:13:51,460 --> 00:13:53,930
+It depends on how fresh you need that content to be.
+
+197
+00:13:53,930 --> 00:13:57,850
+Some application's fresh content
+might be less than a day old.
+
+198
+00:13:57,850 --> 00:14:00,540
+Other types of content stock data or something like that.
+
+199
+00:14:00,540 --> 00:14:03,080
+If it's more than a few minutes old, it's old.
+
+200
+00:14:03,080 --> 00:14:08,040
+And it may have an application that the answer
+isn't the same for all of your contents.
+
+201
+00:14:08,040 --> 00:14:14,530
+So having a strategy where you can control at all these
+layers that in particular are also on the app side.
+
+202
+00:14:14,530 --> 00:14:20,500
+How long does each of these layers hold on
+that content and how is that controlled.
+
+203
+00:14:20,500 --> 00:14:26,490
+One way to control this is to have the server side
+with all of our other answers today, for the most part,
+
+204
+00:14:26,490 --> 00:14:31,210
+have the server side be able to tell the client, here's a
+piece of data, please don't hold on to this for any longer
+
+205
+00:14:31,210 --> 00:14:34,860
+than 10 minutes or 1 hour or whatever
+you think makes most sense.
+
+206
+00:14:34,860 --> 00:14:40,580
+And again, by controlling that from the server side, you
+discover a week from now or a month from now, "Oh no,
+
+207
+00:14:40,580 --> 00:14:44,310
+we added a new piece of data today that really
+doesn't make sense if we cache it for that long.
+
+208
+00:14:44,310 --> 00:14:46,730
+Let's change how long we cache it."
+
+209
+00:14:46,730 --> 00:14:52,750
+From that point forward, if you can just change it on the
+server like normal web technology, you just rev the server
+
+210
+00:14:52,750 --> 00:14:55,400
+and all your clients don't have to
+change to get that new cache site
+
+211
+00:14:55,400 --> 00:14:58,350
+and they just honor the settings
+that are coming up from the server.
+
+212
+00:14:58,350 --> 00:15:02,110
+A couple of ways of doing this,
+obviously, you can use HTTP headers.
+
+213
+00:15:02,110 --> 00:15:06,290
+That's a very natural thing to do
+if you're using HTTP web services.
+
+214
+00:15:06,290 --> 00:15:11,520
+It might be something accustomed to, it
+kind of depends on the situation you're in.
+
+215
+00:15:11,520 --> 00:15:18,580
+If you have already some internal mechanism for managing
+cache ability in your services-oriented architecture
+
+216
+00:15:18,580 --> 00:15:22,760
+that doesn't use HTTP headers, you might want
+to just reflect that up to the client as well.
+
+217
+00:15:22,760 --> 00:15:29,470
+A content delivery network might use the standard
+HTTP headers or it might have its own custom headers
+
+218
+00:15:29,470 --> 00:15:34,040
+that use this to capture time to live data.
+
+219
+00:15:34,040 --> 00:15:37,560
+Anytime you're talking about caching,
+especially at this many different layers,
+
+220
+00:15:37,560 --> 00:15:39,830
+each one adds to the underlying layers, right.
+
+221
+00:15:39,830 --> 00:15:42,010
+So you have 10 minutes here, 10
+minutes there, 10 minutes there.
+
+222
+00:15:42,010 --> 00:15:44,980
+Sooner or later, you're talking about half an hour or more.
+
+223
+00:15:44,980 --> 00:15:51,560
+Then you think about what are the implications if some
+of your content got out that shouldn't have gotten out.
+
+224
+00:15:51,560 --> 00:15:56,230
+Somebody put a bad version content out and had a swear word
+in it or something that was going to damage your brain.
+
+225
+00:15:56,230 --> 00:15:57,420
+What would you do?
+
+226
+00:15:57,420 --> 00:15:59,820
+A couple of approaches to this.
+
+227
+00:15:59,820 --> 00:16:04,840
+One, there's joy in having low cache timeouts, right.
+
+228
+00:16:04,840 --> 00:16:09,330
+Because if you make them low enough, eventually you get
+so low that even by the time somebody found a problem
+
+229
+00:16:09,330 --> 00:16:13,530
+and did all the processes that you might have
+done to manage that emergency to fix that content,
+
+230
+00:16:13,530 --> 00:16:17,630
+that might already have been 30 minutes and if you cache
+this on the 30 minutes, there's nothing else to do.
+
+231
+00:16:17,630 --> 00:16:21,840
+But if you are not in that situation and you
+want to have content that is cached for longer,
+
+232
+00:16:21,840 --> 00:16:26,040
+you might need a mechanism where you
+can force all those intermediate layers
+
+233
+00:16:26,040 --> 00:16:29,700
+to drop the content that they already have on the floor.
+
+234
+00:16:29,700 --> 00:16:36,240
+So there's a couple different ways of dealing with that
+just by setting low TTLs or by having emergency process.
+
+235
+00:16:36,240 --> 00:16:40,880
+And one final thing it is not exactly
+caching but one final consideration to think
+
+236
+00:16:40,880 --> 00:16:45,920
+about in the space though is you know,
+real world servers need to be taken
+
+237
+00:16:45,920 --> 00:16:48,730
+out for maintenance or have problems, things go wrong.
+
+238
+00:16:48,730 --> 00:16:52,980
+And what will you do in your app
+when it can not talk to the server?
+
+239
+00:16:52,980 --> 00:16:56,910
+You know, a lot of people just, you know, they
+put up little boxes that's connected to server,
+
+240
+00:16:56,910 --> 00:16:58,790
+that is common, there is nothing wrong with that.
+
+241
+00:16:58,790 --> 00:17:03,010
+But if you took the server down for maintenance on
+purpose or something like that, you might actually want
+
+242
+00:17:03,010 --> 00:17:07,610
+to have a way where you can substitute
+if you're in maintenance mode,
+
+243
+00:17:07,610 --> 00:17:10,520
+substitute at the load balancer
+level or something like that.
+
+244
+00:17:10,520 --> 00:17:14,290
+A piece of content that your application will
+notice that might do some special behavior other
+
+245
+00:17:14,290 --> 00:17:16,260
+than just putting up an alert, I can't talk to the server.
+
+246
+00:17:16,260 --> 00:17:20,230
+If you want to communicate more intentionally
+to your customer, hey, we'll be right back.
+
+247
+00:17:20,230 --> 00:17:22,480
+We're doing something great, whatever.
+
+248
+00:17:22,480 --> 00:17:27,080
+And that's really the core stuff that I want to talk about
+in the server side is and I want to let Scott come up
+
+249
+00:17:27,080 --> 00:17:34,340
+and get into some of the more client side stuff and
+then after him David and then I'll come in at the end.
+
+250
+00:17:34,340 --> 00:17:35,030
+Scott.
+
+251
+00:17:35,030 --> 00:17:35,200
+>> Scott Lopatin: Thanks.
+
+252
+00:17:35,200 --> 00:17:35,260
+[ Applause ]
+
+253
+00:17:35,260 --> 00:17:35,500
+Good morning.
+
+254
+00:17:35,500 --> 00:17:40,640
+Thanks for coming.
+
+255
+00:17:40,640 --> 00:17:43,930
+My name is Scott from Apple Store Engineering.
+
+256
+00:17:43,930 --> 00:17:50,280
+So we have our HTTP servers repurposed
+delivering dynamic content
+
+257
+00:17:50,280 --> 00:17:53,220
+to our iPhone application, our native UI application.
+
+258
+00:17:53,220 --> 00:18:00,910
+How do we use Cocoa Touch to have
+changing content rendered beautifully
+
+259
+00:18:00,910 --> 00:18:04,190
+on the iPhone device without having to rev the app?
+
+260
+00:18:04,190 --> 00:18:07,590
+The challenge here of course is, you know,
+back in when you have your web application,
+
+261
+00:18:07,590 --> 00:18:12,450
+changing the web application once, all your customers
+immediately get those updates the next time they log
+
+262
+00:18:12,450 --> 00:18:13,870
+in or go to your website.
+
+263
+00:18:13,870 --> 00:18:17,210
+The client is a little bit harder because you're
+not guaranteed that everyone is going to go
+
+264
+00:18:17,210 --> 00:18:19,920
+and download the app on the App Stores as easy as it is.
+
+265
+00:18:19,920 --> 00:18:27,140
+We also want to leverage native Cocoa Touch UI to get
+all the openness that app provides at the same time.
+
+266
+00:18:27,140 --> 00:18:32,460
+So I am going to talk today about some solutions that
+we've come up with, little tricks that we can use
+
+267
+00:18:32,460 --> 00:18:37,210
+for who knows what is coming in the
+future, at least as best as possible.
+
+268
+00:18:37,210 --> 00:18:43,870
+I'll talk about using property lists instead of HTML
+to get dynamic content or changing data structures,
+
+269
+00:18:43,870 --> 00:18:50,560
+data that describes itself to provide the server
+to redirect your app in any different way.
+
+270
+00:18:50,560 --> 00:18:56,870
+We'll talk about handling dynamic data when actually the
+keys and the values of that data could change overtime.
+
+271
+00:18:56,870 --> 00:19:01,560
+I will show some examples of URL path
+generation, how you can lead a user down a path
+
+272
+00:19:01,560 --> 00:19:04,600
+or like an assistant type flow dynamically.
+
+273
+00:19:04,600 --> 00:19:10,090
+And I'll round out with some flexible categories
+that you might want to use when dealing with content
+
+274
+00:19:10,090 --> 00:19:13,090
+that changes overtime and some further optimization.
+
+275
+00:19:13,090 --> 00:19:14,390
+So let's get started.
+
+276
+00:19:14,390 --> 00:19:22,740
+So here's our flower store on the app, coming from the
+App Store and typically, if this was a webpage you know,
+
+277
+00:19:22,740 --> 00:19:28,660
+the content would be coming from your web services
+as HTML over HTTP connections and all that.
+
+278
+00:19:28,660 --> 00:19:34,940
+But what we find is, you know, using property lists and
+having a web server's output text property lists is,
+
+279
+00:19:34,940 --> 00:19:39,870
+you have many advantages, so you can
+serialize into all your NSDictionaries,
+
+280
+00:19:39,870 --> 00:19:43,750
+NSArrays, base types of strings and Booleans.
+
+281
+00:19:43,750 --> 00:19:47,790
+It also can be generated from many different
+platforms and several different languages.
+
+282
+00:19:47,790 --> 00:19:54,470
+And then the client, there's one line to decode that into
+these objects, which then you can do whatever you want with.
+
+283
+00:19:54,470 --> 00:20:04,900
+So here is an example of let us say changing a specific
+item, let's say, on this UI of this flower pot store.
+
+284
+00:20:04,900 --> 00:20:09,330
+So, let's say you know, we have some content that you
+definitely know might want to change in the future
+
+285
+00:20:09,330 --> 00:20:15,140
+and you want to control it so you can actually
+send back hints or like description to Cocoa Touch
+
+286
+00:20:15,140 --> 00:20:19,170
+to tell it exactly how to lay out these buttons
+and actually what view controller to go to,
+
+287
+00:20:19,170 --> 00:20:25,360
+what URL to load once the user taps on
+that link or this button or whatever.
+
+288
+00:20:25,360 --> 00:20:31,050
+Well, remember this is not HTML and you can come
+up with any key or value you want and plan for it
+
+289
+00:20:31,050 --> 00:20:33,920
+on the client so we can add things like device.
+
+290
+00:20:33,920 --> 00:20:37,590
+So, only when this is running on an iPhone I want
+
+291
+00:20:37,590 --> 00:20:44,970
+to provide a Call Us button otherwise people
+can't call from an iPod touch or an iPad.
+
+292
+00:20:44,970 --> 00:20:52,500
+That's one specific element in your app but what
+if you want to control the whole view controller,
+
+293
+00:20:52,500 --> 00:20:56,880
+which view controller the app goes
+to based on the server response.
+
+294
+00:20:56,880 --> 00:21:04,700
+By doing something very simple and routing all of your
+calls through one central kind of dispatch location,
+
+295
+00:21:04,700 --> 00:21:10,160
+your app can handle whatever the server decides
+in the future where you want your app to go.
+
+296
+00:21:10,160 --> 00:21:11,630
+So here's an example.
+
+297
+00:21:11,630 --> 00:21:17,650
+We get a data type back and we add let's say a product
+and this means that we're going to go to a product page
+
+298
+00:21:17,650 --> 00:21:22,220
+but in other instances, maybe you have a list
+of products come back in its search results.
+
+299
+00:21:22,220 --> 00:21:30,620
+Your app can pick the proper view controller based
+on these responses no matter what request is sent.
+
+300
+00:21:30,620 --> 00:21:36,260
+So this is a case where we have a specific set of keys and
+values so far like we know how to interpret the responses
+
+301
+00:21:36,260 --> 00:21:42,340
+but what if we have cases where you might not know
+all the possible keys and values that might come back.
+
+302
+00:21:42,340 --> 00:21:48,680
+We can support this too by doing
+some Cocoa Touch trickery here.
+
+303
+00:21:48,680 --> 00:21:53,810
+We can also provide ways to write less code so a bunch
+of keys and values come back and you might not want
+
+304
+00:21:53,810 --> 00:21:55,350
+to have instance variables for all these.
+
+305
+00:21:55,350 --> 00:21:56,400
+So how do we do this?
+
+306
+00:21:56,400 --> 00:21:59,790
+So here's an example.
+
+307
+00:21:59,790 --> 00:22:02,450
+In the US, let's say we have on this the flower store.
+
+308
+00:22:02,450 --> 00:22:04,180
+We have a way for people to enter their address.
+
+309
+00:22:04,180 --> 00:22:08,180
+You have address, city, state, ZIP, but maybe
+you're rolling out to different regions.
+
+310
+00:22:08,180 --> 00:22:13,030
+You may have province or different address formats, how
+do you support this in different countries without having
+
+311
+00:22:13,030 --> 00:22:17,780
+to rev your app and reference these keys by city or state?
+
+312
+00:22:17,780 --> 00:22:22,980
+One way you can load in this address
+object but then you have attribute objects
+
+313
+00:22:22,980 --> 00:22:24,690
+which actually store the keys and values.
+
+314
+00:22:24,690 --> 00:22:31,820
+Then you can iterate over the attributes and list in
+whatever order the server provides, let's say for the form,
+
+315
+00:22:31,820 --> 00:22:39,870
+and use these values but, still you might
+want to reference some of these properties
+
+316
+00:22:39,870 --> 00:22:42,260
+in the code like first name might not change.
+
+317
+00:22:42,260 --> 00:22:46,570
+You know, people have first names everywhere
+so you could use dynamic properties
+
+318
+00:22:46,570 --> 00:22:51,180
+and then dynamic properties let
+you tie into when they're called.
+
+319
+00:22:51,180 --> 00:22:55,040
+Use methodSignatureForSelector to add
+a method to the class as it's called.
+
+320
+00:22:55,040 --> 00:22:56,810
+There are lots of examples online of this.
+
+321
+00:22:56,810 --> 00:23:04,960
+And then using the dynamic property name,
+look up in an object all the places--
+
+322
+00:23:04,960 --> 00:23:09,360
+the value for that based on the attribute list you have.
+
+323
+00:23:09,360 --> 00:23:16,000
+URL path generation, so there's other points maybe in your
+application where you want to lead the user through a set
+
+324
+00:23:16,000 --> 00:23:22,120
+of kind of assisted flows where they pick one option and
+then go to another screen and pick some more options.
+
+325
+00:23:22,120 --> 00:23:27,120
+What if these options-- what if the
+number of screens changes overtime?
+
+326
+00:23:27,120 --> 00:23:35,340
+You can bake-in one beginning URL and then add or remove
+steps by providing and sending back the URLs to follow.
+
+327
+00:23:35,340 --> 00:23:40,130
+So, let's say we have first screen with a few
+options and Next button to go to the second screen
+
+328
+00:23:40,130 --> 00:23:42,770
+and then the final screen with
+like a Done button, let's say.
+
+329
+00:23:42,770 --> 00:23:48,540
+So going through the screens, maybe these data changes,
+maybe there are four steps tomorrow, maybe there's one step.
+
+330
+00:23:48,540 --> 00:23:58,240
+By baking-in, by returning the actual follow on path URLs
+from the responses, your application can change remotely
+
+331
+00:23:58,240 --> 00:24:00,760
+without having to send a new version down the line.
+
+332
+00:24:00,760 --> 00:24:03,520
+As long as it knows what to do with all
+these keys and values they come across.
+
+333
+00:24:03,520 --> 00:24:11,790
+It's also helpful sometimes you know you might have
+certain, let's say like a flower here might have any number
+
+334
+00:24:11,790 --> 00:24:15,990
+of different information, let's say like bright red,
+
+335
+00:24:15,990 --> 00:24:21,530
+loves lots of water so these might
+change, these might grow and shrink.
+
+336
+00:24:21,530 --> 00:24:27,100
+You can add some great UIKit categories to make this
+kind of information flow nicely on any different screen
+
+337
+00:24:27,100 --> 00:24:31,020
+of your application without having to rev the app
+because you can send in just the list of your views
+
+338
+00:24:31,020 --> 00:24:33,290
+so you have like a UIImageView, a bunch of labels.
+
+339
+00:24:33,290 --> 00:24:37,770
+Let's just return back what we're going
+to display by just iterating over these
+
+340
+00:24:37,770 --> 00:24:41,910
+and making them the right size below each other.
+
+341
+00:24:41,910 --> 00:24:47,080
+So, now there are some further
+optimizations I'll talk about.
+
+342
+00:24:47,080 --> 00:24:56,450
+For mostly, for mobile device like this is not your HTML
+and your web servers used to having clients and there's lots
+
+343
+00:24:56,450 --> 00:25:01,830
+of optimizations that happen there but on a mobile device,
+you might have a very slow connection you might want
+
+344
+00:25:01,830 --> 00:25:05,630
+to optimize these for whichever circumstance you're in.
+
+345
+00:25:05,630 --> 00:25:12,380
+One is like, so if you are-- you can-- on the server
+side, you can provide different interfaces to your data.
+
+346
+00:25:12,380 --> 00:25:17,330
+Really easy in Java and other languages
+but have like different versions
+
+347
+00:25:17,330 --> 00:25:20,470
+of your data come back only for
+the specific place they're needed.
+
+348
+00:25:20,470 --> 00:25:27,110
+So if you have only displaying certain data on one page,
+you might not run and return the whole object every time.
+
+349
+00:25:27,110 --> 00:25:31,400
+So having light and heavy versions of
+your data objects might be helpful.
+
+350
+00:25:32,590 --> 00:25:34,980
+Also Gregor mentioned caching, cache control.
+
+351
+00:25:34,980 --> 00:25:36,760
+You can use HTTP cache control headers.
+
+352
+00:25:36,760 --> 00:25:40,260
+You can also define whatever you want in the property lists.
+
+353
+00:25:40,260 --> 00:25:45,170
+So here, we can actually put an expire flag
+and tell us when our content has to change.
+
+354
+00:25:45,170 --> 00:25:47,410
+So this is useful when you cache these responses.
+
+355
+00:25:47,410 --> 00:25:53,540
+You might want to flip around to different screens on the
+phone but still load the same property list without having
+
+356
+00:25:53,540 --> 00:25:58,840
+to refresh the data, saves a lot of network
+traffic that makes the app feel really fast.
+
+357
+00:25:58,840 --> 00:26:05,650
+And then of course there are times when you have like,
+let's say, a state list HTTP server and you want to,
+
+358
+00:26:05,650 --> 00:26:13,210
+not have to write any code on the client side but
+have some way to know which user you are working with.
+
+359
+00:26:13,210 --> 00:26:19,980
+Remember, even though, it is a native application, you are
+using HttpRequest and you can leverage things like cookies
+
+360
+00:26:19,980 --> 00:26:25,570
+which gets sent in every request to NSURLConnection,
+you know, and the request handle this without any code
+
+361
+00:26:25,570 --> 00:26:31,490
+and they will automatically get sent back and forth with
+every request without, you know, having to do anything.
+
+362
+00:26:31,490 --> 00:26:37,680
+But even still, with all this, there are some
+cases where, you know, updates may be required
+
+363
+00:26:37,680 --> 00:26:42,810
+and new features could be added where, you know,
+sometimes you don't know what you don't know.
+
+364
+00:26:42,810 --> 00:26:51,990
+So with that, I am going to hand it over to
+David to talk about Core Frameworks for Data.
+
+365
+00:26:51,990 --> 00:26:52,050
+[ Applause ]
+
+366
+00:26:52,050 --> 00:26:57,610
+>> David den Boer: My name is David den Boer,
+I am the Engineering Manager for Apple Retail
+
+367
+00:26:57,610 --> 00:27:02,780
+and my team is responsible for creating web and mobile
+applications that are used in our retail stores worldwide.
+
+368
+00:27:02,780 --> 00:27:08,220
+Today, I am going to talk to you
+about Core Frameworks for Data.
+
+369
+00:27:08,220 --> 00:27:16,300
+Using remote data in your application,
+storing it, fetching it, and optimizing.
+
+370
+00:27:16,300 --> 00:27:21,260
+So, one of the considerations we want to look
+at is the remote data types available to us.
+
+371
+00:27:21,260 --> 00:27:24,640
+There are many different data types
+using common client-server interactions
+
+372
+00:27:24,640 --> 00:27:25,890
+and we are going to have a quick look at those.
+
+373
+00:27:25,890 --> 00:27:29,630
+We are also going to look at parsing data.
+
+374
+00:27:29,630 --> 00:27:32,200
+How fast is it to parse those different data types?
+
+375
+00:27:32,200 --> 00:27:36,700
+This will help us chose which kind of
+data we want to send back and forth.
+
+376
+00:27:36,700 --> 00:27:38,780
+Next, we will look at client-side storage.
+
+377
+00:27:38,780 --> 00:27:46,420
+We're going to talk about, we've got our data and we want
+to sometimes store that on the client for a very long time.
+
+378
+00:27:46,420 --> 00:27:53,880
+What are our options there and given that we want to store
+stuff on the client, maybe Core Data is our best option.
+
+379
+00:27:53,880 --> 00:27:57,360
+So, what are the benefits of using Core Data for that?
+
+380
+00:27:57,360 --> 00:28:01,900
+And lastly, one of things I want
+to talk about is given all of this,
+
+381
+00:28:01,900 --> 00:28:06,700
+can we build solution that automatically
+handles client-sever interaction for us
+
+382
+00:28:06,700 --> 00:28:08,900
+and uses Core Data in the back-end with our data store.
+
+383
+00:28:08,900 --> 00:28:13,830
+So, let us take a look at the remote data types.
+
+384
+00:28:13,830 --> 00:28:19,220
+In a common client-server interaction, there are
+several different mode data types you can use.
+
+385
+00:28:19,220 --> 00:28:24,890
+I am going to talk about a couple of
+the standard ones that everyone knows.
+
+386
+00:28:24,890 --> 00:28:32,680
+So, looking at JSON, we've got in our flower application,
+common flower attributes that we want to send down
+
+387
+00:28:32,680 --> 00:28:35,890
+and we want to store those flowers
+because they do not change very often.
+
+388
+00:28:35,890 --> 00:28:46,670
+So, given a list of 500 flowers, that takes
+388k to transfer that over the wire using JSON.
+
+389
+00:28:46,670 --> 00:28:52,040
+With XML, the same data takes 473k
+to transfer over the wire.
+
+390
+00:28:52,040 --> 00:28:59,790
+So, using property list, which is a common format on Mac OS
+X and iOS, in the ASCII property list format in specific,
+
+391
+00:28:59,790 --> 00:29:06,100
+we got 402k and lastly, we have also got
+binary property list as an option available
+
+392
+00:29:06,100 --> 00:29:09,840
+and the same data with binary plist is 405.
+
+393
+00:29:11,310 --> 00:29:17,700
+So now, we've got the data on our client, one of the
+biggest design considerations that you have to look
+
+394
+00:29:17,700 --> 00:29:21,890
+at is how fast is that data going to parse.
+
+395
+00:29:21,890 --> 00:29:26,380
+So looking at the same data again
+with JSON and an open source parser,
+
+396
+00:29:26,380 --> 00:29:30,340
+we're at 416 milliseconds to parse that 500 element list.
+
+397
+00:29:30,340 --> 00:29:36,890
+With XML and NSXML parser, you
+got a whopping 812 milliseconds.
+
+398
+00:29:36,890 --> 00:29:39,320
+That's almost twice as slow as JSON.
+
+399
+00:29:39,320 --> 00:29:49,520
+Now at property list, in an ASCII property list, you got
+140 milliseconds, 1/3 the time it takes for JSON and lastly,
+
+400
+00:29:49,520 --> 00:29:57,870
+with binary property list, you're at a blazing fast 19
+milliseconds to parse that same data on the iOS device.
+
+401
+00:29:57,870 --> 00:30:01,800
+Based on the data that we have seen,
+maybe we are going go to property list
+
+402
+00:30:01,800 --> 00:30:04,950
+as our data type that we are going send back and forth.
+
+403
+00:30:04,950 --> 00:30:09,600
+So, taking a closer look the property
+list, we have a small data size.
+
+404
+00:30:09,600 --> 00:30:14,660
+Compared to JSON and XML, property list is equal,
+little less than XML, little more than JSON.
+
+405
+00:30:14,660 --> 00:30:18,130
+So, it is a reasonably small data size.
+
+406
+00:30:18,130 --> 00:30:20,280
+Property list, we get very fast parsing.
+
+407
+00:30:20,280 --> 00:30:23,790
+Obviously, with ASCII property list
+we're at a very fast parsing speed
+
+408
+00:30:23,790 --> 00:30:30,870
+but with binary property list we're orders
+or magnitude faster than XML and JSON.
+
+409
+00:30:30,870 --> 00:30:34,070
+Property list is also very easy to create.
+
+410
+00:30:34,070 --> 00:30:39,620
+If you've got WebObjects on your server side as
+we do in Apple Retail, it's one line of code.
+
+411
+00:30:39,620 --> 00:30:48,520
+And because Core Foundation is open source, there are
+many libraries available for other application servers
+
+412
+00:30:48,520 --> 00:30:54,630
+that allow you to create property list
+and binary property list on the server.
+
+413
+00:30:54,630 --> 00:30:58,000
+Property list is also very easy to parse.
+
+414
+00:30:58,000 --> 00:31:03,060
+With Cocoa, as Scottie said, it's
+one line of code and there it is.
+
+415
+00:31:03,060 --> 00:31:08,740
+propertyListFromData, mutabilityOption,
+format, errorDescription.
+
+416
+00:31:08,740 --> 00:31:16,300
+So with property list we've got one line of code to parse
+and again, with WebObjects, one line of code to create.
+
+417
+00:31:16,300 --> 00:31:20,100
+So we've got a very good solution there
+for client-server interoperability.
+
+418
+00:31:20,100 --> 00:31:26,820
+So, now that we've got our data, we've got our of
+our flowers and because these flowers aren't changing
+
+419
+00:31:26,820 --> 00:31:30,290
+on us very often, we want to store those on the client.
+
+420
+00:31:30,290 --> 00:31:32,320
+So, what are the options we have available to us to store?
+
+421
+00:31:32,320 --> 00:31:36,190
+So let's take a look at NSDictionary.
+
+422
+00:31:36,190 --> 00:31:40,020
+We want to keep this data in an
+NSDictionary and use it on our app.
+
+423
+00:31:40,020 --> 00:31:42,660
+So, the pros of NSDictionary, obviously, it's very simple.
+
+424
+00:31:42,660 --> 00:31:46,620
+With a property list you actually get an array
+of dictionaries for each one of those flowers.
+
+425
+00:31:46,620 --> 00:31:52,990
+But the cons of course is that there is no real persistence
+for NSDictionaries and if you have very complex data,
+
+426
+00:31:52,990 --> 00:31:59,260
+it can become unmanageable doing all of these
+value for key, value for key, value for key.
+
+427
+00:31:59,260 --> 00:32:06,780
+So we'll look at using data objects or just plain NSObjects
+with attributes for each one of your flower attributes.
+
+428
+00:32:06,780 --> 00:32:09,600
+It's very simple as well and it's extensible.
+
+429
+00:32:09,600 --> 00:32:14,470
+You can add custom methods to your data objects very easily.
+
+430
+00:32:14,470 --> 00:32:18,000
+Of course, the con again is that there is
+no persistence without writing it yourself.
+
+431
+00:32:18,000 --> 00:32:25,300
+So, one of the other options of
+course that we have on iOS is SQLite.
+
+432
+00:32:25,300 --> 00:32:27,120
+Benefit of SQLite of course is that it's SQL.
+
+433
+00:32:27,120 --> 00:32:30,040
+You can do SQL fetching.
+
+434
+00:32:30,040 --> 00:32:31,990
+You can use qualifiers to fetch.
+
+435
+00:32:31,990 --> 00:32:38,190
+You can do updating with SQL in a batch manner
+and of course, you get persistence with SQLite.
+
+436
+00:32:38,190 --> 00:32:44,760
+Of course, with SQLite, unless you are using a very good
+third party library, it's very complex to implement.
+
+437
+00:32:44,760 --> 00:32:47,330
+Lastly, we'll look at Core Data.
+
+438
+00:32:47,330 --> 00:32:54,480
+With Core Data you've got a simple and powerful
+API available to you that is well supported.
+
+439
+00:32:54,480 --> 00:33:01,890
+It has been around since Mac OS 10.4 and it has been
+on the iPhone OS since iPhone OS 3.0 or iOS 3.0.
+
+440
+00:33:01,890 --> 00:33:03,510
+It's very extensible.
+
+441
+00:33:03,510 --> 00:33:07,500
+Your managed objects, you can create
+classes for those and extend them
+
+442
+00:33:07,500 --> 00:33:11,510
+and provide validation and of course, you get persistence.
+
+443
+00:33:11,510 --> 00:33:18,230
+Now, a con of Core Data, if I can call it that,
+is that it's not a pure database in the back-end.
+
+444
+00:33:18,230 --> 00:33:21,030
+The back-end store is abstracted way from you.
+
+445
+00:33:21,030 --> 00:33:26,680
+So you don't actually have access
+to write SQL commands against it.
+
+446
+00:33:26,680 --> 00:33:29,950
+So, why would we want to use Core Data given all that?
+
+447
+00:33:29,950 --> 00:33:37,320
+Well, for starters you get persistence and we are
+going to use persistence for data that rarely changes.
+
+448
+00:33:37,320 --> 00:33:41,640
+On our case, we've got 500 flowers and these
+are our common products that we are selling
+
+449
+00:33:41,640 --> 00:33:43,920
+on our store and they don't change very often.
+
+450
+00:33:43,920 --> 00:33:47,310
+Those are the number one products that we're always selling.
+
+451
+00:33:47,310 --> 00:33:47,990
+So, we'd use that.
+
+452
+00:33:47,990 --> 00:33:49,390
+We're going to persist it.
+
+453
+00:33:49,390 --> 00:33:53,510
+We don't want to have to load that from the server
+every single time that somebody looks for flowers.
+
+454
+00:33:53,510 --> 00:33:57,700
+We get efficient fetching and saving.
+
+455
+00:33:57,700 --> 00:34:02,620
+So, if we are storing all this data inside of our
+application, the users can do a search inside your app
+
+456
+00:34:02,620 --> 00:34:06,530
+and rather than hit your server for the search,
+we are going to hit your direct Core Data store.
+
+457
+00:34:06,530 --> 00:34:08,810
+It will be very fast.
+
+458
+00:34:08,810 --> 00:34:11,900
+With Core Data, you get change tracking and undo.
+
+459
+00:34:11,900 --> 00:34:17,600
+So if you are creating an order, you can create your
+order in Core Data and if the user wants to remove an item
+
+460
+00:34:17,600 --> 00:34:21,090
+or undo something, you can do that very easily.
+
+461
+00:34:21,090 --> 00:34:26,140
+And Core Data because it's an object graph, you
+get object validation and relationship maintenance.
+
+462
+00:34:26,140 --> 00:34:30,060
+So when you've got one object related to another and
+you are adding and removing from those relationships,
+
+463
+00:34:30,060 --> 00:34:33,680
+Core Data is handling all of that for you.
+
+464
+00:34:33,680 --> 00:34:36,140
+Core Data supports key-value coding and key-value observing
+
+465
+00:34:36,140 --> 00:34:40,610
+so you can use key-value observing
+in creating your remote UIs.
+
+466
+00:34:40,610 --> 00:34:44,020
+When data changes, you can have your UI changed.
+
+467
+00:34:44,020 --> 00:34:47,830
+And lastly, coordinates very fast on iOS.
+
+468
+00:34:47,830 --> 00:34:55,000
+So, let's take a close look at the Core Data
+architecture, a very simple look at Core Data architecture.
+
+469
+00:34:55,000 --> 00:35:00,790
+So we start off with an NSManagedObjectModel and
+this is where you are going to define your entities,
+
+470
+00:35:00,790 --> 00:35:05,790
+the attributes of those entities
+and the relationships between them.
+
+471
+00:35:05,790 --> 00:35:10,480
+From your NSObject model, you're going to
+give that to a PersistentStoreCoordinator
+
+472
+00:35:10,480 --> 00:35:13,720
+and your PersistentStoreCoordinator
+is going to talk to your store,
+
+473
+00:35:13,720 --> 00:35:18,940
+and that can be in the back-end,
+a flat file or a SQLite database.
+
+474
+00:35:18,940 --> 00:35:25,610
+But more often than not, you're just going to
+be working with your NSManagedObjectContext.
+
+475
+00:35:25,610 --> 00:35:34,200
+This is where you create data, you fetch
+data, you update your data and delete it.
+
+476
+00:35:34,200 --> 00:35:38,880
+And of course when you're going to fetch something,
+you're going to use an NSFetchRequest and you can use
+
+477
+00:35:38,880 --> 00:35:44,760
+that NSFetchRequest to give it simple qualifiers or
+complex qualifiers if you want to perform fetches
+
+478
+00:35:44,760 --> 00:35:49,960
+against your data store and retrieve
+one or many objects back.
+
+479
+00:35:49,960 --> 00:35:54,700
+Given that Core Data architecture, how can we build on that
+
+480
+00:35:54,700 --> 00:36:01,980
+to produce a client/server data store,
+and why would we want to do that?
+
+481
+00:36:01,980 --> 00:36:04,780
+Well, number one, some data changes rarely.
+
+482
+00:36:04,780 --> 00:36:08,770
+The data you want to persist, in our case
+the flowers, doesn't change very often.
+
+483
+00:36:08,770 --> 00:36:10,920
+So we want to store that.
+
+484
+00:36:10,920 --> 00:36:13,120
+It's very easy to develop.
+
+485
+00:36:13,120 --> 00:36:17,910
+With the Core Data API, your developers don't
+have to know anything about HTTP fetching.
+
+486
+00:36:17,910 --> 00:36:20,470
+They don't have to know anything about caching.
+
+487
+00:36:20,470 --> 00:36:21,940
+It just all happens in Core Data.
+
+488
+00:36:21,940 --> 00:36:27,490
+They perform a fetch and if you build it right,
+that fetch can automatically fetch on the server.
+
+489
+00:36:27,490 --> 00:36:29,320
+So what can we do?
+
+490
+00:36:29,320 --> 00:36:34,190
+We can do automatic fetching from the server.
+
+491
+00:36:34,190 --> 00:36:37,570
+We can propagate our deletes to the server, so
+when something is deleted from our Core Data
+
+492
+00:36:37,570 --> 00:36:40,130
+that can automatically happen on the server side as well.
+
+493
+00:36:40,130 --> 00:36:42,960
+We can do automatic saving to the server.
+
+494
+00:36:42,960 --> 00:36:45,550
+So, how are we going to do this?
+
+495
+00:36:45,550 --> 00:36:50,920
+How do we build this client/server
+data store with Core Data?
+
+496
+00:36:50,920 --> 00:36:56,000
+So we start with a great foundation
+obviously, and we start with Core Data.
+
+497
+00:36:56,000 --> 00:37:00,820
+And in some cases, you're going to need to
+subclass the classes that are in Core Data.
+
+498
+00:37:00,820 --> 00:37:03,140
+So in our case, to do what we really want to do,
+
+499
+00:37:03,140 --> 00:37:08,210
+we need to subclass NSManagedObjectContext
+with my myManagedObjectContext.
+
+500
+00:37:08,210 --> 00:37:10,900
+And then we need to add categories.
+
+501
+00:37:10,900 --> 00:37:16,660
+So we're going to add a category to NSFetchRequest
+that allows us to do fetches on a server,
+
+502
+00:37:16,660 --> 00:37:20,220
+and we're going to add categories to
+NSEntityDescription which allows us
+
+503
+00:37:20,220 --> 00:37:24,840
+to add extra attributes or helpers onto our entities.
+
+504
+00:37:24,840 --> 00:37:32,370
+And then, we actually have to subclass our NSManagedObjects
+as well to provide one little bit of extra data needed
+
+505
+00:37:32,370 --> 00:37:35,130
+to let us know whether or not we're going
+to be doing operation on the server.
+
+506
+00:37:35,130 --> 00:37:39,200
+Also need to update your model.
+
+507
+00:37:39,200 --> 00:37:45,530
+So in your ManagedObjectModel, you need
+to then add attributes onto each one
+
+508
+00:37:45,530 --> 00:37:47,830
+of your entities in the userinfo dictionary.
+
+509
+00:37:47,830 --> 00:37:51,870
+It all starts at the entity level.
+
+510
+00:37:51,870 --> 00:37:56,970
+When you're making your entities in your
+ManagedObjectModel you need to do a few extra things.
+
+511
+00:37:56,970 --> 00:38:02,130
+You need to decide whether or not your entities
+are going to have a server-side counterpart.
+
+512
+00:38:02,130 --> 00:38:07,260
+So in your ManagedObjectModel, you might have entities
+that are client only and some other client server.
+
+513
+00:38:07,260 --> 00:38:13,880
+And you need to know whether or not your entity
+supports what I call the four server-side operations,
+
+514
+00:38:13,880 --> 00:38:19,580
+fetch, insert, update and delete.
+
+515
+00:38:19,580 --> 00:38:23,390
+So, how do we do these on our entities?
+
+516
+00:38:23,390 --> 00:38:24,450
+Well, they need helpers.
+
+517
+00:38:24,450 --> 00:38:28,880
+Your entities need to know whether or
+not what operations they can perform,
+
+518
+00:38:28,880 --> 00:38:31,720
+what route they have to take to perform these operations.
+
+519
+00:38:31,720 --> 00:38:38,710
+So, in the userinfo dictionary, in our
+ManagedObjectModel, we had a key called operations.
+
+520
+00:38:38,710 --> 00:38:43,690
+And in our case, what we've done is we put a bit
+string in there and that bit string is just 4 bits,
+
+521
+00:38:43,690 --> 00:38:50,600
+ones or zeros corresponding to whether or not it
+fetch, it supports fetch, insert, update, and delete.
+
+522
+00:38:50,600 --> 00:38:53,190
+We also need to add a route.
+
+523
+00:38:53,190 --> 00:38:58,660
+So given the example where your web services is on
+the back-end or supporting our REST web services,
+
+524
+00:38:58,660 --> 00:39:05,370
+you need a route for that entity on your REST service and
+we can put that in our userinfo dictionary for that entity.
+
+525
+00:39:05,370 --> 00:39:10,360
+So, if you have a flower entity and your
+REST service to fetch flowers just happen
+
+526
+00:39:10,360 --> 00:39:13,420
+to be flower, you would put that in the route.
+
+527
+00:39:13,420 --> 00:39:20,840
+We then need to build a category on
+NSEntityDescription with methods to get the route for this,
+
+528
+00:39:20,840 --> 00:39:24,680
+and whether or not we shouldProcessInserts,
+updates, or deletes.
+
+529
+00:39:24,680 --> 00:39:30,180
+So next, we need to look at the managed objects.
+
+530
+00:39:30,180 --> 00:39:38,370
+So we need to create an NSManagedObjectContext
+subclass with an override of save.
+
+531
+00:39:38,370 --> 00:39:40,960
+So when you're saving data to your local Core Data store,
+
+532
+00:39:40,960 --> 00:39:43,970
+you need to know whether or not
+you're going to save on a sever.
+
+533
+00:39:43,970 --> 00:39:48,480
+So we override NSManagedObjectContext
+save in order to do some extra work there.
+
+534
+00:39:48,480 --> 00:39:55,560
+And then we also override executeFetchRequest:error
+because that is where we look at whether
+
+535
+00:39:55,560 --> 00:39:59,290
+or not this entity supports client
+server fetching, and if it does,
+
+536
+00:39:59,290 --> 00:40:04,230
+we will then fetch from the server
+rather than fetch from the client.
+
+537
+00:40:04,230 --> 00:40:13,020
+And we're also going to create a category on
+NSManagedObjectContext to get a local instance
+
+538
+00:40:13,020 --> 00:40:21,770
+of this object in persistent store, and our NSManagedObject,
+we're going to create a category which adds toDictionary.
+
+539
+00:40:21,770 --> 00:40:28,160
+We want to-- in order to do clients/server
+operations, you need to serialize your NSManagedObjects
+
+540
+00:40:28,160 --> 00:40:29,800
+so that you can pass that up to the server.
+
+541
+00:40:29,800 --> 00:40:34,180
+So in our case, using plist as our
+client server transport mechanism,
+
+542
+00:40:34,180 --> 00:40:36,510
+we want to serialize our NSManagedObject to a dictionary.
+
+543
+00:40:36,510 --> 00:40:42,200
+So we add a toDictionary method, and we
+add a method for localInstanceInContext
+
+544
+00:40:42,200 --> 00:40:48,110
+which is basically just calls our
+localInstanceOfObject method on this entity
+
+545
+00:40:48,110 --> 00:40:50,780
+or on this object with the past in context.
+
+546
+00:40:50,780 --> 00:40:58,220
+So, let's take just a close look at one
+of the categories that we need to create.
+
+547
+00:41:00,110 --> 00:41:01,850
+So here is our localInstanceOfObject method.
+
+548
+00:41:01,850 --> 00:41:05,860
+We're adding this to NSManagedObject.
+
+549
+00:41:05,860 --> 00:41:13,720
+It's going to return an NSManagedObject,
+and one of the things we need to do is get--
+
+550
+00:41:13,720 --> 00:41:16,320
+check whether or not this object is
+registered in the current context.
+
+551
+00:41:16,320 --> 00:41:17,960
+And if it is, just return that.
+
+552
+00:41:17,960 --> 00:41:18,450
+You're done.
+
+553
+00:41:18,450 --> 00:41:20,050
+You got your local instance.
+
+554
+00:41:20,050 --> 00:41:29,610
+If it isn't, we're going to create another copy of this
+object in the different context and then set the attributes
+
+555
+00:41:29,610 --> 00:41:36,690
+in relationships on this object on
+to the new object and then return it.
+
+556
+00:41:36,690 --> 00:41:41,370
+So now that we built our entities and they
+support client/server operations, how do we fetch?
+
+557
+00:41:41,370 --> 00:41:43,940
+How do we fetch from the server?
+
+558
+00:41:43,940 --> 00:41:48,010
+So by default, all of our fetches are client side.
+
+559
+00:41:48,010 --> 00:41:53,320
+To do server side operations, we need to
+add an endpoint finding to NSFetchRequest.
+
+560
+00:41:53,320 --> 00:41:57,100
+So this is where the subclass of
+NSManagedObject comes into play.
+
+561
+00:41:57,100 --> 00:42:01,820
+And what we do there is we just-- we create a
+simple subclass that becomes our base class for all
+
+562
+00:42:01,820 --> 00:42:07,520
+of our managed objects and we added an attributed
+called endpoint, and it's a transient attribute.
+
+563
+00:42:07,520 --> 00:42:13,210
+So that in our FetchRequest, we can then
+just add, we can set that endpoint attribute.
+
+564
+00:42:13,210 --> 00:42:14,870
+So in this case, we want to find some stores.
+
+565
+00:42:14,870 --> 00:42:17,390
+We want to find the flower stores
+that are nearby where you are.
+
+566
+00:42:17,390 --> 00:42:21,940
+So we are going to pass in the latitude and
+longitude from Core Data or from Core Location
+
+567
+00:42:21,940 --> 00:42:30,000
+and our endpoint nearby stores on our server side, and the
+endpoint specifies the method on the server to execute.
+
+568
+00:42:30,000 --> 00:42:38,160
+Obviously, everything is done with a base URL that is
+passed down like Scottie told in our one config there.
+
+569
+00:42:38,160 --> 00:42:47,930
+And then we need to serialize that NSFetchRequest, and in
+our NSFetchRequest, we're going to include the expressions.
+
+570
+00:42:47,930 --> 00:42:52,710
+So latitude equals latitude, longitude equals
+longitude, and endpoint equals nearbyStores.
+
+571
+00:42:52,710 --> 00:42:57,090
+We're also going to serialize the sort orderings
+so that when you send that fetch request to server,
+
+572
+00:42:57,090 --> 00:43:00,610
+the server can send it back ordered the way you wanted.
+
+573
+00:43:00,610 --> 00:43:02,870
+And we're going to serialize fetch limits.
+
+574
+00:43:02,870 --> 00:43:08,450
+So if you only want the first five,
+the server can give you the first five.
+
+575
+00:43:08,450 --> 00:43:17,360
+So an example of what a fetch request looks like serialized
+that is we can have an array of predicates and the--
+
+576
+00:43:17,360 --> 00:43:22,080
+or we can have array of expressions inside the predicate,
+and that expression includes keep all your pairs
+
+577
+00:43:22,080 --> 00:43:25,060
+and qualifier operation to perform on your server.
+
+578
+00:43:25,060 --> 00:43:34,120
+So in our case, we're going to look for
+flowerID where the flowerID equals 1231.
+
+579
+00:43:34,120 --> 00:43:41,830
+So, given our Core Data stack and that we're doing
+client/server Core Data, how are we going to support things
+
+580
+00:43:41,830 --> 00:43:45,460
+like data that is persistent or transient?
+
+581
+00:43:45,460 --> 00:43:50,560
+Well, we do that with multiple persistent stores.
+
+582
+00:43:50,560 --> 00:43:56,790
+So one of your persistent stores where you're
+actually keeping your data all the time,
+
+583
+00:43:56,790 --> 00:44:00,280
+like our flower database, is SQLite.
+
+584
+00:44:00,280 --> 00:44:04,410
+But if you're using client/server transactions
+where you don't want to store that data
+
+585
+00:44:04,410 --> 00:44:07,520
+for a long period of time, you use in-memory persistence.
+
+586
+00:44:07,520 --> 00:44:11,570
+So you create another persistent store that is in memory.
+
+587
+00:44:11,570 --> 00:44:17,520
+You only need one Managed Object Model, the same
+one, and you have them talking to both stores
+
+588
+00:44:17,520 --> 00:44:23,680
+and you can transfer your objects back and forth using
+that category method we created localInstanceOfObject.
+
+589
+00:44:23,680 --> 00:44:26,520
+And to WebObjects people, they'll
+know what that method does.
+
+590
+00:44:26,520 --> 00:44:27,870
+[ Laughter ]
+
+591
+00:44:27,870 --> 00:44:34,230
+So here we go, we've created now two persistent
+store coordinators, two persistent stores.
+
+592
+00:44:34,230 --> 00:44:37,840
+One of them is in memory and one of
+them is talking to the SQLite database.
+
+593
+00:44:37,840 --> 00:44:46,630
+So, I talked to you now about Core frameworks for data
+and Gregor is going to come back up and talk to you
+
+594
+00:44:46,630 --> 00:44:50,880
+about a few lessons learned in
+creating our flower application.
+
+595
+00:44:50,880 --> 00:44:51,610
+Gregor.
+
+596
+00:44:51,610 --> 00:44:55,770
+[ Applause ]
+
+597
+00:44:55,770 --> 00:44:57,470
+>> Gregor Purdy: Thank you, David.
+
+598
+00:44:57,470 --> 00:44:59,110
+Alright, so I'm still Gregor.
+
+599
+00:44:59,110 --> 00:45:03,250
+What I want to talk about here at the
+end just for a few minutes is a couple
+
+600
+00:45:03,250 --> 00:45:05,900
+of things beyond the stuff we talked about at the beginning.
+
+601
+00:45:05,900 --> 00:45:10,440
+We talked a little bit about caching which comes up a
+lot of times when you talk about-- dealing with scale.
+
+602
+00:45:10,440 --> 00:45:17,310
+And I want to talk about just four other elements of
+dealing with scale beyond caching, call them the Four "M's".
+
+603
+00:45:17,310 --> 00:45:26,520
+The first one is Measure, we'll cover that
+in a second, Model, Monitor, and Message.
+
+604
+00:45:26,520 --> 00:45:30,490
+Now, I'm making a few assumptions in covering
+these things that we're all planning for sort
+
+605
+00:45:30,490 --> 00:45:33,620
+of large scale traffic on our systems and things like that.
+
+606
+00:45:33,620 --> 00:45:35,140
+It may not be true for everybody.
+
+607
+00:45:35,140 --> 00:45:39,870
+But even in a small scenario, some of these
+things can be just as important when it comes
+
+608
+00:45:39,870 --> 00:45:42,490
+to preparing yourself to deal with
+troubleshooting of issues.
+
+609
+00:45:42,490 --> 00:45:44,240
+You know, we're talking about computers.
+
+610
+00:45:44,240 --> 00:45:45,250
+Computers are made by people.
+
+611
+00:45:45,250 --> 00:45:48,490
+So, they have problems and you are going to want
+to have some things to help you troubleshoot,
+
+612
+00:45:48,490 --> 00:45:52,990
+and so some of these are still
+relevant even in a smaller scenario.
+
+613
+00:45:52,990 --> 00:45:55,200
+So, let's talk first about measuring, right?
+
+614
+00:45:55,200 --> 00:45:59,250
+So, this is the first duty for those of
+us who are concerned about performance.
+
+615
+00:45:59,250 --> 00:46:04,350
+We can't do anything about performance unless we have
+some measurements to help us understand what's going on
+
+616
+00:46:04,350 --> 00:46:10,240
+or what could be going on, and you can't do that unless
+you do the work in the beginning to capture stats, right?
+
+617
+00:46:10,240 --> 00:46:13,420
+So, we're talking about possibly
+stats captured on the client side.
+
+618
+00:46:13,420 --> 00:46:19,160
+You can definitely use that kind of information,
+if not, in your deployed application certainly
+
+619
+00:46:19,160 --> 00:46:21,770
+when you're doing-- running in a development environment.
+
+620
+00:46:21,770 --> 00:46:25,460
+You can be logging various things in the client
+side and they can be telling you in the log files
+
+621
+00:46:25,460 --> 00:46:29,950
+and the console what is-- is the experience
+that it's getting talking to your services.
+
+622
+00:46:29,950 --> 00:46:32,070
+Is it getting timeouts?
+
+623
+00:46:32,070 --> 00:46:34,780
+What is the latency for various calls and things like that?
+
+624
+00:46:34,780 --> 00:46:39,700
+That's a great place to start just to help you see what's
+going on each individual developer who might be running
+
+625
+00:46:39,700 --> 00:46:44,190
+into some kind of a problem talking to the
+service while things are still in flux a lot.
+
+626
+00:46:44,190 --> 00:46:47,470
+But I really mean this even more on the server side, right?
+
+627
+00:46:47,470 --> 00:46:50,440
+Imagine we got a big data center,
+we've got our web services back there.
+
+628
+00:46:50,440 --> 00:46:51,790
+There're multiple instances.
+
+629
+00:46:51,790 --> 00:46:58,100
+There're load bouncers, there's all kinds of things
+going on in capturing stats on your web server side
+
+630
+00:46:58,100 --> 00:47:05,250
+where it is keeping track on its own of each call that
+it's receiving from the client, and what was the latency
+
+631
+00:47:05,250 --> 00:47:08,350
+of that call and its internal processing
+to get that response ready.
+
+632
+00:47:08,350 --> 00:47:15,630
+You can capture that data internally and have a way to
+vend it out if somebody has access to your internal systems
+
+633
+00:47:15,630 --> 00:47:21,290
+like you, the developers can hit a different web
+service call on that you don't expose to the world
+
+634
+00:47:21,290 --> 00:47:23,950
+to be able to fetch back what those timers are.
+
+635
+00:47:23,950 --> 00:47:31,200
+You can do this in a wide range of sophistications where
+I've seen it done effectively actually with just duct tape
+
+636
+00:47:31,200 --> 00:47:32,930
+and bailing wire kind of versions of this data.
+
+637
+00:47:32,930 --> 00:47:37,700
+Even in production, it's way better
+than the alternative of having nothing.
+
+638
+00:47:37,700 --> 00:47:45,310
+You can do really sophisticated things like in production
+having your various timers and gauges and cache measurements
+
+639
+00:47:45,310 --> 00:47:49,730
+and things like that exposed via JMX if
+you use JMX elsewhere within your company.
+
+640
+00:47:49,730 --> 00:47:53,760
+You can do things like getting that data off
+
+641
+00:47:53,760 --> 00:47:58,400
+of the host that's running the web service
+and off into some data grid cluster.
+
+642
+00:47:58,400 --> 00:48:01,850
+They do interesting things with in terms of
+capturing it down to a database or running it
+
+643
+00:48:01,850 --> 00:48:03,730
+through a charting package and interesting things like that.
+
+644
+00:48:03,730 --> 00:48:08,490
+There's a whole wide variety of things and the
+main point of this is don't do nothing, right?
+
+645
+00:48:08,490 --> 00:48:09,700
+Do something in this space.
+
+646
+00:48:09,700 --> 00:48:13,090
+Get yourself started so that you're prepared for that.
+
+647
+00:48:13,090 --> 00:48:14,260
+The second one is modeling.
+
+648
+00:48:14,260 --> 00:48:15,760
+OK, great, so we've got these measurements.
+
+649
+00:48:15,760 --> 00:48:21,460
+Now, we've measured them on development or QA hardware and
+we maybe had to generate some artificial traffic to do that.
+
+650
+00:48:21,460 --> 00:48:23,000
+But let's create a model.
+
+651
+00:48:23,000 --> 00:48:28,050
+You know, presumably, we hope, the business people
+created some estimates and we think we're going
+
+652
+00:48:28,050 --> 00:48:30,200
+to do these many hits per month at our peak month.
+
+653
+00:48:30,200 --> 00:48:33,170
+And that's what we're sizing for, make sure we can do that.
+
+654
+00:48:33,170 --> 00:48:38,010
+And you may not be accurate but it's the best thing you got
+to start with, and as engineers, we can always put a couple
+
+655
+00:48:38,010 --> 00:48:40,690
+of doublings in there or rounding up or something like that.
+
+656
+00:48:40,690 --> 00:48:46,480
+But start there, but also figure out, you know,
+don't just look at modeling to the average, right?
+
+657
+00:48:46,480 --> 00:48:52,460
+OK, well, we've got a monthly number, how do we
+turn that into a number reasonably of an estimate
+
+658
+00:48:52,460 --> 00:48:57,990
+of what our peak hour of the peak day looks like if we
+got some spikiness to our traffic that we're expecting?
+
+659
+00:48:57,990 --> 00:49:02,760
+If you got a website that has similar traffic
+patterns to what you're expecting in the mobile space,
+
+660
+00:49:02,760 --> 00:49:08,500
+what you might do is look at your web stats and look at the
+relationship between kind of the average number for a month
+
+661
+00:49:08,500 --> 00:49:13,160
+and the peak day of the month and what is the
+multiplier there in terms of request volume.
+
+662
+00:49:13,160 --> 00:49:16,850
+And then either within the peak day, you might look
+at kind of what's the average hour within the peak day
+
+663
+00:49:16,850 --> 00:49:21,940
+versus the peak hour of the peak day, and that can at least
+get you started of being able to back out of business number
+
+664
+00:49:21,940 --> 00:49:28,370
+into something that you can use as a rough
+volume metric number to measure your stats on.
+
+665
+00:49:28,370 --> 00:49:32,430
+You also need to think about your traffic
+from a pattern perspective, right?
+
+666
+00:49:32,430 --> 00:49:33,930
+So what do we expect?
+
+667
+00:49:33,930 --> 00:49:37,280
+Which pages do we expect people to use within the app more?
+
+668
+00:49:37,280 --> 00:49:38,740
+Everybody hits the first page, right?
+
+669
+00:49:38,740 --> 00:49:43,990
+Unless your app has some persistence on which page they
+were last on and bringing them back in there, well,
+
+670
+00:49:43,990 --> 00:49:48,800
+you can still make some estimates of what we're thinking of
+50 percent of our hits are going to be the first in the--
+
+671
+00:49:48,800 --> 00:49:52,090
+in the second page in that flow and,
+you know, 10 percent are going to be off
+
+672
+00:49:52,090 --> 00:49:54,640
+on our orderings area and things like that.
+
+673
+00:49:54,640 --> 00:49:59,480
+Use that data to estimate given the traffic
+that you think you're going to have a peak.
+
+674
+00:49:59,480 --> 00:50:03,890
+Which web service calls are you going to make
+and what volume at kind of that peak hour?
+
+675
+00:50:03,890 --> 00:50:07,050
+And that can allow you to back
+into-- are they fast enough, right?
+
+676
+00:50:07,050 --> 00:50:12,270
+Do I need, you know, 3 instances or 20 of this
+service to be able to take all that traffic?
+
+677
+00:50:12,270 --> 00:50:16,860
+Then what are the implications for the other
+services that our web service calls, right?
+
+678
+00:50:16,860 --> 00:50:19,960
+It can our ordering system handle that volume, hopefully.
+
+679
+00:50:19,960 --> 00:50:22,320
+And what does that mean for your SLAs, right?
+
+680
+00:50:22,320 --> 00:50:25,040
+It's nice if we're doing all these
+measuring that we talked about a minute ago.
+
+681
+00:50:25,040 --> 00:50:27,640
+That's all flowing into some nice fancy system.
+
+682
+00:50:27,640 --> 00:50:29,710
+It's nice if you can express SLAs in there.
+
+683
+00:50:29,710 --> 00:50:35,800
+Even if they're not used for alarming, still having those
+and thinking about the world in terms of SLAs can keep you
+
+684
+00:50:35,800 --> 00:50:40,960
+out of trouble because it keeps you focused on measuring
+things and, you know, watching the chart and saying, "Well,
+
+685
+00:50:40,960 --> 00:50:43,810
+you know an alarm didn't go off, but
+I saw that went out of SLA, came back.
+
+686
+00:50:43,810 --> 00:50:46,610
+Well, let's go look at that before
+it becomes a real problem."
+
+687
+00:50:46,610 --> 00:50:49,960
+I've kind of cheated a little bit
+by talking about monitoring mixed
+
+688
+00:50:49,960 --> 00:50:52,710
+in with the last couple, but do something for monitoring.
+
+689
+00:50:52,710 --> 00:50:55,720
+And again, this is the one that I've seen
+done a lot with duct tape and bailing wire.
+
+690
+00:50:55,720 --> 00:51:00,090
+I've seen it done, you know, just hitting
+the service through the load balancer
+
+691
+00:51:00,090 --> 00:51:02,640
+and just doing a random sample of
+what's going on on those services.
+
+692
+00:51:02,640 --> 00:51:04,700
+You're just baking them out to some flat files.
+
+693
+00:51:04,700 --> 00:51:07,200
+It's way better than nothing.
+
+694
+00:51:07,200 --> 00:51:10,790
+Hook them up to something more sophisticated
+if you have access to that or can find one.
+
+695
+00:51:10,790 --> 00:51:18,050
+But, when you're looking at doing your monitoring what's--
+it's important to know are you in SLA or out of SLA.
+
+696
+00:51:18,050 --> 00:51:19,220
+That's very good.
+
+697
+00:51:19,220 --> 00:51:22,310
+But another thing that's really important
+to know when you're looking at charts is--
+
+698
+00:51:22,310 --> 00:51:28,420
+and especially if you're a person who's making the charts
+possible, arrange it so that you have some history shown.
+
+699
+00:51:28,420 --> 00:51:33,290
+So show, you know, yesterday along with today or last
+week along with this week or something like that,
+
+700
+00:51:33,290 --> 00:51:35,060
+so that people can really see what the story is.
+
+701
+00:51:35,060 --> 00:51:38,420
+Because a lot of times, there's a
+deeper story in the numbers, right?
+
+702
+00:51:38,420 --> 00:51:47,160
+You might see things like across the week you have one day
+that for whatever reason it's not that the numbers go high,
+
+703
+00:51:47,160 --> 00:51:48,790
+it's that they go more erratic for some reason.
+
+704
+00:51:48,790 --> 00:51:50,910
+There's something going on Tuesdays, right?
+
+705
+00:51:50,910 --> 00:51:53,720
+And you won't see that necessarily
+unless you compare things.
+
+706
+00:51:53,720 --> 00:51:55,490
+You know, look at, "Oh yeah, that repeats every week."
+
+707
+00:51:55,490 --> 00:52:01,100
+To know that you're trending just
+very, very slightly up, up, up, up, up.
+
+708
+00:52:01,100 --> 00:52:04,710
+That can be hard to see unless you show
+that context of what it was last week.
+
+709
+00:52:04,710 --> 00:52:09,610
+So, if you're able to please do show history to save
+you a lot of trouble in finding more subtle bugs
+
+710
+00:52:09,610 --> 00:52:12,480
+that can bite you later if left to fester.
+
+711
+00:52:12,480 --> 00:52:17,100
+And finally, the first duty for
+troubleshooting is message, right?
+
+712
+00:52:17,100 --> 00:52:22,320
+So, both on the client side when you're in development
+mode, there's logging that you can do at console
+
+713
+00:52:22,320 --> 00:52:24,090
+and that's great, and you should to those things.
+
+714
+00:52:24,090 --> 00:52:27,030
+Make sure they're compiled out when you do production build.
+
+715
+00:52:27,030 --> 00:52:33,660
+But on the server side as well, you know, if you're
+doing orders or doing things involve session or talking
+
+716
+00:52:33,660 --> 00:52:39,400
+to external systems where there's identifiers going back
+and forth to identify things that you're doing with them,
+
+717
+00:52:39,400 --> 00:52:43,620
+make sure that when you do your logging, you
+don't just say I had trouble talking to system X.
+
+718
+00:52:43,620 --> 00:52:45,480
+Provide the session identifier.
+
+719
+00:52:45,480 --> 00:52:48,570
+Provide URL that it was trying talk to.
+
+720
+00:52:48,570 --> 00:52:51,430
+Provide order ID plus session identifier.
+
+721
+00:52:51,430 --> 00:52:56,040
+Any of these bread crumbs that you
+can leave for yourself will help.
+
+722
+00:52:56,040 --> 00:52:59,870
+You know, you may have first line
+support, some people have that.
+
+723
+00:52:59,870 --> 00:53:03,280
+But they may call you if you don't have
+this data in there for them to go look
+
+724
+00:53:03,280 --> 00:53:04,920
+at the other systems and see how things are going.
+
+725
+00:53:04,920 --> 00:53:09,410
+So, leave yourself clues on how to resolve problems.
+
+726
+00:53:09,410 --> 00:53:13,590
+And that's really the extra sort of tailing lessons
+learned that I wanted to leave you guys with today.
+
+727
+00:53:13,590 --> 00:53:19,230
+So we've talked about service oriented content delivery,
+how to leverage existing content that you have.
+
+728
+00:53:19,230 --> 00:53:23,630
+We've talked about designing a flexible client
+that allows you to adapt over time at least
+
+729
+00:53:23,630 --> 00:53:26,610
+in certain circumstances without having to rev the client.
+
+730
+00:53:26,610 --> 00:53:31,050
+We've talked about some techniques for managing data
+flowing back and forth between you and web services
+
+731
+00:53:31,050 --> 00:53:35,950
+and also efficiency considerations and
+then-- in there-- There's more information.
+
+732
+00:53:35,950 --> 00:53:37,090
+You can contact Mark.
+
+733
+00:53:37,090 --> 00:53:39,650
+Here is his contact information, he can get you routed.
+
+734
+00:53:39,650 --> 00:53:43,400
+There're a couple related sessions.
+
+735
+00:53:43,400 --> 00:53:45,820
+There's Mastering Core Data today.
+
+736
+00:53:45,820 --> 00:53:50,850
+There's also Networking Apps for iPhone OS
+or iOS, and Crafting Custom Cocoa Views,
+
+737
+00:53:50,850 --> 00:53:54,430
+which you've seen that we've talked
+about a little bit here, on Friday.
+

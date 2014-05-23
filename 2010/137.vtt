@@ -1,0 +1,2888 @@
+1
+00:00:07,550 --> 00:00:14,710
+>> Mellissa Turner: Hello welcome to Session 137:
+Optimizing Core Data Performance on iPhone OS.
+
+2
+00:00:14,710 --> 00:00:16,140
+I'm Mellissa Turner.
+
+3
+00:00:16,140 --> 00:00:21,790
+I'm one of the core data engineers who works on well core
+data and does a lot of optimizing so they sent me up here
+
+4
+00:00:21,790 --> 00:00:27,350
+to talk to you because I think my manager
+didn't want to get up on stage this year.
+
+5
+00:00:27,350 --> 00:00:28,470
+So what are we going to talk about?
+
+6
+00:00:28,470 --> 00:00:34,050
+Well we're going to talk about performance, some design
+starting from when you conceive your applications,
+
+7
+00:00:34,050 --> 00:00:38,170
+things you need to think about for
+making it a prominent application.
+
+8
+00:00:38,170 --> 00:00:44,580
+We'll do some analysis of an application that's not
+performing very well, see you know what tools we have
+
+9
+00:00:44,580 --> 00:00:48,690
+to determine what the problems with our application
+are, we'll talk about some of the things you can do
+
+10
+00:00:48,690 --> 00:00:54,660
+to manage space in your application, minimizing the amount
+of memory you're using and what you can do to manage time
+
+11
+00:00:54,660 --> 00:00:56,740
+or minimize the amount of CPU you're using.
+
+12
+00:00:56,740 --> 00:01:03,340
+Of course as someone much smarter than me discovered
+about 95 years ago, space and time are related so often
+
+13
+00:01:03,340 --> 00:01:10,520
+by minimizing one, particularly by minimizing memory
+you're also going to help with your CPU performance.
+
+14
+00:01:10,520 --> 00:01:20,640
+So at some point in the code cycle somebody says you know
+wouldn't it be really cool if somebody built an application
+
+15
+00:01:20,640 --> 00:01:27,360
+that does insert really cool thing here and you know
+that's all fine and good that happens a lot but you know
+
+16
+00:01:27,360 --> 00:01:34,210
+in the life of a special application, special code somebody
+will say you know yeah that's really cool I'm going to do
+
+17
+00:01:34,210 --> 00:01:39,650
+that and at that point design has to
+start and you start thinking about things
+
+18
+00:01:39,650 --> 00:01:41,690
+like how am I going to build this application?
+
+19
+00:01:41,690 --> 00:01:43,780
+Where am I going to build this application?
+
+20
+00:01:43,780 --> 00:01:45,510
+How do I do it?
+
+21
+00:01:45,510 --> 00:01:50,010
+And depending on what device you've targeted
+each device has different constraints,
+
+22
+00:01:50,010 --> 00:01:52,750
+things like how much memory do I have to play with?
+
+23
+00:01:52,750 --> 00:01:59,100
+If you're working with a desktop system as we all know you
+have effectively infinite memory, or you know close to.
+
+24
+00:01:59,100 --> 00:02:02,390
+If you fill up your available RAM it'll swap the disk.
+
+25
+00:02:02,390 --> 00:02:05,720
+This isn't true on an IOS device.
+
+26
+00:02:05,720 --> 00:02:10,440
+Associated with memory there's memory bus
+feed which is how quickly you can get memory
+
+27
+00:02:10,440 --> 00:02:14,830
+or data out of memory and into the CPU processor.
+
+28
+00:02:14,830 --> 00:02:22,160
+A lot of the time you've got big memory and big CPU and a
+big CPU bus and little tiny memory pipe going between them
+
+29
+00:02:22,160 --> 00:02:27,940
+so you really want to try and you know not load
+any data that you don't have to out of memory
+
+30
+00:02:27,940 --> 00:02:30,760
+because well that's going to make your application slow.
+
+31
+00:02:30,760 --> 00:02:32,970
+You have processor speed to think of.
+
+32
+00:02:32,970 --> 00:02:39,650
+How much time how much work can you afford to do
+before your user gets bored and hits the home button?
+
+33
+00:02:39,650 --> 00:02:41,990
+IO speed is another constraint.
+
+34
+00:02:41,990 --> 00:02:47,210
+There's you know the obvious of loading data out of
+the flash but there's also you know pulling data off
+
+35
+00:02:47,210 --> 00:02:50,610
+of friends phone via Bluetooth, or you
+know reaching out into the 3G cloud
+
+36
+00:02:50,610 --> 00:02:53,310
+and pulling something off a web server somewhere
+
+37
+00:02:53,310 --> 00:02:56,880
+and as we all know there's different
+responsiveness requirements on different platforms.
+
+38
+00:02:56,880 --> 00:03:00,400
+It's perfectly acceptable, or you
+know people have learned to live
+
+39
+00:03:00,400 --> 00:03:05,230
+with on a desktop system, things
+like the spinning pizza of doom.
+
+40
+00:03:05,230 --> 00:03:11,770
+It doesn't work so well on iPhones and really the first step
+
+41
+00:03:11,770 --> 00:03:15,560
+in optimizing your application is actually
+knowing what your application does.
+
+42
+00:03:15,560 --> 00:03:18,310
+It sounds really really silly but a lot of the time
+
+43
+00:03:18,310 --> 00:03:24,910
+when you start studying what your application is doing
+you'll be going wait a second why is it doing that?
+
+44
+00:03:24,910 --> 00:03:28,150
+And really understanding what it's doing
+is the first step to being able to figure
+
+45
+00:03:28,150 --> 00:03:31,020
+out what it's doing wrong or what it could be doing better.
+
+46
+00:03:31,020 --> 00:03:33,970
+Versus what it's doing that well it just needs to be doing.
+
+47
+00:03:33,970 --> 00:03:40,070
+You know if you've got a recipes application and you
+find that it's going out to the network first thing
+
+48
+00:03:40,070 --> 00:03:43,280
+when it launches you might ask yourself why.
+
+49
+00:03:43,280 --> 00:03:49,110
+If you've got an RSS feed reader that
+isn't you might ask yourself why.
+
+50
+00:03:49,110 --> 00:03:54,940
+So you know have this model, mental model of
+what your application is supposed to be doing,
+
+51
+00:03:54,940 --> 00:03:58,880
+spend some time trying to figure out what
+it is doing and if there's any places
+
+52
+00:03:58,880 --> 00:04:03,700
+where you don't understand what it's doing you know figure
+it out and keep going until you have a pretty good sense
+
+53
+00:04:03,700 --> 00:04:09,380
+of what your application does because then you're ready
+to start optimizing because then you'll have some sense
+
+54
+00:04:09,380 --> 00:04:15,280
+of what you can optimize and what you can't and when
+it starts with the stuff that you can't optimize,
+
+55
+00:04:15,280 --> 00:04:20,590
+the first thing to do is figure out where the low
+hanging fruit is, figure out what's really easy
+
+56
+00:04:20,590 --> 00:04:26,240
+and more importantly figure out where your time is
+spent so you can avoid optimizing the 1% performance.
+
+57
+00:04:26,240 --> 00:04:31,740
+If you've got something that's a heavy weight
+in your mind operation but it's only taking 1%
+
+58
+00:04:31,740 --> 00:04:38,300
+of your application's total run time it's not that great
+a candidate for optimization so you make it 100% faster,
+
+59
+00:04:38,300 --> 00:04:43,220
+taking half a percent of your application's
+run time it's really not an improvement,
+
+60
+00:04:43,220 --> 00:04:48,740
+get something else that you dismissed that's
+taking half your application's run time.
+
+61
+00:04:48,740 --> 00:04:53,270
+You improve that by 10%, hey your
+application is 5% faster right there.
+
+62
+00:04:53,270 --> 00:04:54,740
+Pick the right targets.
+
+63
+00:04:54,740 --> 00:04:56,990
+How do you do that?
+
+64
+00:04:56,990 --> 00:04:59,540
+Well you can start with instruments.
+
+65
+00:04:59,540 --> 00:05:03,230
+Instruments on the simulator, instruments on the iPhone,
+
+66
+00:05:03,230 --> 00:05:07,840
+and you can supplement that using
+Core Data logging on the iPhone.
+
+67
+00:05:07,840 --> 00:05:12,990
+Instruments on the simulator: The thing to remember
+here is that the simulator isn't an emulator,
+
+68
+00:05:12,990 --> 00:05:18,900
+you're not going to get perfect timing information of how
+your application is going to run on a device when you run it
+
+69
+00:05:18,900 --> 00:05:25,450
+in the simulator but the simulator and devices are
+both 32-bit systems so you can get a lot of information
+
+70
+00:05:25,450 --> 00:05:31,700
+about the memory use patterns of your device
+by running your application in the simulator.
+
+71
+00:05:31,700 --> 00:05:35,240
+The big reason for wanting to run in the
+simulator is that your build cycle is a lot faster.
+
+72
+00:05:35,240 --> 00:05:38,130
+You're not going to spend any time
+R synching stuff down to a device.
+
+73
+00:05:38,130 --> 00:05:43,650
+You just build and go, build and go, build and go and you're
+going to be doing this iteratively cause you don't want
+
+74
+00:05:43,650 --> 00:05:48,350
+to just test once, you want to test once, make
+a change and see if your change actually worked.
+
+75
+00:05:48,350 --> 00:05:52,230
+You can also use the simulator to
+find out about file system activity.
+
+76
+00:05:52,230 --> 00:05:56,440
+Find out if you're hitting disks, finding also
+if you're hitting networks that kind of thing,
+
+77
+00:05:56,440 --> 00:06:01,010
+and in addition the simulator allows you to do
+the Core Data use the Core Data static probes,
+
+78
+00:06:01,010 --> 00:06:05,410
+which are a bunch of de-trace probes we've
+embedded in the framework that allow you
+
+79
+00:06:05,410 --> 00:06:13,080
+to follow Core Data's file system activity, when we're
+saving, when we're fetching, when you're firing a fault
+
+80
+00:06:13,080 --> 00:06:18,850
+and when that fault requires a round trip to the
+database because it's not already in the cache.
+
+81
+00:06:18,850 --> 00:06:20,940
+There's also instruments on the iPhone.
+
+82
+00:06:20,940 --> 00:06:25,330
+This is really good for determining where
+your application is spending it's CPU cycles,
+
+83
+00:06:25,330 --> 00:06:30,520
+where it's how much time it's spending doing graphics,
+what random system activity you've got going on
+
+84
+00:06:30,520 --> 00:06:35,520
+and it can be supplemented cause we don't have de-trace
+probes on the phone with the core data logging,
+
+85
+00:06:35,520 --> 00:06:41,590
+which you enable using com.apple.CoreData.SQLDebug1
+which will give you timing information
+
+86
+00:06:41,590 --> 00:06:43,980
+about a lot of the operations within Core Data.
+
+87
+00:06:43,980 --> 00:06:53,160
+And now I'm going to walk through an example of how to use
+instruments to find some bottlenecks in a demo application
+
+88
+00:06:53,160 --> 00:06:58,870
+that we've written just for you guys and over
+here I have an iPad sitting on a Wolfe projector.
+
+89
+00:06:58,870 --> 00:07:04,620
+I have a couple of applications.
+
+90
+00:07:04,620 --> 00:07:08,680
+You can tell they were built by an engineer
+and not somebody who knows graphic design
+
+91
+00:07:08,680 --> 00:07:13,010
+so the applications are pretty simple,
+one one thousand, two one thousand,
+
+92
+00:07:13,010 --> 00:07:14,730
+takes a little bit over 2 seconds to launch it.
+
+93
+00:07:14,730 --> 00:07:21,910
+It's a simple contact management application, you can
+scroll up and down in a master list view, select contacts
+
+94
+00:07:21,910 --> 00:07:28,120
+and they'll show up in the detail view and you know it takes
+a couple of seconds to launch, which can be an eternity
+
+95
+00:07:28,120 --> 00:07:34,750
+in the iPhone world so we spent some time
+with that application and we built this one.
+
+96
+00:07:34,750 --> 00:07:36,920
+One one thousand, not even a second.
+
+97
+00:07:36,920 --> 00:07:43,650
+So you can see the kind of performance gains you
+can make using even fairly simple applications
+
+98
+00:07:43,650 --> 00:07:47,340
+by using some tools we have in our system.
+
+99
+00:07:47,340 --> 00:07:50,980
+So again we have the applications
+and can I get a show of hands
+
+100
+00:07:50,980 --> 00:07:55,440
+for people who've used instruments
+before or are familiar with instruments.
+
+101
+00:07:55,440 --> 00:08:02,560
+Oh good a lot of you will know what I'm talking about but
+some of you this will be new and interesting information,
+
+102
+00:08:02,560 --> 00:08:06,770
+because it is interesting, I think instruments
+is one of the best things about our system.
+
+103
+00:08:06,770 --> 00:08:10,570
+So I'm going to create a new template
+and basically this allows me
+
+104
+00:08:10,570 --> 00:08:14,230
+to specify what kinds of profiling I'm interested in doing.
+
+105
+00:08:14,230 --> 00:08:20,340
+You can see over on the left hand side here I can have a
+number of target platforms that I can set up a template for.
+
+106
+00:08:20,340 --> 00:08:26,380
+The iPhone, which has you know templates for memory
+and CPU sound playing and random system stuff.
+
+107
+00:08:26,380 --> 00:08:32,120
+I can target stuff in the iPhone simulator, or you know
+if you're interested you can target stuff on Mac OS X
+
+108
+00:08:32,120 --> 00:08:36,870
+and because I'm an Apple engineer and I know
+where all the bugs are buried I happen to know
+
+109
+00:08:36,870 --> 00:08:44,780
+that even though the Core Data tools shows up only under
+Mac OS X, it can actually be used in the simulator as well
+
+110
+00:08:44,780 --> 00:08:50,160
+so I'm going to pick that as the template I use to
+examine my app in the simulator because I'm interested
+
+111
+00:08:50,160 --> 00:08:52,650
+in this point at looking at its memory use.
+
+112
+00:08:53,680 --> 00:08:58,680
+But I'm not just interested in the Core Data activity I also
+want to see you know what it's doing in memory so I'm going
+
+113
+00:08:58,680 --> 00:09:04,140
+to come up here to the library, which will show me all
+of the possible instruments I could add to my template
+
+114
+00:09:04,140 --> 00:09:11,080
+and I'm going to pick the memory option and in here
+we have a bunch of instruments that specifically focus
+
+115
+00:09:11,080 --> 00:09:18,020
+on analyzing memory and if you come down here in the
+bottom of the library you'll see the instrument name
+
+116
+00:09:18,020 --> 00:09:21,030
+and some information about it and
+specifically you'll see a couple
+
+117
+00:09:21,030 --> 00:09:26,400
+of little labels here telling you what platform you can
+use the instrument on and in this case I've got allocations
+
+118
+00:09:26,400 --> 00:09:30,020
+and it can be used on the iPhone and the Mac
+so I'm going to grab this cause I'm interested
+
+119
+00:09:30,020 --> 00:09:38,370
+in seeing how my memory is being used and I come up here
+and specify that I want to run it against the demo system
+
+120
+00:09:38,370 --> 00:10:01,660
+because I want the simulator and we'd have to go choose
+a target, my users WWDC, nope shared, desktop, builds,
+
+121
+00:10:01,660 --> 00:10:13,780
+[inaudible] apparently I didn't quite get
+everything organized when I set up, there we go.
+
+122
+00:10:13,780 --> 00:10:22,440
+So this will allow me to launch
+my application in the simulator.
+
+123
+00:10:24,250 --> 00:10:29,740
+We can see that memory shoots up and then plateaus
+shortly after launch and since what I'm interested
+
+124
+00:10:29,740 --> 00:10:35,210
+in is my launch performance I can just
+stop it now and start doing some digging.
+
+125
+00:10:35,210 --> 00:10:41,310
+Well if I look at my allocations the first thing I'll notice
+on this top line here is that I've used 9 1/2 meg of memory,
+
+126
+00:10:41,310 --> 00:10:45,280
+that seems to be an awful lot for an
+application that has 1,000 contacts in it.
+
+127
+00:10:45,280 --> 00:10:51,750
+Shouldn't really need to use all of that much up front and
+overall I've churned through an awful lot, just over 100 meg
+
+128
+00:10:51,750 --> 00:10:55,790
+and again because I'm an Apple engineer and know where the
+bugs are buried and I came here to share this knowledge
+
+129
+00:10:55,790 --> 00:11:01,390
+with you, I know that manage objects actually
+don't show up under the name NSManageObject
+
+130
+00:11:01,390 --> 00:11:05,940
+in this view they actually show up
+as bites so I know that they show
+
+131
+00:11:05,940 --> 00:11:09,380
+up in the malloc'd
+80 and malloc 84 collection.
+
+132
+00:11:09,380 --> 00:11:13,560
+You can see well I've got 1,000 of
+those, well over a 1,000 of those.
+
+133
+00:11:13,560 --> 00:11:19,560
+If I go down and look at the Core Data fetches I can see
+why I have so many of those because well I did a fetch
+
+134
+00:11:19,560 --> 00:11:22,280
+against persons and I got 1,000 people back.
+
+135
+00:11:22,280 --> 00:11:26,110
+Just for an application that shows 16 lines on screen.
+
+136
+00:11:26,110 --> 00:11:28,850
+It seems overkill doesn't it?
+
+137
+00:11:28,850 --> 00:11:35,290
+Well let's have a look now at actual
+performance on the device.
+
+138
+00:11:35,290 --> 00:11:42,200
+I have down here or I have here an instrument that's set
+up to run against the first application sitting on the iPad
+
+139
+00:11:42,200 --> 00:11:49,600
+over here and again we can see memory
+performance shoot up and then level off
+
+140
+00:11:49,600 --> 00:11:53,350
+in our first application and that
+tells me my app has launched.
+
+141
+00:11:53,350 --> 00:11:57,220
+Again we can see we're using an awful lot of memory.
+
+142
+00:11:57,220 --> 00:12:04,360
+Something else I might want to focus on as well see I know
+that I've got images in that contacts in those contacts
+
+143
+00:12:04,360 --> 00:12:09,920
+and images are backed by CF datas and well
+I've got 1,000 of those, that seems wrong too.
+
+144
+00:12:09,920 --> 00:12:12,070
+If I come down here and look at the CPU monitor this is
+
+145
+00:12:12,070 --> 00:12:19,960
+where I get the really interesting stuff cause this tells me
+you know this is my application, it's currently using 20 meg
+
+146
+00:12:19,960 --> 00:12:25,030
+of memory and it took 2 and 3/4 seconds to launch.
+
+147
+00:12:25,030 --> 00:12:30,630
+Well given all of that information that it's
+taking a long time to launch and some information
+
+148
+00:12:30,630 --> 00:12:40,100
+about how we're using memory and loading too many objects
+we went off and we looked at the model in our application
+
+149
+00:12:40,100 --> 00:12:42,420
+and our original model looked a lot like this.
+
+150
+00:12:42,420 --> 00:12:47,320
+It's fairly simple; it's what you might do as a first pass
+when you're creating a contact management application.
+
+151
+00:12:47,320 --> 00:12:51,540
+It's got a person who has addresses,
+emails and phone numbers.
+
+152
+00:12:51,540 --> 00:12:56,440
+Well we know we want to move picture off
+because we don't need to load the picture
+
+153
+00:12:56,440 --> 00:13:00,660
+until we're actually displaying the object
+and maybe there's some other stuff we can do.
+
+154
+00:13:00,660 --> 00:13:06,110
+Well our second pass looks a lot more like this.
+
+155
+00:13:06,110 --> 00:13:10,990
+We've still got a person but now it's a detail person and
+we've moved the picture off onto its own separate attributes
+
+156
+00:13:10,990 --> 00:13:16,000
+so I don't need to load the picture every time I load a
+person and I've also split out some of the information
+
+157
+00:13:16,000 --> 00:13:21,800
+from person and duplicated it on a list person and
+the list person is what underlies the master view
+
+158
+00:13:21,800 --> 00:13:25,340
+in the second version of the application,
+has a display first name
+
+159
+00:13:25,340 --> 00:13:27,850
+and display last name and a canonical sorting name.
+
+160
+00:13:27,850 --> 00:13:34,360
+The canonical sorting name we'll talk a little bit about
+the concept behind it later but it basically it allows me
+
+161
+00:13:34,360 --> 00:13:40,660
+to put the name of the person in a very
+simple easy-to-compare format in the database
+
+162
+00:13:40,660 --> 00:13:45,250
+so I don't actually have to do fully Unicode or a string
+comparison where I'm trying to load the person view
+
+163
+00:13:45,250 --> 00:13:50,530
+or when I'm trying to do a search against it and you can
+also see here that I've persisted the section information
+
+164
+00:13:50,530 --> 00:13:54,240
+and we'll talk about that in the section
+about the fetch results controller.
+
+165
+00:13:54,240 --> 00:13:58,690
+So what other changes did I make besides changing my model?
+
+166
+00:13:58,690 --> 00:14:06,410
+Well first up remember I keep talking about loading
+1,000 objects and how I've only got 16 lines in my view,
+
+167
+00:14:06,410 --> 00:14:11,570
+I decided I'm going to use Core Data's batching
+feature to only load a few of those objects,
+
+168
+00:14:11,570 --> 00:14:16,150
+just enough for you know the ones in the
+view plus a few more hanging off the end.
+
+169
+00:14:16,150 --> 00:14:23,250
+I've decided to set my batch size to 25 and this
+will cause Core Data to only load 25 of the objects
+
+170
+00:14:23,250 --> 00:14:26,950
+that are underlying the list view at any one time.
+
+171
+00:14:26,950 --> 00:14:30,530
+We'll talk more about that in the
+fetch results controller section.
+
+172
+00:14:30,530 --> 00:14:37,310
+And one more thing I've done: I've gone into the detail view
+controller and I set relationship key pads for pre-fetching
+
+173
+00:14:37,310 --> 00:14:44,360
+so that whenever I load an object into the detail view
+I know that I'm going to want to access its addresses
+
+174
+00:14:44,360 --> 00:14:50,570
+and its phone numbers so I'll load those at the same
+time instead of individually loading those afterwards.
+
+175
+00:14:50,570 --> 00:14:52,080
+So did it work?
+
+176
+00:14:52,080 --> 00:14:53,680
+Did we make things happen better?
+
+177
+00:14:53,680 --> 00:15:00,290
+Well I have yet another trace and I'm going to run this,
+again I'm going to check my allocations and my CPU use
+
+178
+00:15:00,290 --> 00:15:05,140
+of the application running on the device and away we go.
+
+179
+00:15:05,140 --> 00:15:10,440
+Memory spikes, memory spikes and
+then it flat lines and we're done.
+
+180
+00:15:10,440 --> 00:15:17,150
+Well first thing I can see here is that I'm down to
+under a meg of memory instead of the 9 we had originally
+
+181
+00:15:17,150 --> 00:15:24,150
+and overall I've only used 2.6 meg of memory
+instead of well over 100, a lot less churn.
+
+182
+00:15:24,150 --> 00:15:31,230
+If I come down to my 80 byte objects I've got 252
+of them now instead of 1,300 I think it was before.
+
+183
+00:15:31,230 --> 00:15:36,850
+If I look for my CF datas I've got 25
+of them, whoops that was an accident.
+
+184
+00:15:36,850 --> 00:15:46,210
+If I go to the CPU monitor and look down at the bottom line
+here I can see that I've used a total of 6.5 meg instead
+
+185
+00:15:46,210 --> 00:15:54,020
+of the 20 that the previous version was using and I launched
+in about 2 seconds faster than the original version.
+
+186
+00:15:54,020 --> 00:15:59,780
+So you can see the performance and just doing a little
+bit of performance analysis and start having some idea
+
+187
+00:15:59,780 --> 00:16:05,350
+of what you should be looking for can really help you make
+your application a lot faster and just out of curiosity
+
+188
+00:16:05,350 --> 00:16:07,520
+as we're building the second version of the application,
+
+189
+00:16:07,520 --> 00:16:13,260
+we're going so how much data can we add before it
+gets performance characteristics like the first one.
+
+190
+00:16:13,260 --> 00:16:19,290
+We actually managed to stuff 100,000 rows into it and
+if anybody has 100,000 contacts I'd like to meet them.
+
+191
+00:16:19,290 --> 00:16:25,600
+So having talked a little bit about how you can use
+instruments to optimize the performance of your application,
+
+192
+00:16:25,600 --> 00:16:29,510
+I'd like to talk more generally about
+different problems that you're going to run
+
+193
+00:16:29,510 --> 00:16:34,010
+across while building an application or that you may
+run across and some of the solutions to those problems.
+
+194
+00:16:34,010 --> 00:16:37,680
+I'm going to start at the beginning with data importing.
+
+195
+00:16:37,680 --> 00:16:38,890
+Why do you want to import data?
+
+196
+00:16:38,890 --> 00:16:40,980
+Well there can be a number of reasons.
+
+197
+00:16:40,980 --> 00:16:45,820
+For a lot of people they want to do some kind
+of import when their application is first run.
+
+198
+00:16:45,820 --> 00:16:51,410
+A recipes application may want to add a few default
+recipes so that when it first comes up it's not blank.
+
+199
+00:16:51,410 --> 00:16:54,930
+An RSS feed reader may have a few feeds.
+
+200
+00:16:54,930 --> 00:16:59,310
+Sometimes inputs porting is part of an update
+process, once a month you go out to a website
+
+201
+00:16:59,310 --> 00:17:00,920
+and get a whole bunch of new information.
+
+202
+00:17:00,920 --> 00:17:08,640
+This is common or for stuff like you know magazines,
+or reference documents that have periodic updates.
+
+203
+00:17:08,640 --> 00:17:11,610
+It could also be part of your application standard workflow.
+
+204
+00:17:11,610 --> 00:17:16,110
+If you have an application that allows the user to
+go out and access a web server and download data
+
+205
+00:17:16,110 --> 00:17:21,040
+and you're using Core Data as a
+local cache that's also an import.
+
+206
+00:17:21,040 --> 00:17:23,440
+So how do you do an import most efficiently?
+
+207
+00:17:23,440 --> 00:17:25,390
+Well the easiest way to do it is just not to do it.
+
+208
+00:17:25,390 --> 00:17:30,440
+Core Data allows you to set up stacks that have
+multiple stores so if you're doing something
+
+209
+00:17:30,440 --> 00:17:38,990
+like a periodic application, or a periodic data update that
+comes in a batch just serve it in a Core Data store format
+
+210
+00:17:38,990 --> 00:17:42,870
+and have your application add that
+store with the coordinator.
+
+211
+00:17:42,870 --> 00:17:48,560
+We'll query it, completely transparent
+to you whether you've got 1 or 10 stores.
+
+212
+00:17:48,560 --> 00:17:55,180
+This is best in the case where the data is
+disjoint, where there were if you have user data
+
+213
+00:17:55,180 --> 00:18:04,290
+that can be modified it's not related to the data in your
+seed cause cross-state store relationships are possible
+
+214
+00:18:04,290 --> 00:18:07,580
+but they're a little bit tricky, but they are possible.
+
+215
+00:18:07,580 --> 00:18:14,560
+But if you do have to get all of your data into a single
+store, well this is the general recipe that we recommend.
+
+216
+00:18:14,560 --> 00:18:15,900
+Use a separate context.
+
+217
+00:18:15,900 --> 00:18:17,040
+Why do you want to do that?
+
+218
+00:18:17,040 --> 00:18:22,330
+Well because you don't want your
+main user context to ever be blocked.
+
+219
+00:18:22,330 --> 00:18:26,960
+You want it to be as responsive as possible; you
+don't want some other process stuffing data into it.
+
+220
+00:18:26,960 --> 00:18:30,490
+You also don't want them to get confused
+with partially imported data being returned
+
+221
+00:18:30,490 --> 00:18:35,380
+by their fetcher plasts, do batch saving.
+
+222
+00:18:35,380 --> 00:18:37,740
+Don't save after every single object.
+
+223
+00:18:37,740 --> 00:18:40,670
+IO is the mind killer; you don't want to do that.
+
+224
+00:18:40,670 --> 00:18:46,380
+Do it every 10, 100, 1,000 whatever the size of your
+objects is that makes your application responsive.
+
+225
+00:18:46,380 --> 00:18:51,860
+Put a nested auto release pool around the batch
+import that'll flush out all of the temporary objects
+
+226
+00:18:51,860 --> 00:18:55,790
+and help keep your high-water mark on memory fairly low.
+
+227
+00:18:55,790 --> 00:18:58,010
+Avoid doing unnecessary fetching from the database.
+
+228
+00:18:58,010 --> 00:19:03,440
+If you have to create relationships between the objects
+that are being imported and the objects that are already
+
+229
+00:19:03,440 --> 00:19:09,770
+in your system, fetch some of those objects,
+the ones you know you're going to need up front.
+
+230
+00:19:09,770 --> 00:19:13,430
+Don't go one by one in search of
+them and try and cache unique objects
+
+231
+00:19:13,430 --> 00:19:15,440
+that you know you're going to be creating relationships to.
+
+232
+00:19:15,440 --> 00:19:19,770
+How do you want to set the context up?
+
+233
+00:19:19,770 --> 00:19:21,050
+Well there's a couple of ways.
+
+234
+00:19:21,050 --> 00:19:26,050
+You can set both contexts up to use the same persistent
+store coordinator and the same persistent store.
+
+235
+00:19:26,050 --> 00:19:27,810
+This has a lot of benefits.
+
+236
+00:19:27,810 --> 00:19:35,520
+This will first off it minimizes the amount of memory
+being used by your Core Data part of your application.
+
+237
+00:19:35,520 --> 00:19:44,830
+Second, it puts the imported data into the row cache down in
+the persistent store, which allows the user when they query
+
+238
+00:19:44,830 --> 00:19:51,460
+from their main context to more easily access
+it without having to go to the database.
+
+239
+00:19:51,460 --> 00:19:56,740
+You could also if you have a really
+performance-critical application where you want
+
+240
+00:19:56,740 --> 00:20:01,840
+to have the persistent store coordinator locked or
+the persistence layer locked for as tiny a window
+
+241
+00:20:01,840 --> 00:20:04,420
+as possible, to set up two parallel stacks.
+
+242
+00:20:04,420 --> 00:20:10,160
+There's a real overhead in this in that Core
+Data stacks are not cheap but if you really,
+
+243
+00:20:10,160 --> 00:20:16,000
+really want your user to be able to
+access the data as quickly as possible,
+
+244
+00:20:16,000 --> 00:20:21,900
+this will allow you to have the user's context
+locked out only for as long as it takes
+
+245
+00:20:21,900 --> 00:20:25,010
+to do the transaction down in the SQL database.
+
+246
+00:20:25,010 --> 00:20:27,790
+So it's sort of a choice there.
+
+247
+00:20:27,790 --> 00:20:33,010
+Most of you we think are probably want to go with this
+model because most imports are actually relatively small
+
+248
+00:20:33,010 --> 00:20:37,150
+but the other one is out there if you need it.
+
+249
+00:20:37,150 --> 00:20:38,510
+How do you import data?
+
+250
+00:20:38,510 --> 00:20:39,850
+It's actually pretty simple.
+
+251
+00:20:39,850 --> 00:20:45,360
+You set up your persistent store, contacts, coordinator
+whichever are the two patterns you've chosen,
+
+252
+00:20:45,360 --> 00:20:52,000
+set up your auto release pool, iterate through
+the collection of objects that you need to insert,
+
+253
+00:20:52,000 --> 00:20:58,140
+create and insert them, and then do batch
+save at the end of the process, every N times,
+
+254
+00:20:58,140 --> 00:21:02,140
+pop the auto release pool, reset it and keep going.
+
+255
+00:21:02,140 --> 00:21:05,750
+So we talked about a bunch of things
+you can do and a lot of you
+
+256
+00:21:05,750 --> 00:21:10,610
+at this point have probably been thinking you know this
+sounds like the kind of thing that's probably best done
+
+257
+00:21:10,610 --> 00:21:17,230
+on a background thread and you're right and we'll get into
+talking a little bit about how to use threads with Core Data
+
+258
+00:21:17,230 --> 00:21:23,210
+after the next session, which is about deleting
+because you know book ends, symmetry is nice.
+
+259
+00:21:23,210 --> 00:21:24,260
+How do you delete data?
+
+260
+00:21:24,260 --> 00:21:26,670
+Well when do you delete data?
+
+261
+00:21:26,670 --> 00:21:29,880
+First, it can be a user-initiated delete.
+
+262
+00:21:29,880 --> 00:21:33,720
+They can decide for whatever reason that they
+need to get rid of 10 or 15 or 20 objects,
+
+263
+00:21:33,720 --> 00:21:36,970
+or a couple 100 objects, or a couple 1,000 objects.
+
+264
+00:21:36,970 --> 00:21:38,870
+It can be part of an application update.
+
+265
+00:21:38,870 --> 00:21:44,280
+You have some amount of data that's being
+replaced by whatever is in that new update.
+
+266
+00:21:44,280 --> 00:21:45,440
+It could just be aging out.
+
+267
+00:21:45,440 --> 00:21:50,930
+If you've got an application that shows upcoming events
+somewhere you don't really care about keeping track
+
+268
+00:21:50,930 --> 00:21:55,290
+of the events that happened yesterday or 4 months ago.
+
+269
+00:21:55,290 --> 00:21:56,500
+So how do you delete them?
+
+270
+00:21:56,500 --> 00:21:59,510
+It's very similar to importing.
+
+271
+00:21:59,510 --> 00:22:04,950
+If you can, especially for the application
+update case, just get rid of a single store.
+
+272
+00:22:04,950 --> 00:22:09,570
+Fast, simple, removing a file is much
+faster than removing rows in a database.
+
+273
+00:22:09,570 --> 00:22:13,380
+If you can't you want to use again
+some of the other same strategies.
+
+274
+00:22:13,380 --> 00:22:18,730
+Batch up your deletes; use an auto release
+pool and pre-fetch cascaded objects.
+
+275
+00:22:18,730 --> 00:22:20,060
+What do I mean by that?
+
+276
+00:22:20,060 --> 00:22:23,810
+Well this is probably a bad pattern.
+
+277
+00:22:23,810 --> 00:22:29,250
+My other approach of course is just to go through
+all of the objects that are to be deleted one
+
+278
+00:22:29,250 --> 00:22:32,020
+by one and then call save on your context.
+
+279
+00:22:32,020 --> 00:22:37,290
+There's a problem here and in deleting an object
+can cause other objects to be loaded and you can end
+
+280
+00:22:37,290 --> 00:22:44,810
+up making repeated trips to the database in an attempt
+to get all of the stuff that you need to nullify keys in
+
+281
+00:22:44,810 --> 00:22:50,620
+or what have you, make all of your relationship
+maintenance work and you really don't want to do that,
+
+282
+00:22:50,620 --> 00:22:54,360
+you want to go to the database as few
+times as possible because IO is a killer.
+
+283
+00:22:54,360 --> 00:22:59,560
+So yeah you don't want to do this what you
+actually want to do is something like this.
+
+284
+00:22:59,560 --> 00:23:04,130
+You want to create a fetch and go off and
+load all of the objects that are going
+
+285
+00:23:04,130 --> 00:23:07,620
+to need to be loaded as a result of that batch.
+
+286
+00:23:07,620 --> 00:23:14,190
+You set the relationship key pads for pre-fetching and then
+you execute that fetch and this will tell Core Data to go
+
+287
+00:23:14,190 --> 00:23:21,110
+out and upfront get all of the objects you are about to
+touch and do relationship maintenance on and then you can go
+
+288
+00:23:21,110 --> 00:23:24,370
+through and iterate through one by
+one all of the objects to be deleted.
+
+289
+00:23:24,370 --> 00:23:29,880
+Core Data will process those deletes, propagate it
+out through the object graph and then you can save.
+
+290
+00:23:29,880 --> 00:23:37,610
+And again this is something that's often best done
+in a background thread, which we'll talk about now.
+
+291
+00:23:37,610 --> 00:23:40,610
+How do you do threading in Core Data?
+
+292
+00:23:40,610 --> 00:23:42,860
+Well how to do threading when why?
+
+293
+00:23:42,860 --> 00:23:48,380
+The big one is to avoid being terminated, either by spring
+board or the user who's decided to hit the home button.
+
+294
+00:23:48,380 --> 00:23:49,620
+When do you want to do it?
+
+295
+00:23:49,620 --> 00:23:51,740
+When you go to large operation.
+
+296
+00:23:51,740 --> 00:23:57,690
+Often it's an import or a delete, sometimes it's an update,
+the user has done something that's caused a stage change
+
+297
+00:23:57,690 --> 00:24:07,240
+in your database or in your object graph that's going
+to ripple out and touch 20 or 40 or 100 or 1,000 objects
+
+298
+00:24:07,240 --> 00:24:10,330
+and also you know if you're doing a network operation,
+you're probably going to want to spawn that off
+
+299
+00:24:10,330 --> 00:24:13,620
+and do a background thread rather than having
+the main thread blocked and unresponsive.
+
+300
+00:24:13,620 --> 00:24:17,550
+How do you do it?
+
+301
+00:24:17,550 --> 00:24:26,230
+Well the easy answer is using wood dispatch or GCD,
+they're really the same thing actually I suppose.
+
+302
+00:24:26,230 --> 00:24:34,090
+The dispatch is new on IOS 4; it's been on the Mac
+for a while those of you who are Mac programmers.
+
+303
+00:24:34,090 --> 00:24:40,740
+It allows you to push blocks onto a queue
+for execution on some random thread,
+
+304
+00:24:40,740 --> 00:24:46,020
+GCD will decide how many threads you've got
+and what's most efficient for the kernel.
+
+305
+00:24:46,020 --> 00:24:48,510
+The dispatch cue's default to serial.
+
+306
+00:24:48,510 --> 00:24:54,380
+If you're targeting the iPhone OS 3
+platforms you also have the option, or IOS 4,
+
+307
+00:24:54,380 --> 00:24:58,750
+you have an option of using an NS operation
+queue, which is very similar but has existed
+
+308
+00:24:58,750 --> 00:25:02,670
+on previous versions using NS operations instead of blocks.
+
+309
+00:25:02,670 --> 00:25:05,800
+It allows you to push an NS operation
+onto a queue and then it takes care
+
+310
+00:25:05,800 --> 00:25:09,260
+of managing all of the threads behind your back.
+
+311
+00:25:09,260 --> 00:25:14,730
+The thing to note is the NS operation is defaults
+to concurrent queues rather than serial queues
+
+312
+00:25:14,730 --> 00:25:18,470
+and we'll see why that's important
+in a second but you can also set
+
+313
+00:25:18,470 --> 00:25:26,040
+on an NS operation queue the maximum concurrent
+operation count to 1 to turn it into a serial queue
+
+314
+00:25:26,040 --> 00:25:29,460
+and once you've got these queues what do
+you need to know about Core Data and queues?
+
+315
+00:25:29,460 --> 00:25:35,380
+Well the first thing is you need to confine
+the manage object context to a single thread.
+
+316
+00:25:35,380 --> 00:25:42,350
+Contexts don't really, aren't really designed to support
+having multiple things try and change data in them.
+
+317
+00:25:42,350 --> 00:25:45,830
+It's a standard you know threading data problem.
+
+318
+00:25:45,830 --> 00:25:51,410
+Having multiple threads try and modify the
+same piece of memory is a really good way
+
+319
+00:25:51,410 --> 00:25:55,910
+to shoot yourself in the foot or other people in the foot.
+
+320
+00:25:55,910 --> 00:26:00,940
+You have cache coherency problems where 1 thread
+won't be seeing what the other thread is seeing.
+
+321
+00:26:00,940 --> 00:26:02,630
+You have right timing issues.
+
+322
+00:26:02,630 --> 00:26:06,600
+It's very very hard to get something
+very very complicated correct.
+
+323
+00:26:06,600 --> 00:26:09,830
+So we basically say don't.
+
+324
+00:26:09,830 --> 00:26:16,060
+All operations in a manage object context have to be done
+by single thread and that includes the manage objects
+
+325
+00:26:16,060 --> 00:26:22,610
+that exist within that context, they also
+can only be accessed from the context thread.
+
+326
+00:26:22,610 --> 00:26:25,590
+So what does this mean sort of visually?
+
+327
+00:26:25,590 --> 00:26:27,470
+Sometimes it's easier to understand that way.
+
+328
+00:26:27,470 --> 00:26:33,960
+Well for every serial queue all because
+a serial queue guarantees that all blocks
+
+329
+00:26:33,960 --> 00:26:38,380
+or all NS operations on that queue will be run serially.
+
+330
+00:26:38,380 --> 00:26:43,130
+They can use the same manage object
+context but a separate serial queue,
+
+331
+00:26:43,130 --> 00:26:47,600
+which will possibly be running its
+operations concurrently with the operations
+
+332
+00:26:47,600 --> 00:26:51,530
+in the first queue needs to have its own context.
+
+333
+00:26:51,530 --> 00:26:56,180
+But if we had a concurrent queue, each
+block or operation in that queue needs
+
+334
+00:26:56,180 --> 00:27:03,690
+to have its very own manage object context
+cause who knows when those are going to run.
+
+335
+00:27:03,690 --> 00:27:08,210
+Other things to think about when you're doing currency
+with Core Data is the background threads may terminate
+
+336
+00:27:08,210 --> 00:27:11,370
+with their work uncompleted, they're
+detached threads they just get shot.
+
+337
+00:27:11,370 --> 00:27:17,910
+So if you're running a large process in a background
+thread, particularly if you're doing an import or a delete
+
+338
+00:27:17,910 --> 00:27:23,520
+and you batched it you may need to have either the
+main thread postpone the exit cause you have something
+
+339
+00:27:23,520 --> 00:27:29,610
+like 5 seconds after you've been notified that you need to
+exit in order to actually clean up your work and finish,
+
+340
+00:27:29,610 --> 00:27:34,880
+so if you think you can finish in that time good do
+that, but otherwise you're going to need to track how far
+
+341
+00:27:34,880 --> 00:27:39,960
+into an import or a delete you've
+managed to get and then re-run part of it
+
+342
+00:27:39,960 --> 00:27:44,920
+as necessary the next time your application starts.
+
+343
+00:27:44,920 --> 00:27:48,810
+It's actually very easy to set up operation queue.
+
+344
+00:27:48,810 --> 00:27:55,010
+I mean its 10 lines of code total for
+kicking off the import we saw earlier.
+
+345
+00:27:55,010 --> 00:27:59,580
+Create the import queue somewhere in this
+case I'm doing it in init method.
+
+346
+00:27:59,580 --> 00:28:04,230
+It's 3 lines of code, NSOperation queue allo init,
+I make it a confirmed operation queue
+
+347
+00:28:04,230 --> 00:28:05,790
+and I kicked off the import.
+
+348
+00:28:05,790 --> 00:28:08,350
+The import basically adds a block to that queue.
+
+349
+00:28:08,350 --> 00:28:16,730
+The block loads the data that I'm going to be importing
+from network or from where it gets it, goes through,
+
+350
+00:28:16,730 --> 00:28:22,960
+kicks off the import method we saw earlier and
+then notifies the main thread that it's done.
+
+351
+00:28:22,960 --> 00:28:30,080
+The main thread can simply pull this block this complete
+import could cause a variable to be set in the class.
+
+352
+00:28:30,080 --> 00:28:35,020
+The main thread can then check before it exits to determine
+whether or not it's safe for the application to exit
+
+353
+00:28:35,020 --> 00:28:40,130
+or whether it needs to mark some state so
+that you can pick up on the import later.
+
+354
+00:28:40,130 --> 00:28:46,880
+How do you communicate changes between threads if
+you can only have manage object contacts living
+
+355
+00:28:46,880 --> 00:28:52,480
+within their own thread and you want to communicate changes
+that happened in one context over to another context?
+
+356
+00:28:52,480 --> 00:28:58,630
+Well you can only pass object IDs between threads,
+they're the thread-safe unit of operation.
+
+357
+00:28:58,630 --> 00:29:03,710
+You can pass the NSManageObjectContext
+did save notification between threads.
+
+358
+00:29:03,710 --> 00:29:06,430
+If you inspect it you'll notice it has managed objects.
+
+359
+00:29:06,430 --> 00:29:11,980
+But if you're calling merged changes from managed
+object contacts did save notification we wrote it,
+
+360
+00:29:11,980 --> 00:29:17,660
+we have done all of the special sauce to make sure
+that it handles objects correctly in that case.
+
+361
+00:29:17,660 --> 00:29:22,350
+So those are your two mechanisms for getting
+notifications back and forth between contexts
+
+362
+00:29:22,350 --> 00:29:25,540
+that are running, being managed by different threads.
+
+363
+00:29:25,540 --> 00:29:31,530
+So we know how to import, we know how to delete.
+
+364
+00:29:31,530 --> 00:29:36,830
+There's a whole bunch of stuff in the middle
+so I'll start with how do you manage memory?
+
+365
+00:29:36,830 --> 00:29:41,750
+The first thing to start with is only load
+what it is you're actually going to need.
+
+366
+00:29:41,750 --> 00:29:46,930
+If you're dealing with objects your two strategies
+are going to be batching and partial falls.
+
+367
+00:29:46,930 --> 00:29:47,590
+What are they?
+
+368
+00:29:47,590 --> 00:29:55,800
+Well batching allows you to get when you execute a
+fetch request a collection back it basically knows how
+
+369
+00:29:55,800 --> 00:30:00,290
+to go get manage objects but doesn't
+retrieve all of the manage objects data.
+
+370
+00:30:00,290 --> 00:30:05,250
+This allows you to use a very small token
+instead of a very large manage object
+
+371
+00:30:05,250 --> 00:30:10,330
+in things past other APIs that need collections.
+
+372
+00:30:10,330 --> 00:30:14,930
+For example the list view we saw
+earlier that wants a collection
+
+373
+00:30:14,930 --> 00:30:22,490
+so if you use a batched fetch you can give this
+collection back and it knows how to respond appropriately
+
+374
+00:30:22,490 --> 00:30:25,320
+when you ask it for an object at any given index.
+
+375
+00:30:25,320 --> 00:30:30,670
+Basically, there will be so the batch
+size is 3 when you try and access one
+
+376
+00:30:30,670 --> 00:30:34,030
+of the first 3 objects poof there will be objects.
+
+377
+00:30:34,030 --> 00:30:36,570
+You don't need to know or care how that happened.
+
+378
+00:30:36,570 --> 00:30:41,020
+If you then try and access an object
+elsewhere in the array, poof there are objects.
+
+379
+00:30:41,020 --> 00:30:43,380
+Again you don't need to know or care.
+
+380
+00:30:43,380 --> 00:30:47,310
+So it gets big when it needs to
+be and it's small until then.
+
+381
+00:30:47,310 --> 00:30:50,510
+Partial faults are sort of the same kind of thing.
+
+382
+00:30:50,510 --> 00:30:55,300
+Partial fault allows you to load part of a
+manage object because a lot of the overhead
+
+383
+00:30:55,300 --> 00:31:01,100
+in loading a manage object is actually in the attribute
+data and you don't always need all attributes.
+
+384
+00:31:01,100 --> 00:31:04,840
+If you've got a list view you need whatever
+attribute you're displaying in the list view
+
+385
+00:31:04,840 --> 00:31:11,050
+but there's probably more detail associated with that
+object that you don't care about until you select the object
+
+386
+00:31:11,050 --> 00:31:17,160
+and bring up the detail view so you don't need to
+load all of those extra attributes into memory.
+
+387
+00:31:17,160 --> 00:31:22,790
+Just set up your fetch request so that it only returns
+the attributes you actually want and then when you try
+
+388
+00:31:22,790 --> 00:31:28,900
+and access one of those other attributes
+they will magically be there.
+
+389
+00:31:28,900 --> 00:31:32,910
+Of course if you don't need an object
+you can always load an object ID.
+
+390
+00:31:32,910 --> 00:31:39,270
+We talked about those objects is a little reference you
+can use it on the manage object context with object with ID
+
+391
+00:31:39,270 --> 00:31:46,950
+or existing object with ID to get a reference
+to the actual object when you need it later.
+
+392
+00:31:46,950 --> 00:31:50,580
+Well what you need is meta-information and
+we actually have some other ways to do it.
+
+393
+00:31:50,580 --> 00:31:54,910
+If you need to just get the number of
+objects you can use count for fetch requests.
+
+394
+00:31:54,910 --> 00:32:01,230
+If you just want to find out if an object with an
+ID exists, you've got the object ID from somewhere
+
+395
+00:32:01,230 --> 00:32:06,940
+or from another context, or you had it stored somewhere
+on disk you can use existing object with ID error.
+
+396
+00:32:06,940 --> 00:32:14,970
+This will either return an object or return no and give
+you an error telling why you can't return that object.
+
+397
+00:32:14,970 --> 00:32:19,790
+You can also get dictionary results back, this
+allows you for example to get a list of unique values
+
+398
+00:32:19,790 --> 00:32:24,220
+out of a database, get me all dates
+on which I imported photos.
+
+399
+00:32:24,220 --> 00:32:29,670
+Get me all dates on which there were Core Data labs at WWDC.
+
+400
+00:32:29,670 --> 00:32:33,320
+Can also use the dictionary results
+option to get aggregate values.
+
+401
+00:32:33,320 --> 00:32:44,700
+Get me the total time spent talking about Core Data at WWDC
+and the way to find all of the options that you can flag
+
+402
+00:32:44,700 --> 00:32:51,340
+on NSFetchRequest, go dig in the NSFetchRequest
+documentation or an NSFetchRequest.h there's a lot of stuff
+
+403
+00:32:51,340 --> 00:32:59,100
+in there that will allow you to very specifically target
+your fetch request to get the data you're interested in,
+
+404
+00:32:59,100 --> 00:33:06,200
+in the way that makes the most sense for your application
+and something else to remember when you're talking
+
+405
+00:33:06,200 --> 00:33:11,990
+about memory it's not just you know don't fetch what you
+don't need but get rid of the stuff you don't need any more.
+
+406
+00:33:11,990 --> 00:33:14,420
+Use auto release pools liberally.
+
+407
+00:33:14,420 --> 00:33:19,910
+That'll release any intermediate cross
+created and keep your high water mark down.
+
+408
+00:33:19,910 --> 00:33:21,560
+Prune the object graph regularly.
+
+409
+00:33:21,560 --> 00:33:23,810
+Get rid of objects you don't need.
+
+410
+00:33:23,810 --> 00:33:28,160
+The overkill method is use NSManagedObjectContext reset.
+
+411
+00:33:28,160 --> 00:33:33,630
+This will invalidate all objects, break all
+relationships, cause everything to be flushed out.
+
+412
+00:33:33,630 --> 00:33:39,490
+If you need more specific, more targeting pruning use
+NSManagedObjectContext refresh object merged changes.
+
+413
+00:33:39,490 --> 00:33:45,170
+That can be a little bit tricky if you're
+using refresh object merged changes
+
+414
+00:33:45,170 --> 00:33:47,880
+on an object that has changed relationships.
+
+415
+00:33:47,880 --> 00:33:56,540
+You really want to set merge changes to yes, otherwise you
+risk getting your object graph into an inconsistent state
+
+416
+00:33:56,540 --> 00:34:03,170
+where an object has a relationship but the object it's
+related to doesn't know anything about that relationship.
+
+417
+00:34:03,170 --> 00:34:06,100
+So merge changes no is good if your
+objects are unchanged and you just need
+
+418
+00:34:06,100 --> 00:34:08,730
+to break relationships so other stuff will follow.
+
+419
+00:34:08,730 --> 00:34:11,320
+Merge changes yes for objects have changes.
+
+420
+00:34:11,320 --> 00:34:18,900
+Again in the middle there's how to manage your
+CPU time, have a number of ways to do that.
+
+421
+00:34:18,900 --> 00:34:22,770
+The first and foremost of those is let the database do it.
+
+422
+00:34:22,770 --> 00:34:29,540
+Core Data in most cases for most of your applications
+will you'll be using the Core Data SQL store type.
+
+423
+00:34:29,540 --> 00:34:31,080
+It's an SQL database.
+
+424
+00:34:31,080 --> 00:34:37,100
+SQL databases are good at some things, they're good at
+filtering, they're good at sorting, doing calculations
+
+425
+00:34:37,100 --> 00:34:41,070
+and they do it all without having to
+instantiate any objects or malloc anything.
+
+426
+00:34:41,070 --> 00:34:44,600
+So let the database do it if you can.
+
+427
+00:34:44,600 --> 00:34:49,440
+Operate let Core Data translate
+your predicates into wear clauses.
+
+428
+00:34:49,440 --> 00:34:54,590
+Let it give us a sort operator and
+we'll make the database do the sorting.
+
+429
+00:34:54,590 --> 00:34:59,400
+Use the dictionary results typed with aggregates
+to let the database do the calculation.
+
+430
+00:34:59,400 --> 00:35:05,830
+Other stuff: unicorn code aware
+string comparisons are expensive.
+
+431
+00:35:05,830 --> 00:35:10,220
+I mentioned that on the application earlier
+that sometimes you really don't want
+
+432
+00:35:10,220 --> 00:35:13,060
+to search in the way you think you want to search.
+
+433
+00:35:13,060 --> 00:35:18,160
+This for example is kind of dangerous.
+
+434
+00:35:18,160 --> 00:35:23,530
+You'll note in here that we have, for those of
+you who are familiar with the predicate syntax,
+
+435
+00:35:23,530 --> 00:35:30,220
+a case in diacritic insensitive search that means that
+every time I try and compare a character in the database
+
+436
+00:35:30,220 --> 00:35:33,890
+with a character in memory I have
+to say well is it the character?
+
+437
+00:35:33,890 --> 00:35:35,140
+Is it the lowercase character?
+
+438
+00:35:35,140 --> 00:35:36,920
+Is it the uppercase character?
+
+439
+00:35:36,920 --> 00:35:42,940
+So the character was some kind of diacritic mark that I
+don't actually care about and there can be a lot of those.
+
+440
+00:35:42,940 --> 00:35:45,600
+You really don't want to have to do
+all of that work in the database.
+
+441
+00:35:45,600 --> 00:35:49,830
+I mean they're faster, normalize it.
+
+442
+00:35:49,830 --> 00:35:55,840
+Strip all of that out and store a canonical form in
+the database that's very easy and very fast to search
+
+443
+00:35:55,840 --> 00:36:02,850
+and that allows you to use binary
+operators instead of string operators.
+
+444
+00:36:02,850 --> 00:36:09,330
+This is basically a MEM compare that's a
+lot faster than doing any string operation.
+
+445
+00:36:09,330 --> 00:36:18,320
+Look for strings that are bigger than frank and lower than
+frond and you'll notice I've set this up using a begins
+
+446
+00:36:18,320 --> 00:36:22,030
+with there's a very specific reason for that and
+that's because a lot of the Apple applications
+
+447
+00:36:22,030 --> 00:36:26,040
+and a lot of other applications that are emulating
+Apple applications only do prefix searching
+
+448
+00:36:26,040 --> 00:36:27,960
+when they're doing searching for things.
+
+449
+00:36:27,960 --> 00:36:32,420
+They're just type along prefix, not looking
+for stuff in the middle of the word so try
+
+450
+00:36:32,420 --> 00:36:36,440
+and avoid ends with, contains, like, or matches if possible.
+
+451
+00:36:36,440 --> 00:36:40,360
+Matches in particular can be very dangerous
+because it's a full regex
+
+452
+00:36:40,360 --> 00:36:51,410
+and you don't want your user accidentally tripping
+over the order 2N performance that a regex can have.
+
+453
+00:36:51,410 --> 00:36:55,740
+It's entirely possible you'll have a use
+case for it but it's probably something
+
+454
+00:36:55,740 --> 00:37:00,260
+that you should make sure your user has to do
+intentionally and possibly you'll want to put some kind
+
+455
+00:37:00,260 --> 00:37:06,000
+of background thread that does the search
+and then notifies the foreground thread.
+
+456
+00:37:06,000 --> 00:37:12,940
+You can sort of update them along
+the way as their fetch is happening.
+
+457
+00:37:12,940 --> 00:37:18,570
+But you're saying well I've got a title and it's a string
+with lots of words in it and how do I do prefix searching
+
+458
+00:37:18,570 --> 00:37:21,040
+because prefix searching only looks
+at the beginning of the string?
+
+459
+00:37:21,040 --> 00:37:25,530
+Well in that case you probably want to start
+normalizing the keywords in that title that you care
+
+460
+00:37:25,530 --> 00:37:28,410
+about searching on into an entirely separate entity.
+
+461
+00:37:28,410 --> 00:37:31,390
+For example, if I have a book it has an author and a title.
+
+462
+00:37:31,390 --> 00:37:38,740
+What I could do is create a separate and I
+want to do a search like title contains red,
+
+463
+00:37:38,740 --> 00:37:41,150
+as I said on the previous slide that's slow.
+
+464
+00:37:41,150 --> 00:37:48,520
+What you could do is create an entirely separate keyword
+attribute that you store all the important title words in
+
+465
+00:37:48,520 --> 00:37:53,000
+and relate that to the title or
+the book and then you do a search,
+
+466
+00:37:53,000 --> 00:37:57,680
+the search we saw in the previous the quick
+search we saw in the previous slide then compare
+
+467
+00:37:57,680 --> 00:38:10,210
+and follow the relationship off the keyword to all
+of the books that have that keyword in the title.
+
+468
+00:38:10,210 --> 00:38:22,860
+Something that we've seen fairly often that is kind of an
+odd thing is people will use a list of get me all objects
+
+469
+00:38:22,860 --> 00:38:29,660
+where X is equal to something, or X is equal to something,
+or X is equal to something, or X is equal to something.
+
+470
+00:38:29,660 --> 00:38:35,350
+Often it's better to do inquiries for that get
+me all objects where X is in this collection.
+
+471
+00:38:35,350 --> 00:38:40,000
+SQL database can do that a little more
+efficiently than this very long string of or's,
+
+472
+00:38:40,000 --> 00:38:43,550
+it's also faster, it's constructed and easier.
+
+473
+00:38:43,550 --> 00:38:50,510
+SQL doesn't have much of a query optimizer so you'll
+probably want to do your own predicate ordering
+
+474
+00:38:50,510 --> 00:38:59,300
+and make sure you order the complex
+queries part of a compound predicate last.
+
+475
+00:38:59,300 --> 00:39:02,410
+If you've got something that can do
+an integer compare order that first.
+
+476
+00:39:02,410 --> 00:39:08,230
+If you need to do a regex order that after you've already
+filtered the rows down to as small a set as you can
+
+477
+00:39:08,230 --> 00:39:13,700
+so you're doing the regex against the
+minimal number of strings that you have to.
+
+478
+00:39:13,700 --> 00:39:16,840
+Try not to follow relationships if you don't have to cause
+
+479
+00:39:16,840 --> 00:39:21,230
+that requires making you join the
+database that can be also expensive.
+
+480
+00:39:21,230 --> 00:39:25,450
+But there are cases where what you're trying to
+do is filter about the contents of relationship
+
+481
+00:39:25,450 --> 00:39:27,380
+and for those we've provided sub-queries.
+
+482
+00:39:27,380 --> 00:39:31,850
+They're correlated and they allow you
+to do filtering by relationship content.
+
+483
+00:39:31,850 --> 00:39:36,750
+For example, if you want to find all
+people who have a roommate named Jane Doe.
+
+484
+00:39:36,750 --> 00:39:42,250
+You can construct a sub-query that takes all roommates,
+looks for individual roommates whose first name is Jane
+
+485
+00:39:42,250 --> 00:39:52,090
+and whose last name is Doe and returns true for
+all people for whom that count is greater than 0.
+
+486
+00:39:52,090 --> 00:39:56,330
+You can also use the aggregates on relationships,
+
+487
+00:39:56,330 --> 00:40:07,430
+create a sub query where this will return all
+people whose roommates are all old enough to drink.
+
+488
+00:40:07,430 --> 00:40:12,600
+You want to make your managed object model reflect
+the workflow that your application is going to have.
+
+489
+00:40:12,600 --> 00:40:15,700
+This is really hard to overstate how important this is.
+
+490
+00:40:15,700 --> 00:40:21,720
+Don't design a perfectly ER model if that
+doesn't make sense for your application.
+
+491
+00:40:22,850 --> 00:40:28,320
+But also take advantages of the fact
+that you've got a database there
+
+492
+00:40:28,320 --> 00:40:31,900
+and you know use things the database provides for you.
+
+493
+00:40:31,900 --> 00:40:33,690
+Indexes for example.
+
+494
+00:40:33,690 --> 00:40:39,900
+An index allows a database to very quickly do a search on
+a column and you can set up indices in Core Data by going
+
+495
+00:40:39,900 --> 00:40:46,030
+into the attribute inspector in the modeling
+tool, finding the index button and checking it.
+
+496
+00:40:46,030 --> 00:40:49,470
+This tells Core Data that you want to put an
+index on that column for optimal searching.
+
+497
+00:40:49,470 --> 00:40:51,460
+When do you want to use an index?
+
+498
+00:40:51,460 --> 00:40:53,990
+Well if it's a column you're going
+to be searching frequently
+
+499
+00:40:53,990 --> 00:40:57,480
+and your application is primarily
+centered on doing searching.
+
+500
+00:40:57,480 --> 00:41:03,700
+Because there's as there are with many
+things a performance tradeoff involved.
+
+501
+00:41:05,550 --> 00:41:12,210
+Indexes require storing additional data in the database and
+they need to be updated every time you change the contents
+
+502
+00:41:12,210 --> 00:41:19,320
+of the column that the index is on, so if you have an
+application that spends 90% or 95% of its time doing inserts
+
+503
+00:41:19,320 --> 00:41:22,210
+and deletes there's a lot of time
+you're going to be spending having
+
+504
+00:41:22,210 --> 00:41:25,960
+to update that model, or update that index data.
+
+505
+00:41:25,960 --> 00:41:32,700
+Whereas if you're searching all of the time you don't
+really care if it's expensive to update or update the index
+
+506
+00:41:32,700 --> 00:41:36,790
+because you've done an updaters delete because you're never
+doing them so decide whether you application cares more
+
+507
+00:41:36,790 --> 00:41:40,140
+about insert and delete performance or search performance.
+
+508
+00:41:40,140 --> 00:41:44,510
+If it cares about search performance consider an index.
+
+509
+00:41:44,510 --> 00:41:47,120
+Normalization: separate unlike things.
+
+510
+00:41:47,120 --> 00:41:52,150
+I actually once had a friend who had
+this kind of structure in his life.
+
+511
+00:41:52,150 --> 00:41:54,840
+He had N phones; he had like phones for everywhere.
+
+512
+00:41:54,840 --> 00:42:00,290
+He was a salesmen, he traveled all over the world,
+he was a start-up so it was better to get him a phone
+
+513
+00:42:00,290 --> 00:42:08,870
+for every continent he was on then just have one phone that
+he could take roaming everywhere and you know it's sign
+
+514
+00:42:08,870 --> 00:42:12,500
+that you've done something wrong in your
+model if you have to change entities
+
+515
+00:42:12,500 --> 00:42:17,200
+in your model every time somebody adds a phone
+so a better thing to do in that kind of situation
+
+516
+00:42:17,200 --> 00:42:23,280
+where you notice you've got the same kind of data being put
+in multiple attribute fields is to create a relationship
+
+517
+00:42:23,280 --> 00:42:26,460
+and move the repeated data to the end of that relationship.
+
+518
+00:42:26,460 --> 00:42:30,640
+This is standard entity relationship modeling
+and some of you are familiar with it and you're
+
+519
+00:42:30,640 --> 00:42:34,570
+about to have the hair stand up on the back of
+your neck when you see the next slide which talks
+
+520
+00:42:34,570 --> 00:42:39,740
+about de-normalization which is moving
+information back across relationships
+
+521
+00:42:39,740 --> 00:42:45,680
+and sometimes this can be really important, like say
+for example I have an event and I want to in the view
+
+522
+00:42:45,680 --> 00:42:50,510
+of my application display some information
+about a relationship that event has.
+
+523
+00:42:50,510 --> 00:42:54,420
+For example whether or not there's
+attachments like PDF files that need to be read
+
+524
+00:42:54,420 --> 00:42:57,320
+in order before you show up at a meeting.
+
+525
+00:42:57,320 --> 00:43:01,540
+You don't want to actually have to load the contents of
+that relationship to figure out if you should put the flag
+
+526
+00:43:01,540 --> 00:43:07,590
+up so what you're probably going to want to do
+is de-normalize the contents the information
+
+527
+00:43:07,590 --> 00:43:10,660
+about that relationship that there
+are contents to that relationship.
+
+528
+00:43:10,660 --> 00:43:15,970
+Each one attachment account field on the
+event entity itself and just keep that updated
+
+529
+00:43:15,970 --> 00:43:20,010
+as you update the contents of the attachments relationship.
+
+530
+00:43:20,010 --> 00:43:24,000
+This will avoid having to load that relationship
+whenever you need to display a very small flag.
+
+531
+00:43:24,000 --> 00:43:32,550
+I talked about pre-fetching back in the delete part
+of the talk where I mentioned how it can be important
+
+532
+00:43:32,550 --> 00:43:38,410
+to do pre-fetching before you start a delete in order
+to have as few trips to the database as possible.
+
+533
+00:43:38,410 --> 00:43:43,410
+There's other times you want to do that as well for
+example, in our contacts application we did pre-fetching
+
+534
+00:43:43,410 --> 00:43:46,810
+which will load all of the address
+and phone number information
+
+535
+00:43:46,810 --> 00:43:49,340
+because we had it de-normalized as
+we just saw in the other slides.
+
+536
+00:43:49,340 --> 00:43:56,900
+We want to load all of that when we
+load the detail view and you do that.
+
+537
+00:43:56,900 --> 00:44:01,340
+Here we have another example by setting
+the relationship key pads for pre-fetching.
+
+538
+00:44:01,340 --> 00:44:08,640
+Just set all of the relationship key pads whose information
+you're interested in and Core Data will go off and grab all
+
+539
+00:44:08,640 --> 00:44:13,400
+of that information from the database during the
+same fetch as when you're loading the objects.
+
+540
+00:44:13,400 --> 00:44:19,110
+So for my example whenever I want to load information
+about my manager I want to load information about everybody
+
+541
+00:44:19,110 --> 00:44:25,950
+who works for my manager, I can set the minions
+relationship and all of his will be minions will be loaded.
+
+542
+00:44:25,950 --> 00:44:32,320
+If you have multiple stores you can actually tell Core Data
+to only send a fetch request to a given subset of stores.
+
+543
+00:44:32,320 --> 00:44:38,500
+This can be important if you've decided to go with
+the I have separate sets of information in each store
+
+544
+00:44:38,500 --> 00:44:42,420
+and I know before I do the query which
+set of information I'm interested in.
+
+545
+00:44:42,420 --> 00:44:47,510
+You can specify that it should only go down to that
+store and it doesn't waste the time going down to all
+
+546
+00:44:47,510 --> 00:44:51,380
+of the other stores for which you know
+you're going to get a null result.
+
+547
+00:44:51,380 --> 00:45:01,140
+And taking a slight diversion from just pure performance
+I'd like to talk about the fetch results controller.
+
+548
+00:45:01,140 --> 00:45:05,910
+Fetch results controller is something that
+we've added to Core Data that allows you
+
+549
+00:45:05,910 --> 00:45:11,720
+that will basically manage your data for you
+if you're using it in a iPhone application.
+
+550
+00:45:11,720 --> 00:45:23,690
+It's integrated with the UI table view and what it
+basically does is manage the underlying it's in charge
+
+551
+00:45:23,690 --> 00:45:31,260
+of keeping your view updated when there are changes
+in the underlying context or it can be anyway.
+
+552
+00:45:31,260 --> 00:45:35,750
+It manages your sections for you and it
+does change tracking and it can do caching.
+
+553
+00:45:35,750 --> 00:45:37,520
+It's actually very easy to configure.
+
+554
+00:45:37,520 --> 00:45:43,150
+You give it an NSFetchRequest that specifies
+the information that's being controlled.
+
+555
+00:45:43,150 --> 00:45:48,830
+You give it a section name key path
+which is the key path on the objects
+
+556
+00:45:48,830 --> 00:45:52,140
+that are being managed that it
+uses to sort them into sections.
+
+557
+00:45:52,140 --> 00:45:58,810
+You give it a delegate that's used to
+inform the list view about change tracking
+
+558
+00:45:58,810 --> 00:46:03,580
+and you give it a cache name, we'll get into both of those.
+
+559
+00:46:03,580 --> 00:46:06,030
+I said it will do automatic change tracking.
+
+560
+00:46:06,030 --> 00:46:12,050
+Basically, if an objects in your object graph is changed as
+a result of something that happens in a background thread,
+
+561
+00:46:12,050 --> 00:46:17,450
+or results of something that changed on another
+object, the contents in the fetch results controller
+
+562
+00:46:17,450 --> 00:46:23,040
+and it's reflected list view will automatically
+be updated if you set a delegate that responds
+
+563
+00:46:23,040 --> 00:46:26,100
+to at least one of the delegate change tracking methods.
+
+564
+00:46:26,100 --> 00:46:30,090
+You can see those in the Core Data
+navigation application template
+
+565
+00:46:30,090 --> 00:46:38,220
+if you create a Core Data navigation based application from
+the template it will give you a fully functional application
+
+566
+00:46:38,220 --> 00:46:43,100
+that you can go dig through and see how all of
+the fetch result controller stuff is connected.
+
+567
+00:46:43,100 --> 00:46:52,020
+One thing to note is that if you're using the dictionary
+results option for the type of objects you want returned
+
+568
+00:46:52,020 --> 00:46:56,420
+by your fetch request, you cannot track changes to those.
+
+569
+00:46:56,420 --> 00:47:00,240
+It can't track changes to those objects
+because Core Data can only track changes
+
+570
+00:47:00,240 --> 00:47:04,790
+to NS managed objects, it doesn't do it for any other types.
+
+571
+00:47:04,790 --> 00:47:09,380
+I keep mentioning that the controller does caching.
+
+572
+00:47:09,380 --> 00:47:11,020
+What's that really mean?
+
+573
+00:47:11,020 --> 00:47:16,730
+The controller can persistently cache the results
+of the fetch request that you configured it using.
+
+574
+00:47:16,730 --> 00:47:17,610
+Why do you care?
+
+575
+00:47:17,610 --> 00:47:20,520
+Because this can be really helpful
+in speeding your application launch.
+
+576
+00:47:20,520 --> 00:47:28,310
+You'll store a list of all the objects you need to display
+in a list field and not have to re-perform that fetch
+
+577
+00:47:28,310 --> 00:47:31,800
+against the database when your application starts.
+
+578
+00:47:31,800 --> 00:47:39,020
+This is enabled by setting the cache name and
+well if you're using different queries you need
+
+579
+00:47:39,020 --> 00:47:46,420
+to have different cache names, otherwise somebody is going
+to get to that file first and your other controller is going
+
+580
+00:47:46,420 --> 00:47:49,430
+to be really confused the next
+time your application launches.
+
+581
+00:47:49,430 --> 00:47:56,410
+If you're using a fetch result controller for caching,
+you must not change the NSFetchRequest associated with it.
+
+582
+00:47:56,410 --> 00:48:00,920
+You're not allowed to change the predicate;
+you're not allowed to change the sort descriptors.
+
+583
+00:48:00,920 --> 00:48:05,730
+You're not allowed to change the return type.
+
+584
+00:48:05,730 --> 00:48:11,080
+The persistence mechanism requires that fetch request
+remain immutable otherwise you have the potential
+
+585
+00:48:11,080 --> 00:48:20,680
+for the fetch request the results of the fetch request being
+executed or no longer accurately reflected in the cache.
+
+586
+00:48:20,680 --> 00:48:26,300
+Bugreport.apple.com cause I'm at the end of my talk
+and I figured I put this up before the summary.
+
+587
+00:48:26,300 --> 00:48:31,580
+If you've run across something in Core Data that
+it's not working the way you expect it file a bug.
+
+588
+00:48:31,580 --> 00:48:34,580
+If you run across something that crashes
+and you think it's our fault file a bug.
+
+589
+00:48:34,580 --> 00:48:37,580
+We can't know that you're having
+problems unless you tell us.
+
+590
+00:48:37,580 --> 00:48:45,300
+If you file a bug report it's going to be addressed
+faster if you give us at the very least steps to reproduce
+
+591
+00:48:45,300 --> 00:48:47,990
+and you get bonus points if you give us a sample project.
+
+592
+00:48:47,990 --> 00:48:55,580
+Say run this project, look here and I'm
+expecting to see this and what I'm seeing is this
+
+593
+00:48:55,580 --> 00:48:59,390
+and given that information we can look at what
+you're seeing and what we think you should be seeing
+
+594
+00:48:59,390 --> 00:49:03,970
+and say oh right that's a bug we should fix
+that, or no really you've done this wrong
+
+595
+00:49:03,970 --> 00:49:05,890
+and it's really supposed to work that way.
+
+596
+00:49:05,890 --> 00:49:10,600
+Also use bugreport.apple.com for future
+requests for enhancement requests.
+
+597
+00:49:10,600 --> 00:49:16,390
+This is documentation you think you need needs to
+be fixed or just documentation you would like to see
+
+598
+00:49:16,390 --> 00:49:20,630
+and if you've run across a performance
+issue we're especially interested in those.
+
+599
+00:49:20,630 --> 00:49:31,520
+We saw a bit about doing performance analysis,
+talked about managing memory, managing your CPU use
+
+600
+00:49:31,520 --> 00:49:36,020
+and how these can actually are
+interrelated and because when I was walking
+
+601
+00:49:36,020 --> 00:49:38,960
+through this presentation last week my
+manager said there weren't enough puppies
+
+602
+00:49:38,960 --> 00:49:40,500
+and kittens, there's a puppy and a kitten.
+
+603
+00:49:40,500 --> 00:49:42,510
+Is that good Ben?
+
+604
+00:49:42,510 --> 00:49:47,890
+[ applause ]
+
+605
+00:49:47,890 --> 00:49:52,610
+Unfortunately we're sort of at the end of the week
+for the Core Data stuff so I can't point you off
+
+606
+00:49:52,610 --> 00:49:56,900
+at any labs or any other subsequent sessions.
+
+607
+00:49:56,900 --> 00:50:02,720
+I can however point you at the Apple
+Developer Forums, we pay attention to those.
+
+608
+00:50:02,720 --> 00:50:04,230
+We're there on a regular basis.
+
+609
+00:50:04,230 --> 00:50:10,530
+If you've got questions or you know you just
+want to talk over stuff it's a good place to go.
+
+610
+00:50:10,530 --> 00:50:15,910
+Our Evangelist is Michael Jurewitz you can always send
+an email and there's a lot of Core Data documentation
+
+611
+00:50:15,910 --> 00:50:19,880
+to help you get started on pretty much
+everything you could conceivably want.
+
+612
+00:50:19,880 --> 00:50:21,460
+And we're done.
+

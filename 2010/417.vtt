@@ -1,0 +1,2917 @@
+1
+00:00:06,190 --> 00:00:11,400
+>> Luc Semeria: Hello and welcome to OpenGL
+Shading and Advanced Rendering session.
+
+2
+00:00:11,400 --> 00:00:16,390
+My name is Luc Semeria, and joining
+on stage later will be Michael Swift.
+
+3
+00:00:16,390 --> 00:00:22,350
+What we're going to talk about here are what
+are the techniques that are used in Quest,
+
+4
+00:00:22,350 --> 00:00:27,560
+like how to implement those techniques efficiently
+on all of our devices, and we go also a bit further.
+
+5
+00:00:27,560 --> 00:00:32,090
+So here is the agenda.
+
+6
+00:00:32,090 --> 00:00:39,060
+We know some of you are not quite familiar with OpenGL
+ES 2.0 yet and don't know everything about shaders yet,
+
+7
+00:00:39,060 --> 00:00:44,670
+so we do a quick recap of the programmable
+graphics pipeline, and we'll do --
+
+8
+00:00:44,670 --> 00:00:50,110
+we go through the basics of programmable shaders.
+
+9
+00:00:50,110 --> 00:00:54,500
+Then we dive down in more details
+on real rendering techniques
+
+10
+00:00:54,500 --> 00:00:58,700
+and how to implement them efficiently on the devices.
+
+11
+00:00:58,700 --> 00:01:05,840
+So we talk about skinning, for animated characters,
+lighting, how to make nice lighting and shadows.
+
+12
+00:01:05,840 --> 00:01:13,070
+So if you've been programming with
+the iPhone using OpenGL ES 1.1,
+
+13
+00:01:13,070 --> 00:01:17,310
+you are going to learn a lot about
+shaders here and how to use them.
+
+14
+00:01:17,310 --> 00:01:24,730
+If you've been already programming with shaders on desktop
+or with OpenGL ES 2.0, you may already be familiar with many
+
+15
+00:01:24,730 --> 00:01:31,240
+of those techniques, but we are going to show you
+how you can efficiently implement these techniques
+
+16
+00:01:31,240 --> 00:01:39,150
+so you can have real time nice-looking effects on all
+of the devices including the iPad and the new iPhone.
+
+17
+00:01:39,150 --> 00:01:42,010
+Let's start with the recap of the graphics pipeline.
+
+18
+00:01:42,010 --> 00:01:46,220
+I bet most of you have seen this picture before, right?
+
+19
+00:01:46,220 --> 00:01:55,850
+Start with the objects, bunch of points, those points are
+broken down into vertices that get passed to Vertex Shader.
+
+20
+00:01:55,850 --> 00:02:02,190
+One of the things that Vertex Shader does is it transforms
+the coordinate of those vertices from object space
+
+21
+00:02:02,190 --> 00:02:05,810
+into cube space through eye space.
+
+22
+00:02:05,810 --> 00:02:14,990
+Next step, you take those vertices, put them back
+into a triangles, the triangles get rasterized
+
+23
+00:02:14,990 --> 00:02:20,880
+into separate fragments, those fragments are
+going to end up as pixels on your screen.
+
+24
+00:02:20,880 --> 00:02:27,670
+The Fragment Shaders, one other thing it does is compute
+the final cutoff of these fragments, and then it gets passed
+
+25
+00:02:27,670 --> 00:02:30,610
+down to a few more steps and shows up on your screen.
+
+26
+00:02:30,610 --> 00:02:32,990
+That's the graphics pipeline.
+
+27
+00:02:32,990 --> 00:02:41,660
+Now two components here that we are going to focus
+on today, it's the Vertex and Fragment Shaders.
+
+28
+00:02:41,660 --> 00:02:49,420
+They are programmable, as I mention, and the way you
+program those is using a C like language that's called GLSL.
+
+29
+00:02:49,420 --> 00:02:54,200
+And like, you know, any program, you need
+to compile it and link it into a program,
+
+30
+00:02:54,200 --> 00:02:56,970
+but this time, the program runs on the GPU.
+
+31
+00:02:56,970 --> 00:02:59,510
+So shaders are the way you program your GPU.
+
+32
+00:02:59,510 --> 00:03:04,110
+And I think a programmable pipeline is great.
+
+33
+00:03:04,110 --> 00:03:08,770
+OpenGL ES 2.0 allows you to do very, very nice effects.
+
+34
+00:03:08,770 --> 00:03:17,340
+You can do better bump mapping, better environment mapping,
+better image processing, good effects like refraction.
+
+35
+00:03:17,340 --> 00:03:24,700
+But OpenGL ES 2.0 is also very flexible, and
+that allows you to create your own effects.
+
+36
+00:03:24,700 --> 00:03:28,570
+Say you want to have things look more
+of a cartoony effect, you can do that.
+
+37
+00:03:28,570 --> 00:03:34,510
+You want to make things look more like a real life effect,
+like we see on the horse here, you can do that, too.
+
+38
+00:03:34,510 --> 00:03:36,310
+It's up to you.
+
+39
+00:03:36,310 --> 00:03:41,800
+The other good side of being flexible is it helps
+you tune your algorithms, select the right algorithms
+
+40
+00:03:41,800 --> 00:03:47,510
+so you get the right effects, and at the
+same time, the right level of performance.
+
+41
+00:03:47,510 --> 00:03:50,830
+And the right level of performance is
+especially important when you look at all
+
+42
+00:03:50,830 --> 00:03:55,570
+of the devices that support OpenGL ES 2.0.
+
+43
+00:03:55,570 --> 00:04:05,170
+So we've said this before, right, they all use
+PowerVR SGX as a GPU, and devices are the iPhone 3GS,
+
+44
+00:04:05,170 --> 00:04:10,170
+the 3rd generation iPod touch, the iPad and the iPhone 4.
+
+45
+00:04:10,170 --> 00:04:18,900
+If you look at the screen sizes, you get about five times
+more pixels to drive when you write an active iPad app,
+
+46
+00:04:18,900 --> 00:04:23,090
+about four times for pixels you want
+to use native resolution of your iPhone 4.
+
+47
+00:04:23,090 --> 00:04:29,720
+So if you just your application that runs fine on
+your iPhone 3GS and just try to scale it to the iPad
+
+48
+00:04:29,720 --> 00:04:33,840
+or the iPhone 4, you may end up being fill-rate bound.
+
+49
+00:04:33,840 --> 00:04:40,150
+So being able to tune the performances and select the
+right algorithm to get to real time is extremely important.
+
+50
+00:04:40,150 --> 00:04:41,830
+Now you have the background.
+
+51
+00:04:41,830 --> 00:04:45,500
+Let's look at the basics of how you can write shader.
+
+52
+00:04:45,500 --> 00:04:51,030
+There's our pipeline again, and let's
+look at the Vertex Shader first.
+
+53
+00:04:51,030 --> 00:04:57,000
+I mentioned before that Vertex Shader is used
+to do your position and normal transformations,
+
+54
+00:04:57,000 --> 00:05:00,260
+you can also do a texture coordinate transformations.
+
+55
+00:05:00,260 --> 00:05:05,280
+This is typically where you would implement
+lighting and also skinning, as we will see later.
+
+56
+00:05:05,280 --> 00:05:07,750
+There are several inputs to your vertex shaders.
+
+57
+00:05:07,750 --> 00:05:11,300
+The first set of inputs are called attributes.
+
+58
+00:05:11,300 --> 00:05:16,700
+Attributes are defined for each vertex on your object.
+
+59
+00:05:16,700 --> 00:05:20,370
+So things that you would define as
+attributes are the position of those vertices,
+
+60
+00:05:20,370 --> 00:05:25,140
+extra coordinates for those vertices, normals, the color.
+
+61
+00:05:25,140 --> 00:05:27,020
+That's the first set of inputs.
+
+62
+00:05:27,020 --> 00:05:35,820
+The second set of inputs are called uniforms, and
+they are constant for all the vertices on your object.
+
+63
+00:05:35,820 --> 00:05:44,400
+So example of uniforms, your ModelViewProjectionMatrix
+that you use to go from object space into cube space,
+
+64
+00:05:44,400 --> 00:05:49,590
+ModelViewMatrix, the light position because your
+light is going to be constant at the same location
+
+65
+00:05:49,590 --> 00:05:52,470
+for all of your pixels -- all of your vertices.
+
+66
+00:05:52,470 --> 00:06:02,890
+And the outputs of the Vertex Shader are first and most
+importantly the final position of the vertex as well
+
+67
+00:06:02,890 --> 00:06:06,270
+as varyings that get passed to the Fragment Shader.
+
+68
+00:06:06,270 --> 00:06:13,590
+So example of varyings, your texture of
+coordinates, final color of your vertex, the normals,
+
+69
+00:06:13,590 --> 00:06:16,200
+if you need any Fragment Shader, so on so forth.
+
+70
+00:06:16,200 --> 00:06:20,130
+Next, let's look at the Fragment Shader.
+
+71
+00:06:20,130 --> 00:06:28,420
+So Fragment Shader is typically
+used to do mostly texture loading.
+
+72
+00:06:28,420 --> 00:06:33,090
+This is where for every pixel, you are going to
+get the right value of the texture that you want
+
+73
+00:06:33,090 --> 00:06:36,950
+to have -- you want to use for this fragment.
+
+74
+00:06:36,950 --> 00:06:39,180
+That's why you do your texture environment.
+
+75
+00:06:39,180 --> 00:06:49,440
+If you want to do some per pixel optimization like
+effects like fog, for example, that's where you do it.
+
+76
+00:06:49,440 --> 00:06:52,700
+Again, the Fragment Shader has several inputs.
+
+77
+00:06:52,700 --> 00:06:56,130
+It has both varyings and uniforms as inputs.
+
+78
+00:06:56,130 --> 00:07:01,790
+There is one pretty fine varying coming
+in, which is a fragment coordinate.
+
+79
+00:07:01,790 --> 00:07:04,870
+This come directly from the rasterization stage.
+
+80
+00:07:04,870 --> 00:07:09,800
+And they are sets of varyings that you define.
+
+81
+00:07:09,800 --> 00:07:17,800
+Example of such varyings are normals, colors,
+texture coordinates and they get interpreted
+
+82
+00:07:17,800 --> 00:07:24,290
+by the rasterization stage and passed from
+the Vertex Shader to the Fragment Shader.
+
+83
+00:07:24,290 --> 00:07:28,590
+The other sets of inputs are uniforms.
+
+84
+00:07:28,590 --> 00:07:35,260
+Again, uniforms are going to be constant
+for all of the fragments on your image.
+
+85
+00:07:35,260 --> 00:07:40,190
+Examples, if you do fog computation,
+this is where you have your fog factor.
+
+86
+00:07:40,190 --> 00:07:44,360
+Which texture you need, you want to
+load your textures from, and, of course,
+
+87
+00:07:44,360 --> 00:07:47,100
+the Fragment Shader is going to load the texture.
+
+88
+00:07:47,100 --> 00:07:54,550
+The Fragment Shader has one output which
+is the final color of your fragment.
+
+89
+00:07:54,550 --> 00:07:58,940
+So now you've seen the interface of
+those Fragments Shaders, Vertex Shaders.
+
+90
+00:07:58,940 --> 00:08:00,050
+How do you use them?
+
+91
+00:08:00,050 --> 00:08:05,320
+Well, you use the OpenGL API so that you
+can compile, link and use those shaders.
+
+92
+00:08:05,320 --> 00:08:09,290
+So let's start with the Fragment -- Vertex Shader.
+
+93
+00:08:09,290 --> 00:08:15,540
+The way you use that is you create the shader, you
+attach your source code, you compile that shader.
+
+94
+00:08:15,540 --> 00:08:18,460
+You use the same for all the Fragment Shader.
+
+95
+00:08:18,460 --> 00:08:20,520
+Now you have both compiled.
+
+96
+00:08:20,520 --> 00:08:26,530
+You can create your program, you attach those
+two compile shaders, you can link your program,
+
+97
+00:08:26,530 --> 00:08:31,030
+you do all of this in the initialization
+phase of your program.
+
+98
+00:08:31,030 --> 00:08:38,870
+The other thing in this initialization phase is
+querying the locations of your attributes and uniforms.
+
+99
+00:08:38,870 --> 00:08:46,000
+Then in the main loop of your game, you update
+-- you first say which program you want to use,
+
+100
+00:08:46,000 --> 00:08:52,960
+then you can update the values of those
+uniforms and attributes and you can draw.
+
+101
+00:08:52,960 --> 00:09:00,320
+That's how you quickly write and compile, link, use shaders.
+
+102
+00:09:00,320 --> 00:09:04,680
+Let's take a very simple example, yet very useful.
+
+103
+00:09:04,680 --> 00:09:06,820
+Texture mapping.
+
+104
+00:09:06,820 --> 00:09:09,000
+You probably all know what texture mapping is, right?
+
+105
+00:09:09,000 --> 00:09:11,230
+You start with the view of the world.
+
+106
+00:09:11,230 --> 00:09:13,570
+In this case, it's represented as a wire frame.
+
+107
+00:09:13,570 --> 00:09:23,250
+It's the Quest World here, one specific room of the
+Quest game, and we have a texture atlas that we use.
+
+108
+00:09:23,250 --> 00:09:32,110
+And the idea is to take a specific part of
+this texture atlas and map it onto our world.
+
+109
+00:09:32,110 --> 00:09:37,260
+So, in this case, we take a piece of the world,
+and we want to apply to the world in our model.
+
+110
+00:09:37,260 --> 00:09:39,160
+That's texture mapping.
+
+111
+00:09:39,160 --> 00:09:42,090
+That's how you can end up with a
+world that looks slightly more real.
+
+112
+00:09:42,090 --> 00:09:45,900
+How does that look in a shader?
+
+113
+00:09:45,900 --> 00:09:47,420
+Well, here is a Vertex Shader.
+
+114
+00:09:47,420 --> 00:09:51,270
+It's pretty much as simple as it gets.
+
+115
+00:09:51,270 --> 00:09:56,740
+It gets your attributes and uniforms as
+inputs, two attributes, in this case.
+
+116
+00:09:56,740 --> 00:09:59,490
+First, the position of each vertex, right?
+
+117
+00:09:59,490 --> 00:10:07,400
+The second, the texture coordinate for
+each of those vertices on your objects.
+
+118
+00:10:07,400 --> 00:10:10,460
+The next input is the uniform.
+
+119
+00:10:10,460 --> 00:10:17,140
+It's the ModelViewProjectionMatrix which is used to
+transform the position from object space into cube space.
+
+120
+00:10:17,140 --> 00:10:25,130
+And the output is going to be the final texture
+coordinate that you pass through your Vertex Shader.
+
+121
+00:10:25,130 --> 00:10:29,310
+There is a main function inside the Vertex Shader,
+
+122
+00:10:29,310 --> 00:10:33,640
+and that's a program that's going
+to apply to every single vertices.
+
+123
+00:10:33,640 --> 00:10:39,880
+First line is you do a matrix multiplication of your
+ModelViewProjectionMatrix by the original position
+
+124
+00:10:39,880 --> 00:10:44,410
+of your vertex, and you end up with
+the final position of the vertex.
+
+125
+00:10:44,410 --> 00:10:48,830
+And the second one is just you pass through
+the texture coordinate to the Fragment Shader.
+
+126
+00:10:48,830 --> 00:10:56,950
+On the Fragment Shader side, we got a uniform, which is
+which texture in it we want to load the texture from.
+
+127
+00:10:56,950 --> 00:11:01,540
+In this case, we just have one texture in it.
+
+128
+00:11:01,540 --> 00:11:06,150
+The texture coordinates that come from the
+Vertex Shader and have been interpreted
+
+129
+00:11:06,150 --> 00:11:09,770
+for all the points on the wall, in this case.
+
+130
+00:11:09,770 --> 00:11:16,260
+And in the main function of the Fragment Shader,
+we simply use the built-in function texture 2D
+
+131
+00:11:16,260 --> 00:11:22,070
+to load the texture for the specific texture of coordinates.
+
+132
+00:11:22,070 --> 00:11:25,020
+And that's how we end up with the final color of the vertex.
+
+133
+00:11:25,020 --> 00:11:31,830
+So you end up with a view of the world that
+kind of looks real but doesn't look that good.
+
+134
+00:11:31,830 --> 00:11:33,150
+That is a start.
+
+135
+00:11:33,150 --> 00:11:37,520
+The next step is before you want the
+add your character and animate it,
+
+136
+00:11:37,520 --> 00:11:40,300
+and you want to make this look good, make this look real.
+
+137
+00:11:40,300 --> 00:11:43,010
+So we are going to talk about these techniques now.
+
+138
+00:11:43,010 --> 00:11:50,490
+Mainly, we're going to talk about skinning
+for animating the character, lighting,
+
+139
+00:11:50,490 --> 00:11:55,250
+different ways of lighting, and finally, shadowing.
+
+140
+00:11:55,250 --> 00:11:58,420
+Let's start with skinning.
+
+141
+00:11:58,420 --> 00:12:03,750
+So skinning -- the idea of skinning
+is to model the deformation
+
+142
+00:12:03,750 --> 00:12:09,390
+of the skin based on the animation on a skeleton.
+
+143
+00:12:09,390 --> 00:12:16,250
+And the technique we are going to use here is
+called smooth skinning or linear blend skinning
+
+144
+00:12:16,250 --> 00:12:19,860
+because we use linear interpolation to do skinning.
+
+145
+00:12:19,860 --> 00:12:24,130
+It's a pretty simple technique,
+and yet, it looks pretty good.
+
+146
+00:12:24,130 --> 00:12:31,890
+So the way you do skinning is you start by a
+skeleton, which is a hierarchy of bones and joints,
+
+147
+00:12:31,890 --> 00:12:35,050
+right, each bone is connected with a joint.
+
+148
+00:12:35,050 --> 00:12:39,820
+And that's how you animate your
+character, you animate the skeleton.
+
+149
+00:12:39,820 --> 00:12:43,490
+That's the animation we use in this case.
+
+150
+00:12:43,490 --> 00:12:52,760
+The next step is to bind a skin mesh on top of
+the skeleton so it starts looking more real.
+
+151
+00:12:52,760 --> 00:13:02,440
+And for each of the vertices on the skin mesh, we
+are going to bind it to one or more bones or joints.
+
+152
+00:13:02,440 --> 00:13:06,610
+So let's look into the arm of our hero here.
+
+153
+00:13:06,610 --> 00:13:15,390
+You can see here the different vertices on
+this arm, and we are going to especially look
+
+154
+00:13:15,390 --> 00:13:21,220
+at one vertex, which is on the elbow, this vertex.
+
+155
+00:13:21,220 --> 00:13:28,150
+And it's bound to two bones; the
+upper arm and the lower arm.
+
+156
+00:13:28,150 --> 00:13:32,530
+And here, we represent it as being
+bound to the joint, not the bone itself.
+
+157
+00:13:32,530 --> 00:13:38,990
+And there are two definitions that we are going to put.
+
+158
+00:13:38,990 --> 00:13:41,310
+The first one is a definition of weight.
+
+159
+00:13:41,310 --> 00:13:45,820
+So weight represents the influence
+of a given bone or a given joint
+
+160
+00:13:45,820 --> 00:13:50,010
+on that vertex position, on that point on the skin.
+
+161
+00:13:50,010 --> 00:13:55,570
+So, in this case, we're on the elbow, which is right
+in the middle between the upper arm and the lower arm.
+
+162
+00:13:55,570 --> 00:14:00,890
+So the weights are just 0.5 for each bone.
+
+163
+00:14:00,890 --> 00:14:07,350
+The second definition is for skinning matrices.
+
+164
+00:14:07,350 --> 00:14:17,090
+And what the skinning matrix does is it combines the
+transformation of the bone, so the animation of the bone,
+
+165
+00:14:17,090 --> 00:14:24,130
+with the position of the vertex, position
+of the skin with respect to that bone.
+
+166
+00:14:24,130 --> 00:14:31,170
+So here, we move a little bit the lower arm and
+you can see we define two points; P1 and P2.
+
+167
+00:14:31,170 --> 00:14:37,230
+P1 corresponds to the position of the points,
+the position on the vertex on the skin
+
+168
+00:14:37,230 --> 00:14:39,810
+if it were only attached to the upper arm.
+
+169
+00:14:39,810 --> 00:14:42,510
+So, in this case, it hasn't moved.
+
+170
+00:14:42,510 --> 00:14:48,270
+P2 corresponds to the position of the skin
+if it were only attached to the lower arm.
+
+171
+00:14:48,270 --> 00:14:50,060
+And the way we get those two positions is
+
+172
+00:14:50,060 --> 00:14:55,770
+by simply multiplying the skinning matrix
+by the original position of the skin.
+
+173
+00:14:55,770 --> 00:14:59,180
+So we end up with two points; P1 and P2.
+
+174
+00:14:59,180 --> 00:15:04,990
+Next step is to get the final position
+so we can move the arm a little bit more,
+
+175
+00:15:04,990 --> 00:15:09,320
+and the next step is to get the final position of the skin.
+
+176
+00:15:09,320 --> 00:15:12,750
+And the way we do that is by a simple interpolation.
+
+177
+00:15:12,750 --> 00:15:22,010
+We multiply P1 and P2 by their respective weights,
+sum, and we end up with the final position of the skin.
+
+178
+00:15:22,010 --> 00:15:27,290
+That's how we animate the different points of the skin mesh.
+
+179
+00:15:27,290 --> 00:15:30,830
+So we apply that for all the vertices on the body.
+
+180
+00:15:30,830 --> 00:15:35,360
+Once we've done that, we can do our usual texture mapping.
+
+181
+00:15:35,360 --> 00:15:42,110
+And by animating the skeleton, the underlying
+skeleton, we can animate the whole character.
+
+182
+00:15:42,110 --> 00:15:45,630
+That's skinning; that's how skinning works.
+
+183
+00:15:46,770 --> 00:15:50,300
+How is it implemented in a shader?
+
+184
+00:15:50,300 --> 00:15:56,990
+Let's first look at this shader, which is what you
+would find if you look on the web for a skinning shader.
+
+185
+00:15:56,990 --> 00:15:59,250
+It looks pretty complex, right?
+
+186
+00:15:59,250 --> 00:16:03,130
+You have four loop there, you get a branch.
+
+187
+00:16:03,130 --> 00:16:10,210
+We can probably do better, especially
+from better devices, right?
+
+188
+00:16:10,210 --> 00:16:11,680
+How about that?
+
+189
+00:16:11,680 --> 00:16:16,170
+Let's assume that every vertex, every
+point of the skin is only attached,
+
+190
+00:16:16,170 --> 00:16:19,420
+is always attached and only attached to two bones.
+
+191
+00:16:19,420 --> 00:16:25,110
+This way we don't -- we can unroll the loop and we
+don't need to check whether or not a given bone --
+
+192
+00:16:25,110 --> 00:16:27,830
+a given vertex is attached to a bone or not.
+
+193
+00:16:27,830 --> 00:16:32,020
+We end up with this code that's pretty simple,
+and that looks like what we had in the algorithm.
+
+194
+00:16:32,020 --> 00:16:32,950
+So let's now go through it quickly.
+
+195
+00:16:32,950 --> 00:16:42,890
+First we have a set of attributes, right, the
+position of each vertex on the skin, then the --
+
+196
+00:16:42,890 --> 00:16:50,570
+which joints are attached to that specific
+vertex, right, a joint 1, a joint 2,
+
+197
+00:16:50,570 --> 00:16:55,610
+then what are the respective weights for those two joints?
+
+198
+00:16:55,610 --> 00:16:56,910
+That's our attributes.
+
+199
+00:16:56,910 --> 00:17:00,850
+Then the uniforms are the skinning
+matrices for each of those joints,
+
+200
+00:17:00,850 --> 00:17:05,450
+so they correspond to the animation of the skeleton.
+
+201
+00:17:05,450 --> 00:17:09,290
+And our usual ModelViewProjectionMatrix.
+
+202
+00:17:09,290 --> 00:17:12,800
+The main program for the Vertex Shader is --
+
+203
+00:17:12,800 --> 00:17:17,280
+well, you do your matrix multiplications
+of the skinning matrices by the positions.
+
+204
+00:17:17,280 --> 00:17:25,580
+You end up with the two points I mentioned before, right, P1
+and P2, and then we simply multiply P1 and P2 by the weights
+
+205
+00:17:25,580 --> 00:17:32,660
+of those two positions of the -- that corresponds to
+those two bones and end up with the final position.
+
+206
+00:17:32,660 --> 00:17:44,990
+Then we do our ModelViewProjectionMatrix to go into iSpace
+and we end up with the final position of the vertex.
+
+207
+00:17:44,990 --> 00:17:49,670
+We're going to do texture mapping
+here, so we pass, as we did before,
+
+208
+00:17:49,670 --> 00:17:52,440
+the texture of coordinates to the Fragment Shader.
+
+209
+00:17:52,440 --> 00:17:58,360
+This case, the Fragment Shader is the same as the
+one we saw before, so it's just doing a texture loop.
+
+210
+00:17:58,360 --> 00:18:03,190
+That's how we implement skinning, and it's pretty efficient.
+
+211
+00:18:03,190 --> 00:18:07,150
+So here I have my iPhone and it starts my application.
+
+212
+00:18:07,150 --> 00:18:13,830
+We have two characters here that
+are animating and are being skinned,
+
+213
+00:18:13,830 --> 00:18:18,290
+so you can see they look like they
+have kind of a real animation.
+
+214
+00:18:18,290 --> 00:18:24,520
+And you may think it walks a little bit funny because
+we actually use the animation and in the Quest game,
+
+215
+00:18:24,520 --> 00:18:27,870
+it's carrying a big sword, so it's pretty heavy.
+
+216
+00:18:27,870 --> 00:18:32,770
+That's why the arm is always at the same location.
+
+217
+00:18:32,770 --> 00:18:37,070
+Now, I talked about performance and
+performance being very important.
+
+218
+00:18:37,070 --> 00:18:40,650
+Let's bring up instruments and see how we are doing.
+
+219
+00:18:40,650 --> 00:18:43,590
+We can switch to the demo machine.
+
+220
+00:18:43,590 --> 00:18:45,870
+All right.
+
+221
+00:18:45,870 --> 00:18:52,110
+So I'm bringing up instruments, and I'm going
+to -- since I'm doing an OpenGL ES application,
+
+222
+00:18:52,110 --> 00:18:56,710
+I'm going to set up the OpenGL instruments.
+
+223
+00:18:56,710 --> 00:18:59,260
+Today, I'm not very interested in getting the samples.
+
+224
+00:18:59,260 --> 00:19:09,590
+I'm mostly interested by what's happening on the GPU and
+especially, I want to look at the utilization inside my GPU.
+
+225
+00:19:09,590 --> 00:19:11,790
+So there are two interesting statistics we use here.
+
+226
+00:19:11,790 --> 00:19:20,340
+The first one is the render utilization and that's
+includes how much time you spend in your Fragment --
+
+227
+00:19:20,340 --> 00:19:22,780
+the time that's spent in your Fragment Shader.
+
+228
+00:19:22,780 --> 00:19:30,820
+Title utilization is the other side and includes the time
+-- important time that you spend in your Vertex Shader.
+
+229
+00:19:30,820 --> 00:19:36,440
+So if you want to minimize what's going
+on in your GPU, try to minimize these two.
+
+230
+00:19:36,440 --> 00:19:40,300
+And then we just want to make sure we are at 65 per second.
+
+231
+00:19:40,300 --> 00:19:42,720
+Let's mix in some bigger too.
+
+232
+00:19:42,720 --> 00:19:47,500
+And we have our app running.
+
+233
+00:19:47,500 --> 00:19:53,090
+We are going to attach to it and see how it's performing.
+
+234
+00:19:53,090 --> 00:19:58,840
+And so we can see that title utilization here is 17, 18%.
+
+235
+00:19:58,840 --> 00:20:03,550
+And in this case, I'm using the textbook
+implementation that I showed you first.
+
+236
+00:20:03,550 --> 00:20:08,390
+Let's switch to the other implementation,
+the optimize implementation that we have.
+
+237
+00:20:08,390 --> 00:20:19,310
+So you can see right away, right, the title
+utilization goes down from about 17, 18% to now 12, 11%.
+
+238
+00:20:19,310 --> 00:20:24,850
+You know, for just a few lines of
+code changes, that's 30% improvement.
+
+239
+00:20:24,850 --> 00:20:30,490
+And you may say, oh, well, you know, 18%, that's
+pretty good all right because I'm not using 100%.
+
+240
+00:20:30,490 --> 00:20:34,820
+That was just for two characters, and there was
+nothing going on in the world around it, right?
+
+241
+00:20:34,820 --> 00:20:41,550
+So whatever you can save on that, it's more cycles that
+you can use to do better effects on your characters
+
+242
+00:20:41,550 --> 00:20:45,330
+and you have more vertices and better
+effects you can do on your work.
+
+243
+00:20:45,330 --> 00:20:50,040
+So 30% is important in this case.
+
+244
+00:20:50,040 --> 00:20:54,190
+So that's what I wanted to show
+you and tell you about skinning.
+
+245
+00:20:54,190 --> 00:21:03,730
+Next, Michael is going to tell you everything about
+lighting and how to make all this more real using shadows.
+
+246
+00:21:03,730 --> 00:21:04,510
+Michael.
+
+247
+00:21:04,510 --> 00:21:08,330
+[ Applause ]
+
+248
+00:21:08,330 --> 00:21:09,670
+>> Michael Swift: Thank you, Luc.
+
+249
+00:21:09,670 --> 00:21:14,700
+So as Luc mentioned, my name is Michael
+Swift, and I get to talk to you about lighting
+
+250
+00:21:14,700 --> 00:21:17,600
+and shadowing for the remainder of this session.
+
+251
+00:21:17,600 --> 00:21:20,610
+So let's start off with lighting.
+
+252
+00:21:20,610 --> 00:21:27,730
+So what you see up here is our unlit world, just
+static and plain, just a simple texture fetch
+
+253
+00:21:27,730 --> 00:21:34,640
+that Luc showed you earlier, and I want to use this as
+our starting point and turn it into something that looks
+
+254
+00:21:34,640 --> 00:21:41,630
+like this, which is a fully lit environment with
+a shadow character which will animate and skin
+
+255
+00:21:41,630 --> 00:21:46,450
+and have all the lighting effects
+applied to him as well as the world.
+
+256
+00:21:46,450 --> 00:21:48,220
+So how do we get there?
+
+257
+00:21:48,220 --> 00:21:51,620
+Well, it's important to know that
+light contribution is determined
+
+258
+00:21:51,620 --> 00:21:55,820
+by three main factors, the first of which is distance.
+
+259
+00:21:55,820 --> 00:22:00,570
+And as the character gets further away from
+the light, there's less light contribution.
+
+260
+00:22:00,570 --> 00:22:02,540
+The second is direction.
+
+261
+00:22:02,540 --> 00:22:09,090
+So the light is going to be pointed at the
+geometry and as long as the light is --
+
+262
+00:22:09,090 --> 00:22:13,140
+or as long as the geometry is facing the
+light, it will have full light contribution.
+
+263
+00:22:13,140 --> 00:22:20,690
+And as it is facing away, it will have less
+and less of that light applied to the vertex.
+
+264
+00:22:20,690 --> 00:22:23,120
+And the third part is actually occlusion.
+
+265
+00:22:23,120 --> 00:22:26,890
+So if there's an object in between
+the light and the character,
+
+266
+00:22:26,890 --> 00:22:30,630
+then the character will not have any light applied to them.
+
+267
+00:22:30,630 --> 00:22:41,350
+So those are the three factors that determine how
+much light is applied to our hero in this scenario.
+
+268
+00:22:41,350 --> 00:22:47,530
+So to help make this make more sense, we're
+actually going to break down our world
+
+269
+00:22:47,530 --> 00:22:50,730
+and our character into two types of content.
+
+270
+00:22:50,730 --> 00:22:55,480
+We have static content, which is our
+environment, and we have dynamic content,
+
+271
+00:22:55,480 --> 00:23:00,070
+which is our skinned hero who's
+moving around the environment.
+
+272
+00:23:00,070 --> 00:23:04,180
+So, taking that as a baseline, we're going
+to start off with the OpenGL light model.
+
+273
+00:23:04,180 --> 00:23:12,390
+So many of you have used OpenGL ES 1.1,
+and this is roughly comparable to that.
+
+274
+00:23:12,390 --> 00:23:14,320
+And it accounts for distance.
+
+275
+00:23:14,320 --> 00:23:22,640
+This is the linear light attenuation modes
+and factors and also accounts for direction.
+
+276
+00:23:22,640 --> 00:23:28,870
+And this is -- we'll use the light vector, and
+the geometry normals to compute a dot product.
+
+277
+00:23:28,870 --> 00:23:32,380
+And the nice thing about this is it works for all lights.
+
+278
+00:23:32,380 --> 00:23:34,500
+So you can have static lights, dynamic lights.
+
+279
+00:23:34,500 --> 00:23:36,050
+And it works for all content.
+
+280
+00:23:36,050 --> 00:23:39,670
+It'll work for both dynamic content and static content.
+
+281
+00:23:39,670 --> 00:23:43,270
+So let's take a look at how that is in the world.
+
+282
+00:23:43,270 --> 00:23:49,520
+And you can see it's a visual improvement
+over that simple unlit environment.
+
+283
+00:23:49,520 --> 00:23:52,600
+And so how do we actually do this?
+
+284
+00:23:52,600 --> 00:23:55,660
+Well, we have our Vertex Shader,
+and it has a series of inputs.
+
+285
+00:23:55,660 --> 00:24:00,580
+We have our normal and we have our vertex position.
+
+286
+00:24:00,580 --> 00:24:03,800
+And these are passed in per vertex.
+
+287
+00:24:03,800 --> 00:24:05,690
+And then we also have a series of uniforms.
+
+288
+00:24:05,690 --> 00:24:12,850
+We have our light location, we have our light color, we
+have the attenuation falloff factor that we want to use.
+
+289
+00:24:12,850 --> 00:24:16,220
+In this case, it is the linear attenuation factor.
+
+290
+00:24:16,220 --> 00:24:19,510
+And lastly, we have our ModelViewProjectionMatrix.
+
+291
+00:24:19,510 --> 00:24:24,760
+And the result of all of this is
+going to be a light color per vertex.
+
+292
+00:24:24,760 --> 00:24:28,680
+So let's take a closer look at the main body of the code.
+
+293
+00:24:28,680 --> 00:24:38,430
+So the first thing that happens is we need to transform
+our incoming geometry to create the vertex in clip space.
+
+294
+00:24:38,430 --> 00:24:47,710
+And the second part is the linear attenuation part,
+and this accounts for the distance contribution
+
+295
+00:24:47,710 --> 00:24:52,010
+that I was talking about in the first few slides.
+
+296
+00:24:52,010 --> 00:24:57,410
+And so we use our light location and
+the incoming light -- oh, sorry --
+
+297
+00:24:57,410 --> 00:25:05,180
+the incoming vertex location to compute a length
+and then use that to figure out how much we want
+
+298
+00:25:05,180 --> 00:25:11,500
+that light's contribution to fall off as it
+gets further and further away from the light.
+
+299
+00:25:11,500 --> 00:25:14,580
+And also, we'll create a direction factor.
+
+300
+00:25:14,580 --> 00:25:22,310
+So we mentioned earlier that we're going to use a dot
+product to vary the amount of light that's being applied
+
+301
+00:25:22,310 --> 00:25:27,930
+for each vertex depending on whether or
+not it's facing the light or facing away.
+
+302
+00:25:27,930 --> 00:25:33,800
+And so here, since we need the vector, which was
+originally in world space to actually be normalized
+
+303
+00:25:33,800 --> 00:25:37,260
+so we can have a same result from our dot product.
+
+304
+00:25:37,260 --> 00:25:41,050
+And we assume our normal is already in unit space as well.
+
+305
+00:25:41,050 --> 00:25:48,240
+And so we'll create the dot product
+and clamp that to the range 0 to 1.
+
+306
+00:25:48,240 --> 00:25:54,660
+And then finally, we will create our final color by
+using the original light color, the direction factor
+
+307
+00:25:54,660 --> 00:25:59,280
+and the attenuation factor all multiplied together.
+
+308
+00:25:59,280 --> 00:26:02,740
+So why would you want to use this?
+
+309
+00:26:02,740 --> 00:26:04,600
+Well, it's fairly straightforward.
+
+310
+00:26:04,600 --> 00:26:12,220
+It's very similar to what you are already using,
+OpenGL ES 1.1, but it is computationally expensive.
+
+311
+00:26:12,220 --> 00:26:17,270
+There's a lot of math, and if you want to implement
+the full light model, which is ambient color
+
+312
+00:26:17,270 --> 00:26:21,790
+and specular color, it takes more and more and cycles.
+
+313
+00:26:21,790 --> 00:26:28,840
+And you have to compute this for
+each frame, so it's highly expensive.
+
+314
+00:26:28,840 --> 00:26:35,620
+But it is an improvement over having no lighting,
+and it does account for both direction and distance.
+
+315
+00:26:35,620 --> 00:26:38,750
+But it has no way of knowing about
+other objects in the world,
+
+316
+00:26:38,750 --> 00:26:44,790
+and so there's no light contribution
+for geometry that is occluded.
+
+317
+00:26:44,790 --> 00:26:49,130
+And that brings us to prebaked content.
+
+318
+00:26:49,130 --> 00:26:57,490
+So what's real important here is we can simplify our scene
+to deal with just the static lights and a static geometry,
+
+319
+00:26:57,490 --> 00:27:04,790
+and this allows us to precompute the light
+contributions for the world in an offline pass.
+
+320
+00:27:04,790 --> 00:27:09,690
+And this makes a lot of sense because all of
+that computation we did in the Vertex Shader
+
+321
+00:27:09,690 --> 00:27:14,520
+and in the Fragment Shader, we're actually going to
+hoist out, and it'll make things run a lot faster.
+
+322
+00:27:14,520 --> 00:27:21,180
+And so you can create these lightmaps, and you
+can atlas them as part as an optimization phase
+
+323
+00:27:21,180 --> 00:27:24,520
+to make your game and your content run really fast.
+
+324
+00:27:24,520 --> 00:27:30,030
+And it accounts for all of the distance
+and direction and occlusion information
+
+325
+00:27:30,030 --> 00:27:33,790
+of the static lights and the static geometry.
+
+326
+00:27:33,790 --> 00:27:36,210
+So, let's look at the first class of these.
+
+327
+00:27:36,210 --> 00:27:39,540
+And specifically, it's the per-object lightmaps.
+
+328
+00:27:39,540 --> 00:27:43,710
+These are only for static geometry.
+
+329
+00:27:43,710 --> 00:27:51,340
+So what we actually do is in your 3D modeling
+software or your level editor environment,
+
+330
+00:27:51,340 --> 00:27:55,630
+you actually use like a radiosity, so
+it's like a nice soft shadowing algorithm
+
+331
+00:27:55,630 --> 00:27:59,820
+or a direct illumination algorithm, so some hard shadows.
+
+332
+00:27:59,820 --> 00:28:05,940
+And then prebake all this light contribution and create
+an atlas like you see on the lower left-hand side
+
+333
+00:28:05,940 --> 00:28:09,260
+which we can then use to draw the entire world.
+
+334
+00:28:09,260 --> 00:28:17,660
+And on the lower right, you can see that atlas being
+applied to the first room in the Quest environment.
+
+335
+00:28:17,660 --> 00:28:19,330
+So let's take a closer look at that.
+
+336
+00:28:19,330 --> 00:28:25,030
+So we have our lightmap which is -- which was
+created for each piece of geometry in the world,
+
+337
+00:28:25,030 --> 00:28:32,920
+and then we can multiply that against our original diffused
+texture, and we get something that looks like this.
+
+338
+00:28:32,920 --> 00:28:41,350
+So it's a lot more interesting than what we got out of the
+OpenGL ES light model that you saw on the first few slides.
+
+339
+00:28:41,350 --> 00:28:43,490
+So how do we actually make this work?
+
+340
+00:28:43,490 --> 00:28:47,380
+Well, the only thing that's different
+here is the Fragment Shader.
+
+341
+00:28:47,380 --> 00:28:51,080
+The Vertex Shader is just like
+the ones we've showed you earlier
+
+342
+00:28:51,080 --> 00:28:57,430
+which is just passing then the texture
+coordinate and transforming the incoming geometry.
+
+343
+00:28:57,430 --> 00:29:00,540
+So in the Fragment Shader, we have samplers -- oh --
+
+344
+00:29:00,540 --> 00:29:06,650
+we have two samplers; one for the lightmap
+and one for the diffused texture map.
+
+345
+00:29:06,650 --> 00:29:12,310
+And we have two sets of texture coordinates
+because the -- they're atlased separately.
+
+346
+00:29:12,310 --> 00:29:17,060
+And we do the two sample operations
+and then multiply them together.
+
+347
+00:29:17,060 --> 00:29:22,440
+So very simple, very straight forward,
+very efficient on this hardware.
+
+348
+00:29:22,440 --> 00:29:28,690
+So what I've been talking about is working
+with static lights and static geometry.
+
+349
+00:29:28,690 --> 00:29:32,680
+And now we're going to take a look at
+how you can deal with static lights
+
+350
+00:29:32,680 --> 00:29:36,090
+with dynamic geometry because it's a little bit different.
+
+351
+00:29:36,090 --> 00:29:41,970
+You can't know during your offline phase
+where your dynamic geometry is going to be
+
+352
+00:29:41,970 --> 00:29:45,640
+and how much light contribution it will ultimately have.
+
+353
+00:29:45,640 --> 00:29:51,940
+And so you cannot account for direction because you
+don't know if the content that's moving is going
+
+354
+00:29:51,940 --> 00:29:57,210
+to face the light, face away from the light or
+be somewhere else or be animating or skinned.
+
+355
+00:29:57,210 --> 00:29:58,320
+You have no idea.
+
+356
+00:29:58,320 --> 00:30:01,900
+So you can't use those per-object lightmaps.
+
+357
+00:30:01,900 --> 00:30:08,770
+Instead, you get to approximate
+it by using world space lightmaps.
+
+358
+00:30:08,770 --> 00:30:14,310
+And for our Quest example, we actually
+are doing this all in 2.5D.
+
+359
+00:30:14,310 --> 00:30:20,760
+The game itself was constructed such that we could
+use just a single top-down lightmap that is --
+
+360
+00:30:20,760 --> 00:30:25,520
+that has all the light contribution
+and -- I'll move it to the side --
+
+361
+00:30:25,520 --> 00:30:30,810
+and apply that to the actual character
+as he moves around the environment.
+
+362
+00:30:30,810 --> 00:30:34,300
+And we do this by having a reference point.
+
+363
+00:30:34,300 --> 00:30:40,790
+We need to know how to get our X, Y,
+Zs into UV texture coordinate space.
+
+364
+00:30:40,790 --> 00:30:44,370
+And by having this reference point,
+we can actually make that possible.
+
+365
+00:30:44,370 --> 00:30:48,450
+So we'll take our character, and
+we'll transform him or flatten him
+
+366
+00:30:48,450 --> 00:30:52,420
+down to a specific part of the world as he moves around.
+
+367
+00:30:52,420 --> 00:30:56,740
+And so here are two screen shots.
+
+368
+00:30:56,740 --> 00:30:58,740
+Let's zoom in on the one on the left.
+
+369
+00:30:58,740 --> 00:31:05,760
+And as you can see, on the left-hand side of the
+hero, he's lit with a nice, bright, white light.
+
+370
+00:31:05,760 --> 00:31:08,640
+There's less light contribution on his right-hand side.
+
+371
+00:31:08,640 --> 00:31:16,660
+And then on the second image, the hero is actually
+in front of it of a grate and so the geometry that is
+
+372
+00:31:16,660 --> 00:31:23,580
+of the grate itself is hiding the red light that's behind
+the grate, so you have him lit with the dark red on top
+
+373
+00:31:23,580 --> 00:31:28,540
+and on bottom, but there's less
+light contribution in the middle.
+
+374
+00:31:28,540 --> 00:31:31,190
+So looking at the shaders themselves.
+
+375
+00:31:31,190 --> 00:31:35,220
+So we're going to start with the skinning
+shader that Luc showed you earlier,
+
+376
+00:31:35,220 --> 00:31:38,550
+and we're going to add in a couple of new pieces.
+
+377
+00:31:38,550 --> 00:31:46,230
+So, as I mentioned before, what we're doing is we're
+transforming our X, Y and Zs into the UV coordinate space,
+
+378
+00:31:46,230 --> 00:31:50,160
+and we can do that using a simple matrix multiplication.
+
+379
+00:31:50,160 --> 00:31:56,660
+And so, our new input is a lightmap projection matrix,
+
+380
+00:31:56,660 --> 00:32:01,330
+and then we're going to create a
+set of lightmap UVs as the output.
+
+381
+00:32:01,330 --> 00:32:09,170
+And so this is one extra line of code, which is
+simply the matrix multiplication of those two values,
+
+382
+00:32:09,170 --> 00:32:15,900
+of the matrix with the postskinned location of the geometry.
+
+383
+00:32:15,900 --> 00:32:17,600
+So these are great.
+
+384
+00:32:17,600 --> 00:32:19,380
+These work really fast.
+
+385
+00:32:19,380 --> 00:32:21,180
+You only need one top-down lightmap.
+
+386
+00:32:21,180 --> 00:32:24,960
+It's very straightforward, and
+you don't have to add much code.
+
+387
+00:32:24,960 --> 00:32:32,390
+However, this does not handle the direction contribution
+as I mentioned in the first couple of slides of this.
+
+388
+00:32:32,390 --> 00:32:35,710
+And so you can get some weird artifacts.
+
+389
+00:32:35,710 --> 00:32:39,370
+So, specifically, we have our hero,
+he's standing on top of the grate,
+
+390
+00:32:39,370 --> 00:32:42,930
+and there's actually a light underneath the grate.
+
+391
+00:32:42,930 --> 00:32:51,000
+And so you can see the striated, dark and light shadows on
+top of the character, and that's not what you really want.
+
+392
+00:32:51,000 --> 00:32:54,130
+You want something that's actually correct.
+
+393
+00:32:54,130 --> 00:32:56,560
+So how do we make that happen?
+
+394
+00:32:56,560 --> 00:33:03,300
+Well, we talked earlier about the OpenGL ES lighting
+model, and we're actually going to use part of that.
+
+395
+00:33:03,300 --> 00:33:10,720
+We're going to use that -- the normal and the light
+vector and this dot product to figure out whether
+
+396
+00:33:10,720 --> 00:33:15,200
+or not the character is facing that
+light or facing away from that light,
+
+397
+00:33:15,200 --> 00:33:21,780
+and then we're going to still use these world
+space lightmaps for each one of the lights.
+
+398
+00:33:21,780 --> 00:33:26,640
+But the difference here is instead of just a single world
+space lightmap, we're going to have a whole slew of them,
+
+399
+00:33:26,640 --> 00:33:31,300
+and you're going to change through
+them as you move in your environment.
+
+400
+00:33:31,300 --> 00:33:34,710
+And then it's the same straightforward
+process you saw earlier.
+
+401
+00:33:34,710 --> 00:33:37,340
+We're going to multiply the two of them together.
+
+402
+00:33:37,340 --> 00:33:39,670
+So, how does this actually look?
+
+403
+00:33:39,670 --> 00:33:42,910
+So let's first take a look at the lightmaps themselves.
+
+404
+00:33:42,910 --> 00:33:47,340
+And so we have our first group -- our first
+light, second light and the third light.
+
+405
+00:33:47,340 --> 00:33:54,880
+And so we're going to constrain our code to what would
+just be three lights, at least in the first room,
+
+406
+00:33:54,880 --> 00:34:01,750
+so we can keep the greatest contribution
+as the character moves around the world.
+
+407
+00:34:01,750 --> 00:34:05,150
+And the results of those three you can see here.
+
+408
+00:34:05,150 --> 00:34:13,490
+So the first light creates shadows on the right-hand side
+of the character, and the second light will create shadows
+
+409
+00:34:13,490 --> 00:34:23,170
+on the left-hand side of the character, and then finally,
+the third light, which is actually behind the character
+
+410
+00:34:23,170 --> 00:34:29,900
+and higher up, will have a small amount of light
+contribution on the shoulders and the head.
+
+411
+00:34:29,900 --> 00:34:34,050
+So once you put this altogether, you
+get something that looks like this.
+
+412
+00:34:34,050 --> 00:34:37,370
+And it's actually fairly interesting.
+
+413
+00:34:37,370 --> 00:34:40,990
+We're going to go into a demo in a few
+minutes and actually see this in action.
+
+414
+00:34:40,990 --> 00:34:44,680
+It's a lot more nuanced than what you see here.
+
+415
+00:34:44,680 --> 00:34:46,040
+So how do we make this happen?
+
+416
+00:34:46,040 --> 00:34:50,360
+Well, we're going to start out with
+our Vertex Shader just like before,
+
+417
+00:34:50,360 --> 00:34:54,680
+and it's slightly larger than you would like, probably.
+
+418
+00:34:54,680 --> 00:34:56,840
+But there we go.
+
+419
+00:34:56,840 --> 00:34:59,950
+So we're start off with our skinning
+part that we mentioned earlier.
+
+420
+00:34:59,950 --> 00:35:07,240
+And the next part was that lightmap UVs
+from world space X, Y, Z transformation.
+
+421
+00:35:07,240 --> 00:35:15,090
+And what's new is just like skinning the geometry
+locations, we also need to skin the normals
+
+422
+00:35:15,090 --> 00:35:21,800
+because as the character animates, we need the make
+sure the normals are also appropriately changed
+
+423
+00:35:21,800 --> 00:35:24,890
+as the animation happens.
+
+424
+00:35:24,890 --> 00:35:32,130
+So same process and what's different
+here is the normals are transformed,
+
+425
+00:35:32,130 --> 00:35:37,680
+not by the ModelViewProjectionMatrix,
+but by just the model view matrix.
+
+426
+00:35:37,680 --> 00:35:41,760
+And then we're actually going to do
+that dot product we mentioned earlier.
+
+427
+00:35:41,760 --> 00:35:48,380
+So for each one of the lights, we have three lights,
+we're going to create the light vector and then dot
+
+428
+00:35:48,380 --> 00:35:52,020
+that light vector, and we're packing here in the first
+
+429
+00:35:52,020 --> 00:35:58,790
+or X part of the vec3 varying light
+factor, the second and then the third.
+
+430
+00:35:58,790 --> 00:36:03,880
+So this is how we put in each of the
+three light contributions and make sure
+
+431
+00:36:03,880 --> 00:36:08,900
+that we can subsequently read them in the Fragment
+Shader, which we're going to jump to next.
+
+432
+00:36:08,900 --> 00:36:16,050
+So, the Fragment Shader has the original diffused texture
+and our three lightmap textures that we talked about
+
+433
+00:36:16,050 --> 00:36:27,550
+and has our lightmap UVs, our diffuse UVs and it has
+this new light factor into which we packed the N.L test.
+
+434
+00:36:27,550 --> 00:36:32,240
+And we're just going to sum all
+those lights contributions together.
+
+435
+00:36:32,240 --> 00:36:36,500
+We're going to do a texture fetch and
+then multiply it by the light factor,
+
+436
+00:36:36,500 --> 00:36:40,430
+texture fetch the diffuse color,
+and lastly, multiply it all.
+
+437
+00:36:40,430 --> 00:36:43,770
+So that creates the final result.
+
+438
+00:36:43,770 --> 00:36:51,550
+So, what's interesting about this is this is a lot more
+work, and this will solve those artifacts we talked
+
+439
+00:36:51,550 --> 00:36:56,050
+about earlier, but they could also be -- those
+same artifacts could be solved by some tricks
+
+440
+00:36:56,050 --> 00:37:01,090
+and things while you're exporting
+your lights and your content.
+
+441
+00:37:01,090 --> 00:37:07,580
+And for a game like Quest, they chose to modify their
+assets rather than implement a more complete algorithm
+
+442
+00:37:07,580 --> 00:37:11,080
+like this because there is an increased cost.
+
+443
+00:37:11,080 --> 00:37:17,610
+And as a result, this kind of algorithm is more suited
+for a first person shooter where you're really in close
+
+444
+00:37:17,610 --> 00:37:26,140
+and can see all the various light changes on
+the character as he moves and animates and dies
+
+445
+00:37:26,140 --> 00:37:28,780
+and falls over and all those kind of fun stuff.
+
+446
+00:37:28,780 --> 00:37:35,490
+So, this gives you a really nice increase in quality, but
+it may be really subtle based on where your camera is.
+
+447
+00:37:35,490 --> 00:37:39,690
+And so you might -- you need to do some tradeoffs
+to figure out which algorithms are appropriate
+
+448
+00:37:39,690 --> 00:37:43,190
+for the kind of content that you're working on.
+
+449
+00:37:43,190 --> 00:37:49,750
+But the advantage of it is it will fully
+account for your distance, your direction
+
+450
+00:37:49,750 --> 00:37:53,360
+and your occlusion information of the static geometry.
+
+451
+00:37:53,360 --> 00:37:55,840
+So let's hop into a demo.
+
+452
+00:37:55,840 --> 00:37:57,950
+There's the skin you saw earlier.
+
+453
+00:37:57,950 --> 00:37:58,750
+There is the optimized skinning.
+
+454
+00:37:58,750 --> 00:38:01,340
+As you can see, there's no difference.
+
+455
+00:38:01,340 --> 00:38:04,930
+And so here we have our character
+with the OpenGL light model,
+
+456
+00:38:04,930 --> 00:38:09,970
+and it's running on a nice fluid
+65ths, nice and smooth, as you can see.
+
+457
+00:38:09,970 --> 00:38:11,060
+Let's zoom back in.
+
+458
+00:38:11,060 --> 00:38:14,620
+And you can see the character has a little
+bit of change of lighting as he moves around,
+
+459
+00:38:14,620 --> 00:38:19,360
+but it's fairly straightforward and kind of plain.
+
+460
+00:38:19,360 --> 00:38:24,420
+And this is what you can do right now in OpenGL ES 1.1.
+
+461
+00:38:24,420 --> 00:38:28,090
+And so we're actually showing the prebaked world lighting.
+
+462
+00:38:28,090 --> 00:38:33,700
+And you get a lot more nuanced colors and shadows
+and you can -- it actually runs a lot faster.
+
+463
+00:38:33,700 --> 00:38:42,310
+If we were to look at instruments, the utilization
+is probably about a third of that previous frame.
+
+464
+00:38:42,310 --> 00:38:45,730
+And so as you can see, as the character moves around,
+
+465
+00:38:45,730 --> 00:38:49,100
+there's different moves amounts of
+light being applied to the character.
+
+466
+00:38:49,100 --> 00:38:53,290
+It would be most noticeable as he goes
+on the right-hand side of the screen.
+
+467
+00:38:53,290 --> 00:38:57,600
+So this is just the single top-down
+lightmap, and its looks pretty good.
+
+468
+00:38:57,600 --> 00:39:00,510
+So let's jump back to the main room with the same lighting.
+
+469
+00:39:00,510 --> 00:39:03,560
+And it's kind of interesting; it's not great.
+
+470
+00:39:03,560 --> 00:39:10,580
+The interesting part about this screen, though, is that
+the grate is exactly in the center of those three lines,
+
+471
+00:39:10,580 --> 00:39:13,990
+so it kind of has a very even light contribution.
+
+472
+00:39:13,990 --> 00:39:19,210
+But when we add the direction test
+and use those per-light lightmaps,
+
+473
+00:39:19,210 --> 00:39:26,040
+we get a much more nuanced kind of lighting effect.
+
+474
+00:39:26,040 --> 00:39:29,730
+As you can see, there's different parts of him
+that get darker and brighter as he moves around
+
+475
+00:39:29,730 --> 00:39:35,070
+and just a lot more interesting effects, and
+it becomes more noticeable as you're zoomed in.
+
+476
+00:39:35,070 --> 00:39:41,560
+If you're zoomed all the way out, you can
+kind of tell, but it's not -- it doesn't --
+
+477
+00:39:41,560 --> 00:39:46,550
+not quite as different from the
+previous single top-down lightmap.
+
+478
+00:39:46,550 --> 00:39:51,180
+So in summary, there's a whole bunch of
+choices of what you can do with lighting.
+
+479
+00:39:51,180 --> 00:39:57,370
+There's the OpenGL light model that you saw which
+works for static lights, dynamics lights and static
+
+480
+00:39:57,370 --> 00:40:06,220
+and dynamic geometry, but it's kind of expensive, and
+it's hard to make it run really efficiently on the GPU
+
+481
+00:40:06,220 --> 00:40:11,720
+and also these other methods I just
+showed you actually look nicer.
+
+482
+00:40:11,720 --> 00:40:18,660
+And so there's the per-object lightmaps that we mentioned
+which is solely for static lights and static geometry.
+
+483
+00:40:18,660 --> 00:40:26,760
+And then you have these tradeoffs of performance versus
+quality for using these top-down lightmaps or any other kind
+
+484
+00:40:26,760 --> 00:40:30,860
+of world space lightmaps based on your content.
+
+485
+00:40:30,860 --> 00:40:36,760
+And that brings us to shadowing because thus far,
+we've talked about how do you deal with static lights
+
+486
+00:40:36,760 --> 00:40:40,200
+and their light contribution on dynamic geometry.
+
+487
+00:40:40,200 --> 00:40:48,850
+Now we want to talk about how you do you handle the dynamic
+geometry actually shadowing both the environment and itself?
+
+488
+00:40:48,850 --> 00:40:52,250
+And we're going to focus today on shadow volumes.
+
+489
+00:40:52,250 --> 00:40:58,070
+And we're doing this because they work well with
+the per-light lightmaps that we mentioned earlier,
+
+490
+00:40:58,070 --> 00:41:03,990
+and they can do a per pixel test whether
+something is shadowed or something is lit.
+
+491
+00:41:03,990 --> 00:41:08,900
+And it's also one of the full shadowing solutions
+
+492
+00:41:08,900 --> 00:41:15,100
+that will implement self-shadowing and
+shadowing of the rest of the world.
+
+493
+00:41:15,100 --> 00:41:17,560
+So let's take a closer look on this.
+
+494
+00:41:17,560 --> 00:41:22,030
+And specifically, we want to talk
+about how do you count shadows?
+
+495
+00:41:22,030 --> 00:41:29,710
+Well, we have these three pieces of geometry, A, B
+and C, all of which are casting shadows on the things
+
+496
+00:41:29,710 --> 00:41:33,960
+that are on the opposite side of the light.
+
+497
+00:41:33,960 --> 00:41:39,200
+And what we want to do is we have a camera
+and he's going to actually look through,
+
+498
+00:41:39,200 --> 00:41:46,400
+and we want to figure out for a given point on
+that line, how many shadows are we inside of?
+
+499
+00:41:46,400 --> 00:41:53,260
+Now you can see, on the left-hand side it's 0,
+as it enters A, it becomes 1, and then it exits A
+
+500
+00:41:53,260 --> 00:41:57,020
+and goes back to 0 and so on and so on and so on.
+
+501
+00:41:57,020 --> 00:42:04,010
+And this is actually really important because we can
+use that entering and exiting information to figure
+
+502
+00:42:04,010 --> 00:42:08,550
+out is something shadowed or is something lit?
+
+503
+00:42:08,550 --> 00:42:12,620
+So let's do a brief overview of how all this works.
+
+504
+00:42:12,620 --> 00:42:15,060
+And you start out by you render your world.
+
+505
+00:42:15,060 --> 00:42:18,390
+In this case, you want to render
+our ambient light contribution.
+
+506
+00:42:18,390 --> 00:42:24,980
+This sets up our color and also sets up our depth
+information which is critical for the counting algorithm.
+
+507
+00:42:24,980 --> 00:42:30,470
+And then for each light, we want
+silhouette or geometry with --
+
+508
+00:42:30,470 --> 00:42:38,690
+or from the light's perspective effectively creating that
+shadow as a volume and this creates just the front edge.
+
+509
+00:42:38,690 --> 00:42:43,610
+Which we want to then extrude that out to infinity.
+
+510
+00:42:43,610 --> 00:42:47,630
+This, in fact, casts the shadow.
+
+511
+00:42:47,630 --> 00:42:52,600
+And once we have these pieces of
+geometry, we just have to stencil buffer
+
+512
+00:42:52,600 --> 00:42:55,990
+and we render the volume from the original camera's view.
+
+513
+00:42:55,990 --> 00:43:01,790
+And what's important here is we're actually
+counting how many volumes have we entered
+
+514
+00:43:01,790 --> 00:43:06,220
+and exited before we hit the first thing in our scene.
+
+515
+00:43:06,220 --> 00:43:15,090
+Because we want to stop as soon as we have a matching
+depth so we can accurately say for this location
+
+516
+00:43:15,090 --> 00:43:19,600
+on the screen, was this fragment shadowed or lit?
+
+517
+00:43:19,600 --> 00:43:28,460
+And then we're going to use that count information and
+specifically get the stencil to 0 then it's fully lit.
+
+518
+00:43:28,460 --> 00:43:30,850
+And if it's non-0, then it's shadowed.
+
+519
+00:43:30,850 --> 00:43:37,940
+And so we're going to render our world through that
+stencil test and then add that light contribution.
+
+520
+00:43:37,940 --> 00:43:40,500
+So we're going to do this for each one of the three lights,
+
+521
+00:43:40,500 --> 00:43:46,100
+and then we're going to sum all of
+these to create our final image.
+
+522
+00:43:46,100 --> 00:43:49,120
+Let's take a closer look at this.
+
+523
+00:43:49,120 --> 00:43:55,490
+So when we're generating the shadow volumes, as I mentioned
+before, we need to do this silhouette determination.
+
+524
+00:43:55,490 --> 00:43:58,480
+This breaks down to two key things.
+
+525
+00:43:58,480 --> 00:44:05,180
+What we need to do is we need to figure out what edges
+or what geometry are on the edge of the silhouette.
+
+526
+00:44:05,180 --> 00:44:11,450
+And we do this by using the dot product
+test that I mentioned so we can tell
+
+527
+00:44:11,450 --> 00:44:13,980
+if the geometry is facing the light and facing away.
+
+528
+00:44:13,980 --> 00:44:20,910
+And it's actually when there's a shared edge between
+two triangles that face both towards the light
+
+529
+00:44:20,910 --> 00:44:25,880
+and away from the light that we can
+actually say this edge is in the silhouette.
+
+530
+00:44:25,880 --> 00:44:31,290
+So once we have our silhouette, we can then extrude it.
+
+531
+00:44:31,290 --> 00:44:39,390
+And we're going to do this by taking our
+geometry, copying it, and then setting the W to 0.
+
+532
+00:44:39,390 --> 00:44:44,230
+Now, this is on a quick little hack because
+the ModelViewProjectionMatrix that we said
+
+533
+00:44:44,230 --> 00:44:48,170
+that can be equal to 0, it goes off to infinity.
+
+534
+00:44:48,170 --> 00:44:50,470
+So this works great.
+
+535
+00:44:50,470 --> 00:44:56,260
+So once we have our volumes, we then need
+to set up the stencil buffer or count them.
+
+536
+00:44:56,260 --> 00:45:04,270
+And as I mentioned earlier, it's only when we pass the depth
+test or in front of the fragment that we want to shade it --
+
+537
+00:45:04,270 --> 00:45:10,430
+that we want to test the volumes against
+that we're going to increment the stencil
+
+538
+00:45:10,430 --> 00:45:14,680
+when we enter a volume and decrement
+when we exit the volume.
+
+539
+00:45:14,680 --> 00:45:23,450
+Now the good news is OpenGL ES 2.0 as part of the
+core spec supports the increment WRAP extension,
+
+540
+00:45:23,450 --> 00:45:26,160
+and you can set them both separately.
+
+541
+00:45:26,160 --> 00:45:32,920
+So instead of having to do two passes of your
+silhouette geometry, you can instead use one
+
+542
+00:45:32,920 --> 00:45:39,640
+and then have both a front test and a back test
+allowing this to happen in just a single pass.
+
+543
+00:45:39,640 --> 00:45:40,440
+So that's great.
+
+544
+00:45:40,440 --> 00:45:46,200
+This also works in OpenGL ES 1.1 through some extensions.
+
+545
+00:45:46,200 --> 00:45:53,220
+So, once your stencil buffer is set up, you
+then want to test is it lit or is it shadowed?
+
+546
+00:45:53,220 --> 00:45:59,700
+And so when we actually do this test, we're going
+to do the stencil test of equal as the operator
+
+547
+00:45:59,700 --> 00:46:04,250
+and the value of 0 because 0 we chose to be fully lit.
+
+548
+00:46:04,250 --> 00:46:10,360
+And then our depth test once again to be equal
+so we only draw the pixels where we've matched,
+
+549
+00:46:10,360 --> 00:46:21,210
+and then we add in that light contribution by
+drawing our world and the skinned characters.
+
+550
+00:46:21,210 --> 00:46:24,960
+So, let's take a look at the volumes.
+
+551
+00:46:24,960 --> 00:46:32,840
+So, here we have three lights which are casting white light,
+but we've chosen to color them as red, green and blue.
+
+552
+00:46:32,840 --> 00:46:36,720
+And the first volume here is the
+red volume cast by the red light.
+
+553
+00:46:36,720 --> 00:46:42,860
+And the next one is the green one
+from the green-colored light.
+
+554
+00:46:42,860 --> 00:46:47,070
+And lastly, the top-down blue light.
+
+555
+00:46:47,070 --> 00:46:49,590
+So let's get a little closer look at this.
+
+556
+00:46:49,590 --> 00:46:55,350
+So we have our three volumes that have been
+extruded, and we're showing here in the world,
+
+557
+00:46:55,350 --> 00:46:58,530
+and then we're going to turn those into actual shadows.
+
+558
+00:46:58,530 --> 00:47:06,380
+So I'm going to zoom in on this, and you can see you
+get really nice, crisp per pixel shadow versus lit.
+
+559
+00:47:06,380 --> 00:47:08,020
+And it looks really good.
+
+560
+00:47:08,020 --> 00:47:12,100
+And happens to work fairly well on the PowerVR SGX.
+
+561
+00:47:12,100 --> 00:47:17,890
+So that's how all that works.
+
+562
+00:47:17,890 --> 00:47:26,610
+And it changes only a small amount when you're working with
+prebaked lighting because we want to take all these things
+
+563
+00:47:26,610 --> 00:47:31,880
+and mix them altogether to get a
+really, really good visual result.
+
+564
+00:47:31,880 --> 00:47:38,220
+And so the first thing we need to do is we need
+to draw our world with the full prebaked light.
+
+565
+00:47:38,220 --> 00:47:43,980
+So that was basically what we saw
+at the end of the lighting section.
+
+566
+00:47:43,980 --> 00:47:47,550
+And then we're just going to silhouette
+our geometry, extrude it,
+
+567
+00:47:47,550 --> 00:47:51,850
+and we're going the set up sensor
+buffer exactly the same way.
+
+568
+00:47:51,850 --> 00:47:55,510
+But instead, we're going to add a little twist here.
+
+569
+00:47:55,510 --> 00:48:00,470
+Instead of adding light contribution, since
+the prebaked lighting already counted for all
+
+570
+00:48:00,470 --> 00:48:12,540
+of the light's contributions, instead we're going to say
+if we are in shadow, then remove that light's contribution.
+
+571
+00:48:12,540 --> 00:48:20,890
+So by doing this, we're all going to incur the cost of
+removing the shadows, and that's a lot less fill rate.
+
+572
+00:48:20,890 --> 00:48:26,280
+So, once again, we have our environment
+with the three volumes visualized.
+
+573
+00:48:30,110 --> 00:48:32,210
+Zoom in on that real quick.
+
+574
+00:48:32,210 --> 00:48:36,050
+And you can turn these into actual shadows.
+
+575
+00:48:36,050 --> 00:48:41,350
+Now what you'll notice is the shadows are very
+subtle and this is because what we subtracted
+
+576
+00:48:41,350 --> 00:48:46,840
+out were those individual lightmaps
+for each one of the lights.
+
+577
+00:48:46,840 --> 00:48:54,620
+And as they get -- as the character and shadows get further
+away from those lights, there's less and less contribution.
+
+578
+00:48:54,620 --> 00:48:57,450
+Let's watch a quick little zoomed in movie of this.
+
+579
+00:48:57,450 --> 00:49:01,220
+As you can the character is moving
+around and you can get some nice shadows
+
+580
+00:49:01,220 --> 00:49:03,300
+and they're casting all their world geometry.
+
+581
+00:49:03,300 --> 00:49:10,980
+And then finally, you can see on the lower right-hand
+side, that shadow is cast from the right-hand side
+
+582
+00:49:10,980 --> 00:49:17,310
+up towards the upper left, has a really strong
+shadow initially, and then it fades off nicely.
+
+583
+00:49:17,310 --> 00:49:21,560
+So this is kind of a way you can kind of mix
+kind of soft shadows with the hard shadows
+
+584
+00:49:21,560 --> 00:49:25,860
+of stencil volumes by using these prebaked lightmaps.
+
+585
+00:49:25,860 --> 00:49:29,490
+So there's a couple of things to know about this.
+
+586
+00:49:29,490 --> 00:49:31,120
+It is expensive.
+
+587
+00:49:31,120 --> 00:49:40,620
+But by using the prebaked lighting, we only incur the cost
+for when things are shadowed and not when things are lit
+
+588
+00:49:40,620 --> 00:49:44,900
+because as you noticed in our environment, there's
+a lot less things that are shadowed than lit.
+
+589
+00:49:44,900 --> 00:49:46,700
+So we saved all of that fill rate.
+
+590
+00:49:46,700 --> 00:50:00,340
+And shadow volumes are quite large, and they have an extra
+cost both on the vertex processing in the shader stage
+
+591
+00:50:00,340 --> 00:50:07,040
+as well as when you are actually tiling this
+because this is a tile-based architecture.
+
+592
+00:50:07,040 --> 00:50:14,790
+And we can make some of this tricks and hacks
+and we can use the prebaked lights specifically
+
+593
+00:50:14,790 --> 00:50:23,470
+because the lights themselves contain the occlusion
+information of the static geometry which means you only have
+
+594
+00:50:23,470 --> 00:50:27,180
+to deal with the contribution of the dynamic geometry.
+
+595
+00:50:27,180 --> 00:50:36,040
+So, in this case, our environment is 50, 60.000
+tries, and our skinned character is only about 1,700.
+
+596
+00:50:36,040 --> 00:50:41,430
+So those are vast orders of magnitude that you
+won't have to generate silhouettes and volumes
+
+597
+00:50:41,430 --> 00:50:46,890
+because there's a small amount
+relative to the rest of the environment.
+
+598
+00:50:46,890 --> 00:50:52,300
+And the best news is depth testing and
+stencil testing is really efficient on SGX.
+
+599
+00:50:52,300 --> 00:50:59,130
+And so you can do all of this in just a single pass
+unlike some other algorithms you can do for shadowing.
+
+600
+00:50:59,130 --> 00:51:01,970
+So let's hop into a demo and see how this looks in action.
+
+601
+00:51:01,970 --> 00:51:05,710
+So here we were with our lightmaps.
+
+602
+00:51:05,710 --> 00:51:10,680
+We topped our lightmaps with direction
+and let's jump to the next one.
+
+603
+00:51:10,680 --> 00:51:18,450
+So here are our visualized shadow volumes, as you
+can see, if I zoom out, they do extend to infinity,
+
+604
+00:51:18,450 --> 00:51:20,800
+and you have our blue light which is in the upper --
+
+605
+00:51:20,800 --> 00:51:25,510
+the top and behind, hence the shadow is cast
+very short and the red light and green light.
+
+606
+00:51:25,510 --> 00:51:33,440
+So zooming and then switching to the actual shadows,
+you can see how they're nice and sharp and crisp,
+
+607
+00:51:33,440 --> 00:51:38,700
+and it's all really fluid as the character zooms around.
+
+608
+00:51:38,700 --> 00:51:45,660
+So moving out of the sky box environment,
+we actually put him in the world.
+
+609
+00:51:45,660 --> 00:51:53,100
+And so, as we zoom in, you can see just the same effects
+of the directional lightmaps being applied to the character
+
+610
+00:51:53,100 --> 00:51:59,790
+and also the shadows animating and falling off as he
+gets closer and further away from the light sources.
+
+611
+00:51:59,790 --> 00:52:04,050
+And if we zoom out, we can actually get
+-- you can see the shadows being cast
+
+612
+00:52:04,050 --> 00:52:08,520
+on the various pieces of geometry in the world correctly.
+
+613
+00:52:08,520 --> 00:52:14,510
+So those are shadow volumes.
+
+614
+00:52:14,510 --> 00:52:19,040
+[ Applause ]
+
+615
+00:52:19,040 --> 00:52:23,280
+And so, all of that is happening
+in real time on the new iPhone 4.
+
+616
+00:52:23,280 --> 00:52:29,900
+So you can do the same algorithms and you can save all
+of that fragment cost by switching your algorithms around
+
+617
+00:52:29,900 --> 00:52:33,980
+and removing the light contribution
+as opposed to adding it in.
+
+618
+00:52:33,980 --> 00:52:36,120
+It saves a lot of fill rate.
+
+619
+00:52:36,120 --> 00:52:42,810
+And so, here was our agenda for today,
+and let's just jump into quick summary.
+
+620
+00:52:42,810 --> 00:52:53,010
+So the key to all of this is OpenGL ES 2 allows you to
+choose the algorithms that are right for your content.
+
+621
+00:52:53,010 --> 00:52:57,610
+You can choose algorithms that allows you to
+do a rough approximation that's really fast
+
+622
+00:52:57,610 --> 00:53:01,320
+if you are zoomed far away from
+your skinned and animated content.
+
+623
+00:53:01,320 --> 00:53:05,700
+Or if you want to be up close for like a first
+person shooter, you can choose higher quality ones.
+
+624
+00:53:05,700 --> 00:53:13,350
+And you can make those tradeoffs, and you need to
+choose which ones are best suited for your content.
+
+625
+00:53:13,350 --> 00:53:18,730
+And the best part is since you can do all
+these tricks and change the math and like --
+
+626
+00:53:18,730 --> 00:53:25,820
+and prebake all this stuff, it allows you to simplify
+your GLSL in your Fragment Shaders to just a few lines
+
+627
+00:53:25,820 --> 00:53:32,710
+or to just -- or to use more expensive shaders
+just for smaller amounts of dynamic content.
+
+628
+00:53:32,710 --> 00:53:39,970
+And so you can optimize both for performance as
+well as optimizing for the visual quality based
+
+629
+00:53:39,970 --> 00:53:43,540
+on where your camera is and how your world is constructed.
+
+630
+00:53:43,540 --> 00:53:52,180
+And you can hoist it all out to a preprocessing stage
+and make your games that much more visually interesting
+
+631
+00:53:52,180 --> 00:53:59,060
+and just really fun to watch and like -- and
+see everything nice and smooth and run at 65ths.
+
+632
+00:53:59,060 --> 00:54:03,890
+So, please contact Allan Schaffer if you have any questions.
+
+633
+00:54:03,890 --> 00:54:05,390
+His contact information is here.
+
+634
+00:54:05,390 --> 00:54:08,830
+There's also the Apple Developer Forums.
+
+635
+00:54:08,830 --> 00:54:13,550
+Many of us on the OpenGL and Driver
+teams are on there making comments
+
+636
+00:54:13,550 --> 00:54:15,970
+and trying to help out anyone who has questions.
+

@@ -1,0 +1,3585 @@
+1
+00:00:06,120 --> 00:00:07,420
+>> Jean-Francois Roy: Hello, everyone.
+
+2
+00:00:07,420 --> 00:00:11,330
+And welcome to OpenGL ES Tuning and Optimization.
+
+3
+00:00:11,330 --> 00:00:16,720
+This is going to be a session all about
+making your application as fast as possible.
+
+4
+00:00:16,720 --> 00:00:19,060
+So this is going to be a three-part session.
+
+5
+00:00:19,060 --> 00:00:24,060
+We're going to begin by showing you
+the new OpenGL ES Analyzer instrument.
+
+6
+00:00:24,060 --> 00:00:29,520
+Then my colleague, Alex, will come on stage to
+tell you all about tuning the graphics pipeline.
+
+7
+00:00:29,520 --> 00:00:33,090
+And then I will come back to give you
+a demo of the Analyzer instrument.
+
+8
+00:00:33,090 --> 00:00:36,860
+And so, without further ado, I'm Jean-Francois.
+
+9
+00:00:36,860 --> 00:00:43,300
+I'm an engineer on the GPU Software Developer
+Technologies group, and I'm here to tell you all
+
+10
+00:00:43,300 --> 00:00:46,170
+about the new OpenGL ES Analyzer instrument.
+
+11
+00:00:46,170 --> 00:00:51,820
+You may have caught a glimpse of this instrument
+during the Developer Tool State of the Union.
+
+12
+00:00:51,820 --> 00:00:59,010
+This is a brand new instrument that will allow you to
+measure all the OpenGL ES activity in your application,
+
+13
+00:00:59,010 --> 00:01:05,590
+get some key information out of those statistics, and
+then allow you to quickly troubleshoot correctness
+
+14
+00:01:05,590 --> 00:01:08,320
+and performance problems in your application.
+
+15
+00:01:08,320 --> 00:01:14,900
+Now, whether you're a seasoned OpenGL developer or a
+newcomer, you may have been faced with something like this
+
+16
+00:01:14,900 --> 00:01:19,180
+where the application doesn't quite render correctly.
+
+17
+00:01:19,180 --> 00:01:25,020
+You may even have faced the dreaded black screen
+of death where absolutely nothing renders.
+
+18
+00:01:25,020 --> 00:01:30,860
+With this new instrument, you'll be able to solve
+these sorts of issues in a very short amount of time.
+
+19
+00:01:30,860 --> 00:01:35,660
+Now, this instrument is also a preview itself;
+so there's a few things you should be aware of.
+
+20
+00:01:35,660 --> 00:01:41,280
+First of all, the preview only
+functions on PowerVR SGX-based devices,
+
+21
+00:01:41,280 --> 00:01:44,910
+so this is iPhone 3GS and anything that came after.
+
+22
+00:01:44,910 --> 00:01:48,070
+And it only functions with the new iOS4 operating system.
+
+23
+00:01:48,070 --> 00:01:51,100
+So you'll need to install that on your device.
+
+24
+00:01:51,100 --> 00:01:57,800
+Additionally, you will need to launch your application
+from within Instruments to use this new instrument,
+
+25
+00:01:57,800 --> 00:02:04,880
+meaning that you cannot both debug your application with
+GDB and use the Analyzer instrument at the same time.
+
+26
+00:02:04,880 --> 00:02:06,710
+Now, there's a lot more than that.
+
+27
+00:02:06,710 --> 00:02:08,780
+You can check the release notes for all the details.
+
+28
+00:02:08,780 --> 00:02:14,800
+And we also highly encourage you to give us
+feedback to improve this brand new instrument.
+
+29
+00:02:14,800 --> 00:02:17,970
+So, why an instrument?
+
+30
+00:02:17,970 --> 00:02:25,790
+Well, Instruments is this extremely powerful developer
+tool that we've been shipping for a number of years now.
+
+31
+00:02:25,790 --> 00:02:33,470
+It includes a wide variety of instruments that allow you
+to measure just about anything you do in your application,
+
+32
+00:02:33,470 --> 00:02:37,740
+from disc I/O to network activity to graphics.
+
+33
+00:02:37,740 --> 00:02:42,760
+Not only that, but you can combine
+multiple instruments at the same time
+
+34
+00:02:42,760 --> 00:02:48,670
+and correlate all the information they're
+gathering to get a much more comprehensive picture
+
+35
+00:02:48,670 --> 00:02:55,100
+of what your application is doing, what is its
+performance characteristics, where it's spending its time.
+
+36
+00:02:55,100 --> 00:02:59,500
+Additionally, Instruments provides
+you with powerful data mining tools,
+
+37
+00:02:59,500 --> 00:03:07,600
+which will allow you to extract the information you
+need out of the sea of data that instruments gather
+
+38
+00:03:07,600 --> 00:03:11,850
+to solve the specific problem that you're trying to solve.
+
+39
+00:03:11,850 --> 00:03:19,100
+Finally, Instruments for many of you will be a familiar
+interface, a familiar tool, so you'll be able to dig right
+
+40
+00:03:19,100 --> 00:03:22,960
+in and start using this new instrument right away.
+
+41
+00:03:22,960 --> 00:03:28,350
+So, the new OpenGL ES Analyzer
+instrument has three main components.
+
+42
+00:03:28,350 --> 00:03:31,210
+The first is the Activity Monitor.
+
+43
+00:03:31,210 --> 00:03:38,310
+This guy traces all the OpenGL ES activity in your
+application and then extracts some key statistics out of
+
+44
+00:03:38,310 --> 00:03:42,860
+that data to allow you to better
+understand what is going on.
+
+45
+00:03:42,860 --> 00:03:45,540
+The second component are the Overrides.
+
+46
+00:03:45,540 --> 00:03:52,550
+The Overrides allow you to do quick performance experiments
+by allowing you to disable or alter certain parts
+
+47
+00:03:52,550 --> 00:03:59,600
+of the OpenGL ES pipeline to see what effect
+that has on how your application is performing.
+
+48
+00:03:59,600 --> 00:04:05,040
+Alex is going to go into much more detail on how to
+leverage these in combination with some knowledge
+
+49
+00:04:05,040 --> 00:04:10,120
+on how the graphics pipeline work to really
+hone in on where you're spending your time.
+
+50
+00:04:10,120 --> 00:04:14,360
+Finally, the last component, I'm actually going to
+keep it a secret for now; and we're going to get back
+
+51
+00:04:14,360 --> 00:04:17,980
+to it in the second session of the Analyzer.
+
+52
+00:04:17,980 --> 00:04:22,130
+So Activity Monitor, Overrides; let's
+start with the Activity Monitor.
+
+53
+00:04:22,130 --> 00:04:29,150
+The first step in solving any general engineering
+problems is usually to get all the facts right,
+
+54
+00:04:29,150 --> 00:04:33,860
+get all the information and really
+understand what is going on.
+
+55
+00:04:33,860 --> 00:04:42,050
+For the specific case of graphics, a complex application
+such as a game or a visualization application,
+
+56
+00:04:42,050 --> 00:04:49,290
+it may be very difficult for you to look at the
+source code and translate that into the OpenGL command
+
+57
+00:04:49,290 --> 00:04:51,840
+that your application will make at runtime.
+
+58
+00:04:51,840 --> 00:04:53,100
+There's many reasons for this.
+
+59
+00:04:53,100 --> 00:05:00,040
+A common one, for example, is a data-driven application
+where the commands that end up actually being produced
+
+60
+00:05:00,040 --> 00:05:06,440
+by the application depend not entirely on the code
+but also on data that the application will receive.
+
+61
+00:05:06,440 --> 00:05:11,300
+So, without you really knowing, your
+application may actually be doing a lot more work
+
+62
+00:05:11,300 --> 00:05:13,140
+than you thought it was doing.
+
+63
+00:05:13,140 --> 00:05:16,960
+It may also be doing work in an unexpected order.
+
+64
+00:05:16,960 --> 00:05:25,610
+A common case of this particular type of problem is when
+you're driving your rendering through some data structures,
+
+65
+00:05:25,610 --> 00:05:29,890
+such as a tree, if you have a subtle
+bug in your tree traversal algorithm,
+
+66
+00:05:29,890 --> 00:05:34,780
+you may end up actually issuing
+OpenGL commands in an incorrect order.
+
+67
+00:05:34,780 --> 00:05:40,370
+Finally, your application may just be doing the
+wrong kind of work for the hardware it's running on.
+
+68
+00:05:40,370 --> 00:05:47,650
+For example, if you have produced assets for a game on
+multiple platforms, these assets may not be optimized
+
+69
+00:05:47,650 --> 00:05:50,850
+for the graphics hardware in iPhone and iPad.
+
+70
+00:05:50,850 --> 00:05:53,560
+And this could severely impact your performance.
+
+71
+00:05:53,560 --> 00:06:00,610
+So the Activity Monitor allows you to record
+all the OpenGL ES activity in your application.
+
+72
+00:06:00,610 --> 00:06:05,360
+And then it presents you this information
+through four main hubs: frame statistics,
+
+73
+00:06:05,360 --> 00:06:08,650
+API statistics, command trace, and call tree.
+
+74
+00:06:08,650 --> 00:06:13,920
+Let's go through all four of these now,
+starting with the frame statistics.
+
+75
+00:06:13,920 --> 00:06:18,120
+The frame statistics allow you to get
+an idea of your per-frame workload.
+
+76
+00:06:18,120 --> 00:06:22,540
+This is the amount of work your
+application does every single frame.
+
+77
+00:06:22,540 --> 00:06:26,920
+This table's also a great place to
+navigate the trace frame by frame.
+
+78
+00:06:26,920 --> 00:06:31,200
+And also know that you can constrain
+the amount of data this table shows
+
+79
+00:06:31,200 --> 00:06:35,230
+by making a time selection in the instrument's timeline.
+
+80
+00:06:35,230 --> 00:06:39,160
+Now, let's go through a few key
+statistics and also some relationships
+
+81
+00:06:39,160 --> 00:06:44,160
+between those statistics, starting
+with primitives and batches.
+
+82
+00:06:44,160 --> 00:06:46,520
+Primitives is the number of points, lines,
+
+83
+00:06:46,520 --> 00:06:51,800
+and triangles your application rendered
+for any given frame, in any given frame.
+
+84
+00:06:51,800 --> 00:06:56,650
+And the batches or draw commands
+is the number of OpenGL commands,
+
+85
+00:06:56,650 --> 00:07:00,300
+draw commands that you issued to draw those primitives.
+
+86
+00:07:00,300 --> 00:07:06,310
+Now, one of the key ratios to remember about
+these two is the ratio to primitives and batches.
+
+87
+00:07:06,310 --> 00:07:09,310
+You want to maximize this ratio as much as possible.
+
+88
+00:07:09,310 --> 00:07:15,970
+In other words, you want to draw as much as
+you can with as few draw commands as you can.
+
+89
+00:07:15,970 --> 00:07:18,940
+You also want to minimize the number of batches.
+
+90
+00:07:18,940 --> 00:07:23,210
+Just do the least amount of work
+possible to get the result you want.
+
+91
+00:07:23,210 --> 00:07:28,430
+And, finally, this is a great way of finding your
+most costly frame with respect to geometry simply
+
+92
+00:07:28,430 --> 00:07:31,220
+by sorting the table by the number of primitives.
+
+93
+00:07:31,220 --> 00:07:36,010
+Oftentimes, the frame that renders the most
+geometry is going to be your most expensive frame;
+
+94
+00:07:36,010 --> 00:07:40,830
+and you'll want to focus your optimization
+efforts on that frame.
+
+95
+00:07:40,830 --> 00:07:43,450
+Next, we have OpenGL commands.
+
+96
+00:07:43,450 --> 00:07:48,340
+What you want to do here is minimize
+how many commands you issue per frame.
+
+97
+00:07:48,340 --> 00:07:53,950
+And you can look at this through two different columns:
+again, the number of batches, which are all OpenGL commands
+
+98
+00:07:53,950 --> 00:07:57,450
+that draw something on the screen;
+and then you have all OpenGL commands,
+
+99
+00:07:57,450 --> 00:08:01,810
+which is everything that you call in the OpenGL API.
+
+100
+00:08:01,810 --> 00:08:04,730
+Now, two key goals here.
+
+101
+00:08:04,730 --> 00:08:08,590
+Number one is to minimize how many
+commands you issue every frame.
+
+102
+00:08:08,590 --> 00:08:11,740
+So, again, do the least amount of work possible.
+
+103
+00:08:11,740 --> 00:08:16,650
+More importantly, you want to look at
+the ratio of GL commands to the number
+
+104
+00:08:16,650 --> 00:08:21,020
+of batches or batches to GL commands, rather.
+
+105
+00:08:21,020 --> 00:08:23,610
+And you want this ratio to approach 1.
+
+106
+00:08:23,610 --> 00:08:30,730
+In other words, you want to do as little stuff that
+isn't drawing with respect to the stuff that is drawing.
+
+107
+00:08:30,730 --> 00:08:37,140
+If this ratio is small, you may benefit from doing state
+sorting, which will allow you to minimize the number
+
+108
+00:08:37,140 --> 00:08:43,300
+of commands you have in between your draw commands that
+reconfigure the OpenGL state and improve your performance.
+
+109
+00:08:43,300 --> 00:08:47,700
+Next, we have redundant state changes.
+
+110
+00:08:47,700 --> 00:08:55,870
+These are commands that your application issued to modify
+a part of the OpenGL ES state to its existing value.
+
+111
+00:08:55,870 --> 00:08:59,790
+So these commands will have no functional impact whatsoever.
+
+112
+00:08:59,790 --> 00:09:05,410
+However, they will still incur a cost in the
+framework and in the driver to validate the change,
+
+113
+00:09:05,410 --> 00:09:07,550
+confirm that it's the same state, etc.,
+
+114
+00:09:07,550 --> 00:09:13,530
+etc. So these redundant state commands are not
+free, but they're completely wasteful work.
+
+115
+00:09:13,530 --> 00:09:16,110
+So you just don't want to do any of them.
+
+116
+00:09:16,110 --> 00:09:19,950
+This column should be full of 0s.
+
+117
+00:09:19,950 --> 00:09:22,740
+Finally, we have render passes.
+
+118
+00:09:22,740 --> 00:09:26,190
+The tile-based deferred renderer
+hardware that we have in iPhone
+
+119
+00:09:26,190 --> 00:09:31,000
+and iPad structures your rendering
+through a number of render passes.
+
+120
+00:09:31,000 --> 00:09:33,930
+Now, these are very expensive to configure, to set up.
+
+121
+00:09:33,930 --> 00:09:38,040
+So you want to minimize how many
+render passes you have every frame.
+
+122
+00:09:38,040 --> 00:09:41,990
+Now, ideally, you only want one render frame.
+
+123
+00:09:41,990 --> 00:09:46,590
+But there are very good reasons to have more than
+one, particularly if you do off-screen rendering.
+
+124
+00:09:46,590 --> 00:09:52,490
+However, do note that some operations such
+as texture uploads can force the hardware
+
+125
+00:09:52,490 --> 00:09:55,920
+to end the current render pass and begin a new one.
+
+126
+00:09:55,920 --> 00:10:01,130
+And so it is critical that you structure your
+application in a way that will minimize render passes.
+
+127
+00:10:01,130 --> 00:10:06,780
+And there's some things you can do
+that will have an impact on this.
+
+128
+00:10:06,780 --> 00:10:09,540
+Next we have API statistics.
+
+129
+00:10:09,540 --> 00:10:12,960
+The API statistics allow you to see which commands,
+
+130
+00:10:12,960 --> 00:10:19,760
+which OpenGL commands your application used the most
+frequently and also which ones cost you the most.
+
+131
+00:10:19,760 --> 00:10:23,890
+So, starting with the cost and time, ideally,
+
+132
+00:10:23,890 --> 00:10:28,260
+you want draw commands to dominate your
+application after your loading phase.
+
+133
+00:10:28,260 --> 00:10:34,150
+In other words, you want to be
+spending your time drawing, right?
+
+134
+00:10:34,150 --> 00:10:42,880
+However, do note that simple commands with a very
+low average time or average cost can still end
+
+135
+00:10:42,880 --> 00:10:48,000
+up costing you a lot overall if you
+call them very, very frequently.
+
+136
+00:10:48,000 --> 00:10:53,970
+And a good example here shown on screen is BindBuffer,
+which, you know, only cost you a small amount; but,
+
+137
+00:10:53,970 --> 00:10:58,510
+because you call it so often, it's in the top ten functions.
+
+138
+00:10:58,510 --> 00:11:02,650
+There are also some commands that are just expensive.
+
+139
+00:11:02,650 --> 00:11:06,380
+A very good example of this is
+all the APR related to shaders.
+
+140
+00:11:06,380 --> 00:11:12,390
+Compiling a shader, linking a GLSL
+program are very expensive operations.
+
+141
+00:11:12,390 --> 00:11:22,020
+The key here is to do these operations once, ideally, when
+your application loads; or, if you need to be more dynamic,
+
+142
+00:11:22,020 --> 00:11:27,780
+do these operations in a background thread such that they
+will not impact the main rendering of your application.
+
+143
+00:11:27,780 --> 00:11:30,860
+You can also look at API statistics
+from a frequency point of view.
+
+144
+00:11:30,860 --> 00:11:35,070
+So this is just the total number of times you've
+called each and every single API in OpenGL.
+
+145
+00:11:35,070 --> 00:11:42,520
+And the key here, again, is to make sure that you're
+not doing more work than you absolutely need to.
+
+146
+00:11:42,520 --> 00:11:47,610
+If you see many commands that alter the
+OpenGL state in this table that have --
+
+147
+00:11:47,610 --> 00:11:52,030
+you know, near the top if you're sorting
+by cost, you need to ask yourself if --
+
+148
+00:11:52,030 --> 00:11:59,230
+how many of these commands are redundant and if
+you can eliminate them to improve your performance.
+
+149
+00:11:59,230 --> 00:12:06,080
+There are also a number of extensions such as vertex
+array objects that will allow you to eliminate
+
+150
+00:12:06,080 --> 00:12:11,070
+or significantly reduce the number of
+times you have to use for an OpenGL API.
+
+151
+00:12:11,070 --> 00:12:16,170
+And so you should definitely try to
+take advantage of those extensions.
+
+152
+00:12:16,170 --> 00:12:18,650
+Finally, a note about time range filtering.
+
+153
+00:12:18,650 --> 00:12:26,940
+The API statistics are actually computed live to reflect the
+current time range selection in the instrument's timeline.
+
+154
+00:12:26,940 --> 00:12:34,160
+And, so, if you constrain the selection, the API statistics
+will only reflect the OpenGL activity for that time range.
+
+155
+00:12:34,160 --> 00:12:39,420
+This is great in combination with the
+frame statistics table to allow you to look
+
+156
+00:12:39,420 --> 00:12:43,360
+at the API statistics only for a specific set of frames.
+
+157
+00:12:43,360 --> 00:12:46,580
+You can also combine this with other instruments.
+
+158
+00:12:46,580 --> 00:12:53,150
+These other instruments may highlight some activity
+that you didn't expect, such as a spike in CPU usage.
+
+159
+00:12:53,150 --> 00:12:58,650
+You can hone in on that spike and
+activity based on that other instrument,
+
+160
+00:12:58,650 --> 00:13:05,800
+then go look at the OpenGL ES activity statistics
+to see what OpenGL was doing at that time.
+
+161
+00:13:05,800 --> 00:13:07,730
+Next, we have the command trace.
+
+162
+00:13:07,730 --> 00:13:13,190
+This is very simply the complete list of
+OpenGL command issued by your application.
+
+163
+00:13:13,190 --> 00:13:20,120
+Now, even a simple application is going to have tens
+of thousands if not hundreds of thousands of commands.
+
+164
+00:13:20,120 --> 00:13:25,970
+So what you want to do here is start with the other
+hubs of information, such as the frame statistics
+
+165
+00:13:25,970 --> 00:13:32,520
+or the API statistics, find a particular command of
+interest or a particular point in time of interest,
+
+166
+00:13:32,520 --> 00:13:37,060
+then go look at the OpenGL ES trace
+to see what was going on at that time:
+
+167
+00:13:37,060 --> 00:13:41,930
+what commands came in before the command
+of interest, what commands came after.
+
+168
+00:13:41,930 --> 00:13:47,790
+Do note that every single one of those commands has a back
+trace so you can actually know where it was called from.
+
+169
+00:13:47,790 --> 00:13:49,730
+Finally, we have the call tree.
+
+170
+00:13:49,730 --> 00:13:56,670
+This is the standard instrument call tree
+view but focus exclusively on OpenGL commands.
+
+171
+00:13:56,670 --> 00:14:01,800
+Now, do note that there's a significant difference between
+this table and what you would get from the CPU sampler.
+
+172
+00:14:01,800 --> 00:14:08,230
+The CPU sampler is going to be a statistical
+sampling of the activity on the CPU.
+
+173
+00:14:08,230 --> 00:14:10,580
+The information you see here is exact.
+
+174
+00:14:10,580 --> 00:14:12,010
+It's exact tracing.
+
+175
+00:14:12,010 --> 00:14:17,100
+The amount of time, the running
+time is the wall clock time spent
+
+176
+00:14:17,100 --> 00:14:21,390
+in that OpenGL function including both
+time spent actually running the code
+
+177
+00:14:21,390 --> 00:14:25,510
+on the CPU and time spent by the CPU being blocked.
+
+178
+00:14:25,510 --> 00:14:32,560
+This is a great view for seeing which OpenGL ES commands
+took the most amount of time in your application
+
+179
+00:14:32,560 --> 00:14:36,380
+but also where each of these commands were called from.
+
+180
+00:14:36,380 --> 00:14:42,180
+And so it's interesting because some commands
+will sometimes have a higher or lower cost,
+
+181
+00:14:42,180 --> 00:14:44,490
+depending on where they were called in your application.
+
+182
+00:14:44,490 --> 00:14:49,610
+And this table will allow you to
+distinguish between those cases.
+
+183
+00:14:49,610 --> 00:14:52,310
+And so that is the Activity Monitor.
+
+184
+00:14:52,310 --> 00:14:59,780
+And moving on to the Overrides; and for that, I would
+like to invite my colleague, Alex Kan, on stage.
+
+185
+00:14:59,780 --> 00:15:06,010
+And he's going to explain you how to tune
+the graphics pipeline both using, you know,
+
+186
+00:15:06,010 --> 00:15:11,680
+knowledge about how the graphic pipeline works but
+also using the Overrides in the Analyzer instruments.
+
+187
+00:15:11,680 --> 00:15:12,860
+Alex.
+
+188
+00:15:12,860 --> 00:15:13,490
+>> Alex Kan: I'm Alex.
+
+189
+00:15:13,490 --> 00:15:15,970
+I work in the iPhone GP Software group at Apple.
+
+190
+00:15:15,970 --> 00:15:18,370
+And so we're going to talk about a few things.
+
+191
+00:15:18,370 --> 00:15:21,800
+We're going to talk about how to
+target optimization-specific parts
+
+192
+00:15:21,800 --> 00:15:23,640
+of the pipeline and how to tune your shaders.
+
+193
+00:15:23,640 --> 00:15:28,630
+But first we're going to talk about what goes into
+getting a rendered frame from your app onto the screen.
+
+194
+00:15:28,630 --> 00:15:30,970
+So, really, this happens in four stages.
+
+195
+00:15:30,970 --> 00:15:35,980
+First, the CPU translates your OpenGL
+commands into a set of commands for the GPU.
+
+196
+00:15:35,980 --> 00:15:42,370
+Next, the GPU operates on these commands and on
+tile-based deferred renders like the PowerVR MBX and SGX.
+
+197
+00:15:42,370 --> 00:15:44,170
+This really happens in two phases.
+
+198
+00:15:44,170 --> 00:15:48,430
+So, in the first phase, the GPU will read
+and shade all the vertex data in your scene.
+
+199
+00:15:48,430 --> 00:15:52,870
+And the next, in the second stage, it will rasterize
+and shade all the fragments that have been generated
+
+200
+00:15:52,870 --> 00:15:56,930
+by the geometry in your scene and
+write those out to the frame buffer.
+
+201
+00:15:56,930 --> 00:16:01,010
+So, once that's done, then core animation will
+take your rendered frame buffer and composite it
+
+202
+00:16:01,010 --> 00:16:03,680
+with the rest of the items in your view hierarchy.
+
+203
+00:16:03,680 --> 00:16:07,930
+So one thing to keep in mind when you're looking at
+this list of stages is that they don't always take --
+
+204
+00:16:07,930 --> 00:16:10,410
+or not all stages take the same amount of time.
+
+205
+00:16:10,410 --> 00:16:15,240
+And, in particular, you'll find that, depending
+on what your application actually renders,
+
+206
+00:16:15,240 --> 00:16:18,450
+some stages will actually take
+significantly longer than others.
+
+207
+00:16:18,450 --> 00:16:24,760
+In addition, and really, these stages all take
+place in different places in the hardware.
+
+208
+00:16:24,760 --> 00:16:30,610
+And so what that actually means is that what will
+typically happen is that you'll have multiple components
+
+209
+00:16:30,610 --> 00:16:34,860
+of the hardware working on different parts
+of different frames at the same time.
+
+210
+00:16:34,860 --> 00:16:39,550
+So what does this actually mean for you
+when you're optimizing your application?
+
+211
+00:16:39,550 --> 00:16:44,780
+It means that your frame rate is really
+determined by how long it takes the slowest stage
+
+212
+00:16:44,780 --> 00:16:46,680
+in your pipeline to finish what it's doing.
+
+213
+00:16:46,680 --> 00:16:51,340
+And so that means that this is really the stage that you
+should be targeting when you're optimizing your application.
+
+214
+00:16:51,340 --> 00:16:54,580
+Now, the nice thing about this is
+that, because the faster stages
+
+215
+00:16:54,580 --> 00:16:59,130
+in your pipeline don't necessarily affect the frame
+rate overall, you can sometimes add additional work
+
+216
+00:16:59,130 --> 00:17:03,050
+to these stages without impacting your app's frame rate.
+
+217
+00:17:03,050 --> 00:17:07,450
+So how do you actually understand what this
+pipeline looks like in your app in particular?
+
+218
+00:17:07,450 --> 00:17:09,450
+And you do that via Instruments.
+
+219
+00:17:09,450 --> 00:17:16,220
+So there are a few instruments in Instruments that are
+useful for understanding how active your CPU and GPU are.
+
+220
+00:17:16,220 --> 00:17:19,510
+In particular, the CPU sampler can tell you, well,
+
+221
+00:17:19,510 --> 00:17:23,430
+how much time your CPU is spending doing
+your rendering work and where it's doing it.
+
+222
+00:17:23,430 --> 00:17:28,220
+And the OpenGL ES Driver instrument
+can tell you how active both the vertex
+
+223
+00:17:28,220 --> 00:17:30,990
+and fragment processing components of the GPU are.
+
+224
+00:17:30,990 --> 00:17:35,800
+And so you can take this information and
+use the Overrides in the OpenGL ES Analyzer
+
+225
+00:17:35,800 --> 00:17:39,750
+to change your application's workload and
+see what effect this has on performance.
+
+226
+00:17:39,750 --> 00:17:45,490
+And so, with that, let's actually take a look at the
+stages of the pipeline, you know, stage by stage.
+
+227
+00:17:45,490 --> 00:17:49,570
+So, for the purpose of this discussion, we'll
+only focus on the stages that are relevant
+
+228
+00:17:49,570 --> 00:17:53,330
+to OpenGL ES rendering, so that means the CPU and the GPU.
+
+229
+00:17:53,330 --> 00:17:55,970
+So let's start with the CPU.
+
+230
+00:17:55,970 --> 00:17:59,230
+So, first of all, you can typically
+identify a CPU bottleneck by noticing
+
+231
+00:17:59,230 --> 00:18:02,460
+that the GPU is not active nearly
+as much as you think it would be.
+
+232
+00:18:02,460 --> 00:18:07,420
+And, in particular, you'll often see that, if you
+change the drawing complexity of your app by, say,
+
+233
+00:18:07,420 --> 00:18:13,390
+changing the number of triangles or whatever to -- well,
+in your draw calls to basically be like a single triangle,
+
+234
+00:18:13,390 --> 00:18:16,290
+you may see no impact on your frame rate whatsoever.
+
+235
+00:18:16,290 --> 00:18:20,860
+And what you'll also observe in situations like this
+is that the CPU is actually spending a lot of time
+
+236
+00:18:20,860 --> 00:18:25,370
+in the OpenGL framework on behalf of your app, and
+it can actually be doing this in one of two ways.
+
+237
+00:18:25,370 --> 00:18:30,050
+It can be completely busied actually doing work; or it
+can simply be blocked, waiting for other components.
+
+238
+00:18:30,050 --> 00:18:33,070
+So let's take a look at the situation
+where the CPU is fully busy.
+
+239
+00:18:33,070 --> 00:18:39,530
+In this case, this usually occurs because the CPU is
+busy handling state changes issued by your application.
+
+240
+00:18:39,530 --> 00:18:46,700
+And the nice thing about that is that the Activity Monitor
+in the OpenGL ES Analyzer can tell you a lot about,
+
+241
+00:18:46,700 --> 00:18:50,490
+you know, what's actually going on here and
+how many of your state changes are redundant.
+
+242
+00:18:50,490 --> 00:18:55,170
+And one thing to keep in mind when you're looking at this
+diagram is that not all of these state changes are equal.
+
+243
+00:18:55,170 --> 00:18:59,990
+So, in particular, certain types of stage changes,
+like particularly those having to do with vertex
+
+244
+00:18:59,990 --> 00:19:04,140
+and fragment programs, can be particularly
+expensive compared to other ones.
+
+245
+00:19:04,140 --> 00:19:06,120
+So what can you do about this?
+
+246
+00:19:06,120 --> 00:19:10,050
+A lot of this comes down to just structuring your
+application to minimize the amount of state changes
+
+247
+00:19:10,050 --> 00:19:13,650
+that you issue overall, and that
+includes redundant stage changes.
+
+248
+00:19:13,650 --> 00:19:17,870
+So, in addition, when you're, you know,
+thinking about how to organize your app,
+
+249
+00:19:17,870 --> 00:19:21,900
+you should also be thinking about
+where a state is stored in OpenGL.
+
+250
+00:19:21,900 --> 00:19:26,690
+So, in particular, there are a lot of objects that
+actually carry a good amount of state with them.
+
+251
+00:19:26,690 --> 00:19:34,470
+For example, textures have their own per-texture wrap modes
+and filters; and program objects have their own uniforms.
+
+252
+00:19:34,470 --> 00:19:39,220
+And vertex arrays can store a whole bunch of vertex
+submission state all, you know, in one thing.
+
+253
+00:19:39,220 --> 00:19:43,610
+And so the nice thing about this is that, when you bind
+that object, all that state comes along for the ride.
+
+254
+00:19:43,610 --> 00:19:48,220
+And so that's something you should be taking
+into consideration when you're writing your app
+
+255
+00:19:48,220 --> 00:19:53,410
+so that you don't do a lot of redundant work
+just because you changed what object was bound.
+
+256
+00:19:53,410 --> 00:19:57,440
+So what happens if, instead, your application
+was simply spending a lot of time waiting?
+
+257
+00:19:57,440 --> 00:20:02,330
+So what this typically means is that your application is
+waiting for the pipeline that you saw earlier to drain,
+
+258
+00:20:02,330 --> 00:20:05,620
+and usually this is because the CPU
+needs to access or modify some kind
+
+259
+00:20:05,620 --> 00:20:08,460
+of resource that the GPU also happened to be using.
+
+260
+00:20:08,460 --> 00:20:10,890
+And so this can happen in a number of ways.
+
+261
+00:20:10,890 --> 00:20:15,430
+It can happen because you're reading back the
+contents of a frame buffer that you rendered to
+
+262
+00:20:15,430 --> 00:20:20,180
+or you're modifying the contents of a texture
+or vertex buffer object or something like that.
+
+263
+00:20:20,180 --> 00:20:23,850
+And, generally, the thing that you want
+to do here is minimize the amount of time
+
+264
+00:20:23,850 --> 00:20:25,410
+that the -- well, that the CPU spends waiting.
+
+265
+00:20:25,410 --> 00:20:29,950
+And how you do that is that, well, in the case
+of frame buffers, you might want to wait as long
+
+266
+00:20:29,950 --> 00:20:35,210
+as possible before issuing a glReadPixels call
+to actually get the image data back from the GPU.
+
+267
+00:20:35,210 --> 00:20:39,480
+And, similarly, when you're modifying resources,
+you generally want to avoid modifying a resource
+
+268
+00:20:39,480 --> 00:20:42,940
+that you've already used in that form in the current frame.
+
+269
+00:20:42,940 --> 00:20:46,560
+And one thing that you can do to
+take this a step further is,
+
+270
+00:20:46,560 --> 00:20:50,360
+if you can afford to have multiple
+objects around, is to do exactly that.
+
+271
+00:20:50,360 --> 00:20:53,990
+And, so, if you're doing something like this,
+you would want to typically read back from
+
+272
+00:20:53,990 --> 00:20:56,200
+or modify the oldest object in the pipeline.
+
+273
+00:20:56,200 --> 00:21:00,450
+And this can actually go a long way towards minimizing
+the amount of time that the CPU spends waiting.
+
+274
+00:21:00,450 --> 00:21:02,480
+Okay. So that was generally CPU bottlenecks.
+
+275
+00:21:02,480 --> 00:21:05,250
+Most of it comes down to exactly
+how you've structured your app.
+
+276
+00:21:05,250 --> 00:21:11,620
+And, for that, you know, generally there's a lot that you
+can get from the OpenGL Essential Design Practices session,
+
+277
+00:21:11,620 --> 00:21:16,740
+and that's mostly reducing state changes and avoiding
+situations where the CPU has to wait for the GPU.
+
+278
+00:21:16,740 --> 00:21:19,760
+And, you know, Instruments can
+tell you a lot as Jeff showed,
+
+279
+00:21:19,760 --> 00:21:22,970
+like about situations in which this
+is happening and, you know, why.
+
+280
+00:21:22,970 --> 00:21:26,520
+So now let's talk about the GPU.
+
+281
+00:21:26,520 --> 00:21:30,100
+And before we actually talk about the vertex
+and fragment stages, I'd like to, you know,
+
+282
+00:21:30,100 --> 00:21:33,860
+introduce a metric that's generally useful
+for thinking about what the GPU is doing.
+
+283
+00:21:33,860 --> 00:21:38,600
+And that's that the amount of time that the GPU
+spend active is a function of really two factors.
+
+284
+00:21:38,600 --> 00:21:43,880
+It's a -- the first factor is really the amount of objects
+that you're sending to it like vertices or fragments.
+
+285
+00:21:43,880 --> 00:21:48,590
+And the second is really the cost of
+processing each individual element.
+
+286
+00:21:48,590 --> 00:21:52,000
+And this, too, can be broken down into a few factors.
+
+287
+00:21:52,000 --> 00:21:57,630
+You can think of it as, you know, an interaction of both
+what it takes to fetch the data that the GPU need to operate
+
+288
+00:21:57,630 --> 00:22:01,660
+on and to write it back out when it's
+done and to actually perform and --
+
+289
+00:22:01,660 --> 00:22:04,950
+and for the GPU to actually perform
+the calculations on these elements.
+
+290
+00:22:04,950 --> 00:22:07,740
+So let's take a look at how this
+applies to vertex processing.
+
+291
+00:22:07,740 --> 00:22:13,450
+So, typically, if you have an application
+that's bottlenecked by vertex processing,
+
+292
+00:22:13,450 --> 00:22:19,190
+what you'll see in the OpenGL ES Driver instrument
+is that the tiler utilization percentage which,
+
+293
+00:22:19,190 --> 00:22:26,120
+if you were here for the Shading and Rendering Techniques
+session, you should have seen an example of this.
+
+294
+00:22:26,120 --> 00:22:29,730
+You'll see the tiler utilization is near 100 percent.
+
+295
+00:22:29,730 --> 00:22:33,930
+And so, as I just mentioned, the workload size
+is really something that you control directly.
+
+296
+00:22:33,930 --> 00:22:37,890
+It's the number of vertices that you send through OpenGL.
+
+297
+00:22:37,890 --> 00:22:43,340
+And so what you'll see in this case is that you can often
+make the frame rate increase simply by using simpler models
+
+298
+00:22:43,340 --> 00:22:46,220
+or by sending less vertex data through the system.
+
+299
+00:22:46,220 --> 00:22:49,250
+Now, let's talk a little bit about the cost per vertex.
+
+300
+00:22:49,250 --> 00:22:55,740
+And so the two factors here are really fetching of the
+vertex attributes that you specified for your data;
+
+301
+00:22:55,740 --> 00:22:59,870
+and the actual computation, which is,
+you know, the shading, transformation,
+
+302
+00:22:59,870 --> 00:23:01,540
+lighting that you may be applying to the vertex.
+
+303
+00:23:01,540 --> 00:23:08,690
+And, in this case, you can distinguish between vertex
+processing cases that are bound by data versus computation
+
+304
+00:23:08,690 --> 00:23:13,860
+by simplifying what you're doing in your vertex
+shader to see if that increases the performance.
+
+305
+00:23:13,860 --> 00:23:17,800
+So, first, let's actually take a look at the data case.
+
+306
+00:23:17,800 --> 00:23:22,370
+So there are generally a few things that you can do
+to improve performance of an application that's bound
+
+307
+00:23:22,370 --> 00:23:24,730
+by vertex fetching rather than computation.
+
+308
+00:23:24,730 --> 00:23:30,820
+And the first -- well, the first thing which is actually the
+most important thing is that, on PowerVR SGX in particular,
+
+309
+00:23:30,820 --> 00:23:34,230
+you should be using vertex buffer
+objects for all your vertex data.
+
+310
+00:23:34,230 --> 00:23:38,650
+Now, the nice thing about this is that it allows the
+GPU to fetch the vertex data directly without, you know,
+
+311
+00:23:38,650 --> 00:23:42,420
+involving the CPU in it, which
+can significantly speed things up.
+
+312
+00:23:42,420 --> 00:23:45,550
+When you're using vertex buffer
+objects, you should definitely keep
+
+313
+00:23:45,550 --> 00:23:50,530
+in mind how you're actually using your vertex
+data and hint that to OpenGL appropriately.
+
+314
+00:23:50,530 --> 00:23:54,590
+Now, what OpenGL has is something called
+a usage hint for vertex buffer object;
+
+315
+00:23:54,590 --> 00:23:59,580
+and that specifies both how often you intend to
+modify the contents of that vertex buffer object,
+
+316
+00:23:59,580 --> 00:24:02,330
+as well as how often you intend to actually render from it.
+
+317
+00:24:02,330 --> 00:24:07,930
+And, so, in OpenGL ES 2.0, there are three possible
+things that you can specify, as you can see.
+
+318
+00:24:07,930 --> 00:24:12,560
+And so we recommend that you pick the one
+that matches what you're trying to do.
+
+319
+00:24:12,560 --> 00:24:16,750
+In addition, we highly recommend that you
+use index draw calls wherever possible.
+
+320
+00:24:16,750 --> 00:24:21,210
+So this means using an index buffer and
+using glDrawElements instead of glDrawArrays.
+
+321
+00:24:21,210 --> 00:24:27,830
+And what's good about this is that it typically allows the
+GPU to benefit from many reuse of vertices that you have
+
+322
+00:24:27,830 --> 00:24:32,150
+in your data which, you know, in turn,
+translates into more efficient fetching.
+
+323
+00:24:32,150 --> 00:24:38,620
+Another thing that you can do to improve the efficiency
+of vertex fetching is to take all your vertex attributes,
+
+324
+00:24:38,620 --> 00:24:43,470
+and instead of having them in separate arrays, you can
+pack them all together into a single interleaved array.
+
+325
+00:24:43,470 --> 00:24:47,480
+And, when you're doing this, you should keep in mind
+that, for best performance when you're doing this,
+
+326
+00:24:47,480 --> 00:24:52,470
+you should have all your attributes, both the pointers
+and the strides, aligned to 4-byte boundaries.
+
+327
+00:24:52,470 --> 00:24:54,020
+So I haven't talked about computation yet.
+
+328
+00:24:54,020 --> 00:24:56,650
+We'll actually talk about that in the shader tuning section.
+
+329
+00:24:56,650 --> 00:25:00,640
+But just to remind you, for vertex processing,
+there's really just a few things that you should do.
+
+330
+00:25:00,640 --> 00:25:03,800
+You should take advantage of vertex
+buffer objects, vertex array objects,
+
+331
+00:25:03,800 --> 00:25:11,020
+and you should generally structure your vertex data so
+that the GPU can fetch it as efficiently as possible.
+
+332
+00:25:11,020 --> 00:25:13,890
+Okay. Now let's talk a bit about fragment processing.
+
+333
+00:25:13,890 --> 00:25:19,270
+This is typically -- a fragment processing
+bound application is typically identified
+
+334
+00:25:19,270 --> 00:25:24,150
+by a renderer utilization percentage
+that's near 100 percent.
+
+335
+00:25:24,150 --> 00:25:27,230
+So how did this -- you know, how
+did these two factors map to --
+
+336
+00:25:27,230 --> 00:25:32,540
+or the workload size and cost per
+element map to a fragment processing?
+
+337
+00:25:32,540 --> 00:25:35,130
+So how things stack up in fragment processing is
+
+338
+00:25:35,130 --> 00:25:39,500
+that the workload size is determined
+by the number of visible fragments.
+
+339
+00:25:39,500 --> 00:25:42,270
+And this is, you know, slightly
+less straightforward than the number
+
+340
+00:25:42,270 --> 00:25:46,820
+of vertices that you're sending through the system.
+
+341
+00:25:46,820 --> 00:25:49,010
+But let's see.
+
+342
+00:25:49,010 --> 00:25:55,410
+One thing that you could do generally to identify fragment
+processing bottlenecks is to use the minimize number
+
+343
+00:25:55,410 --> 00:25:58,840
+of pixels rendered override that
+is in the OpenGL ES Analyzer.
+
+344
+00:25:58,840 --> 00:26:02,280
+And this -- what this will actually do
+is to restrict all your rendering to a 1
+
+345
+00:26:02,280 --> 00:26:07,420
+by 1 box at the corner of your frame buffer.
+
+346
+00:26:07,420 --> 00:26:14,790
+So, now, the cost per fragment is determined by, well --
+data fetching in terms of cost per fragment is determined
+
+347
+00:26:14,790 --> 00:26:23,640
+by what it takes to fetch both frame buffer and texture data
+for your fragments and to write frame buffer data back out.
+
+348
+00:26:23,640 --> 00:26:26,620
+Computation is determined by the
+contents of your fragment shader.
+
+349
+00:26:26,620 --> 00:26:31,960
+And so this is one of the things that we'll also
+talk about in the shader tuning section of this talk.
+
+350
+00:26:31,960 --> 00:26:37,240
+So let's take a closer look at the
+number of visible fragments since,
+
+351
+00:26:37,240 --> 00:26:39,520
+you know, that's the interaction of a few factors.
+
+352
+00:26:39,520 --> 00:26:42,930
+In particular, let's talk about hidden surface removal.
+
+353
+00:26:42,930 --> 00:26:49,390
+On tile-based deferred renderers, such as the PowerVR
+SGX, there's a hidden surface removal mechanism
+
+354
+00:26:49,390 --> 00:26:53,610
+that typically works by looking at
+groups of opaque geometry and determining
+
+355
+00:26:53,610 --> 00:26:57,020
+which of these things are actually
+covered up by other opaque geometry.
+
+356
+00:26:57,020 --> 00:27:02,000
+So what that implies is that, when you're drawing in your
+application, you can generally get the best efficiency
+
+357
+00:27:02,000 --> 00:27:08,140
+out of this mechanism by taking all your opaque objects
+and drawing them together at the start of your scene.
+
+358
+00:27:08,140 --> 00:27:12,760
+And, to follow onto that, once you've drawn all
+your opaque objects, what we typically recommend is
+
+359
+00:27:12,760 --> 00:27:17,880
+that you draw all alpha-tested objects or objects
+using the discard keyword in GLSL ES after that,
+
+360
+00:27:17,880 --> 00:27:21,090
+and only after all of that is done do
+you draw your alpha blended objects.
+
+361
+00:27:21,090 --> 00:27:28,210
+So let's take a look now at the last two objects
+-- the last two object types that I mentioned.
+
+362
+00:27:28,210 --> 00:27:34,970
+So, in particular, one thing that we want you to keep in
+mind when you're thinking about fragment processing is that,
+
+363
+00:27:34,970 --> 00:27:39,890
+really, that processing work happens regardless of
+what result it actually has on the frame buffers.
+
+364
+00:27:39,890 --> 00:27:43,560
+So, in particular, for quads that
+may have a lot of transparent area
+
+365
+00:27:43,560 --> 00:27:46,300
+in them, that work is really still happening.
+
+366
+00:27:46,300 --> 00:27:49,850
+And, in particular, this can be even
+worse if you have alpha testing enabled,
+
+367
+00:27:49,850 --> 00:27:53,720
+as this can be particularly expensive
+on GPUs like the PowerVR SGX.
+
+368
+00:27:53,720 --> 00:27:59,970
+And in -- well, when you think about this and, like,
+if you have a lot of layers that are drawn like this,
+
+369
+00:27:59,970 --> 00:28:04,790
+the amount of wasted work can really
+accumulate as the number of layers increases.
+
+370
+00:28:04,790 --> 00:28:08,240
+So what can you do about this?
+
+371
+00:28:08,240 --> 00:28:13,400
+One thing that you can do is you can just
+try to reduce the amount of wasted area
+
+372
+00:28:13,400 --> 00:28:15,950
+by simply trimming it out with your geometry.
+
+373
+00:28:15,950 --> 00:28:21,840
+And so there's -- the simplest way is to really
+just restrict your quads so that they bound your --
+
+374
+00:28:21,840 --> 00:28:26,640
+well, they bound the interesting parts of your
+sprites or whatever assets as closely as possible.
+
+375
+00:28:26,640 --> 00:28:30,600
+And, you know, you can go a step further and
+actually pick geometry that's custom tailored
+
+376
+00:28:30,600 --> 00:28:33,050
+for what you're trying to draw.
+
+377
+00:28:33,050 --> 00:28:37,840
+So I mentioned earlier in the talk that you can
+often add work to other parts of the pipeline
+
+378
+00:28:37,840 --> 00:28:39,380
+without impacting your frame rate overall.
+
+379
+00:28:39,380 --> 00:28:40,580
+And this is really an example of that.
+
+380
+00:28:40,580 --> 00:28:44,450
+This is an example of trading extra
+vertex processing to reduce the load
+
+381
+00:28:44,450 --> 00:28:49,390
+on the fragment processing part of the pipeline.
+
+382
+00:28:49,390 --> 00:28:52,280
+So now let's look at the other side
+of the equation, the cost per vertex.
+
+383
+00:28:52,280 --> 00:28:57,490
+So, as before, there's always a bandwidth and computa --
+
+384
+00:28:57,490 --> 00:29:02,520
+there are always bandwidth and computation factors
+at play when determining the cost of a fragment.
+
+385
+00:29:02,520 --> 00:29:06,220
+And you can -- and you can determine
+which have these two things is really,
+
+386
+00:29:06,220 --> 00:29:09,580
+you know, impacting you also using the Analyzer.
+
+387
+00:29:09,580 --> 00:29:13,520
+So there are two Overrides that the
+Analyzer provides for these situations.
+
+388
+00:29:13,520 --> 00:29:19,540
+One of them is minimize -- is called minimize utilized
+texture bandwidth, which can greatly reduce any bottlenecks
+
+389
+00:29:19,540 --> 00:29:21,920
+that you might be seeing on the bandwidth side.
+
+390
+00:29:21,920 --> 00:29:25,320
+And, similarly, you have simplified
+fragment shader processing,
+
+391
+00:29:25,320 --> 00:29:28,320
+which will replace whatever fragment
+shaders you have in your app
+
+392
+00:29:28,320 --> 00:29:32,150
+with a trivial fragment shader that
+draws a simple -- a single color.
+
+393
+00:29:32,150 --> 00:29:37,510
+And so, by completely removing the workload on
+one side or the other of this particular equation,
+
+394
+00:29:37,510 --> 00:29:39,940
+you can determine which of these
+was actually your bottleneck.
+
+395
+00:29:39,940 --> 00:29:44,890
+So let's take a look at what you
+can do for a bandwidth bound app.
+
+396
+00:29:44,890 --> 00:29:50,970
+So a simple thing that you can generally do in almost every
+app is minimize the amount of write out that's being done
+
+397
+00:29:50,970 --> 00:29:55,240
+for fragment data -- for frame
+-- sorry -- frame buffer data.
+
+398
+00:29:55,240 --> 00:30:01,440
+And, generally, you know, we find that a lot of apps don't
+need the contents of their buffers from frame to frame.
+
+399
+00:30:01,440 --> 00:30:05,950
+And, generally, what you can do in this
+situation is you can issue a full screen clear
+
+400
+00:30:05,950 --> 00:30:07,890
+of all the buffers at the start of your frame.
+
+401
+00:30:07,890 --> 00:30:10,270
+So that's, you know, color, depth,
+stencil, or whatever you have.
+
+402
+00:30:10,270 --> 00:30:14,320
+And, then, at the end of the frame,
+typically you only need color,
+
+403
+00:30:14,320 --> 00:30:16,900
+especially if you're not reusing those other buffers anyway.
+
+404
+00:30:16,900 --> 00:30:21,000
+So what you can do in this situation is you discard
+all of the other buffers at the end of the frame.
+
+405
+00:30:21,000 --> 00:30:26,200
+And, as you can see, this can greatly reduce the
+amount of writes that the GPU does to memory.
+
+406
+00:30:26,200 --> 00:30:32,250
+Now, this becomes even more important once you start
+using multisampled rendering because these color --
+
+407
+00:30:32,250 --> 00:30:36,580
+these color and depth frame buffers in the
+multisample frame buffer can be so large.
+
+408
+00:30:36,580 --> 00:30:39,640
+And this becomes -- well, yeah.
+
+409
+00:30:39,640 --> 00:30:45,800
+So the biggest thing about this is that, with
+proper usage of both clearing and discarding,
+
+410
+00:30:45,800 --> 00:30:50,340
+you can typically allow the GPU to resolve the contents
+of the multisample frame buffer directly to memory
+
+411
+00:30:50,340 --> 00:30:53,370
+without any extra -- without any extra traffic.
+
+412
+00:30:53,370 --> 00:30:55,330
+So what can you do on the texture side?
+
+413
+00:30:55,330 --> 00:31:01,050
+Usually this comes down to using the smallest texture
+format that's suitable for whatever your assets are.
+
+414
+00:31:01,050 --> 00:31:05,530
+So the first thing that we typically suggest that you
+try, particularly if you have assets that are photographic
+
+415
+00:31:05,530 --> 00:31:09,570
+in nature, is the PVR texture compression format.
+
+416
+00:31:09,570 --> 00:31:14,170
+So a lot of this comes down to actually compressing your
+images with a format and seeing if they look, you know,
+
+417
+00:31:14,170 --> 00:31:15,700
+good enough for what you're trying to do.
+
+418
+00:31:15,700 --> 00:31:20,090
+And if they don't, there are still a number of other formats
+that you should be considering: single channel, luminance,
+
+419
+00:31:20,090 --> 00:31:25,350
+and alpha formats or a number of
+16-bit RGB and RGBA formats.
+
+420
+00:31:25,350 --> 00:31:30,230
+In addition to choosing the right depth for your
+textures, you should also be sizing them, you know,
+
+421
+00:31:30,230 --> 00:31:33,750
+based on how big they will actually appear on the screen.
+
+422
+00:31:33,750 --> 00:31:36,810
+Now, if you have a texture that will actually
+appear at a number of different scale factors,
+
+423
+00:31:36,810 --> 00:31:41,870
+what you should generally be doing is generating mipmaps for
+these textures and using mipmapping when you actually render
+
+424
+00:31:41,870 --> 00:31:45,310
+from this, as this basically allows
+the GPU to pick the right size.
+
+425
+00:31:45,310 --> 00:31:51,110
+So before we talk about shader tuning
+and fragment and vertex computation,
+
+426
+00:31:51,110 --> 00:31:55,270
+I'd like to just quickly recap what we
+talked about for fragment processing.
+
+427
+00:31:55,270 --> 00:32:01,460
+So what you generally want to do is you want to minimize
+the number of actual fragments that the GPU thinks it has
+
+428
+00:32:01,460 --> 00:32:07,190
+to work on, so that means minimizing the number
+of -- well, the amount of screen area that goes in
+
+429
+00:32:07,190 --> 00:32:12,180
+and giving the GPU the best chance that it can
+to remove all hidden surfaces in your scene.
+
+430
+00:32:12,180 --> 00:32:16,040
+And, similarly, you just want to minimize
+the amount of external bandwidth consumed
+
+431
+00:32:16,040 --> 00:32:17,800
+for both frame buffered data and for textures.
+
+432
+00:32:17,800 --> 00:32:22,460
+So now let's talk a little bit about shader tuning.
+
+433
+00:32:22,460 --> 00:32:25,420
+So we're going to focus on a few topics
+that we think are generally relevant
+
+434
+00:32:25,420 --> 00:32:28,230
+to writing performance shaders on this platform.
+
+435
+00:32:28,230 --> 00:32:31,930
+So we'll cover precision qualifiers in GLSL ES.
+
+436
+00:32:31,930 --> 00:32:38,670
+We'll talk about how to structure your shaders to
+minimize the amount of computation that's performed.
+
+437
+00:32:38,670 --> 00:32:42,820
+And we'll talk about dependent texture
+reads and why you should care about them.
+
+438
+00:32:42,820 --> 00:32:45,300
+So, first, precision qualifiers.
+
+439
+00:32:45,300 --> 00:32:47,930
+If you've come from the desktop and
+you've written GLSL shaders there,
+
+440
+00:32:47,930 --> 00:32:49,800
+this will be something that's slightly new to you.
+
+441
+00:32:49,800 --> 00:32:52,890
+So what these are, are hints that you can give
+
+442
+00:32:52,890 --> 00:32:56,340
+to the compiler regarding the precision
+of every variable in your shader.
+
+443
+00:32:56,340 --> 00:33:00,380
+And one thing that's interesting about this is that, if you
+have the varying variable that appears in both the vertex
+
+444
+00:33:00,380 --> 00:33:05,420
+and fragment shader stages, you can
+specify a different precision for each.
+
+445
+00:33:05,420 --> 00:33:12,630
+Now, we emphasize these precisions because choosing
+smaller precisions can sometimes increase performance; and,
+
+446
+00:33:12,630 --> 00:33:17,910
+in general, picking the right precisions for the
+variables in your shaders can often make the difference
+
+447
+00:33:17,910 --> 00:33:22,120
+between an application that runs fast
+enough and one that's just not quite there.
+
+448
+00:33:22,120 --> 00:33:25,930
+So, with that, what precisions are available in GLSL ES?
+
+449
+00:33:25,930 --> 00:33:27,260
+First, we have highp.
+
+450
+00:33:27,260 --> 00:33:31,000
+This is typically a single precision floating point format.
+
+451
+00:33:31,000 --> 00:33:35,360
+And what we find that this is generally good for are
+things like position and texture coordinate transformation,
+
+452
+00:33:35,360 --> 00:33:38,080
+like what you see in the shader snippet below.
+
+453
+00:33:38,080 --> 00:33:43,790
+So this shader snippet, you know, applies a model view and
+a projection transform to a vertex position and also uses
+
+454
+00:33:43,790 --> 00:33:49,050
+that vertex position to generate a texture
+coordinate from something like a top-down light map
+
+455
+00:33:49,050 --> 00:33:54,580
+or some other like -- some other world space texture.
+
+456
+00:33:54,580 --> 00:33:58,500
+Next, we have mediump.
+
+457
+00:33:58,500 --> 00:34:01,610
+On this platform, this is a half
+precision floating point format.
+
+458
+00:34:01,610 --> 00:34:08,850
+This can sometimes give an increase in
+computation throughput, but that comes at a --
+
+459
+00:34:08,850 --> 00:34:11,800
+within a decrease in both range and precision.
+
+460
+00:34:11,800 --> 00:34:14,310
+But what we find is that this is
+often good enough for things
+
+461
+00:34:14,310 --> 00:34:17,490
+like lighting calculations like
+what you see in the shader snippet.
+
+462
+00:34:17,490 --> 00:34:22,020
+This can also be good for storing texture coordinates
+that come out of your shaders; and, in particular,
+
+463
+00:34:22,020 --> 00:34:26,400
+we recommend this if you're dealing with small textures
+and textures that don't use a whole lot of wrapping
+
+464
+00:34:26,400 --> 00:34:30,990
+or perspective, you know, to ensure that
+you don't run into any precision issues.
+
+465
+00:34:30,990 --> 00:34:32,710
+Finally, we have lowp.
+
+466
+00:34:32,710 --> 00:34:36,330
+This is a much more restricted precision than the other two.
+
+467
+00:34:36,330 --> 00:34:41,890
+I mean, it only covers a range from negative 2 to
+2; and it does so with 8-bit fractional precision.
+
+468
+00:34:41,890 --> 00:34:50,760
+But what's nice about this particular format is that that's
+enough range for things like texture samples, colors,
+
+469
+00:34:50,760 --> 00:34:54,610
+normal data, other factors that you would
+use to mix between colors, and so on.
+
+470
+00:34:54,610 --> 00:35:00,090
+And so what that means is that this is really a precision
+that you want to be using a lot in your fragment shaders.
+
+471
+00:35:00,090 --> 00:35:05,240
+But, when you're using this precision, there's a few
+things that you'll generally want to keep in mind.
+
+472
+00:35:05,240 --> 00:35:08,860
+You want to stick to 3- and 4-component vectors
+where possible, and you generally don't want
+
+473
+00:35:08,860 --> 00:35:12,540
+to swizzle the components of these
+vectors if you don't have to.
+
+474
+00:35:12,540 --> 00:35:14,670
+So, in this particular shader example, you know,
+
+475
+00:35:14,670 --> 00:35:18,630
+what we're doing in this fragment shader
+is we're sampling a texture value.
+
+476
+00:35:18,630 --> 00:35:23,340
+And we're just modulating with another lowp color
+that we've passed through from the vertex shader.
+
+477
+00:35:23,340 --> 00:35:29,870
+So now that we've looked at all the different precisions
+that are available, what things do you have to keep in mind
+
+478
+00:35:29,870 --> 00:35:31,790
+when you're actually choosing these precisions?
+
+479
+00:35:31,790 --> 00:35:35,270
+And the first thing is really that
+these precision hints are exactly that.
+
+480
+00:35:35,270 --> 00:35:35,970
+They're hints.
+
+481
+00:35:35,970 --> 00:35:39,440
+They're minimums that the compiler must
+respect when it's compiling your shader.
+
+482
+00:35:39,440 --> 00:35:43,290
+But the compiler is actually free to use
+more precision than what you've asked for.
+
+483
+00:35:43,290 --> 00:35:48,470
+And so, with that in mind, you generally want
+to pick precisions that actually, you know,
+
+484
+00:35:48,470 --> 00:35:53,600
+make sense given the range or whatever of the
+computations that you're trying to perform.
+
+485
+00:35:53,600 --> 00:35:58,190
+And on that note, you should generally be querying
+the implementation to see exactly what precisions
+
+486
+00:35:58,190 --> 00:36:03,920
+and ranges are available for those
+particular qualifiers in your specific GPU.
+
+487
+00:36:03,920 --> 00:36:09,320
+Additionally, when you're picking precisions, you also
+want to avoid introducing situations where the compiler has
+
+488
+00:36:09,320 --> 00:36:11,820
+to convert variables between different precisions.
+
+489
+00:36:11,820 --> 00:36:14,360
+And this is actually even more
+important when you're dealing with lowp,
+
+490
+00:36:14,360 --> 00:36:18,510
+because you generally want computations
+to stay in lowp once they're there.
+
+491
+00:36:18,510 --> 00:36:22,040
+[ Pause ]
+
+492
+00:36:22,040 --> 00:36:25,020
+So now let's talk about expressing
+your computations efficiently.
+
+493
+00:36:25,020 --> 00:36:28,320
+And we'll talk about both how and where.
+
+494
+00:36:28,320 --> 00:36:31,020
+But, actually, let's talk about where first.
+
+495
+00:36:31,020 --> 00:36:35,590
+So consider the case of like some
+model that you're rendering.
+
+496
+00:36:35,590 --> 00:36:38,890
+You know, there are really three places
+that you can express computations.
+
+497
+00:36:38,890 --> 00:36:41,160
+So let's look at uniforms first.
+
+498
+00:36:41,160 --> 00:36:47,190
+So, you know, in this situation, you
+basically calculate your uniforms on the CPU.
+
+499
+00:36:47,190 --> 00:36:51,530
+And then you just pass them in and then this value
+just gets used, well, everywhere in your shader.
+
+500
+00:36:51,530 --> 00:36:54,760
+And so that really -- that computation happens once.
+
+501
+00:36:54,760 --> 00:36:59,940
+So now let's consider the case where you want
+to do a calculation in your vertex shader.
+
+502
+00:36:59,940 --> 00:37:03,740
+So, really, that computation happens once
+for every invocation with the vertex shader.
+
+503
+00:37:03,740 --> 00:37:05,540
+So that's every vertex.
+
+504
+00:37:05,540 --> 00:37:09,810
+And for, you know, some kind of model for a
+character that you might have, that, you know,
+
+505
+00:37:09,810 --> 00:37:13,680
+amounts to maybe a few thousand
+times that this calculation occurs.
+
+506
+00:37:13,680 --> 00:37:19,700
+Now, if, instead, you choose to do the calculation with
+the fragment shader, that calculation now has to run once
+
+507
+00:37:19,700 --> 00:37:23,210
+for every single fragment that's generated
+by this model that you might be drawing.
+
+508
+00:37:23,210 --> 00:37:28,700
+And so, if you think of it in terms of screen
+pixels, that can actually be a lot of times
+
+509
+00:37:28,700 --> 00:37:31,210
+that this particular computation happens.
+
+510
+00:37:31,210 --> 00:37:32,890
+So what's the takeaway message from this?
+
+511
+00:37:32,890 --> 00:37:35,600
+You generally want to do your calculations
+as early as possible.
+
+512
+00:37:35,600 --> 00:37:37,800
+If things are constant, you want
+to express them as uniforms.
+
+513
+00:37:37,800 --> 00:37:42,680
+And, generally, this can do a lot to minimize the
+number of times that a particular operation happens.
+
+514
+00:37:42,680 --> 00:37:46,900
+So now let's talk a little bit more
+about the how of efficient computation.
+
+515
+00:37:46,900 --> 00:37:52,530
+So what you want to do in this case
+is to -- well, to take in mind --
+
+516
+00:37:52,530 --> 00:37:56,160
+keep in mind that this GPU is really a scalar GPU.
+
+517
+00:37:56,160 --> 00:38:00,820
+And so you only want to operate on the elements
+of your variables that you actually need.
+
+518
+00:38:00,820 --> 00:38:05,860
+And so, for example, let's take a look at the way
+this attenuation factor is calculated in this shader.
+
+519
+00:38:05,860 --> 00:38:10,940
+As you can see, we actually operate on the elements
+individually to avoid extra work that might have been done
+
+520
+00:38:10,940 --> 00:38:18,650
+on the X component of attenuation factor or the Y
+component of the attenuation factor, for that matter.
+
+521
+00:38:18,650 --> 00:38:24,720
+Similarly, when you're operating on
+a mix of scalar and vector variables,
+
+522
+00:38:24,720 --> 00:38:31,260
+you generally want to keep all your scalar vectors --
+or your scalar variables together in your computations.
+
+523
+00:38:31,260 --> 00:38:36,940
+And so this avoids situations where a scalar operation
+has to be applied to every single element of a vector.
+
+524
+00:38:36,940 --> 00:38:42,900
+So consider the way the direction factor in
+attenuation is applied to this lighting calculation.
+
+525
+00:38:42,900 --> 00:38:46,890
+So both the attenuation and ndotl are both scalar qualities.
+
+526
+00:38:46,890 --> 00:38:52,600
+And so, by performing these calculations together,
+you can do this division once instead of once
+
+527
+00:38:52,600 --> 00:38:56,790
+for every single element or every
+single component of the color.
+
+528
+00:38:56,790 --> 00:39:00,920
+So now let's talk about another feature
+of GLSL, which are the built-in functions.
+
+529
+00:39:00,920 --> 00:39:05,410
+Now, these implement a lot of functionality that's
+generally useful for a lot of shader writers.
+
+530
+00:39:05,410 --> 00:39:10,540
+And there's actually another perk to using GLSL
+built-ins, which is that they give the compiler leeway
+
+531
+00:39:10,540 --> 00:39:15,060
+to express these calculations in the way
+that makes the most sense for the hardware.
+
+532
+00:39:15,060 --> 00:39:20,460
+So let's take a look at this particular example which
+basically blends between two colors based on a third factor.
+
+533
+00:39:20,460 --> 00:39:22,860
+And so there are a number of ways that you could write this.
+
+534
+00:39:22,860 --> 00:39:28,590
+You could try to express this particular interpolation
+yourself in, you know, a few different ways.
+
+535
+00:39:28,590 --> 00:39:33,880
+Or you could simply use the GLSL mixed keyword
+and let the compiler figure out what's best.
+
+536
+00:39:33,880 --> 00:39:38,590
+And so this is something that we highly
+recommend; because, well, you know,
+
+537
+00:39:38,590 --> 00:39:46,110
+you don't require any hardware-specific
+knowledge of, you know, what makes the most sense.
+
+538
+00:39:46,110 --> 00:39:48,580
+So now let's talk about dependent texture reads.
+
+539
+00:39:48,580 --> 00:39:50,920
+Some of you may already be familiar with this term.
+
+540
+00:39:50,920 --> 00:39:54,790
+What it generally is, is texture
+samples that use texture coordinates
+
+541
+00:39:54,790 --> 00:39:56,650
+that have been calculated in the fragment shader.
+
+542
+00:39:56,650 --> 00:40:01,170
+Now, this is as opposed to dependent -- or nondependent
+texture reads which come from texture coordinates
+
+543
+00:40:01,170 --> 00:40:05,080
+that may have been passed directly
+from the vertex shader in varyings.
+
+544
+00:40:05,080 --> 00:40:11,030
+So this can actually happen in a number of different
+ways, some of which are more obvious than others.
+
+545
+00:40:11,030 --> 00:40:15,630
+So, first, let's consider the straightforward
+way in which a texture read can become dependent.
+
+546
+00:40:15,630 --> 00:40:21,020
+And that's basically when you modify that texture
+coordinate explicitly in the fragment shader.
+
+547
+00:40:21,020 --> 00:40:25,200
+Now, I've provided two examples here; because I
+specifically want to point out the second example.
+
+548
+00:40:25,200 --> 00:40:29,880
+Now, this example applies a constant
+bias to the texture coordinate.
+
+549
+00:40:29,880 --> 00:40:35,510
+So, in a situation like this, this is really a calculation
+that you could have done in the vertex shader instead.
+
+550
+00:40:35,510 --> 00:40:39,560
+And if you think about what happens if you take this
+particular calculation and move it to the vertex shader,
+
+551
+00:40:39,560 --> 00:40:44,410
+you know, what occurs is that, well,
+one, this calculation happens a lot less
+
+552
+00:40:44,410 --> 00:40:47,290
+because it's now occurring per
+vertex instead of per fragment.
+
+553
+00:40:47,290 --> 00:40:49,850
+And you've also turned this back
+into a nondependent texture read.
+
+554
+00:40:49,850 --> 00:40:53,050
+So there are a few other slightly less
+obvious ways in which this might occur.
+
+555
+00:40:53,050 --> 00:40:57,870
+And, in particular, the ones that I'm about to
+point out are somewhat specific to the PowerVR SGX.
+
+556
+00:40:57,870 --> 00:41:02,090
+And, in particular, this is when you
+use texture samples that are projected
+
+557
+00:41:02,090 --> 00:41:06,520
+or use an LOD bias or specifically select the LOD.
+
+558
+00:41:06,520 --> 00:41:12,900
+And so this generally happens when you use the
+special texture 2D sampling functions in GLSL.
+
+559
+00:41:12,900 --> 00:41:16,560
+So I pointed out all these particular situations.
+
+560
+00:41:16,560 --> 00:41:18,140
+And why do they matter?
+
+561
+00:41:18,140 --> 00:41:22,880
+Generally, what you'll find is that doing
+nondependent texture reads is, well,
+
+562
+00:41:22,880 --> 00:41:24,560
+faster than doing dependent texture reads.
+
+563
+00:41:24,560 --> 00:41:31,460
+And this happens for a number of reasons, the first of
+which is that this generally costs fewer shader cycles;
+
+564
+00:41:31,460 --> 00:41:36,790
+and the second is really that doing
+nondependent texture reads allows the GPU
+
+565
+00:41:36,790 --> 00:41:39,960
+to better take advantage of parallelism
+in the fragment shader.
+
+566
+00:41:39,960 --> 00:41:44,640
+So let's take a step back and look at
+what we've covered in shader tuning.
+
+567
+00:41:44,640 --> 00:41:46,830
+There really are a few messages that
+we want you to take away from this.
+
+568
+00:41:46,830 --> 00:41:49,810
+And, really, the first one is to
+choose precisions carefully.
+
+569
+00:41:49,810 --> 00:41:54,110
+You want to pick them based on what you're
+actually doing with a particular variable.
+
+570
+00:41:54,110 --> 00:41:57,590
+Second, we want to make sure that you're looking
+at where you're actually putting your calculations,
+
+571
+00:41:57,590 --> 00:42:03,520
+like which stage of the pipeline you're putting your
+calculations; and, generally, that you're expressing them
+
+572
+00:42:03,520 --> 00:42:08,010
+in a way that's as efficient for the compiler as possible.
+
+573
+00:42:08,010 --> 00:42:11,870
+So let's take another step back and
+just look at optimization in general.
+
+574
+00:42:11,870 --> 00:42:17,350
+And here, the biggest thing that you
+should take away is that you really want
+
+575
+00:42:17,350 --> 00:42:21,010
+to be spending your time tuning
+the slowest stage in your pipeline.
+
+576
+00:42:21,010 --> 00:42:22,950
+And this is something that the
+tools can really help you with.
+
+577
+00:42:22,950 --> 00:42:28,700
+The tools can do a great job of pointing you
+at exactly which pipeline stage is the slowest.
+
+578
+00:42:28,700 --> 00:42:33,260
+And, you know, and that -- with that, in turn, you should
+not be afraid to do more work in other stages if you think
+
+579
+00:42:33,260 --> 00:42:36,250
+that that can actually help alleviate your bottlenecks.
+
+580
+00:42:36,250 --> 00:42:40,040
+And the second thing is, of course,
+to do less work if you can.
+
+581
+00:42:40,040 --> 00:42:46,370
+Or you want to also give the GPU the ability to do less work
+by taking advantage of its hidden surface removal abilities.
+
+582
+00:42:46,370 --> 00:42:50,260
+And you want to really give it less work
+by giving it smaller data types to work on
+
+583
+00:42:50,260 --> 00:42:53,350
+and just minimizing the amount of
+computation you perform overall.
+
+584
+00:42:53,350 --> 00:42:56,120
+So that was probably a lot of guidance.
+
+585
+00:42:56,120 --> 00:42:59,100
+And, you know, one thing that you
+might be wondering is, well,
+
+586
+00:42:59,100 --> 00:43:01,880
+how do I know exactly which of these things applies to me?
+
+587
+00:43:01,880 --> 00:43:06,560
+And, for that, I'd like to bring Jeff back on to talk
+about the last feature of the OpenGL ES Analyzer.
+
+588
+00:43:06,560 --> 00:43:12,360
+>> Jean-Francois Roy: The last feature of the
+OpenGL ES Analyzer is the OpenGL ES Expert.
+
+589
+00:43:12,360 --> 00:43:21,210
+The OpenGL ES Expert is an expert system that
+has comprehensive knowledge of the OpenGL ES API
+
+590
+00:43:21,210 --> 00:43:25,770
+of our implementation of OpenGL ES and of our hardware.
+
+591
+00:43:25,770 --> 00:43:34,750
+It will allow you to easily find problems in your
+application by finding those problems for you
+
+592
+00:43:34,750 --> 00:43:40,340
+and will also help you fix these problems by
+providing you with actionable recommendations
+
+593
+00:43:40,340 --> 00:43:43,250
+on how to address each one of those problems.
+
+594
+00:43:43,250 --> 00:43:52,360
+Here's some categories of problems that the Expert knows
+about: redundant state changes; invalid frame buffer
+
+595
+00:43:52,360 --> 00:44:00,690
+and texture configurations; invalid OpenGL operations;
+suboptimal vertex formats, layouts and storage --
+
+596
+00:44:00,690 --> 00:44:06,330
+and this also applies to textures;
+suboptimal operation order; and, finally,
+
+597
+00:44:06,330 --> 00:44:09,950
+some hardware-specific performance conditions
+
+598
+00:44:09,950 --> 00:44:14,870
+that would otherwise be very difficult
+or impossible for you to know about.
+
+599
+00:44:14,870 --> 00:44:21,100
+Rather than talk about each one of those categories in
+detail, let me give you a demo of the OpenGL ES Analyzer.
+
+600
+00:44:21,100 --> 00:44:28,270
+So we have an application here that is trying to draw
+pictures but, well, isn't quite doing so correctly.
+
+601
+00:44:28,270 --> 00:44:36,000
+And if I bring in a frame, you know, FPS
+counter, it shows about 33 frames per second.
+
+602
+00:44:36,000 --> 00:44:37,260
+So this is not bad.
+
+603
+00:44:37,260 --> 00:44:38,980
+But this is a very, very simple application.
+
+604
+00:44:38,980 --> 00:44:42,710
+So we actually expect a lot more performance than this.
+
+605
+00:44:42,710 --> 00:44:46,500
+So let's see if we can use the OpenGL ES Analyzer to figure
+
+606
+00:44:46,500 --> 00:44:50,770
+out why this application is rendering
+incorrectly and why it's so slow.
+
+607
+00:44:50,770 --> 00:44:59,720
+And the easiest way to get access to the OpenGL ES
+Analyzer is to use this new OpenGL ES Analysis Template.
+
+608
+00:45:01,030 --> 00:45:07,930
+This will get you both the Driver
+instruments and also the Analyzer instrument.
+
+609
+00:45:07,930 --> 00:45:13,480
+Now, like most instruments, the OpenGL ES
+Analyzer has some amount of configuration.
+
+610
+00:45:13,480 --> 00:45:18,520
+Specifically, you can toggle which
+frame statistics you're interested in.
+
+611
+00:45:18,520 --> 00:45:24,330
+And so now let's select our application
+and see what we can find out.
+
+612
+00:45:24,330 --> 00:45:29,390
+So immediately we see this red
+thing that looks very ominous.
+
+613
+00:45:29,390 --> 00:45:33,930
+So we probably have already found
+one of our two critical problems.
+
+614
+00:45:33,930 --> 00:45:40,100
+So let me just stop recording right away
+and start taking a look at what we have.
+
+615
+00:45:40,100 --> 00:45:45,180
+So the first thing I'd like to highlight is
+this red flag in the instrument's timeline.
+
+616
+00:45:45,180 --> 00:45:50,230
+Any issue that's considered by the Expert to be an
+absolutely critical issue, either for correctness
+
+617
+00:45:50,230 --> 00:45:52,620
+or performance, is going to be highlighted right up there.
+
+618
+00:45:52,620 --> 00:45:55,980
+And this generally should be the
+first thing you start looking at.
+
+619
+00:45:55,980 --> 00:46:02,770
+In this case, the Expert is telling us that we're
+performing unoptimized multisampling results.
+
+620
+00:46:02,770 --> 00:46:11,120
+This is also what you can see in the list of
+recommendation or problems that the Expert has found.
+
+621
+00:46:11,120 --> 00:46:14,940
+You'll also notice that the problems are sorted by severity.
+
+622
+00:46:14,940 --> 00:46:20,820
+So the general guideline here is
+to go down the list top to bottom.
+
+623
+00:46:20,820 --> 00:46:23,510
+These are the broad categories of problems.
+
+624
+00:46:23,510 --> 00:46:27,230
+So once you've decided on what
+kind of issue you want to work on,
+
+625
+00:46:27,230 --> 00:46:31,060
+you can click on the little arrow to focus on this category.
+
+626
+00:46:31,060 --> 00:46:37,830
+And this will bring you to a table that will show you
+every single unique instance of this particular problem.
+
+627
+00:46:37,830 --> 00:46:42,560
+These are unique by the back trace,
+meaning that, if you're doing something
+
+628
+00:46:42,560 --> 00:46:45,530
+or your application is doing something
+incorrect every frame,
+
+629
+00:46:45,530 --> 00:46:48,690
+you'll only get one entry for that particular problem.
+
+630
+00:46:48,690 --> 00:46:54,290
+And the occurrences is the number of
+times it has, you know, actually occurred.
+
+631
+00:46:54,290 --> 00:46:58,090
+So what we're seeing here is that
+we're doing a suboptimal MSAA resolve.
+
+632
+00:46:58,090 --> 00:47:04,200
+And the occurrence actually matches the number of
+frames we've recorded, so we're doing this every frame.
+
+633
+00:47:04,200 --> 00:47:06,120
+Now, how do we solve this problem?
+
+634
+00:47:06,120 --> 00:47:11,130
+Well, to get more information, we can
+bring the instrument's extended detail view
+
+635
+00:47:11,130 --> 00:47:13,690
+by using this icon here in the tool bar.
+
+636
+00:47:13,690 --> 00:47:21,070
+And we can immediately see that the OpenGL ES Expert is
+giving us a recommendation on how to address this problem.
+
+637
+00:47:21,070 --> 00:47:26,660
+So here it's telling us that we've performed
+an expensive, suboptimal multisampling resolve,
+
+638
+00:47:26,660 --> 00:47:32,690
+and that this is typically caused by failing to use discard
+frame buffer after resolve multisample frame buffer.
+
+639
+00:47:32,690 --> 00:47:35,370
+It's also pointing us at documentation here,
+
+640
+00:47:35,370 --> 00:47:39,550
+the specifications for an extension to
+get more information on this problem.
+
+641
+00:47:39,550 --> 00:47:46,250
+Now, if you've attended the OpenGL ES Overview
+session, you will know that this is a critical part
+
+642
+00:47:46,250 --> 00:47:49,600
+of getting good performance out of multisampling.
+
+643
+00:47:49,600 --> 00:47:54,310
+So we really want to adopt the discard
+extension here to improve our performance.
+
+644
+00:47:54,310 --> 00:47:57,430
+Now, where is -- you know, where should we change our code?
+
+645
+00:47:57,430 --> 00:48:02,820
+Well, like many things, Instruments
+provides you with a stack trace.
+
+646
+00:48:02,820 --> 00:48:06,970
+And so we know exactly where in our
+application this problem should be fixed.
+
+647
+00:48:06,970 --> 00:48:10,600
+In this case, it's in some rendering class on line 690.
+
+648
+00:48:10,600 --> 00:48:13,050
+So let's actually go fix our problem.
+
+649
+00:48:13,050 --> 00:48:15,920
+Going to bring up Xcode 4.
+
+650
+00:48:15,920 --> 00:48:19,130
+I conveniently happened to be on the source line.
+
+651
+00:48:19,130 --> 00:48:26,270
+And we, indeed, can see that we have the resolve
+multisample frame buffer API call here and no discard.
+
+652
+00:48:26,270 --> 00:48:28,680
+So that's bad.
+
+653
+00:48:28,680 --> 00:48:36,820
+Let's bring in our discard and just going
+to bring in over here from the snippets area
+
+654
+00:48:36,820 --> 00:48:41,100
+in Xcode 4 the -- whoops -- the discard command.
+
+655
+00:48:41,100 --> 00:48:43,040
+And this is all you need.
+
+656
+00:48:43,040 --> 00:48:48,470
+This is two lines of code to get rid of the multisampled
+color attachment and depth attachment,
+
+657
+00:48:48,470 --> 00:48:51,710
+since we're never going to use them again; and call discard.
+
+658
+00:48:51,710 --> 00:48:55,150
+And so pretty confident that this
+will fix our performance problem.
+
+659
+00:48:55,150 --> 00:48:56,210
+So, all right.
+
+660
+00:48:56,210 --> 00:48:56,630
+That's great.
+
+661
+00:48:56,630 --> 00:48:58,790
+That was fast.
+
+662
+00:48:58,790 --> 00:49:03,370
+But we also have black textures, and that's not cool.
+
+663
+00:49:03,370 --> 00:49:07,170
+So let's try to see if we can find that problem.
+
+664
+00:49:07,170 --> 00:49:12,060
+So we're going to go back to the categories
+and look at what else the Expert is telling us.
+
+665
+00:49:12,060 --> 00:49:17,390
+And, hmm; there's this mipmapping
+without complete mipchain thing here.
+
+666
+00:49:17,390 --> 00:49:21,230
+I'm not an expert on OpenGL, but I know that
+mipmapping has something to do with textures.
+
+667
+00:49:21,230 --> 00:49:22,790
+So, you know, let's take a look at this.
+
+668
+00:49:22,790 --> 00:49:25,100
+It's the next item in the list, right?
+
+669
+00:49:25,100 --> 00:49:26,480
+So we're going to focus on this.
+
+670
+00:49:26,480 --> 00:49:32,050
+And here we can see that there's two
+unique locations where this is happening.
+
+671
+00:49:32,050 --> 00:49:36,950
+And if you pay attention to the batch rates,
+you'll see that it sort of changes the lines.
+
+672
+00:49:36,950 --> 00:49:39,790
+So two different locations in the
+source code where this is happening.
+
+673
+00:49:39,790 --> 00:49:46,750
+And we can see that one of them is occurring more
+frequently than the other, so let's take a look at that one.
+
+674
+00:49:46,750 --> 00:49:51,340
+Here we can see that the Expert is telling us
+that mipmapping has been enabled for this texture,
+
+675
+00:49:51,340 --> 00:49:53,790
+but we are missing levels in our mipchain.
+
+676
+00:49:53,790 --> 00:49:55,990
+The rendering results will likely be incorrect.
+
+677
+00:49:55,990 --> 00:49:58,640
+Hmm. Well, this sounds like what we're seeing.
+
+678
+00:49:58,640 --> 00:50:01,230
+So this may be our problem.
+
+679
+00:50:01,230 --> 00:50:05,550
+You can also see that it points out a documentation
+on GL tech image 2D and GL tech parameter.
+
+680
+00:50:05,550 --> 00:50:12,940
+These are the OpenGL commands to configure
+texturing and add an image to a texture.
+
+681
+00:50:12,940 --> 00:50:18,810
+But to really make sure that this is our problem, we can
+leverage the other hubs of information in the Analyzer
+
+682
+00:50:18,810 --> 00:50:22,550
+to really convince ourselves that this is our problem.
+
+683
+00:50:22,550 --> 00:50:27,950
+So a good strategy here is we know we're loading
+our texture at the beginning of the application.
+
+684
+00:50:27,950 --> 00:50:36,140
+So we're going to switch to the frame statistics
+table right here and highlight the second frame,
+
+685
+00:50:36,140 --> 00:50:41,910
+which is going to move the instrument's
+time head just before --
+
+686
+00:50:41,910 --> 00:50:45,450
+you know, at the very beginning of that second frame.
+
+687
+00:50:45,450 --> 00:50:51,280
+We can then move is -- kind of just move the
+timing a little bit and select that time range.
+
+688
+00:50:51,280 --> 00:50:53,450
+And this basically selected the first frame.
+
+689
+00:50:53,450 --> 00:50:57,300
+So now we're going to focus our
+attention only on the first frame.
+
+690
+00:50:57,300 --> 00:51:00,360
+I'd also like to mention, if you
+notice, that the redundant state changes
+
+691
+00:51:00,360 --> 00:51:03,450
+of this application is 3 at the
+beginning and then it's all 0s.
+
+692
+00:51:03,450 --> 00:51:05,440
+So we're good on that.
+
+693
+00:51:05,440 --> 00:51:06,860
+That's great.
+
+694
+00:51:06,860 --> 00:51:12,150
+So now that we selected this range, we
+can go take a look at the API statistics.
+
+695
+00:51:12,150 --> 00:51:16,200
+And, yeah; indeed, we are calling
+GL tech image 2D in there 14 times.
+
+696
+00:51:16,200 --> 00:51:18,870
+So this is -- we have the right spot.
+
+697
+00:51:18,870 --> 00:51:25,350
+And we can finally go look at the trace and see at all
+the OpenGL commands that your application issued --
+
+698
+00:51:25,350 --> 00:51:28,640
+that this application issued in this time range.
+
+699
+00:51:28,640 --> 00:51:30,660
+So we see the usual suspects.
+
+700
+00:51:30,660 --> 00:51:33,260
+We're creating our context, creating our frame buffers.
+
+701
+00:51:33,260 --> 00:51:34,120
+So that's expected.
+
+702
+00:51:34,120 --> 00:51:35,470
+And, oh, look.
+
+703
+00:51:35,470 --> 00:51:45,320
+Texture calls that enable mipmapping as the minification
+filter but we only ever specify one texture for each
+
+704
+00:51:45,320 --> 00:51:47,150
+of these textures at the full resolution.
+
+705
+00:51:47,150 --> 00:51:49,710
+So that's -- that's clearly wrong.
+
+706
+00:51:49,710 --> 00:51:52,540
+That's not what we want to be doing.
+
+707
+00:51:52,540 --> 00:51:53,400
+And so, yeah.
+
+708
+00:51:53,400 --> 00:51:54,910
+This is definitely our problem.
+
+709
+00:51:54,910 --> 00:51:57,310
+We are missing mipmaps in our textures.
+
+710
+00:51:57,310 --> 00:51:59,190
+So where can we fix this problem?
+
+711
+00:51:59,190 --> 00:52:05,240
+Well, let's take a look at this tech image
+2D command and see where it's called from.
+
+712
+00:52:05,240 --> 00:52:10,550
+It's called from some function called create
+texture, blah, blah, blah, on line 933.
+
+713
+00:52:10,550 --> 00:52:14,270
+So let's go right there, see if we can fix our problem.
+
+714
+00:52:14,270 --> 00:52:15,870
+Again, I'm going to bring up Xcode.
+
+715
+00:52:15,870 --> 00:52:19,590
+Go to line 933.
+
+716
+00:52:19,590 --> 00:52:21,580
+There we go.
+
+717
+00:52:21,580 --> 00:52:26,530
+And this is a generic function that this
+application is using for loading textures.
+
+718
+00:52:26,530 --> 00:52:36,320
+It has a convenient use mipmaps argument; but,
+well, we never submit all the other texture levels.
+
+719
+00:52:36,320 --> 00:52:38,580
+So there's typically two solutions to this.
+
+720
+00:52:38,580 --> 00:52:41,740
+The first is that you can pregenerate your mipmaps offline.
+
+721
+00:52:41,740 --> 00:52:44,940
+This is the recommended approach
+if your textures are static.
+
+722
+00:52:44,940 --> 00:52:48,880
+But if you just want the performance and
+quality improvements of using mipmapping
+
+723
+00:52:48,880 --> 00:52:53,550
+without having extra assets, you can use
+the convenient generate mipmaps command
+
+724
+00:52:53,550 --> 00:52:56,320
+to have OpenGL generate the mipmaps for you.
+
+725
+00:52:56,320 --> 00:52:58,060
+And so this is a single line of code.
+
+726
+00:52:58,060 --> 00:53:00,480
+You can just bring this over.
+
+727
+00:53:00,480 --> 00:53:01,920
+And there we go.
+
+728
+00:53:01,920 --> 00:53:05,600
+We have hopefully fixed our texturing problems.
+
+729
+00:53:05,600 --> 00:53:10,660
+Let's convince ourselves that this is
+the case by running the Analyzer again.
+
+730
+00:53:10,660 --> 00:53:15,370
+I'm going to magically switch to a
+fixed version of this application,
+
+731
+00:53:15,370 --> 00:53:21,510
+click record, and let's see what the Expert tells us.
+
+732
+00:53:21,510 --> 00:53:22,950
+And, yeah.
+
+733
+00:53:22,950 --> 00:53:31,160
+The big, red ominous flag is gone, and so are the --
+so is the mip recommendation, as well, or problem.
+
+734
+00:53:31,160 --> 00:53:33,790
+And if we can switch to the demo phone, please.
+
+735
+00:53:33,790 --> 00:53:40,720
+We can see that the application renders the
+pictures correctly, and it seems a lot speedier too.
+
+736
+00:53:40,720 --> 00:53:46,870
+And, indeed, if I bring the frames per second, you'll see
+that we're pretty much pegged at 60 frames per second.
+
+737
+00:53:46,870 --> 00:53:49,000
+Great. We fixed our application.
+
+738
+00:53:49,000 --> 00:53:50,520
+We've improved its performance.
+
+739
+00:53:50,520 --> 00:53:52,100
+We didn't have to scratch our heads.
+
+740
+00:53:52,100 --> 00:53:53,120
+Fantastic.
+
+741
+00:53:53,120 --> 00:54:00,750
+So that was the OpenGL ES Expert, one of the three
+components of the new OpenGL ES Analyzer instrument,
+
+742
+00:54:00,750 --> 00:54:09,210
+a brand new instrument designed to help you solve your
+performance and correctness problems in your application.
+
+743
+00:54:09,210 --> 00:54:13,170
+Now, I'd like to conclude this with a call to arms.
+
+744
+00:54:13,170 --> 00:54:19,950
+If you've attended the Game Design sessions, you've
+been told that, you know, play testing is critical;
+
+745
+00:54:19,950 --> 00:54:24,090
+that you need to do it every -- you
+know, as much as you can every day.
+
+746
+00:54:24,090 --> 00:54:26,310
+Well, this is also true for performance.
+
+747
+00:54:26,310 --> 00:54:31,910
+You need to be looking at your performance continuously
+until you ship your application and then continue
+
+748
+00:54:31,910 --> 00:54:35,590
+to do so, even if it's -- you know, for version 2.
+
+749
+00:54:35,590 --> 00:54:39,220
+So I want you to go out after this session and get the tool.
+
+750
+00:54:39,220 --> 00:54:44,240
+And I want you to start using it on
+your application every single day
+
+751
+00:54:44,240 --> 00:54:47,520
+to improve your performance or keep it where it's at.
+
+752
+00:54:47,520 --> 00:54:49,660
+Make sure you never regress.
+
+753
+00:54:49,660 --> 00:54:54,610
+Also, I highly encourage you to send us feedback
+so that we can make this tool even better for you.
+
+754
+00:54:54,610 --> 00:54:57,390
+And, finally, go make an awesome app.
+
+755
+00:54:57,390 --> 00:55:04,190
+OpenGL is this fantastically powerful API
+that can let you create fantastic graphics.
+
+756
+00:55:04,190 --> 00:55:10,650
+And so, with great tools and great API,
+you can make the most amazing applications.
+
+757
+00:55:10,650 --> 00:55:16,390
+For more information, there's two evangelists you may
+want to talk to: Allan Schaffer for anything graphics
+
+758
+00:55:16,390 --> 00:55:20,540
+and games related, and Mike Jurewitz
+for anything developer tools related.
+
+759
+00:55:20,540 --> 00:55:27,470
+We have a lot of great documention on OpenGL
+on the Developer Web site; in particular,
+
+760
+00:55:27,470 --> 00:55:32,980
+the OpenGL programming guide includes on paper
+many of the recommendations that we've expressed
+
+761
+00:55:32,980 --> 00:55:37,430
+in this session and that the Expert has internalized.
+
+762
+00:55:37,430 --> 00:55:39,900
+There's also the Khronos group, the Web site.
+
+763
+00:55:39,900 --> 00:55:43,910
+Khronos is the standard organization responsible for OpenGL.
+
+764
+00:55:43,910 --> 00:55:48,680
+They have a lot of information on the
+OpenGL, also including the specifications,
+
+765
+00:55:48,680 --> 00:55:51,770
+which I highly recommend you go read if you haven't done so.
+
+766
+00:55:51,770 --> 00:55:59,030
+And, finally, the Apple Developer Forums is the
+place to go to get information or ask questions
+
+767
+00:55:59,030 --> 00:56:02,500
+and have it answered both by your
+peers and by Apple engineers.
+

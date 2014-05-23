@@ -1,0 +1,3144 @@
+1
+00:00:06,050 --> 00:00:09,470
+>> Welcome to the third Game Center session.
+
+2
+00:00:09,470 --> 00:00:16,810
+This is Game Center Techniques, Part 2 and I'm going
+to talk to you about adding multiplayer to your game.
+
+3
+00:00:16,810 --> 00:00:17,940
+I'm Nathan Taylor.
+
+4
+00:00:17,940 --> 00:00:22,190
+I'm a senior iPhone development
+engineer, the Game Center team.
+
+5
+00:00:22,190 --> 00:00:29,240
+And we want to talk about how the facilities for multiplayer
+do the hard stuff, getting people connected in terms
+
+6
+00:00:29,240 --> 00:00:33,790
+of network gaming so that you can
+just easily take advantage of our APIs
+
+7
+00:00:33,790 --> 00:00:36,750
+and get your game players playing with each other.
+
+8
+00:00:36,750 --> 00:00:44,450
+I'm going do a quick overview of what Game Center is
+and what Game Center offers and then I'm going to step
+
+9
+00:00:44,450 --> 00:00:48,550
+into the nitty gritty of what we do for
+multiplayer to make it easy for you.
+
+10
+00:00:48,550 --> 00:00:52,810
+First of all Game Center is Apple's social gaming network.
+
+11
+00:00:52,810 --> 00:00:57,280
+It's comprised of three parts-- there's
+the built-in application, Game Center app,
+
+12
+00:00:57,280 --> 00:01:02,290
+if you've installed the developer seed you've
+seen our icon on your home screen or page 2.
+
+13
+00:01:02,290 --> 00:01:04,390
+It's also a framework.
+
+14
+00:01:04,390 --> 00:01:10,480
+The GameKit framework is where the Game Center
+API lives and we have a set of online services,
+
+15
+00:01:10,480 --> 00:01:14,210
+our Game Center services, which
+we host sort of in the cloud.
+
+16
+00:01:14,210 --> 00:01:20,450
+There are servers and they handle a lot of the storage
+requirements for your leaderboards and your achievements
+
+17
+00:01:20,450 --> 00:01:25,340
+as well as all the players and then they
+have the Auto-Matching and invite services
+
+18
+00:01:25,340 --> 00:01:27,450
+that hook your players up for multiplayer.
+
+19
+00:01:27,450 --> 00:01:37,200
+Game Center provides several of these facilities
+here; the friend relationships, leaderboards,
+
+20
+00:01:37,200 --> 00:01:41,730
+achievements and the multiplayer
+API that's the focus of this talk.
+
+21
+00:01:41,730 --> 00:01:49,420
+All of these build together combined to make a social gaming
+network and then the multiplayer you know leverages that
+
+22
+00:01:49,420 --> 00:01:54,080
+and that leverages the friend relationships to send
+friend invites and also it just helps grow the network.
+
+23
+00:01:54,080 --> 00:01:59,650
+If you play with somebody you'll see them on
+the recently played list in the Game Center app.
+
+24
+00:01:59,650 --> 00:02:03,200
+And then you can make them your friend and
+add them to your network for future invites.
+
+25
+00:02:03,200 --> 00:02:10,820
+So what you're going to learn in this session,
+I'm going to show you the overview slide,
+
+26
+00:02:10,820 --> 00:02:14,890
+the graphic that is the block diagram that is Game
+Center that you've seen before if you've been here.
+
+27
+00:02:14,890 --> 00:02:17,630
+But we'll focus on the area that we're going to talk about.
+
+28
+00:02:17,630 --> 00:02:23,690
+I'm going to give you a quick look at what we provide
+in the Game Center services and then I'm going
+
+29
+00:02:23,690 --> 00:02:25,840
+to go in-depth on what the multiplayer services are.
+
+30
+00:02:25,840 --> 00:02:29,610
+I'm going to start with Authentication
+because you can't do anything
+
+31
+00:02:29,610 --> 00:02:37,070
+in Game Center unless you've authenticated the local player,
+about how to get connected through invites and Auto-Matching
+
+32
+00:02:37,070 --> 00:02:42,940
+and talk about the network communications that we
+set up for you and you know the different types
+
+33
+00:02:42,940 --> 00:02:45,790
+of things you can do here and how
+to be a good network citizen.
+
+34
+00:02:45,790 --> 00:02:51,000
+Finally we're going to get into how you can make it fun
+and engaging for users beyond how great your game is
+
+35
+00:02:51,000 --> 00:02:54,200
+but let them talk to each other with player communications.
+
+36
+00:02:54,200 --> 00:02:58,580
+So this is the block diagram that is Game Center.
+
+37
+00:02:58,580 --> 00:03:03,350
+We have the GameKit framework in the middle in green here.
+
+38
+00:03:03,350 --> 00:03:07,270
+And your games and Game Center sit on top of this.
+
+39
+00:03:07,270 --> 00:03:12,770
+We provide the general functionality that was covered
+in the previous session, which is the authentication,
+
+40
+00:03:12,770 --> 00:03:15,090
+friends list, leaderboards and achievements.
+
+41
+00:03:15,090 --> 00:03:21,150
+And then what we're going to cover today in
+this session is the multiplayer functionality.
+
+42
+00:03:21,150 --> 00:03:30,520
+This is our Auto-Matching service, our Game Invitations,
+Peer-to-Peer Networking and In-Game Voice Chat.
+
+43
+00:03:32,120 --> 00:03:37,960
+So the Game Center services, the servers
+that we offer are there to connect people.
+
+44
+00:03:37,960 --> 00:03:44,010
+We use these servers to route requests to devices
+and we use these to find devices that can communicate
+
+45
+00:03:44,010 --> 00:03:48,000
+so that we can establish global peer-to-peer communications.
+
+46
+00:03:48,000 --> 00:03:50,320
+So the question that came up in the overview,
+
+47
+00:03:50,320 --> 00:03:57,520
+and yes we do establish wide-area network
+peer-to-peer communication between devices.
+
+48
+00:03:57,520 --> 00:04:05,670
+These services are available over WiFi and over the various
+cellular networks and you know being able to connect people
+
+49
+00:04:05,670 --> 00:04:11,410
+and get together in the same game provides a great
+opportunity for social gaming and allows a lot of people
+
+50
+00:04:11,410 --> 00:04:18,020
+to discover your games because as was shown in the
+overview if one person invites their friend to play a game
+
+51
+00:04:18,020 --> 00:04:22,440
+and that friend does not have the game yet the
+invitation notice will give them an opportunity
+
+52
+00:04:22,440 --> 00:04:27,140
+to buy the game immediately in
+the game store, in the app store.
+
+53
+00:04:27,140 --> 00:04:31,490
+And ultimately there are things you need
+to keep in mind; these are mobile devices.
+
+54
+00:04:31,490 --> 00:04:32,850
+These are phones.
+
+55
+00:04:32,850 --> 00:04:39,470
+People move around, phone calls come in, connections come
+and go and there are some considerations you need to take
+
+56
+00:04:39,470 --> 00:04:43,300
+into account in handling these off-line situations.
+
+57
+00:04:43,300 --> 00:04:46,540
+So as I said players will come
+and go in the middle of your game.
+
+58
+00:04:46,540 --> 00:04:52,000
+Now we're going to try and notify you if you have a
+connection that goes away but you need to be prepared
+
+59
+00:04:52,000 --> 00:04:57,530
+for the game player to take phone calls and
+if they lose and regain their connection.
+
+60
+00:04:57,530 --> 00:05:03,180
+So we have facilities where you can detect a disconnect
+and then potentially add another player into it
+
+61
+00:05:03,180 --> 00:05:09,630
+or your game can just go on without that player
+or you can handle it whatever way you need to.
+
+62
+00:05:09,630 --> 00:05:13,000
+And you also need to be aware in iOS 4 of multitasking.
+
+63
+00:05:13,000 --> 00:05:17,160
+Your game might get switched to the background for some
+other reason in which case you might want to Pause.
+
+64
+00:05:17,160 --> 00:05:23,460
+And if you're in multiplayer you might want to communicate
+that to the other players so that they Pause as well.
+
+65
+00:05:23,460 --> 00:05:28,690
+And ultimately it's important for game play to be able
+to continue for the others in one form or another.
+
+66
+00:05:28,690 --> 00:05:37,290
+If they want to continue and let this person be dropped, you
+know without this person, then they should be able to do so.
+
+67
+00:05:37,290 --> 00:05:42,370
+So the service also-- there are some considerations
+that need to be taken in setting up your game.
+
+68
+00:05:42,370 --> 00:05:47,520
+We currently provide compatibility between different
+versions and this comes into play with matchmaking.
+
+69
+00:05:47,520 --> 00:05:54,500
+In iTunes Connect you set up your game through
+its bundle identifier and you register it
+
+70
+00:05:54,500 --> 00:06:00,080
+to be a game center application and then
+you set up the versions that are going
+
+71
+00:06:00,080 --> 00:06:02,240
+to be compatible to play with each other.
+
+72
+00:06:02,240 --> 00:06:11,850
+So if you add the Game Center services multiplayer in
+version 1.0 and then you know, or actually you add it in 2.0
+
+73
+00:06:11,850 --> 00:06:17,570
+and you have it in 2.1 and then you know you broke
+it in 2.3, so maybe you want to leave that out,
+
+74
+00:06:17,570 --> 00:06:20,200
+and then maybe 3.0 is now totally different.
+
+75
+00:06:20,200 --> 00:06:21,770
+It's no longer compatible.
+
+76
+00:06:21,770 --> 00:06:30,610
+You need to kind of report these in iTunes Connect
+so that we know that you know basically if 3.0 comes
+
+77
+00:06:30,610 --> 00:06:35,220
+in it's compatible with 2.0 and 2.1 but
+it's not compatible with 1.0 anymore.
+
+78
+00:06:35,220 --> 00:06:39,840
+And this is done with Invites on the
+recipient's device and the invite will come in
+
+79
+00:06:39,840 --> 00:06:45,660
+and we'll tell them what version it was for and if they
+don't have that version, but they do have the game,
+
+80
+00:06:45,660 --> 00:06:49,440
+they can at least go to the store and
+upgrade to the appropriate version.
+
+81
+00:06:49,440 --> 00:06:51,920
+Actually, they'll get to go to the latest version.
+
+82
+00:06:51,920 --> 00:06:53,470
+So that's one thing to keep in mind.
+
+83
+00:06:53,470 --> 00:06:59,480
+Before we can get started with multiplayer and Game
+Center in general you need to take the GKLocalPlayer,
+
+84
+00:06:59,480 --> 00:07:02,840
+which is the user of the device
+and you need to authenticate it.
+
+85
+00:07:02,840 --> 00:07:10,480
+So authentication is done with the LocalPlayer and it
+also provides the friend list so that you can now dive
+
+86
+00:07:10,480 --> 00:07:19,170
+into the social network, get the friends of this player
+and display them and use them however you want to.
+
+87
+00:07:19,170 --> 00:07:26,290
+The LocalPlayer provides an invariant playerID
+persistent the lifetime of that account.
+
+88
+00:07:26,290 --> 00:07:30,260
+You should use this for referencing saved games so that if--
+
+89
+00:07:30,260 --> 00:07:34,300
+because one device might be used for
+multiple local players at different times.
+
+90
+00:07:34,300 --> 00:07:37,080
+You'd like them to have different sets of saved game data.
+
+91
+00:07:37,080 --> 00:07:43,230
+You also want to use this for cash data as mentioned in the
+previous session if you want to submit a leaderboard score
+
+92
+00:07:43,230 --> 00:07:49,810
+or achievement and the network is offline at the
+time, you want to archive that achievement or score.
+
+93
+00:07:49,810 --> 00:07:57,310
+It will be saved with the playerID
+and you will want to resend that.
+
+94
+00:07:57,310 --> 00:08:03,880
+So the key thing to keep in mind with authentication
+is you want to do it as early as possible.
+
+95
+00:08:03,880 --> 00:08:08,560
+We recommend that you do it as soon as
+you can after an application is launching.
+
+96
+00:08:08,560 --> 00:08:14,760
+The only thing to keep in mind is its probably
+best that your game UI is up in some form
+
+97
+00:08:14,760 --> 00:08:18,970
+because Game Center will show additional UI.
+
+98
+00:08:18,970 --> 00:08:25,720
+If the user is not logged in we're going to show an
+alert allowing them to log in or create a new account.
+
+99
+00:08:25,720 --> 00:08:30,410
+If they have gone through and logged in
+somewhere else we have a single sign-on
+
+100
+00:08:30,410 --> 00:08:32,720
+and then we will automatically
+authenticate and we will at least show the UI
+
+101
+00:08:32,720 --> 00:08:36,670
+to welcome them back to Game Center and your game.
+
+102
+00:08:36,670 --> 00:08:43,590
+If you have not authenticated and start using other Game
+Center APIs these will return immediately with errors.
+
+103
+00:08:43,590 --> 00:08:45,480
+So make sure to authenticate as soon as possible.
+
+104
+00:08:45,480 --> 00:08:50,190
+Here is a quick review of the code.
+
+105
+00:08:50,190 --> 00:08:54,170
+It is a single method on LocalPlayer.
+
+106
+00:08:54,170 --> 00:09:00,010
+The first thing you want to do is get the LocalPlayer
+through the GKLocalPlayer Singleton method,
+
+107
+00:09:00,010 --> 00:09:06,710
+and then call authenticateWithCompletionHandler
+and this is using the block syntax.
+
+108
+00:09:06,710 --> 00:09:10,830
+You will receive a callback with an error or not.
+
+109
+00:09:10,830 --> 00:09:16,670
+If you receive an error you should disable
+your Game Center features but make sure
+
+110
+00:09:16,670 --> 00:09:19,930
+that the user can still play your game in some form.
+
+111
+00:09:19,930 --> 00:09:24,750
+You know you may have to restrict them to Single-Player
+mode, but at least leave some of your game functionality.
+
+112
+00:09:24,750 --> 00:09:29,960
+Because it would be terrible if your game was not usable when they're on an airplane.
+
+113
+00:09:29,960 --> 00:09:36,730
+Otherwise go ahead and enable the Game Center
+functionality and provide the full Game Center experience.
+
+114
+00:09:38,190 --> 00:09:43,170
+So the first multiplayer experience that
+I want to talk about is Auto-Matching.
+
+115
+00:09:43,170 --> 00:09:49,640
+This is where we allow people with similar configurations
+that want to play multiplayer without any encumbrance just
+
+116
+00:09:49,640 --> 00:09:55,110
+to jump in and be matched with people that are like-minded.
+
+117
+00:09:55,110 --> 00:09:57,950
+There is a few classes we use to do this in the API.
+
+118
+00:09:57,950 --> 00:10:07,190
+They are the GKMatchRequest, which defines the parameters
+of the match, the GKMatchmaker that can do this,
+
+119
+00:10:07,190 --> 00:10:14,940
+the matchmaking, you know it takes the match request and
+gets the match back without any UI and then if you want to,
+
+120
+00:10:14,940 --> 00:10:18,070
+provide standard UI for the matchmaking
+and if you do this you need
+
+121
+00:10:18,070 --> 00:10:21,140
+to handle invitations as well,
+which will be the next section.
+
+122
+00:10:21,140 --> 00:10:23,160
+You can use the GKmatchmakerViewController.
+
+123
+00:10:23,160 --> 00:10:27,370
+I'm going to walk through the Auto-Matching
+flow a little bit here
+
+124
+00:10:27,370 --> 00:10:29,890
+and show you how things were communicating with the servers.
+
+125
+00:10:29,890 --> 00:10:34,140
+If you were at the overview session you've
+probably seen this before but I'm going to go
+
+126
+00:10:34,140 --> 00:10:37,860
+into a little bit more detail about
+the parts of this matchmaking.
+
+127
+00:10:37,860 --> 00:10:44,070
+So we're starting up here with Onward, which is one
+of our test games and ThunderZeus has just signed in.
+
+128
+00:10:44,070 --> 00:10:49,880
+We're going to set up Auto-Matching
+and then add two more players to play.
+
+129
+00:10:49,880 --> 00:10:53,520
+So here the game is allowing 2 to 4 players.
+
+130
+00:10:53,520 --> 00:11:01,100
+ThunderZeus has chosen to play with 4 players and when
+I hit the Play Now, the match request will be sent
+
+131
+00:11:01,100 --> 00:11:05,100
+to by the Matchmaker to our Auto-Matching services.
+
+132
+00:11:05,100 --> 00:11:08,490
+Now if you've written a great game, it's popular.
+
+133
+00:11:08,490 --> 00:11:14,970
+You'll have a lot of people out there and the probability
+is there are going to people for this person to play with.
+
+134
+00:11:14,970 --> 00:11:17,510
+Everybody's going to want to play the game.
+
+135
+00:11:17,510 --> 00:11:21,730
+The services are going to look at all
+the requests, find the most appropriate,
+
+136
+00:11:21,730 --> 00:11:26,580
+the best suited requests, and we'll
+return a match to those games.
+
+137
+00:11:26,580 --> 00:11:32,950
+The Matchmaking class GKMatchmaker or the
+View Controller will return a match object
+
+138
+00:11:32,950 --> 00:11:36,590
+at which point you can begin your game.
+
+139
+00:11:36,590 --> 00:11:39,930
+So here's a rundown of the matchmaking process.
+
+140
+00:11:39,930 --> 00:11:44,040
+The first thing you need to do is create a match request.
+
+141
+00:11:44,040 --> 00:11:47,140
+This is where you define the parameters of the match.
+
+142
+00:11:47,140 --> 00:11:53,310
+You then send the match request to the server
+either through the Matchmaker or the standard UI.
+
+143
+00:11:53,310 --> 00:11:59,380
+The server then applies the Matchmaking logic and
+takes into account parameters of the match request,
+
+144
+00:11:59,380 --> 00:12:05,350
+information about all the devices that are requesting
+similar parameters in their connection capabilities
+
+145
+00:12:05,350 --> 00:12:13,730
+and looks at particular into two parameters that you can
+choose, which is the Player Group and the player attributes.
+
+146
+00:12:13,730 --> 00:12:21,400
+These are properties on the match request that
+allow you to control how the match is grouped,
+
+147
+00:12:21,400 --> 00:12:27,730
+you know how we segregate the pools of the people that want
+to play and also the type of players that can come together.
+
+148
+00:12:27,730 --> 00:12:31,420
+I'm going to give more details and
+in-depth analysis of this later.
+
+149
+00:12:31,420 --> 00:12:36,480
+Once the server has found the best
+match the match is returned
+
+150
+00:12:36,480 --> 00:12:40,290
+to all the devices that are participating in that match.
+
+151
+00:12:40,290 --> 00:12:46,480
+Then it's up to you to basically start listening
+on that match for all players to connect.
+
+152
+00:12:46,480 --> 00:12:49,660
+Once everything is ready to go, begin
+the game and let everybody have fun.
+
+153
+00:12:49,660 --> 00:12:56,220
+So let's take a look at what the match request is.
+
+154
+00:12:56,220 --> 00:12:57,980
+It's a really simple object.
+
+155
+00:12:57,980 --> 00:13:01,160
+It's the parameters for the match.
+
+156
+00:13:01,160 --> 00:13:03,610
+You get to set a few properties here.
+
+157
+00:13:03,610 --> 00:13:06,020
+The first two are the minimum and maximum players.
+
+158
+00:13:06,020 --> 00:13:15,540
+If you want to allow the user to choose between a certain
+set of players you can set a range, 2 to 4 for example.
+
+159
+00:13:15,540 --> 00:13:19,470
+If you only wanted to allow a 3-player
+game you could set both equal to 3.
+
+160
+00:13:19,470 --> 00:13:23,250
+Ultimately the only requirements here
+are that minimum players be less than
+
+161
+00:13:23,250 --> 00:13:27,440
+or equal to maximum players, it
+wouldn't make sense otherwise.
+
+162
+00:13:27,440 --> 00:13:32,210
+Now keep in mind depending on what type of match you
+want, whether you're going to go with a peer-to-peer match
+
+163
+00:13:32,210 --> 00:13:39,920
+or client-hosted or server-hosted, sorry or server-hosted
+match, there may be other limitations to what type
+
+164
+00:13:39,920 --> 00:13:41,790
+or the number of players that we can support.
+
+165
+00:13:41,790 --> 00:13:46,180
+Then you're going to assign a Player Group.
+
+166
+00:13:46,180 --> 00:13:54,230
+A Player Group is some parameters based on your application,
+the version of the application, the level they've chosen.
+
+167
+00:13:54,230 --> 00:14:02,520
+The player attributes are more specific attributes about
+what the player's chosen, their class you know in an RPG,
+
+168
+00:14:02,520 --> 00:14:07,140
+their position in a sport and I'll
+take a look at those later.
+
+169
+00:14:07,140 --> 00:14:08,640
+Let's look at Player Groups right now.
+
+170
+00:14:08,640 --> 00:14:10,570
+I've got 4 tracks.
+
+171
+00:14:10,570 --> 00:14:15,340
+We've got the standard oval, the figure eight,
+and some that are a bit more interesting.
+
+172
+00:14:15,340 --> 00:14:22,480
+Now, when we go to the matchmaking
+services we want to split the people up into
+
+173
+00:14:22,480 --> 00:14:24,100
+which racetrack they want to play on right.
+
+174
+00:14:24,100 --> 00:14:31,120
+They're going to pick this before you
+go into Auto-Matching and you know
+
+175
+00:14:31,120 --> 00:14:34,070
+when that happens the match requests
+are all sent to the server.
+
+176
+00:14:34,070 --> 00:14:41,020
+The server groups these by the Player Group and will
+only match players that are in the same Player Group.
+
+177
+00:14:41,020 --> 00:14:45,230
+Now as you can see there's one side of it
+that can happen in this case and that is
+
+178
+00:14:45,230 --> 00:14:50,230
+that there's a racetrack that's
+unpopular or a level that's unpopular
+
+179
+00:14:50,230 --> 00:14:53,440
+and ultimately just a Player Group
+that nobody is playing in.
+
+180
+00:14:53,440 --> 00:15:00,850
+We provide an API for you to query the activity of this
+Player Group, which you can then use to either present UI
+
+181
+00:15:00,850 --> 00:15:04,850
+to the user to show them that hey, there's
+not been many people on that racetrack.
+
+182
+00:15:04,850 --> 00:15:06,550
+It's not very popular now.
+
+183
+00:15:06,550 --> 00:15:12,930
+Maybe you don't want to play that one or you can even use it
+to automatically redirect them to a different Player Group
+
+184
+00:15:12,930 --> 00:15:15,830
+after they've chosen it and I demonstrate that here.
+
+185
+00:15:15,830 --> 00:15:20,610
+You know you query the Player Group and
+you switch them to this other racetrack.
+
+186
+00:15:20,610 --> 00:15:25,360
+Then when the match request goes in that person
+is not going to be sitting there for a long time.
+
+187
+00:15:25,360 --> 00:15:29,720
+They will be immediately matched with everybody
+that wants to play that particular track.
+
+188
+00:15:31,430 --> 00:15:33,540
+So what exactly is a Player Group?
+
+189
+00:15:33,540 --> 00:15:35,980
+You know, it's hard to define.
+
+190
+00:15:35,980 --> 00:15:42,010
+It really depends on your game, but it's an
+arbitrary grouping based on in-game settings.
+
+191
+00:15:42,010 --> 00:15:47,410
+You know we've called it internally a bucket or if you
+want to think of a hash table, its like has you know.
+
+192
+00:15:47,410 --> 00:15:54,400
+It's some combination of what the user has
+chosen and the configuration of your game.
+
+193
+00:15:54,400 --> 00:16:00,470
+You know if you have download content, you know
+inapt purchase content and you have someone who wants
+
+194
+00:16:00,470 --> 00:16:07,050
+to play a new track, well that track should have
+you know new content of another Player Group.
+
+195
+00:16:07,050 --> 00:16:12,090
+Ultimately you're going to use this to match
+players with compatible in-game settings
+
+196
+00:16:12,090 --> 00:16:15,160
+and our services will not match
+people between Player Groups.
+
+197
+00:16:15,160 --> 00:16:20,450
+So only in the same Player Group will be matched.
+
+198
+00:16:20,450 --> 00:16:24,140
+Ideas for Player Group assignment are difficulty setting.
+
+199
+00:16:24,140 --> 00:16:25,540
+That's pretty easy.
+
+200
+00:16:25,540 --> 00:16:28,070
+You know you've got people that like to play
+easy that are probably not good at the game
+
+201
+00:16:28,070 --> 00:16:29,930
+so you can kind of keep those people together.
+
+202
+00:16:29,930 --> 00:16:35,240
+Normal and Hard applies, well as I
+showed with the racetracks the game level
+
+203
+00:16:35,240 --> 00:16:38,080
+or map if you're in first-person shooter.
+
+204
+00:16:38,080 --> 00:16:46,330
+You may want to combine this with game mode, so you may
+want to kind of hash the two together and combine you know,
+
+205
+00:16:46,330 --> 00:16:54,310
+capture the flag and deathmatch so they'll be a different
+Player Group for level 1 capture the flag and deathmatch.
+
+206
+00:16:54,310 --> 00:17:01,000
+You know each of those would be a different
+Player Group as well as level 1 deathmatch.
+
+207
+00:17:01,000 --> 00:17:08,050
+If you have a global game that's very popular and you
+want to keep people playing that are local to each other,
+
+208
+00:17:08,050 --> 00:17:14,340
+you may want to use Player Groups
+based on region or even realm
+
+209
+00:17:14,340 --> 00:17:20,430
+such as the multi-mass multiplayer on-line
+games where you have to remember realms.
+
+210
+00:17:20,430 --> 00:17:27,390
+One thing to do is as showed, query activity in the Player
+Group to make sure that there are people there to play with.
+
+211
+00:17:27,390 --> 00:17:30,680
+And let me show you how we can do that.
+
+212
+00:17:30,680 --> 00:17:34,420
+It's basically one a synchronous API.
+
+213
+00:17:34,420 --> 00:17:41,670
+It's on the GKMatchmaker class and it's called
+queryPlayerGroupActivity withCompletionHandler.
+
+214
+00:17:41,670 --> 00:17:44,190
+The input parameter is the Player Group you wish to use.
+
+215
+00:17:44,190 --> 00:17:51,350
+In this graphic here each of the colored arrows
+represents a player attribute based on the key here.
+
+216
+00:17:51,350 --> 00:17:53,560
+And what's going to happen is they're going to communicate.
+
+217
+00:17:53,560 --> 00:17:56,510
+They're all in the same Player
+Group and the services are going
+
+218
+00:17:56,510 --> 00:18:02,460
+to find the best players that fit
+the set of player attributes.
+
+219
+00:18:02,460 --> 00:18:08,290
+So it's going to return a match to one
+of each of the different colored arrows.
+
+220
+00:18:08,290 --> 00:18:14,140
+So I've got here a thief, a fighter, a mage and a cleric.
+
+221
+00:18:14,140 --> 00:18:19,210
+Now let's see more specifically what
+an attribute is and how it works.
+
+222
+00:18:19,210 --> 00:18:21,550
+Now we were sort of analyzing the used cases here
+
+223
+00:18:21,550 --> 00:18:25,550
+and try to find the simplest way we could
+represent something to achieve these results.
+
+224
+00:18:25,550 --> 00:18:34,040
+And basically what we've come up with here and its optional
+is a 32-bit integer value that you use sort of as flags
+
+225
+00:18:34,040 --> 00:18:37,830
+to represent the attributes of
+your player in this match request.
+
+226
+00:18:37,830 --> 00:18:44,730
+We sort of do a logical OR operation on this
+when performing a match to group these together.
+
+227
+00:18:44,730 --> 00:18:48,300
+And if you think about this as the
+OR the Player Group is the AND,
+
+228
+00:18:48,300 --> 00:18:51,760
+and if you're outside of the Player
+Group its not going to match anything.
+
+229
+00:18:51,760 --> 00:18:58,870
+You want to choose these based on player characteristics.
+
+230
+00:18:58,870 --> 00:19:03,770
+I gave an example previously of a role-playing game
+where we have a fighter, cleric, mage and a thief
+
+231
+00:19:03,770 --> 00:19:12,480
+but if you're writing a musical game, a band, you might
+have a guitar, bass, drums and vocals or a sports game
+
+232
+00:19:12,480 --> 00:19:17,560
+where you need a goalie, a couple forwards and defenders.
+
+233
+00:19:17,560 --> 00:19:22,190
+Ultimately what happens in the server
+is we try to combine these flags
+
+234
+00:19:22,190 --> 00:19:32,890
+to match you know the maxent bit pattern 0xFFFFFFFF.
+
+235
+00:19:32,890 --> 00:19:35,590
+You know you don't need me to read that but it's there.
+
+236
+00:19:35,590 --> 00:19:41,550
+You know we're going to combine these and when the
+server finds the combination of player attributes
+
+237
+00:19:41,550 --> 00:19:46,630
+within the same Player Group that matches it is
+what's going to use to send the match back to.
+
+238
+00:19:46,630 --> 00:19:53,300
+So let's take a more in-depth example of how you can
+configure a match request and we'll look at it in code here.
+
+239
+00:19:53,300 --> 00:19:58,510
+So I've kind of broken things in part here,
+so we have the basic match request up top
+
+240
+00:19:58,510 --> 00:20:02,910
+where I'm setting up a 4-player dungeon crawl.
+
+241
+00:20:02,910 --> 00:20:06,270
+They're going to play my level 4 dungeon.
+
+242
+00:20:06,270 --> 00:20:12,520
+I have a minimum of 4 players and a maximum of 4
+players; you need a 4-player party for this game.
+
+243
+00:20:12,520 --> 00:20:17,620
+One of the players would set their
+attributes to the fighter attributes.
+
+244
+00:20:17,620 --> 00:20:23,820
+Another one on another device would
+be the mage, cleric and thief
+
+245
+00:20:23,820 --> 00:20:27,780
+and then through the Matchmaker
+we'll send up this match request.
+
+246
+00:20:27,780 --> 00:20:34,390
+Once the match is made the players need
+to get connected and this where a lot
+
+247
+00:20:34,390 --> 00:20:37,750
+of the heavy lifting is done for you by Game Center.
+
+248
+00:20:37,750 --> 00:20:45,480
+We will establish by default a peer-to-peer connection
+and this is where we establish connections directly
+
+249
+00:20:45,480 --> 00:20:50,230
+between player's devices and we analyze
+what the connectivity abilities are,
+
+250
+00:20:50,230 --> 00:20:54,390
+you know to pick the correct players for a match.
+
+251
+00:20:54,390 --> 00:21:01,950
+And essentially what this establishes is a mesh where each
+device is connected to all other devices that are played.
+
+252
+00:21:01,950 --> 00:21:10,530
+If you choose to go with a peer-to-peer match, you
+have Send and Receive data APIs in the GKMatch object.
+
+253
+00:21:10,530 --> 00:21:16,660
+The other option we provide with our
+services is to go with a server-hosted match.
+
+254
+00:21:16,660 --> 00:21:24,490
+There are fewer limitations to the number of players but you
+have to host a separate server yourself to host the game.
+
+255
+00:21:24,490 --> 00:21:25,240
+But this has a benefit.
+
+256
+00:21:25,240 --> 00:21:32,090
+It allows you to improve these abilities,
+get more players and provide more options.
+
+257
+00:21:32,090 --> 00:21:38,930
+The one down side is that to go this way you
+need to establish custom network communications.
+
+258
+00:21:38,930 --> 00:21:42,960
+You need to set up the links between
+each device and your server.
+
+259
+00:21:42,960 --> 00:21:46,380
+We will give the devices enough
+information so that you can figure
+
+260
+00:21:46,380 --> 00:21:48,710
+out who should be playing each other
+when they connect to your server.
+
+261
+00:21:48,710 --> 00:21:56,300
+We will do the invites and the Auto-Matching
+but it's up to you to connect to your server
+
+262
+00:21:56,300 --> 00:21:59,660
+and get everybody communicating through your service.
+
+263
+00:21:59,660 --> 00:22:04,880
+So let's just take a quick look at how these look like.
+
+264
+00:22:04,880 --> 00:22:07,050
+It's pretty straightforward.
+
+265
+00:22:07,050 --> 00:22:10,330
+Once you've communicated with the Auto-Matching
+services and had the matches returned
+
+266
+00:22:10,330 --> 00:22:17,920
+to the devices either a peer-to-peer network, here a little
+mesh will be set up where each device talks to the other
+
+267
+00:22:17,920 --> 00:22:25,170
+or you could go with the hosted approach where every
+device talks to your run, the central server you run.
+
+268
+00:22:25,170 --> 00:22:30,110
+So let's look at what we need to do Matchmaking.
+
+269
+00:22:30,110 --> 00:22:35,080
+These are two devices representing two different
+players that want to be connected through our services.
+
+270
+00:22:35,080 --> 00:22:42,210
+And we're going to replace one of these
+with the classes you need to do this.
+
+271
+00:22:42,210 --> 00:22:46,250
+Here we have two classes that I went through before.
+
+272
+00:22:46,250 --> 00:22:54,780
+The match request and the Matchmaker, the match request
+is pretty straightforward as I showed you earlier.
+
+273
+00:22:54,780 --> 00:23:00,240
+We set up a match request with the player counts
+and the minimum players and maximum players.
+
+274
+00:23:00,240 --> 00:23:04,470
+The Player Group and the player
+attributes are defined, how this person,
+
+275
+00:23:04,470 --> 00:23:07,200
+this local person, should be matched with other players.
+
+276
+00:23:07,200 --> 00:23:16,850
+This match request is passed as the Matchmaker and with
+this code here we initialize the shared Matchmaker.
+
+277
+00:23:16,850 --> 00:23:21,320
+Then we call create match or request withCompletionHandler.
+
+278
+00:23:21,320 --> 00:23:29,140
+This takes the match request that you just created as
+input and will return to you on success a GKMatch object
+
+279
+00:23:29,140 --> 00:23:36,110
+that represents the peer-to-peer network and it will contain
+information for you to find out when players connect,
+
+280
+00:23:36,110 --> 00:23:39,680
+disconnect and also to send and receive data.
+
+281
+00:23:39,680 --> 00:23:45,100
+If we are unable to create a match an error
+will be returned and you need to handle
+
+282
+00:23:45,100 --> 00:23:48,200
+that error and report the situation to the user.
+
+283
+00:23:48,200 --> 00:23:55,300
+On success though you need to set somebody to be the
+delegate of this match to start receiving connections
+
+284
+00:23:55,300 --> 00:23:59,990
+and receiving data, here I set the delegate to self.
+
+285
+00:23:59,990 --> 00:24:01,900
+The other way you could set the match is server-hosted.
+
+286
+00:24:01,900 --> 00:24:07,620
+If you go the server-hosted route you're
+going to want to use a different API.
+
+287
+00:24:07,620 --> 00:24:12,030
+This API is findPlayersforRequest withCompletionHandler.
+
+288
+00:24:12,030 --> 00:24:16,030
+Instead of us returning a GKMatch
+object that contains all the connections
+
+289
+00:24:16,030 --> 00:24:19,790
+for the peer-to-peer network retain an array of GKPlayers.
+
+290
+00:24:19,790 --> 00:24:28,670
+Each GKPlayer has a playerID that is invariant which you
+can communicate to the server to help connect these people.
+
+291
+00:24:28,670 --> 00:24:37,740
+Similarly as the other API an error will be returned
+if we are unable to connect and create the match.
+
+292
+00:24:37,740 --> 00:24:43,540
+Now in summary of Matchmaking it's pretty straightforward.
+
+293
+00:24:43,540 --> 00:24:47,470
+It's simple to set up Matchmaking without UI or with UI.
+
+294
+00:24:47,470 --> 00:24:50,110
+The first step is to create a match request.
+
+295
+00:24:50,110 --> 00:24:53,510
+Think about the Player Groups you need for your game.
+
+296
+00:24:53,510 --> 00:24:55,790
+How do you want to separate how people play in your game?
+
+297
+00:24:55,790 --> 00:24:57,860
+That's kind of the first step you need to think about.
+
+298
+00:24:57,860 --> 00:25:01,300
+And then think about if you're going to
+need attributes at all and if you do,
+
+299
+00:25:01,300 --> 00:25:04,220
+you now make sure that the sign goes to the match request.
+
+300
+00:25:04,220 --> 00:25:06,900
+Then you're going to request the match.
+
+301
+00:25:06,900 --> 00:25:11,500
+You're going to take this match request you built,
+hand it off to the Matchmaker or stand it off
+
+302
+00:25:11,500 --> 00:25:14,380
+to the standard UI through the MatchmakerViewController.
+
+303
+00:25:14,380 --> 00:25:21,560
+When you get the match back you need to handle
+player state changes and wait for players to connect.
+
+304
+00:25:21,560 --> 00:25:25,200
+After everybody is connected the game is ready to go on.
+
+305
+00:25:25,200 --> 00:25:28,300
+So that wraps up Auto-Matching.
+
+306
+00:25:28,300 --> 00:25:31,750
+The next thing I want to talk about are invitations.
+
+307
+00:25:32,810 --> 00:25:37,360
+Invitations are handled by some of the
+same classes and a couple other classes.
+
+308
+00:25:37,360 --> 00:25:40,600
+Again we have the match request.
+
+309
+00:25:40,600 --> 00:25:47,380
+We also have the Matchmaker and the new classes are
+the GKInvite and the MatchmakerViewController again.
+
+310
+00:25:47,380 --> 00:25:54,500
+So we use the match request the same way but
+the rest is going to be a little bit different.
+
+311
+00:25:54,500 --> 00:25:58,910
+So let's take a look at an invite
+flow in a demo game that we created
+
+312
+00:25:58,910 --> 00:26:01,920
+and I've got a few screen shots to walk you through here.
+
+313
+00:26:01,920 --> 00:26:06,530
+I've got two devices, inviter and an invitee.
+
+314
+00:26:06,530 --> 00:26:09,970
+The inviter has already launched
+the game and been authenticated.
+
+315
+00:26:09,970 --> 00:26:16,880
+The player is going to select to invite their
+friends to play and up comes the standard UI.
+
+316
+00:26:16,880 --> 00:26:23,250
+To do this you're going to need to implement that
+button and initialize and show the standard UI.
+
+317
+00:26:24,570 --> 00:26:29,590
+Then the player can Select To Invite a
+Friend, which will bring up their friend list.
+
+318
+00:26:29,590 --> 00:26:35,420
+They can choose their friend and essentially even
+choose multiple friends from this list at the same time.
+
+319
+00:26:35,420 --> 00:26:40,930
+Once they've got people they want to play with they'll
+click Next where they can compose an optional message
+
+320
+00:26:40,930 --> 00:26:44,560
+that will show up on the device
+when the invitation is received
+
+321
+00:26:44,560 --> 00:26:52,930
+and once Send is pressed the view controller sends
+the match request and the players up to the service
+
+322
+00:26:52,930 --> 00:26:59,550
+where we compose a notification, find the players
+device and send the notification on to the device
+
+323
+00:26:59,550 --> 00:27:04,880
+and when the recipients device receives
+the notification up pops the alert.
+
+324
+00:27:04,880 --> 00:27:10,110
+If they have the game and its compatible
+they can choose to Accept
+
+325
+00:27:10,110 --> 00:27:13,760
+or Decline the invitation, we always hope that they Accept.
+
+326
+00:27:13,760 --> 00:27:17,380
+So here the invitee is going to accept the game.
+
+327
+00:27:17,380 --> 00:27:23,220
+The game launches and will automatically
+display the Matchmaker UI.
+
+328
+00:27:23,220 --> 00:27:27,190
+At this point now everybody is connected
+and ready to go and we're just waiting
+
+329
+00:27:27,190 --> 00:27:32,000
+on ThunderZeus, the inviter, to start the game.
+
+330
+00:27:32,000 --> 00:27:34,560
+They pick PlayNow.
+
+331
+00:27:34,560 --> 00:27:41,650
+At this point the match object is returned,
+the players are connected and the game starts.
+
+332
+00:27:43,410 --> 00:27:47,990
+So what do we use invitations for and how do they work?
+
+333
+00:27:47,990 --> 00:27:51,580
+Well, generally they're to invite friends to play games.
+
+334
+00:27:51,580 --> 00:27:58,810
+And they are two ways that this can happen,
+and they only happen involving Game Center UI.
+
+335
+00:27:58,810 --> 00:28:03,610
+One is through the standard in-game UI
+provided by the GKMatchmakerViewController
+
+336
+00:28:03,610 --> 00:28:06,950
+and the other way is through is Game Center.
+
+337
+00:28:06,950 --> 00:28:14,060
+As was discussed in the overview if the user browses
+to their friend's page in the Game Center application
+
+338
+00:28:14,060 --> 00:28:18,830
+and then views one of the games that their friend is
+playing there is a Play button available on that screen.
+
+339
+00:28:18,830 --> 00:28:30,030
+If they click that Play button we're going to launch
+your game and request that you invite that player
+
+340
+00:28:30,030 --> 00:28:33,720
+to play the game with the player of your device.
+
+341
+00:28:36,520 --> 00:28:40,600
+What happens is we send push notifications.
+
+342
+00:28:40,600 --> 00:28:43,380
+All the invites goes through the
+push notification mechanism.
+
+343
+00:28:43,380 --> 00:28:51,210
+It's sent directly to your friend's device and there
+are pretty much options that they'll get to choose from.
+
+344
+00:28:51,210 --> 00:28:55,580
+The primary one is to Accept the invite and Play the game.
+
+345
+00:28:55,580 --> 00:29:00,850
+If they're busy and don't want to play they can Decline.
+
+346
+00:29:00,850 --> 00:29:06,400
+If they don't have the game or don't have a
+compatible version they can go to the apps store
+
+347
+00:29:06,400 --> 00:29:10,130
+and buy your game or upgrade to your latest version.
+
+348
+00:29:10,130 --> 00:29:15,370
+Once the invite is accepted and they
+have the latest game we're going
+
+349
+00:29:15,370 --> 00:29:21,620
+to automatically launch the game
+and that's where you come into play.
+
+350
+00:29:21,620 --> 00:29:30,600
+The flow to creating, to inviting friends to play is
+pretty much like creating a MatchmakerViewController.
+
+351
+00:29:30,600 --> 00:29:34,890
+You're going to create a match request,
+use the same set of properties min players
+
+352
+00:29:34,890 --> 00:29:38,410
+and max players, Player Groups and player attributes.
+
+353
+00:29:38,410 --> 00:29:42,400
+You will initialize the MatchmakerViewController
+with this request.
+
+354
+00:29:42,400 --> 00:29:47,280
+This MatchmakerViewController uses underneath
+a GKMatchmaker object that I discussed
+
+355
+00:29:47,280 --> 00:29:49,720
+with Auto-Matching and shows our standard UI.
+
+356
+00:29:49,720 --> 00:29:56,770
+So you're going to show the MatchmakerViewController
+object you created where the user is now in control.
+
+357
+00:29:56,770 --> 00:30:03,700
+And if you have a range of players they are able to change
+the number of players they wish to play and then select
+
+358
+00:30:03,700 --> 00:30:07,610
+from their friends list the players
+that they wish to play with.
+
+359
+00:30:07,610 --> 00:30:13,920
+It's also possible that they-- you know you have
+a 4-player game they may invite one or two players
+
+360
+00:30:13,920 --> 00:30:16,780
+and then choose to Auto-Match the remaining players.
+
+361
+00:30:16,780 --> 00:30:21,190
+So if they don't invite everybody to fill in
+all the game slots, all the available players,
+
+362
+00:30:21,190 --> 00:30:27,310
+Auto-Matching as I discussed before will fill
+in the rest, automatically behind the scenes.
+
+363
+00:30:27,310 --> 00:30:31,720
+When the user is done with this UI you're
+either going to get a match or you're not.
+
+364
+00:30:31,720 --> 00:30:35,140
+And so hopefully we'll get a match
+and you can start the game.
+
+365
+00:30:35,140 --> 00:30:41,840
+So again we're going to start with two devices,
+one to communicate through the Game Center services
+
+366
+00:30:41,840 --> 00:30:48,190
+and we have essentially one device that
+represents the inviter and one the invitee.
+
+367
+00:30:48,190 --> 00:30:54,090
+So I take away the inviters device here and
+show you the classes that you're going to use
+
+368
+00:30:54,090 --> 00:30:57,500
+at the top level for setting up game invitations.
+
+369
+00:30:57,500 --> 00:31:00,900
+It's really simple the two you need to worry about.
+
+370
+00:31:00,900 --> 00:31:02,480
+Again we start with the match request.
+
+371
+00:31:02,480 --> 00:31:10,220
+We're going to start pretty much the same
+parameters, 2 to 4 players in our level 4 dungeon.
+
+372
+00:31:10,220 --> 00:31:13,640
+We're going to initialize the match request.
+
+373
+00:31:13,640 --> 00:31:17,880
+We initialize the MatchmakerViewController
+with our match request.
+
+374
+00:31:17,880 --> 00:31:27,250
+We want to be the delegate of the MatchmakerViewController
+because through a delegate method that the match is returned
+
+375
+00:31:27,250 --> 00:31:33,850
+and then we will show the MatchmakerViewController
+to present the UI to the user.
+
+376
+00:31:33,850 --> 00:31:36,770
+Now at this point we need to be the delegator
+and implement these delegate methods.
+
+377
+00:31:36,770 --> 00:31:38,810
+So let's look at what the delegate does.
+
+378
+00:31:38,810 --> 00:31:48,450
+The first and primary one, the one we hope always gets
+called is MatchmakerViewController did create match.
+
+379
+00:31:48,450 --> 00:31:53,290
+This is the delegate method that is called
+when the user has completed the ViewController,
+
+380
+00:31:53,290 --> 00:31:55,620
+the Game Center services have found the best people to play
+
+381
+00:31:55,620 --> 00:32:03,400
+with and/or the invitations have been
+accepted and you will get a return to match.
+
+382
+00:32:03,400 --> 00:32:06,120
+Again you want to set yourself
+to be the delegator of the match
+
+383
+00:32:06,120 --> 00:32:10,250
+or somebody else and then wait for everybody to connect.
+
+384
+00:32:10,250 --> 00:32:17,030
+Now optionally you can do just like with Auto-Matching,
+you can choose to do the ViewController with a hosted match
+
+385
+00:32:17,030 --> 00:32:22,780
+in which case you will get the
+MatchmakerViewControllerDidFindPlayer delegate method called
+
+386
+00:32:22,780 --> 00:32:26,740
+and similar to Auto-Matching this
+returns an array of players.
+
+387
+00:32:26,740 --> 00:32:35,860
+There are a few other delegate methods that handle
+cancellation, MatchmakerViewController was canceled.
+
+388
+00:32:35,860 --> 00:32:39,310
+This happens when the user clicks the Cancel button.
+
+389
+00:32:39,310 --> 00:32:43,070
+Errors-- MatchmakerViewController did fail with error.
+
+390
+00:32:43,070 --> 00:32:48,590
+This is that the server's, based on the match
+request was unable to make a valid match.
+
+391
+00:32:48,590 --> 00:32:53,120
+If you have an error in your match request something
+went wrong in communicating with the servers.
+
+392
+00:32:53,120 --> 00:32:54,200
+You may get this call.
+
+393
+00:32:54,200 --> 00:32:59,830
+We've gone through how you send an
+invite but there is work you need to do
+
+394
+00:32:59,830 --> 00:33:03,250
+to be able to handle the invite once it's received.
+
+395
+00:33:03,250 --> 00:33:07,580
+Game Center will show the invite alert.
+
+396
+00:33:07,580 --> 00:33:10,330
+When the user accepts your game will be launched.
+
+397
+00:33:10,330 --> 00:33:17,200
+But for you to know that you were launched with
+an invite we needed to implement these two methods
+
+398
+00:33:17,200 --> 00:33:21,240
+and when you get these you need to show the ViewController.
+
+399
+00:33:21,240 --> 00:33:27,620
+These are both basically properties
+that are blocks on GKMatchmaker.
+
+400
+00:33:27,620 --> 00:33:31,270
+The first is the InviteHandler block.
+
+401
+00:33:31,270 --> 00:33:41,300
+This block is called when your game is launched or when an
+invite has been accepted by the user on behalf of your game.
+
+402
+00:33:41,300 --> 00:33:46,350
+And basically the block will be called and pass the invite.
+
+403
+00:33:46,350 --> 00:33:50,000
+There are some things worth knowing, this is one.
+
+404
+00:33:50,000 --> 00:33:55,090
+You should keep this thing set at all times.
+
+405
+00:33:55,090 --> 00:34:00,130
+You may be called immediately after
+setting this block to the GKMatchmaker.
+
+406
+00:34:00,130 --> 00:34:06,700
+Because if your game was launched in response
+to an invite, you know, the invite is waiting,
+
+407
+00:34:06,700 --> 00:34:12,340
+so as soon as you send this CompletionHandler it's
+going to get called and the invite is going to passed to it
+
+408
+00:34:12,340 --> 00:34:14,920
+so be ready to handle it when you send it.
+
+409
+00:34:14,920 --> 00:34:18,310
+It also may get called at any point during your game flow.
+
+410
+00:34:18,310 --> 00:34:23,050
+If you're just playing the game, playing your
+game, and they receive another invite from one
+
+411
+00:34:23,050 --> 00:34:30,060
+of their friends to play their game, the alert comes up,
+and they can choose to accept or decline that invite.
+
+412
+00:34:30,060 --> 00:34:33,020
+If they want to play with this other person that
+invited them, you know they like them better
+
+413
+00:34:33,020 --> 00:34:37,150
+than who they're playing with, you need to
+respect their wishes and make sure that you clean
+
+414
+00:34:37,150 --> 00:34:41,720
+up your game state and get them set up into this new game.
+
+415
+00:34:41,720 --> 00:34:48,810
+So you are going to be called and you are going to be given a
+GKInvite object and all you really need
+
+416
+00:34:48,810 --> 00:34:53,830
+to do is initialize the MatchmakerViewController
+with this invite and show it.
+
+417
+00:34:53,830 --> 00:35:00,010
+The other method, which is not in the
+API that you've seen in the seeds,
+
+418
+00:35:00,010 --> 00:35:04,930
+but will be coming soon is the playerstoInviteHandler.
+
+419
+00:35:04,930 --> 00:35:11,310
+This handles a special case of your game being launched
+from Game Center from a friend's game details page.
+
+420
+00:35:11,310 --> 00:35:17,180
+And it has basically the same sort
+of conditions as the InviteHandler.
+
+421
+00:35:17,180 --> 00:35:21,690
+It can be called immediately.
+
+422
+00:35:21,690 --> 00:35:26,560
+With multitasking it can potentially be called at any time.
+
+423
+00:35:26,560 --> 00:35:30,540
+And you know do the same thing,
+initialize the MatchmakerViewController.
+
+424
+00:35:30,540 --> 00:35:32,080
+It's a little bit different.
+
+425
+00:35:32,080 --> 00:35:37,600
+Instead of being the recipient of an invite you're actually
+going to be sending an invite on behalf of the user.
+
+426
+00:35:37,600 --> 00:35:38,850
+Transparently you're going to set up the UI.
+
+427
+00:35:38,850 --> 00:35:43,410
+So to do this you want to initialize the
+ViewController with the match request
+
+428
+00:35:43,410 --> 00:35:47,950
+and the array of players that this block has given.
+
+429
+00:35:47,950 --> 00:35:53,200
+So we're going to take a look at the code for
+these and how these come together right now.
+
+430
+00:35:53,200 --> 00:36:01,870
+So I've moved to the other side and we're implementing
+the invitee recipient code and we have two blocks
+
+431
+00:36:01,870 --> 00:36:08,040
+that we're dealing with again, the
+GKMatchmaker and the GKMatchmakerViewController.
+
+432
+00:36:08,040 --> 00:36:15,810
+Let's implement the InviteHandler that's going to pass
+the invite, the GKInvite to the matchmaker ViewController.
+
+433
+00:36:15,810 --> 00:36:21,140
+It's the InviteHandler block on the shared
+Matchmaker and it's a block that takes
+
+434
+00:36:21,140 --> 00:36:24,900
+as a parameter one single parameter, the GKInvite.
+
+435
+00:36:24,900 --> 00:36:27,600
+This is a pretty simple object.
+
+436
+00:36:27,600 --> 00:36:29,970
+You don't actually need to pull anything out of it.
+
+437
+00:36:29,970 --> 00:36:31,210
+You're just going to pass it along.
+
+438
+00:36:31,210 --> 00:36:35,510
+You're going to pass it and initialize
+the MatchmakerViewController with it.
+
+439
+00:36:35,510 --> 00:36:39,080
+Again you need to become the delegate of the
+ViewController and you need to show the ViewController.
+
+440
+00:36:39,080 --> 00:36:45,870
+Now I'm going to take a little liberty with the next
+slide because it's actually the invite tour side
+
+441
+00:36:45,870 --> 00:36:48,670
+but I'm going to show it here because it fits.
+
+442
+00:36:48,670 --> 00:36:52,950
+This is the playerstoInviteHandler,
+which works pretty much the same way.
+
+443
+00:36:52,950 --> 00:37:03,650
+You're going to set up your players InviteHandler block
+and instead of a GKInvite object it's an array of players.
+
+444
+00:37:03,650 --> 00:37:09,920
+And instead of initializing the ViewController
+with an invite you'll mate it with a match request,
+
+445
+00:37:09,920 --> 00:37:16,400
+which we'll make based on the properties the player chooses
+perhaps before this step you actually want to show some UI
+
+446
+00:37:16,400 --> 00:37:20,660
+so that it will let the player pick
+the level that they want to play on.
+
+447
+00:37:20,660 --> 00:37:23,970
+Because remember this is a little bit different,
+essentially you're going to send the invite
+
+448
+00:37:23,970 --> 00:37:31,090
+out so you can let them pick the level, pick their
+class whatever and playerstoInvite and the same thing,
+
+449
+00:37:31,090 --> 00:37:33,400
+set up the delegate and show the ViewController.
+
+450
+00:37:33,400 --> 00:37:37,960
+So in summary, invitations are pretty easy.
+
+451
+00:37:37,960 --> 00:37:40,070
+A couple things you need to do.
+
+452
+00:37:40,070 --> 00:37:42,570
+One, remember to create the match request.
+
+453
+00:37:42,570 --> 00:37:51,080
+You know present the standard UIs because all invitation
+flow goes through the standard UI whether sending one out,
+
+454
+00:37:51,080 --> 00:37:57,900
+you're handling or receiving an invite or
+you're going to prepare an invite response
+
+455
+00:37:57,900 --> 00:38:03,690
+to someone launching an app from Game Center.
+
+456
+00:38:03,690 --> 00:38:08,480
+The few things to remember is you can be called at any time.
+
+457
+00:38:08,480 --> 00:38:13,100
+Make sure that you can clean up your game
+state, and you need to respect the user's wishes.
+
+458
+00:38:13,100 --> 00:38:19,550
+You know, if they've accepted an invite and they're called
+it's because they want to play that invite and you need
+
+459
+00:38:19,550 --> 00:38:24,590
+to abandon what they're currently doing, and
+remember that it may be called immediately.
+
+460
+00:38:24,590 --> 00:38:28,650
+So let's take a look at the hard stuff,
+the networking that we do for you.
+
+461
+00:38:28,650 --> 00:38:33,130
+Basically all of the networking
+is done under the GKMatch object.
+
+462
+00:38:33,130 --> 00:38:36,240
+And this networking, this peer-to-peer
+networking that we do for you is actually--
+
+463
+00:38:36,240 --> 00:38:40,670
+shares a lot of the infrastructure that makes FaceTime work.
+
+464
+00:38:40,670 --> 00:38:45,230
+FaceTime is established as a peer-to-peer connection
+and it uses a lot of the same stuff that we do.
+
+465
+00:38:45,230 --> 00:38:48,910
+So the match represents the game
+communications between the players.
+
+466
+00:38:48,910 --> 00:38:51,090
+It's got an array of players.
+
+467
+00:38:51,090 --> 00:38:53,670
+It lets you know when players are connecting.
+
+468
+00:38:53,670 --> 00:38:57,020
+It gives you an API so that you can send data.
+
+469
+00:38:57,020 --> 00:39:02,610
+If you've seen the previous versions of the
+GameKit framework, a lot of this is similar.
+
+470
+00:39:02,610 --> 00:39:05,090
+We have two ways of sending data.
+
+471
+00:39:05,090 --> 00:39:08,360
+You can send data unreliably you know.
+
+472
+00:39:08,360 --> 00:39:12,590
+This is data, you know that if it didn't
+go through it's going to be stale anyway
+
+473
+00:39:12,590 --> 00:39:15,160
+and you can just send new data and replace it.
+
+474
+00:39:15,160 --> 00:39:21,910
+You know position information of a player moving
+around a map or it can be sent reliably and what we do
+
+475
+00:39:21,910 --> 00:39:29,200
+with reliable data is we will wait for acknowledgement
+and attempt to resend the data if it doesn't go through.
+
+476
+00:39:29,200 --> 00:39:35,780
+Now in general a lot of the stuff we need
+to do unreliable is probably satisfactory.
+
+477
+00:39:35,780 --> 00:39:41,950
+It also provides a delegate method so that you can
+receive data on all the other players in the match.
+
+478
+00:39:41,950 --> 00:39:50,410
+And finally there's a PlayerStateChange delegate method that
+allows you to wait and watch for player's state changes.
+
+479
+00:39:50,410 --> 00:39:53,970
+It will tell when you players connect
+and when players disconnect.
+
+480
+00:39:53,970 --> 00:40:00,340
+And you use this first off to wait for all players to
+connect before you start sending any of your game data
+
+481
+00:40:00,340 --> 00:40:04,610
+and also to be able to notice when
+players drop or disconnect mid game.
+
+482
+00:40:04,610 --> 00:40:09,590
+You know, if someone takes a phone call, goes into a
+tunnel, you know you need to be able to handle this.
+
+483
+00:40:09,590 --> 00:40:10,930
+We're on mobile devices.
+
+484
+00:40:10,930 --> 00:40:14,830
+So let's take a look at what we need
+to do to wait for players to connect.
+
+485
+00:40:14,830 --> 00:40:22,560
+It's a GKMatch delegate method
+called MatchPlayersDidChangeState.
+
+486
+00:40:22,560 --> 00:40:29,870
+The operative objects are the player
+and the state that they changed to.
+
+487
+00:40:29,870 --> 00:40:33,600
+I highlight the two states that we care
+about here, the connected state.
+
+488
+00:40:33,600 --> 00:40:39,700
+This is when they initially connect and a
+disconnected state when they disconnect.
+
+489
+00:40:39,700 --> 00:40:46,180
+And we will try, when you get this
+disconnect, they are really disconnected.
+
+490
+00:40:46,180 --> 00:40:50,440
+We have tried through our connections to
+reconnect them and have been unable to.
+
+491
+00:40:50,440 --> 00:40:56,280
+So at this point they're gone and
+you need to be able to handle that.
+
+492
+00:40:56,280 --> 00:40:58,760
+There are ways you can do this
+with a match and the Matchmaker.
+
+493
+00:40:58,760 --> 00:41:04,840
+You can choose to add players to the
+Auto-Match but we'll take a look at that later.
+
+494
+00:41:04,840 --> 00:41:10,600
+So when you're using this call and waiting for players to
+connect, we have a property that can help you to do that.
+
+495
+00:41:10,600 --> 00:41:16,020
+This is property on the match called expectedPlayers
+and you can watch for that to decrement.
+
+496
+00:41:16,020 --> 00:41:19,630
+We'll decrement how the players connect that we expect.
+
+497
+00:41:19,630 --> 00:41:23,380
+So we'll start off you now you've got a 4-player game.
+
+498
+00:41:23,380 --> 00:41:30,150
+We're going to be expecting 3 players and
+as each player connects this will decrement.
+
+499
+00:41:30,150 --> 00:41:36,360
+When this gets to 0, if you haven't already started
+your game because remember this player state can happen
+
+500
+00:41:36,360 --> 00:41:38,290
+at any time, it's time to start your game.
+
+501
+00:41:38,290 --> 00:41:43,880
+A couple of ways to send data once the connection is
+established and you want to start a multiplayer game
+
+502
+00:41:43,880 --> 00:41:49,550
+that means communicating the game state between devices.
+
+503
+00:41:49,550 --> 00:41:58,060
+So two APIs, we have a GKMatch, sendDatatwoPlayers
+with data mode allows you to send your data
+
+504
+00:41:58,060 --> 00:42:01,560
+to a subset of the players that are in the match.
+
+505
+00:42:01,560 --> 00:42:05,630
+And again you can send it reliably or unreliably.
+
+506
+00:42:05,630 --> 00:42:08,820
+Here I use reliable as my example.
+
+507
+00:42:08,820 --> 00:42:16,070
+Worth noting is that this method will return a bouillon
+and it would be false if for some reason we were unable
+
+508
+00:42:16,070 --> 00:42:22,020
+to send the data and in that case
+the error property will be populated.
+
+509
+00:42:23,300 --> 00:42:28,490
+Similarly we have a method basically to
+broadcast data to all the players in the match.
+
+510
+00:42:28,490 --> 00:42:32,630
+This is SendDatatoAllPlayers again with a data mode
+
+511
+00:42:32,630 --> 00:42:38,330
+and again this property will turn
+a bouillon and an error on failure.
+
+512
+00:42:38,330 --> 00:42:45,400
+To receive data there a single development method that you
+need to implement that is matched, DidReceiveDatafromPlayer
+
+513
+00:42:45,400 --> 00:42:51,080
+and you know I really can't tell you what to do here because
+it all depends on your game code but you want to take
+
+514
+00:42:51,080 --> 00:42:57,450
+that data you got and run it through your game
+engine and it's pretty much as easy as that.
+
+515
+00:42:57,450 --> 00:43:03,410
+So some things to keep in mind when
+using our Matchmaking services,
+
+516
+00:43:03,410 --> 00:43:06,630
+we want everybody here to write
+games that are good network citizens.
+
+517
+00:43:06,630 --> 00:43:12,900
+This means that games that will work with
+multiple instances running on the same network.
+
+518
+00:43:12,900 --> 00:43:16,810
+Cooperate and play nice when there are
+other games running on the same network.
+
+519
+00:43:16,810 --> 00:43:20,220
+So here are a couple of things we recommend that you do.
+
+520
+00:43:20,220 --> 00:43:23,350
+First, keep your network traffic to a minimum.
+
+521
+00:43:23,350 --> 00:43:31,370
+By minimum I mean make it small, so minimize the size
+of the data packets and send as few packets as possible.
+
+522
+00:43:31,370 --> 00:43:37,560
+So some things not to do-- don't send data
+for every game frame if you can avoid it.
+
+523
+00:43:37,560 --> 00:43:45,060
+If you're game is running at 60 frames per second do you
+really need to send location players for every frame.
+
+524
+00:43:45,060 --> 00:43:49,860
+Think hard about that, because that's
+an awful lot of data to be sending.
+
+525
+00:43:49,860 --> 00:43:56,000
+You also don't want to broadcast
+data to all players all the time.
+
+526
+00:43:56,000 --> 00:44:02,160
+It's usually the case that the data only needs to
+go to a subset of the players and not to everybody.
+
+527
+00:44:02,160 --> 00:44:08,850
+To help with this we also recommend that you
+try adopting some common networking strategies.
+
+528
+00:44:08,850 --> 00:44:12,650
+Some of these are to set up a client-host network topology.
+
+529
+00:44:12,650 --> 00:44:16,080
+This is where you're going to choose
+one of the peers to be a host
+
+530
+00:44:16,080 --> 00:44:18,920
+and all other devices will communicate through that host.
+
+531
+00:44:18,920 --> 00:44:24,960
+Or you can set up a ring network where the device is
+communicated along the ring and with the array of players
+
+532
+00:44:24,960 --> 00:44:29,520
+in the match and the disconnect notices
+you can also re-establish that ring
+
+533
+00:44:29,520 --> 00:44:33,830
+so it's a little more robust than some other ring networks.
+
+534
+00:44:33,830 --> 00:44:38,400
+Or you can host your own servers
+and use our server-based networking.
+
+535
+00:44:38,400 --> 00:44:45,840
+So let's take a quick look at what
+it kind of takes to do a client-host
+
+536
+00:44:45,840 --> 00:44:47,860
+because this is what a lot of you
+are probably going to want to do.
+
+537
+00:44:47,860 --> 00:44:51,260
+This is what we've done in most of our demo games.
+
+538
+00:44:51,260 --> 00:44:54,900
+The first thing you need to do is to nominate the host.
+
+539
+00:44:54,900 --> 00:45:01,790
+And common ways to do this are to set up a voting or a
+coin-toss algorithm where random numbers are generated,
+
+540
+00:45:01,790 --> 00:45:08,900
+sent to all the devices, collated and the host is
+chosen from that or we found that there is kind
+
+541
+00:45:08,900 --> 00:45:10,860
+of an easy way that you can do things, too.
+
+542
+00:45:10,860 --> 00:45:13,290
+You can compare the playerIDs.
+
+543
+00:45:13,290 --> 00:45:19,070
+Now the playerIDs are strings, but you
+still use string collation to compare them.
+
+544
+00:45:19,070 --> 00:45:28,010
+And while it's not truly random, you will be able to
+reliably and very cheaply find either the lowest sort order
+
+545
+00:45:28,010 --> 00:45:34,730
+or the highest order playerID and make that one the
+host without having to communicate excess packets.
+
+546
+00:45:34,730 --> 00:45:41,270
+Ultimately then you want to communicate all
+data to the host that involves the game state
+
+547
+00:45:41,270 --> 00:45:46,130
+where the host then maintains the truth and
+then chooses who it needs to send data out to.
+
+548
+00:45:46,130 --> 00:45:49,630
+So the host will then pass that
+data to the necessary clients.
+
+549
+00:45:49,630 --> 00:45:53,360
+We take at look at how this affects the networking.
+
+550
+00:45:53,360 --> 00:45:59,240
+Here's a peer-to-peer mesh where we've got you know
+bidirectional connections between all the devices.
+
+551
+00:45:59,240 --> 00:46:03,330
+There basically are 6 bidirectional connections here.
+
+552
+00:46:03,330 --> 00:46:09,420
+If we move to a client-host topology we
+basically reduce the communication down to,
+
+553
+00:46:09,420 --> 00:46:17,930
+let me go back real quick, 3 bidirectional caches.
+
+554
+00:46:17,930 --> 00:46:24,270
+The green arrows represent the subset that are used for
+the client host so the device up front has become the host.
+
+555
+00:46:24,270 --> 00:46:26,980
+Now everybody communicates through it.
+
+556
+00:46:26,980 --> 00:46:32,970
+Alternatively as I mentioned you know you may want to think
+about using a ring network that is suitable for your game.
+
+557
+00:46:32,970 --> 00:46:40,500
+One of the graphics is wrong, but there should
+be another arrow on that short link in red,
+
+558
+00:46:40,500 --> 00:46:42,920
+but basically we established-- used 4 of the connections
+
+559
+00:46:42,920 --> 00:46:50,200
+as basically unidirectional links
+and we can send data around the ring.
+
+560
+00:46:50,200 --> 00:46:55,720
+So that handles what we do for peer-to-peer.
+
+561
+00:46:55,720 --> 00:47:00,620
+If you were going the other route and you want to host
+your own server, some considerations you need to take
+
+562
+00:47:00,620 --> 00:47:06,930
+into account is one, when using the GKMatchmaker and
+Auto-Matching or the MatchmakerViewController you want
+
+563
+00:47:06,930 --> 00:47:09,300
+to make sure you choose the correct API to use.
+
+564
+00:47:09,300 --> 00:47:15,170
+It is essentially a separate set of APIs and parameters
+for peer-to-peer networking, which is the default
+
+565
+00:47:15,170 --> 00:47:21,080
+and hosted networking, which is for a
+client, when you host the server yourself.
+
+566
+00:47:21,080 --> 00:47:26,320
+You can still use our invitations in Auto-Matchmaking flow.
+
+567
+00:47:26,320 --> 00:47:27,420
+That's why it's there.
+
+568
+00:47:27,420 --> 00:47:29,180
+We want to do that part for you.
+
+569
+00:47:29,180 --> 00:47:33,340
+And you can even use the playerID to track players.
+
+570
+00:47:33,340 --> 00:47:36,710
+You know we only give you an array
+of playerIDs for the match.
+
+571
+00:47:36,710 --> 00:47:40,190
+You can use those to find the unique matches on your server.
+
+572
+00:47:40,190 --> 00:47:44,870
+The multiple ways you want to do this is
+communicate these matched players to your server
+
+573
+00:47:44,870 --> 00:47:49,840
+and then implement your networking
+and set up communications.
+
+574
+00:47:49,840 --> 00:47:55,430
+So let's take a look at the Auto-Matching
+API that we use for this.
+
+575
+00:47:55,430 --> 00:47:59,060
+I think you've seen it once before in
+the slides but we'll just review it here.
+
+576
+00:47:59,060 --> 00:48:02,870
+This is findPlayersforRequest withCompletionHandler.
+
+577
+00:48:02,870 --> 00:48:12,650
+It's a method on the GKMatchmaker and it returns an array
+of players or an error you now for a server-hosted match.
+
+578
+00:48:12,650 --> 00:48:18,680
+Now if you want to use a standard UI or handle
+invitations you do this with a match request and you set
+
+579
+00:48:18,680 --> 00:48:23,510
+up the standard GKMatchmakerViewController
+but in addition to setting yourself
+
+580
+00:48:23,510 --> 00:48:27,030
+as the delegate you want to set the hosted property to YES.
+
+581
+00:48:27,030 --> 00:48:33,990
+That's telling us you intend for this to be a hosted
+game where you're going to host it on your own servers.
+
+582
+00:48:33,990 --> 00:48:39,390
+You'll show the UI and then you'll
+get back a different delegate call.
+
+583
+00:48:39,390 --> 00:48:40,300
+I'll show you the delegate.
+
+584
+00:48:40,300 --> 00:48:49,280
+It's the MatchmakerViewController, didfindPlayers delegate
+and you'll get an array of players for this match.
+
+585
+00:48:49,280 --> 00:48:59,500
+So for peer-to-peer networking GKMatch provides
+all the API you need to do the communications.
+
+586
+00:48:59,500 --> 00:49:00,170
+We've got Send.
+
+587
+00:49:00,170 --> 00:49:04,900
+We've have Receive and we've got player state change APIs.
+
+588
+00:49:04,900 --> 00:49:07,900
+It's important that you handle the player state changes.
+
+589
+00:49:07,900 --> 00:49:09,880
+Remember these are mobile devices.
+
+590
+00:49:09,880 --> 00:49:12,890
+They can take phone calls.
+
+591
+00:49:12,890 --> 00:49:14,930
+They now multitask.
+
+592
+00:49:14,930 --> 00:49:20,920
+They can lose their connection to the
+network so be able to handle that.
+
+593
+00:49:20,920 --> 00:49:23,320
+Be a good network citizen.
+
+594
+00:49:23,320 --> 00:49:28,270
+You don't want to overwhelm the networks
+that games are being played on you know.
+
+595
+00:49:28,270 --> 00:49:35,850
+Use our APIs appropriately and, you know, make
+sure that you're not over-saturating the network.
+
+596
+00:49:35,850 --> 00:49:41,160
+And if you need to handle, you want to handle a lot
+of players, you have some other functionality you want
+
+597
+00:49:41,160 --> 00:49:43,740
+to handle, seriously consider hosting on your own servers.
+
+598
+00:49:43,740 --> 00:49:52,050
+So the last thing I want to talk
+about is In-Game Voice Chat.
+
+599
+00:49:52,050 --> 00:49:58,580
+We made this very easy for you to establish voice
+communications between the players in your match.
+
+600
+00:49:58,580 --> 00:50:03,710
+Now this only applies to peer-to-peer
+matches as it uses the GKMatch class
+
+601
+00:50:03,710 --> 00:50:09,180
+and the GKVoiceChat class, which represents a distinct chat.
+
+602
+00:50:10,290 --> 00:50:14,440
+So In-Game Voice Chat allows your
+players to communicate with each other.
+
+603
+00:50:14,440 --> 00:50:17,540
+All the iPhones even the iPod touches.
+
+604
+00:50:17,540 --> 00:50:19,030
+They all have microphone.
+
+605
+00:50:19,030 --> 00:50:24,960
+You know if you connect the microphone headset to the
+iPod touch, it's great for players to communicate.
+
+606
+00:50:24,960 --> 00:50:28,510
+It's a new thing to be able to do this
+and it's a new thing on the phones.
+
+607
+00:50:28,510 --> 00:50:30,960
+You know it's almost kind of expected to be able to do this.
+
+608
+00:50:30,960 --> 00:50:32,800
+It really keeps players involved.
+
+609
+00:50:32,800 --> 00:50:39,000
+If players can talk to each other, you know get some
+more into the game, they can do things like trash talk.
+
+610
+00:50:39,000 --> 00:50:40,630
+They can encourage the others.
+
+611
+00:50:40,630 --> 00:50:43,190
+They can strategize among their own team.
+
+612
+00:50:43,190 --> 00:50:46,360
+It really enhances the competition.
+
+613
+00:50:46,360 --> 00:50:49,510
+We make it very easy for you to integrate.
+
+614
+00:50:49,510 --> 00:50:56,100
+It's basically you know we do all the networking
+for you to send the voice packets between devices.
+
+615
+00:50:56,100 --> 00:51:01,870
+All you have to do are create the Voice Chats
+and then manipulate them for which one is active.
+
+616
+00:51:01,870 --> 00:51:05,900
+So let's take a look at what Voice Chats offer.
+
+617
+00:51:05,900 --> 00:51:11,550
+We have multiple named Voice Chats
+that are accessible from the GKMatch.
+
+618
+00:51:11,550 --> 00:51:18,950
+You can use properties on the Voice Chats or methods
+to start and stop them so you can hear selected chats.
+
+619
+00:51:18,950 --> 00:51:21,380
+You can have multiple chats going.
+
+620
+00:51:21,380 --> 00:51:24,730
+The microphone is always routed to only a single chat.
+
+621
+00:51:24,730 --> 00:51:30,890
+And you can increase or decrease the volume of a given chat.
+
+622
+00:51:30,890 --> 00:51:37,660
+And if you need to it's possible for you to allow
+the player to mute another player in any given chat.
+
+623
+00:51:37,660 --> 00:51:43,080
+And then just like in Matchmaking it's
+useful to watch for the state changes
+
+624
+00:51:43,080 --> 00:51:47,760
+so we have a handler implemented by a block.
+
+625
+00:51:47,760 --> 00:51:53,200
+The players update the handler, so you can find out when players connect,
+disconnect, start and stop speaking.
+
+626
+00:51:53,200 --> 00:51:59,090
+So before you set up the Voice Chats you
+need to set up the audio on the device.
+
+627
+00:51:59,090 --> 00:52:01,750
+It's a little pre-set up you need to do.
+
+628
+00:52:01,750 --> 00:52:06,880
+You want to set your audio session to play and
+record and make it the active audio session.
+
+629
+00:52:06,880 --> 00:52:07,810
+Take a quick look at this code.
+
+630
+00:52:07,810 --> 00:52:09,430
+There are a couple of ways to do this.
+
+631
+00:52:09,430 --> 00:52:11,890
+I'm showing you the AVAudioSession.
+
+632
+00:52:11,890 --> 00:52:15,380
+You basically set up its shared instance.
+
+633
+00:52:15,380 --> 00:52:20,750
+You set its category to Play and
+Record category and you make it active.
+
+634
+00:52:20,750 --> 00:52:22,000
+It's pretty straightforward.
+
+635
+00:52:22,000 --> 00:52:27,200
+Once you've got the audio session set
+up you need to get the Voice Chats.
+
+636
+00:52:27,200 --> 00:52:29,760
+Before you can actually do this you need to get the match.
+
+637
+00:52:29,760 --> 00:52:36,430
+So from the match, you're self-match,
+I'm going to create two chats.
+
+638
+00:52:36,430 --> 00:52:42,670
+The main chat or the lobby, which is where everybody
+will be able to talk to everybody else and the team chat
+
+639
+00:52:42,670 --> 00:52:49,260
+for the red team, where only the people on
+the red team after that is connected can talk.
+
+640
+00:52:49,260 --> 00:52:55,410
+Here I show where we can stop the main chat so
+it's not going to play through this user's device
+
+641
+00:52:55,410 --> 00:52:59,010
+so they won't hear the audio from the
+main chat and start the team chat.
+
+642
+00:52:59,010 --> 00:53:05,080
+And then I will make the team chat active to
+the route the microphone to the team chat.
+
+643
+00:53:05,080 --> 00:53:10,050
+And one important thing to note is when you make the
+microphone active for this it's generally important
+
+644
+00:53:10,050 --> 00:53:12,290
+for you to give some indication to the user.
+
+645
+00:53:12,290 --> 00:53:16,670
+And an audible and a visual indicator
+are usually called for.
+
+646
+00:53:16,670 --> 00:53:24,330
+So it's just when you activate a chat and
+get the microphone active indicate it please.
+
+647
+00:53:24,330 --> 00:53:27,730
+Handling player state changes is pretty straightforward.
+
+648
+00:53:27,730 --> 00:53:31,180
+It's a block, the playerStateUpdateHandler.
+
+649
+00:53:31,180 --> 00:53:37,570
+There are 4 states that you may care about--
+connected, if a player connects you may want
+
+650
+00:53:37,570 --> 00:53:42,380
+to show their icon, show their name in lobby whatever.
+
+651
+00:53:42,380 --> 00:53:45,920
+If a disconnect, remove them from that list.
+
+652
+00:53:45,920 --> 00:53:51,050
+And when they start speaking you may want
+to show an icon you know a speaker icon,
+
+653
+00:53:51,050 --> 00:53:55,610
+a little dot next to the name and
+remove it when they go silent.
+
+654
+00:53:57,150 --> 00:54:06,140
+So a lot of this functionality for
+multiplayer can only be tested on devices.
+
+655
+00:54:06,140 --> 00:54:10,270
+So its' very important that you test this
+on devices in particular like invitations
+
+656
+00:54:10,270 --> 00:54:16,930
+or Voice Chat do not work you know you'll want to
+test with multiple devices and multiple accounts.
+
+657
+00:54:16,930 --> 00:54:18,330
+Testing on the simulator is limited.
+
+658
+00:54:18,330 --> 00:54:22,600
+You can test mostly other Game Center
+features like leaderboards and achievements
+
+659
+00:54:22,600 --> 00:54:30,950
+but invitations are not available due to
+limitations and In-Game Voice Chat is also disabled.
+
+660
+00:54:30,950 --> 00:54:35,310
+There is only one little side effect
+that you probably won't notice
+
+661
+00:54:35,310 --> 00:54:41,290
+but our preemptive cache invalidation is also
+disabled in the simulator, which you will only notice
+
+662
+00:54:41,290 --> 00:54:45,780
+in the Game Center application probably, if at all.
+
+663
+00:54:45,780 --> 00:54:47,670
+So thank you for listening to me.
+
+664
+00:54:47,670 --> 00:54:53,840
+A couple of things I want to say before I leave the
+stage here is remind you that the first thing you need
+
+665
+00:54:53,840 --> 00:54:58,140
+to do before you use Game Center
+is authenticate the local player.
+
+666
+00:54:58,140 --> 00:55:02,540
+Nothing will work unless you do that.
+
+667
+00:55:02,540 --> 00:55:08,320
+Then think about for your app how you want to divide
+the players that are going to play multiplayer.
+
+668
+00:55:08,320 --> 00:55:11,460
+You know come up with some good
+Player Groups and player attributes
+
+669
+00:55:11,460 --> 00:55:14,960
+so that you can get the right sets of people together.
+
+670
+00:55:14,960 --> 00:55:21,540
+To handle invites make sure you implement both
+the InviteHandler and the playersToInviteHandler.
+
+671
+00:55:22,720 --> 00:55:31,140
+Use GKmatchmakerViewController to present the
+standard invitation UI and standard Matchmaking UI.
+
+672
+00:55:31,140 --> 00:55:34,420
+Once you have a match, wait for all players
+
+673
+00:55:34,420 --> 00:55:38,530
+to connect before you start sending packets
+otherwise they're not going to go through.
+
+674
+00:55:38,530 --> 00:55:42,180
+It's a lot easier if you just wait
+before you start sending them.
+
+675
+00:55:42,180 --> 00:55:48,100
+Integrate Voice Chat because it gets your players
+more involved and we make it easy for you to do so.
+
+676
+00:55:48,100 --> 00:55:57,730
+And remember the Game Center is currently a preview on
+iPhone, sorry iOS 4 and will be available later this year.
+
+677
+00:55:57,730 --> 00:56:03,250
+For more information contact the Graphics and
+Game Technologies Evangelist, Allan Schaffer.
+

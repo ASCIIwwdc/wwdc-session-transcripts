@@ -1,0 +1,2832 @@
+1
+00:00:06,470 --> 00:00:11,270
+>> My name's Ken Dyke, I'm a member of the
+Graphics and Architecture Group at Apple Computer,
+
+2
+00:00:11,270 --> 00:00:17,120
+and I'm going to talk to you guys this morning about
+how to take advantage of multiple GPU's in your apps.
+
+3
+00:00:17,120 --> 00:00:19,510
+So, what are we going to learn today?
+
+4
+00:00:19,510 --> 00:00:27,090
+First, the basics of supporting multiple GPU's in your
+apps, how you find all of the renders in the system,
+
+5
+00:00:27,090 --> 00:00:32,940
+how do you switch between then on your own
+or when you want the system to do it for you.
+
+6
+00:00:32,940 --> 00:00:39,620
+Second, we'll talk a little bit about how to support
+multiple GPU's at the same time and what that entails.
+
+7
+00:00:39,620 --> 00:00:47,150
+Some things involved with that are shared contexts, resource
+management, how synchronization works between the two GPU's,
+
+8
+00:00:47,150 --> 00:00:52,380
+and some performance tips when you really want to
+get the best, best that you can out of your system.
+
+9
+00:00:52,380 --> 00:00:58,690
+And lastly, we'll talk a little bit about IOSurface
+and multiple GPU's and how that can help you.
+
+10
+00:00:58,690 --> 00:01:03,690
+All right, so what are the motivations
+for talking, for using multiple GPU's?
+
+11
+00:01:03,690 --> 00:01:09,430
+So, we've been shipping systems with multiple GPU's for
+quite a long time, you know, you can buy a Mac Pro with up
+
+12
+00:01:09,430 --> 00:01:14,860
+to four GPU's in it, recent MacBook Pros
+have multiple GPU's in them as well,
+
+13
+00:01:14,860 --> 00:01:17,810
+so it's good for users to support them there.
+
+14
+00:01:17,810 --> 00:01:23,700
+But probably the biggest reason is, you know,
+getting a better user experience, you know, again,
+
+15
+00:01:23,700 --> 00:01:31,030
+increased performance is one thing, if your apps respond to
+GPU changes the correct way, the system can tell you, "Hey,
+
+16
+00:01:31,030 --> 00:01:34,600
+you know, the user moved their
+window from one GPU to the next."
+
+17
+00:01:34,600 --> 00:01:39,810
+If you don't do that, the window server might be
+stuck copying data between the GPU's on your behalf.
+
+18
+00:01:39,810 --> 00:01:42,500
+It works, but it's not the best performance message.
+
+19
+00:01:42,500 --> 00:01:48,520
+Another thing that goes along with that is that it's sort of
+important to support multiple GPU's for hot-plug, you know,
+
+20
+00:01:48,520 --> 00:01:53,100
+it's like on a Mac Pro, you can yank the display
+card out of one, or not the display card,
+
+21
+00:01:53,100 --> 00:01:57,240
+but the display cable out of one card, plug it into
+the other one, everything is supposed to move over,
+
+22
+00:01:57,240 --> 00:02:01,920
+and most of the time it works, but again,
+if your app isn't written the right way,
+
+23
+00:02:01,920 --> 00:02:05,970
+and the system decides to switch GPU's,
+things might not work quite so well.
+
+24
+00:02:05,970 --> 00:02:10,430
+Okay, so let's talk about the basics of Multi-GPU support.
+
+25
+00:02:10,430 --> 00:02:13,140
+So first, a little bit of terminology here.
+
+26
+00:02:13,140 --> 00:02:19,430
+So, a renderer is basically a single piece of
+graphics hardware in your machine, you know,
+
+27
+00:02:19,430 --> 00:02:28,100
+it could be an AMD card an NVIDIA NVIDIA card, or it
+could be the CPU software based renderer, as well.
+
+28
+00:02:28,100 --> 00:02:35,080
+Now each one of these guys has a unique renderer ID in
+the system, that way if you have more than one NVIDIA card
+
+29
+00:02:35,080 --> 00:02:39,730
+or more than one AMD card or like say
+you've got four GT120's in your machine,
+
+30
+00:02:39,730 --> 00:02:45,160
+you can still identify specific pieces of hardware,
+even though they're all basically the same.
+
+31
+00:02:45,160 --> 00:02:53,290
+Now a pixel format object is something you normally
+think about being, hey, you know, I want 32-bit depth
+
+32
+00:02:53,290 --> 00:02:58,350
+and 32-bit color and Multi-Sample and that sort
+of thing, but the important thing for this talk is
+
+33
+00:02:58,350 --> 00:03:04,190
+that it also embodies what set of renderers
+your OpenGLContext is going to use.
+
+34
+00:03:04,190 --> 00:03:09,030
+In this case, I might have a pixel format that
+actually supports three renderers at the same time.
+
+35
+00:03:09,030 --> 00:03:12,060
+Okay, so how does that relate to context?
+
+36
+00:03:12,060 --> 00:03:16,620
+So when you create a context, you always have to
+pass in the pixel format that you want to use,
+
+37
+00:03:16,620 --> 00:03:22,510
+again that's what decides what
+renderers your context is going to use.
+
+38
+00:03:22,510 --> 00:03:27,750
+Now once you have that, there's
+this concept of a virtual screen.
+
+39
+00:03:27,750 --> 00:03:33,870
+Those are assigned, basically into the
+renderer slots within your OpenGLContext.
+
+40
+00:03:33,870 --> 00:03:39,990
+Now, OpenGLContexts all have the
+concept of a current virtual screen.
+
+41
+00:03:39,990 --> 00:03:43,660
+You know, you're always saying, "For this
+OpenGLContext I want to be using my AMD card
+
+42
+00:03:43,660 --> 00:03:47,170
+or I want to be using a software
+renderer, or the NVIDIA card,
+
+43
+00:03:47,170 --> 00:03:50,830
+depending on maybe what screen I'm on, that sort of thing."
+
+44
+00:03:50,830 --> 00:03:53,760
+An important thing, I'll show you
+in the demo a little bit later,
+
+45
+00:03:53,760 --> 00:03:58,380
+is that the virtual screen order does match
+the order of the renderers in the pixel format.
+
+46
+00:03:58,380 --> 00:04:03,590
+All of this stuff correlates so that you can go from
+a context virtual screen back to the pixel format,
+
+47
+00:04:03,590 --> 00:04:07,780
+and figure out what piece of hardware you're
+on, figure out what display that might support,
+
+48
+00:04:07,780 --> 00:04:11,730
+core renderer attributes, that sort of things.
+
+49
+00:04:11,730 --> 00:04:16,110
+Now, we call it a screen, but the
+virtual part of it really is
+
+50
+00:04:16,110 --> 00:04:20,760
+because it doesn't have any correlation
+with physical displays on your system.
+
+51
+00:04:20,760 --> 00:04:27,490
+You might have one display and three GPU's, you might have
+two displays and one GPU, they don't necessarily really line
+
+52
+00:04:27,490 --> 00:04:30,790
+up with each, so don't let that confuse you.
+
+53
+00:04:30,790 --> 00:04:37,020
+And last, and something that's, again, sort of cool
+for this talk, is that Mac OS X is the only platform
+
+54
+00:04:37,020 --> 00:04:43,670
+that supports NSOpenGLContext that can support different
+renderers at the same time, and switch between them.
+
+55
+00:04:43,670 --> 00:04:49,270
+It, you know, it's just one way that Mac OS
+X makes supporting head systems a lot easier
+
+56
+00:04:49,270 --> 00:04:51,880
+than it is on other platforms.
+
+57
+00:04:51,880 --> 00:04:55,670
+Now OpenCL are similar concepts to all of this.
+
+58
+00:04:55,670 --> 00:04:59,850
+It's a different set of API's,
+but the concepts are all the same.
+
+59
+00:04:59,850 --> 00:05:05,200
+So instead of using Choose Pixel Format to
+choose a particular set of OpenGL renderers,
+
+60
+00:05:05,200 --> 00:05:10,880
+you can call clGetDeviceIDs to get a list of
+all supported OpenCL devices in the system.
+
+61
+00:05:10,880 --> 00:05:18,790
+And instead of passing, you know a pixel format
+to NSOpenGLContext, when you call clCreateContext,
+
+62
+00:05:18,790 --> 00:05:22,340
+you get to specify exactly the set
+of renderers that you want to use.
+
+63
+00:05:22,340 --> 00:05:28,660
+And instead of using a virtual screen to select
+the OpenGL renderer you want, in OpenCL land,
+
+64
+00:05:28,660 --> 00:05:33,730
+what you're going to do is create a specific
+command queue against an OpenCLContext
+
+65
+00:05:33,730 --> 00:05:40,330
+and that lets you pick the particular
+piece of hardware you're going to use.
+
+66
+00:05:40,330 --> 00:05:46,790
+Okay, so how do you allow your app to
+see multiple renderers in the system?
+
+67
+00:05:46,790 --> 00:05:51,930
+So, say you've got some code like this in your app, you
+know, setting up some pixel format attributes for OpenGL,
+
+68
+00:05:51,930 --> 00:05:58,280
+you want accelerated, you want it to be double buffered,
+32-bit color, but say you've also told the system,
+
+69
+00:05:58,280 --> 00:06:02,050
+"Hey, this is the one display I want to use."
+
+70
+00:06:02,050 --> 00:06:08,530
+In this case I'm saying, "Hey, I just want whatever
+GPU's hooked up to the main display, give me that one."
+
+71
+00:06:08,530 --> 00:06:12,210
+Please don't do this.
+
+72
+00:06:12,210 --> 00:06:17,150
+First of all, it's guaranteed you're only ever going
+to get a single renderer if you do this, okay,
+
+73
+00:06:17,150 --> 00:06:21,380
+which means your app is guaranteed not
+to support hot-plug, that sort of thing,
+
+74
+00:06:21,380 --> 00:06:27,220
+or even if the user has two cards plugged in with four
+displays, you're only going to end up using one GPU
+
+75
+00:06:27,220 --> 00:06:31,740
+to get any OpenGL acceleration, and the window
+server is going to be stuck copying the contents
+
+76
+00:06:31,740 --> 00:06:35,190
+of your drawable across to the other card, not good.
+
+77
+00:06:35,190 --> 00:06:41,980
+The whole point of ScreenMask is really only from
+sort of legacy full-screen context where, you know,
+
+78
+00:06:41,980 --> 00:06:47,650
+you would have your OpenGLContext and then you just
+tell it, Set Full-screen, you had no way to say, "Hey,
+
+79
+00:06:47,650 --> 00:06:51,650
+I want to be using, you know, go full-screen
+on this particular GPU versus another."
+
+80
+00:06:51,650 --> 00:06:59,040
+Now in 10.5, we added a new API that lets you have multiple
+hardware supporting full-screen context, but as of 10.6,
+
+81
+00:06:59,040 --> 00:07:01,510
+you don't need to use full-screen context anymore anyway.
+
+82
+00:07:01,510 --> 00:07:04,480
+You can just create a full-screen
+window, covers the display,
+
+83
+00:07:04,480 --> 00:07:07,000
+and will automatically give you
+all the performance benefits,
+
+84
+00:07:07,000 --> 00:07:10,550
+so don't use ScreenMask, it's really not necessary anymore.
+
+85
+00:07:10,550 --> 00:07:14,010
+Now what you should use though is allow offline renderers.
+
+86
+00:07:14,010 --> 00:07:15,230
+This one is the biggee.
+
+87
+00:07:15,230 --> 00:07:22,670
+If you don't specify this one, you won't get any
+GPU's that don't have displays attached at the time.
+
+88
+00:07:22,670 --> 00:07:27,870
+So, if, you know, you just do the normal thing and the
+user has two GPU's and they would start up your app
+
+89
+00:07:27,870 --> 00:07:33,930
+and they switch to the other card, for whatever
+reason, your app isn't going to even be able to move
+
+90
+00:07:33,930 --> 00:07:37,910
+to the other GPU, even if you wanted it to, okay?
+
+91
+00:07:37,910 --> 00:07:42,600
+So this is what's allows you to see
+renderers that don't have displays attached.
+
+92
+00:07:42,600 --> 00:07:46,500
+Now, the reason we don't do this by
+default is primarily for compatibility.
+
+93
+00:07:46,500 --> 00:07:52,690
+Unlike most of the other pixel format attributes,
+this one actually adds to the list of renderers,
+
+94
+00:07:52,690 --> 00:07:56,270
+rather than takes away from them, and there's
+some apps that just don't deal with that,
+
+95
+00:07:56,270 --> 00:08:01,480
+so this is kind of an opt-in thing, but at
+this point, everybody should be doing it.
+
+96
+00:08:01,480 --> 00:08:05,040
+And, again, it's important for hot-plug.
+
+97
+00:08:05,040 --> 00:08:10,640
+So, how do you trigger a renderer change
+to happen within your OpenGLContext?
+
+98
+00:08:10,640 --> 00:08:17,010
+Well, normally the system will do it for you, but
+if you just call NSOpenGLContext update method,
+
+99
+00:08:17,010 --> 00:08:21,210
+the system will look at the window
+your OpenGLContext is attached to,
+
+100
+00:08:21,210 --> 00:08:28,210
+and automatically chose the right renderer based on, you
+know, if I'm on this display or another display or how,
+
+101
+00:08:28,210 --> 00:08:33,530
+if I'm straddling, which one has more
+screen coverage that sort of thing.
+
+102
+00:08:33,530 --> 00:08:41,150
+So, normally you would do this in response to NSOpenGLViews
+update method, you just have almost a single line of code
+
+103
+00:08:41,150 --> 00:08:48,310
+in there that just says, "Hey, my view could have moved
+displays, or it's been scrolled or something like that,
+
+104
+00:08:48,310 --> 00:08:54,220
+OpenGLContext, now's a good time, go ahead and
+re-choose what the best renderer to be using is."
+
+105
+00:08:54,220 --> 00:09:00,900
+Now if you're not using NSOpenGLView and you're sort of
+just using a regular NSView yourself and attaching a context
+
+106
+00:09:00,900 --> 00:09:08,620
+to it by hand, there's an AppKit notification you can
+sign up for that you see here NSGlobalFrameDidChange,
+
+107
+00:09:08,620 --> 00:09:13,890
+AppKit will post that notification when it believes
+that your view could have moved to a different display.
+
+108
+00:09:13,890 --> 00:09:19,170
+It doesn't post it all the time for performance reasons, but
+if you move to a different display, or you've been scrolled
+
+109
+00:09:19,170 --> 00:09:22,380
+or something like that, AppKit will post it for you.
+
+110
+00:09:22,380 --> 00:09:28,140
+You can also tell the OpenGLContext
+to use a particular virtual screen.
+
+111
+00:09:28,140 --> 00:09:33,680
+This forces it to use a particular renderer, no matter
+what it thinks, you're, what card it thinks you're on.
+
+112
+00:09:33,680 --> 00:09:40,610
+This is primarily useful for off-screen context, like
+say, you've got one context doing some rendering to an FBO
+
+113
+00:09:40,610 --> 00:09:44,990
+or something like that, or doing some texture uploading,
+well you want to make sure your texture uploading goes
+
+114
+00:09:44,990 --> 00:09:49,670
+to the same virtual screen or the
+same renderer that your onscreen does.
+
+115
+00:09:49,670 --> 00:09:53,050
+So, this is how you would accomplish that.
+
+116
+00:09:53,050 --> 00:09:56,130
+Now, how do you respond when a renderer change happens?
+
+117
+00:09:56,130 --> 00:09:57,940
+What do you have to do?
+
+118
+00:09:57,940 --> 00:10:00,380
+Well, for a lot of apps, you don't have to do anything.
+
+119
+00:10:00,380 --> 00:10:09,080
+If you're not using a lot of crazy or very hardware
+specific OpenGL extensions, calling update will be enough.
+
+120
+00:10:09,080 --> 00:10:16,080
+However, if you're doing something NVIDIA specific, or AMD
+specific, you're right up against some hardware limits,
+
+121
+00:10:16,080 --> 00:10:22,550
+you want to basically look and see if the virtual screen
+has changed since the last time you called update.
+
+122
+00:10:22,550 --> 00:10:24,030
+Now let's say that it changed.
+
+123
+00:10:24,030 --> 00:10:26,390
+What do I do then?
+
+124
+00:10:26,390 --> 00:10:31,160
+Well, in that case, check the extension
+list, see if the extensions you want
+
+125
+00:10:31,160 --> 00:10:35,140
+to be using have changed, now that you're on a new renderer.
+
+126
+00:10:35,140 --> 00:10:41,730
+Other things you can look for are, see if there's a hardware
+limit, some of your textures might exceed or something
+
+127
+00:10:41,730 --> 00:10:45,480
+like that, and you might have to re-upload them.
+
+128
+00:10:45,480 --> 00:10:51,860
+And lastly, again, make sure that if you have any off-screen
+context, that they're synchronized with your onscreen ones,
+
+129
+00:10:51,860 --> 00:10:55,700
+so we don't have to copy data across the bus for you.
+
+130
+00:10:55,700 --> 00:11:01,670
+Okay, so how does resource management work when you've
+got one of these context supporting multiple GPU's?
+
+131
+00:11:01,670 --> 00:11:08,850
+Well, OpenGL and OpenCL will automatically track anything
+you've specified, via the API textures, anything like that,
+
+132
+00:11:08,850 --> 00:11:14,980
+we can keep track of which GPU's that data is
+on and move it back and forth as necessary.
+
+133
+00:11:14,980 --> 00:11:20,400
+Resources that you specify, like an OpenGL texture,
+or VBOData, something that you're not going
+
+134
+00:11:20,400 --> 00:11:26,300
+to be modifying using the GPU, we can just simply
+re-upload to the second GPU and everything will continue.
+
+135
+00:11:26,300 --> 00:11:35,460
+Now, if you've modified a texture, using
+like FBO, or something like that, on one GPU,
+
+136
+00:11:35,460 --> 00:11:42,460
+when a renderer change happens, we're going to have pull
+that data off one card and ship it over to the other one.
+
+137
+00:11:42,460 --> 00:11:45,320
+Now the nice thing is is that happens
+completely automatically just
+
+138
+00:11:45,320 --> 00:11:48,650
+as a result of you doing the context update.
+
+139
+00:11:48,650 --> 00:11:57,000
+Okay, any objects that are bound at the time you
+perform the renderer update, we automatically move over,
+
+140
+00:11:57,000 --> 00:12:01,750
+because you could just keep doing any
+rendering right on them and expect it to work.
+
+141
+00:12:01,750 --> 00:12:08,570
+Any other objects are basically done lazily as you bind
+to them, we'll detect that they're on the wrong GPU,
+
+142
+00:12:08,570 --> 00:12:12,780
+pull them back to system memory, then upload
+them to whatever renderer is necessary.
+
+143
+00:12:12,780 --> 00:12:17,580
+So, this will sort of give you
+an idea of how all this works.
+
+144
+00:12:17,580 --> 00:12:24,070
+So let's say on my OpenGLContext, I go ahead and
+create a texture and give some texture data to OpenGL,
+
+145
+00:12:24,070 --> 00:12:26,830
+in this case it's just a simple little brick texture.
+
+146
+00:12:26,830 --> 00:12:34,040
+At this point, the OpenGLContext in host memory has a copy
+of the texture, but it doesn't exist on either GPU yet.
+
+147
+00:12:34,040 --> 00:12:40,290
+So let's say I do some simple rendering code that draws
+with the texture, it still sitting just in system memory,
+
+148
+00:12:40,290 --> 00:12:49,520
+not until that command stream gets Flushed to the
+open GPU does it finally get uploaded, as we see here.
+
+149
+00:12:49,520 --> 00:12:55,070
+Now let's say I do something like I talked about before
+where I go ahead and modify that texture in some way,
+
+150
+00:12:55,070 --> 00:13:00,670
+that's going to, and in this case, let's say that
+that function was accelerate by this particular driver
+
+151
+00:13:00,670 --> 00:13:06,900
+and all of that data is now basically going to in-flight
+up to the GPU to modify that texture up in VRAM.
+
+152
+00:13:06,900 --> 00:13:09,960
+The host memory copy of that texture has now become invalid.
+
+153
+00:13:09,960 --> 00:13:13,740
+We can't really use it to upload
+to the other card if necessary.
+
+154
+00:13:13,740 --> 00:13:19,840
+And let's say we stay bound to that texture and we do
+a context update that switches us to the NVIDIA card,
+
+155
+00:13:19,840 --> 00:13:26,240
+part of that process involved paging that back to
+host memory, and then switching our virtual screen
+
+156
+00:13:26,240 --> 00:13:32,050
+over to the NVIDIA renderer in this case.
+
+157
+00:13:32,050 --> 00:13:38,630
+So, again, let's say I draw with that texture over on the
+NVIDIA card, again nothing happens until I do a Flush.
+
+158
+00:13:38,630 --> 00:13:43,690
+At that point, the data gets copied
+up and everything is all good.
+
+159
+00:13:43,690 --> 00:13:48,070
+All right, so let me give you a little demo here.
+
+160
+00:13:48,070 --> 00:13:52,440
+Was anybody here at my 2002 Chords Extreme Talk?
+
+161
+00:13:52,440 --> 00:13:54,370
+Nobody, oh man, all right.
+
+162
+00:13:54,370 --> 00:13:56,790
+So, all right, Peter was.
+
+163
+00:13:56,790 --> 00:14:06,530
+So, this is a really simple demo, but it's designed to show
+that an app can basically seamlessly move between renderers
+
+164
+00:14:06,530 --> 00:14:08,980
+without having to do much of anything at all.
+
+165
+00:14:08,980 --> 00:14:14,040
+So, I have the ever-important Allow Off-screen
+renderers in here so that I can detect things.
+
+166
+00:14:14,040 --> 00:14:22,800
+Now I should back up a step a little bit, the machine that
+I'm using for this has both a GTX285 and an AMD4870 card
+
+167
+00:14:22,800 --> 00:14:25,760
+in it at the same time, but we're
+only hooked to one display.
+
+168
+00:14:25,760 --> 00:14:31,100
+Now were driving the display off the NVIDIA card, so
+if I want to see or be able to get at the AMD renderer,
+
+169
+00:14:31,100 --> 00:14:36,640
+I have to put all offline renderers in here,
+or I'm not going to be able to get at it.
+
+170
+00:14:36,640 --> 00:14:44,100
+Now for demo purposes, which you'll see why in a minute, I'm
+also signing up to just detect whenever the window moves,
+
+171
+00:14:44,100 --> 00:14:48,420
+because I want really fine grained control
+over when we're going to switch GPU's.
+
+172
+00:14:48,420 --> 00:14:57,490
+Now in my GPU changed thing, for the purposes of this
+app, I really don't have to do anything important.
+
+173
+00:14:57,490 --> 00:15:00,450
+Everything that's in here, is just
+really to update the User Interface
+
+174
+00:15:00,450 --> 00:15:03,210
+with what renderer I'm going to be showing you guys.
+
+175
+00:15:03,210 --> 00:15:10,140
+So the simple part of that is here, I'm just calling OpenGL,
+doing a little bit of Cocoa to take the C-string I get back
+
+176
+00:15:10,140 --> 00:15:15,920
+from OpenGL and slam that into a text field, so we
+can see the name of the renderer I'm going be on.
+
+177
+00:15:15,920 --> 00:15:19,620
+This code down here, which I'm not
+going to go into the gory details on,
+
+178
+00:15:19,620 --> 00:15:25,980
+lets me go from the OpenGLContext virtual screen,
+whichever one that is, all the way back to being able
+
+179
+00:15:25,980 --> 00:15:28,740
+to query the renderer for how much video memory it has.
+
+180
+00:15:28,740 --> 00:15:35,920
+So finally, down here, I can say, you know,
+does it have half a gigabyte or a gigabyte.
+
+181
+00:15:35,920 --> 00:15:41,180
+Now, also for the purposes of this demo, normally
+you would just do this, you'd just call Update,
+
+182
+00:15:41,180 --> 00:15:46,870
+because you said I needed to, for the demo, I have
+to do something a little bit more interesting.
+
+183
+00:15:46,870 --> 00:15:51,730
+In this case, I want to switch renderers based on which half
+of the screen I'm on, so this part figures that out for me.
+
+184
+00:15:51,730 --> 00:15:56,300
+It lets me sort of simulate having
+two displays hooked up here.
+
+185
+00:15:56,300 --> 00:15:59,090
+So, let me go ahead and run this.
+
+186
+00:15:59,090 --> 00:16:02,600
+So, anybody recognize what this is from?
+
+187
+00:16:02,600 --> 00:16:06,170
+Come on, geez, all right, nobody
+grew up in the '90's I guess.
+
+188
+00:16:06,170 --> 00:16:06,470
+>>
+
+189
+00:16:06,470 --> 00:16:06,980
+>>Ken: Thank you.
+
+190
+00:16:06,980 --> 00:16:08,140
+All right.
+
+191
+00:16:08,140 --> 00:16:14,610
+So, the other thing about this is kind of funny,
+I implemented this to use VBO's for performance
+
+192
+00:16:14,610 --> 00:16:19,330
+and of course it doesn't matter in this case, because
+there aren't enough Polys and it uses per pixel lighting
+
+193
+00:16:19,330 --> 00:16:26,710
+and you still can't tell, so anyway, so now if I move
+this over, it switches, now everything's being rendered
+
+194
+00:16:26,710 --> 00:16:30,880
+on the ATI card and the Window's
+server just automatically figuring out.
+
+195
+00:16:30,880 --> 00:16:35,910
+The take away from this is nothing
+happens on the screen when I do it.
+
+196
+00:16:35,910 --> 00:16:41,040
+There's no glitch, it just keep going and the
+OS basically does the right thing for you.
+
+197
+00:16:41,040 --> 00:16:47,660
+That's what we want the user experience to be in this case,
+all right, you know, just nice and smooth transition as far
+
+198
+00:16:47,660 --> 00:16:51,320
+as your user's concerned, life is good,
+nothing happened, that's the whole idea.
+
+199
+00:16:51,320 --> 00:16:56,410
+So, check out the sample code, it should be posted already
+
+200
+00:16:56,410 --> 00:17:00,180
+and you can take a look at what
+the rest of the app is doing.
+
+201
+00:17:00,180 --> 00:17:04,200
+Okay, so let's talk a little bit
+about advanced Multi-GPU Support,
+
+202
+00:17:04,200 --> 00:17:07,160
+when you want to purposely be using
+more than one GPU at once.
+
+203
+00:17:07,160 --> 00:17:11,620
+So, what are the motivations for this?
+
+204
+00:17:11,620 --> 00:17:14,490
+Well, the biggest one, obviously, is performance.
+
+205
+00:17:14,490 --> 00:17:16,640
+You know, you've got this other card sitting there,
+
+206
+00:17:16,640 --> 00:17:22,090
+maybe it's really good at doing OpenCL
+stuff and you want to make use of it.
+
+207
+00:17:22,090 --> 00:17:27,930
+Due to the way GPUContext switch, or don't these day,
+you know, if you have an offline GPU doing a lot compute,
+
+208
+00:17:27,930 --> 00:17:32,340
+it doesn't really matter if you're tying that
+thing up for really long periods of time,
+
+209
+00:17:32,340 --> 00:17:36,680
+the GPU driving your display will
+be free to just do GUI stuff.
+
+210
+00:17:36,680 --> 00:17:40,820
+Another reason is, you might just find
+yourself on a system that has two GPU's,
+
+211
+00:17:40,820 --> 00:17:44,910
+but only one of them has the extensions you
+want, so you really have to use the one that,
+
+212
+00:17:44,910 --> 00:17:48,920
+just for whatever reason the user
+doesn't have the display hooked up to.
+
+213
+00:17:48,920 --> 00:17:52,830
+In that case, you know, you might just
+simply need to use the other one along
+
+214
+00:17:52,830 --> 00:17:54,980
+with the one that you're using for display.
+
+215
+00:17:54,980 --> 00:17:59,440
+So, there's some issues to consider with this.
+
+216
+00:17:59,440 --> 00:18:02,020
+First, context sharing, how does that work?
+
+217
+00:18:02,020 --> 00:18:09,810
+How do we, you know, make resources share between
+multiple contacts running on different OpenGL renderers
+
+218
+00:18:09,810 --> 00:18:16,030
+and how does synchronization and resource management
+work when you have more than one renderer involved.
+
+219
+00:18:16,030 --> 00:18:19,740
+So, first we'll talk a little bit
+about context sharing in OpenGL,
+
+220
+00:18:19,740 --> 00:18:22,430
+which is something not everybody might be familiar with.
+
+221
+00:18:22,430 --> 00:18:28,130
+On MAS OS X, you can have multiple
+OpenGLContext sharing the same set of resources.
+
+222
+00:18:28,130 --> 00:18:34,430
+This mean like textures, display lists,
+FBO's, VBO's, whole bunch of stuff like that.
+
+223
+00:18:34,430 --> 00:18:38,090
+That way, no matter how many different
+OpenGLContext you have in the system,
+
+224
+00:18:38,090 --> 00:18:40,620
+you only have to give it the texture data once.
+
+225
+00:18:40,620 --> 00:18:46,370
+It's better for system performance, there's
+not duplicates of everything, life is all good.
+
+226
+00:18:46,370 --> 00:18:49,920
+Now normally when you create a context,
+this is just a really simple example,
+
+227
+00:18:49,920 --> 00:18:52,500
+here you can see that the second parameter here is null,
+
+228
+00:18:52,500 --> 00:18:59,060
+that's saying that parameter is the
+sort of shared context parameter, okay.
+
+229
+00:18:59,060 --> 00:19:04,370
+If you switch that out to a different context, now
+when you create context B, it's going to share all
+
+230
+00:19:04,370 --> 00:19:08,620
+of your, you know, resources with the first one.
+
+231
+00:19:08,620 --> 00:19:11,400
+Now there's some limitations here.
+
+232
+00:19:11,400 --> 00:19:18,700
+Both contexts have to have exactly the same set of renderers
+in it, you can't have one context that just has the AMD card
+
+233
+00:19:18,700 --> 00:19:25,430
+and another context that has just the NVIDIA card
+and share resources between them, that won't work.
+
+234
+00:19:25,430 --> 00:19:29,830
+Both contexts have to have both renderers in them.
+
+235
+00:19:29,830 --> 00:19:35,530
+So, be very careful if you're going to call
+ChoosePixelFormat once for each context.
+
+236
+00:19:35,530 --> 00:19:42,010
+If you use DisplayMask, or something else that limits
+you to one particular hardware device or another,
+
+237
+00:19:42,010 --> 00:19:44,580
+you're probably not going to get what you want.
+
+238
+00:19:44,580 --> 00:19:51,800
+The safest thing you can do is just ask the first
+context for its pixel format and pass that in here,
+
+239
+00:19:51,800 --> 00:19:57,160
+that way when you create the second context,
+you're guaranteed that it's going to work.
+
+240
+00:19:57,160 --> 00:20:02,940
+In OpenCL, it's a pretty similar story, but
+it's easier to sort of force the sharing stuff.
+
+241
+00:20:02,940 --> 00:20:08,560
+Whenever you create a command queue in
+OpenCL, off of a given OpenCLContext,
+
+242
+00:20:08,560 --> 00:20:14,270
+it's basically all of the command queues created against
+that OpenCLContext are guaranteed to share stuff.
+
+243
+00:20:14,270 --> 00:20:17,960
+You don't necessarily have to jump
+through the same hoops you do in OpenGL.
+
+244
+00:20:17,960 --> 00:20:26,910
+Now the interesting thing on Mac OS X you can do is you
+can create an OpenGLContext, that already has automatically
+
+245
+00:20:26,910 --> 00:20:35,010
+in it, the set of renderers that another OpenGLContext is
+using, and if you do it this way, as the code shows here,
+
+246
+00:20:35,010 --> 00:20:41,200
+you automatically get resource sharing between OpenCL
+and OpenGL's, so like images and textures will be shared,
+
+247
+00:20:41,200 --> 00:20:46,590
+or buffer objects will be shared automatically
+and you can pass data between them.
+
+248
+00:20:46,590 --> 00:20:47,680
+That's how you do that.
+
+249
+00:20:47,680 --> 00:20:54,530
+It is worthy to point out, in this particular case, your
+OpenGLContext might have the software renderer in it,
+
+250
+00:20:54,530 --> 00:21:00,360
+but this code here for OpenCL won't get you the CL software
+compute device, you would have to add that in as well.
+
+251
+00:21:00,360 --> 00:21:06,730
+So, let's talk a little bit about multiple-context
+synchronization and what goes on there.
+
+252
+00:21:06,730 --> 00:21:12,550
+So, if you've got two different contexts, even if they're
+on the same GPU, you really have to pay attention to order
+
+253
+00:21:12,550 --> 00:21:17,760
+of operations if you're going to be sort of
+doing a producer consumer sort of thing, okay?
+
+254
+00:21:17,760 --> 00:21:24,560
+On Mac OS X, OpenGL at least uses what we call Flush
+and then Bind semantics, if you're going to do this.
+
+255
+00:21:24,560 --> 00:21:31,860
+Any context that's modifying a resource, like rendering
+to a texture using FBO, or anything along those lines,
+
+256
+00:21:31,860 --> 00:21:37,060
+has to Flush that context before we do
+anything else with the data in another context.
+
+257
+00:21:37,060 --> 00:21:43,070
+That could be a GLFlush, GLFlush renderer Apple,
+GLFinish, not the best performance, but it would work,
+
+258
+00:21:43,070 --> 00:21:49,930
+anything that basically drains the entire open
+GLPipeline dry will ensure that everything is good.
+
+259
+00:21:49,930 --> 00:21:56,060
+After that point, any contexts that are going
+to use that modified resource, must bind to it.
+
+260
+00:21:56,060 --> 00:22:01,140
+You can't just already be sitting there bound to a
+texture that you modify in another GPU or another context
+
+261
+00:22:01,140 --> 00:22:04,250
+and then draw with it, it won't work
+right, you have to redo the bind.
+
+262
+00:22:04,250 --> 00:22:07,020
+The bind calls how, where we get
+a chance to go in and detect
+
+263
+00:22:07,020 --> 00:22:11,960
+that the data might not be on the GPU where it's now needed.
+
+264
+00:22:11,960 --> 00:22:16,080
+Now this applies to both single and multi GPU cases.
+
+265
+00:22:16,080 --> 00:22:22,380
+Even if, you know, I've got two contexts, it's
+on the same renderer, if I do a text sub image,
+
+266
+00:22:22,380 --> 00:22:26,630
+or something along those lines on one context and
+don't do a Flush and go to the second context,
+
+267
+00:22:26,630 --> 00:22:32,230
+even though it's all on the same GPU, because of the command
+buffering that happens and host memory and everything else,
+
+268
+00:22:32,230 --> 00:22:38,320
+those text for modifications might not simply be visible
+to that second context, unless it's been Flushed first.
+
+269
+00:22:38,320 --> 00:22:43,020
+In the Multi-GPU case, it's also very critical,
+because at that point that's what allows us
+
+270
+00:22:43,020 --> 00:22:49,000
+to pull the data off the first GPU
+and ship it over to the second one.
+
+271
+00:22:49,000 --> 00:22:56,540
+Now OpenCL you can use either event
+model to accomplish the same sort of thing.
+
+272
+00:22:56,540 --> 00:23:03,540
+If you're shipping data from GL to OpenCL, for example, you
+kind of have to follow the appropriate rule for each API.
+
+273
+00:23:03,540 --> 00:23:07,560
+In this case, if you're going to
+render to a texture using OpenGL,
+
+274
+00:23:07,560 --> 00:23:13,330
+and then you want to do some CL specific image processing
+on the result, you're going to have to Flush the GLContext,
+
+275
+00:23:13,330 --> 00:23:18,150
+make sure all those commands are in flight first,
+then you can do an acquire on the image in CL,
+
+276
+00:23:18,150 --> 00:23:21,020
+and everything will work the way you expect.
+
+277
+00:23:21,020 --> 00:23:28,440
+So, this is similar to my previous diagram, but what I've
+got to show here, is that I have two OpenGLContexts, okay,
+
+278
+00:23:28,440 --> 00:23:32,810
+they're using the same Share Group, in this
+particular case, but each one is talking
+
+279
+00:23:32,810 --> 00:23:37,000
+to a different GPU, so how's this going to work?
+
+280
+00:23:37,000 --> 00:23:43,370
+So, using my previous example, I create a new
+texture object and I put some data into it.
+
+281
+00:23:43,370 --> 00:23:48,180
+At that point, it's really the Share
+Group that owns the copy of the data.
+
+282
+00:23:48,180 --> 00:23:53,270
+In the previous animation that I showed for you,
+I didn't show the Share Group as a separate thing
+
+283
+00:23:53,270 --> 00:23:56,540
+from the OpenGLContext because I didn't
+want to sort of muddy the waters,
+
+284
+00:23:56,540 --> 00:24:02,020
+but the reality is is that even a standalone
+OpenGLContext always has a Share Group sitting under it,
+
+285
+00:24:02,020 --> 00:24:05,020
+and that's really where all the resources are owned.
+
+286
+00:24:05,020 --> 00:24:07,870
+So in this case, again, I've specified a texture,
+
+287
+00:24:07,870 --> 00:24:12,090
+it's now owned by the Share Group,
+now I come along and I render with it.
+
+288
+00:24:12,090 --> 00:24:17,940
+Now, again, that draw texture command, or whatever that
+entailed in my app, whatever those GL commands were,
+
+289
+00:24:17,940 --> 00:24:22,640
+is still just sitting in host memory, it
+hasn't been shipped off to that other GPU yet.
+
+290
+00:24:22,640 --> 00:24:25,060
+Or to the AMD card in this case.
+
+291
+00:24:25,060 --> 00:24:31,980
+Once I call Flush, that's when everything gets going
+and that data will be uploaded to the card and consumed.
+
+292
+00:24:31,980 --> 00:24:38,410
+Now, again, let's say I to a text sub-image operation
+that winds up being accelerated, so we're not going to end
+
+293
+00:24:38,410 --> 00:24:44,490
+up modifying at host memory first, that causes the
+host memory copy to now be out of date with respect
+
+294
+00:24:44,490 --> 00:24:47,540
+to what's up in video memory on the AMD card.
+
+295
+00:24:47,540 --> 00:24:53,930
+And again, Flush it to make sure
+that everything is really up there.
+
+296
+00:24:53,930 --> 00:24:58,060
+Now let's say I go over to my there
+OpenGLContext that's currently bound
+
+297
+00:24:58,060 --> 00:25:02,630
+to the NVIDIA renderer, and do
+something interesting over there.
+
+298
+00:25:02,630 --> 00:25:05,410
+So, I'm going to bind to that same texture object.
+
+299
+00:25:05,410 --> 00:25:11,270
+Now the instant I do the bind, the Share Group is smart
+enough to say, "Hey, wait a minute, you know that texture,
+
+300
+00:25:11,270 --> 00:25:14,050
+we don't have the most up-to-date copy in system memory.
+
+301
+00:25:14,050 --> 00:25:18,620
+I've got to reach all the way over to this
+other piece of hardware and pull the data back.
+
+302
+00:25:18,620 --> 00:25:24,000
+This is why all of the, both contexts have
+to have the same set of renderers in them,
+
+303
+00:25:24,000 --> 00:25:32,390
+because even though over on the Open, the second
+OpenGLContext on your right, I'm talking to the NVIDIA card,
+
+304
+00:25:32,390 --> 00:25:37,390
+I might need to have sort device access to
+the AMD card so that I can pull resources
+
+305
+00:25:37,390 --> 00:25:42,510
+on it back to host memory, on your behalf, okay?
+
+306
+00:25:42,510 --> 00:25:48,770
+So now I'll go ahead and I draw with it and I Flush, that
+causes that data to get pulled up to the NVIDIA card now,
+
+307
+00:25:48,770 --> 00:25:52,610
+and everything continues the way you want it to.
+
+308
+00:25:52,610 --> 00:25:56,200
+Now, let's say I go over here and do
+an accelerated copy text sub-image.
+
+309
+00:25:56,200 --> 00:26:02,830
+Well the instant you do that, OpenGL knows that, not only
+is the Share Group copy out of date with respect with what's
+
+310
+00:26:02,830 --> 00:26:10,160
+up on the NVIDIA card, but the AMD's data is now going to
+be out of date too, so if I go back to the first context
+
+311
+00:26:10,160 --> 00:26:15,560
+and do something with that, it's going to have
+to start this entire process all over again
+
+312
+00:26:15,560 --> 00:26:19,760
+and pull the data off the NVIDIA, back to
+host memory, and back up to the AMD card.
+
+313
+00:26:19,760 --> 00:26:22,890
+And, again, make sure you finish
+your rendering with a Flush.
+
+314
+00:26:22,890 --> 00:26:29,040
+So, there's some performance things to think about, if
+you're going to use multiple GPU's within your application.
+
+315
+00:26:29,040 --> 00:26:33,820
+The biggest one is make sure you're
+doing enough work to make it worthwhile.
+
+316
+00:26:33,820 --> 00:26:42,280
+You have to take into account how much compute or rendering
+you're going to do versus what it's going to cost you
+
+317
+00:26:42,280 --> 00:26:48,480
+to transfer the data, you know, back to
+host memory and up to the second GPU.
+
+318
+00:26:48,480 --> 00:26:54,000
+Especially in the Mac Pros where it might even matter
+what slots you're in, you have to pay attention to that,
+
+319
+00:26:54,000 --> 00:26:59,140
+you know the user may have four cards in the
+system, but only two of them will have 16X slots,
+
+320
+00:26:59,140 --> 00:27:06,260
+the other two will have 4X, getting data off certain
+GPU's is going to be considerably more expensive.
+
+321
+00:27:07,650 --> 00:27:16,630
+So, what you want to do ideally as well, is decouple
+the workloads between the two GPU's as much as possible,
+
+322
+00:27:16,630 --> 00:27:22,800
+you know, say if you had four GPU's in there,
+and you're doing some kind of, I don't know,
+
+323
+00:27:22,800 --> 00:27:26,890
+like image processing thing where you don't
+have to have dependencies between the GPU's,
+
+324
+00:27:26,890 --> 00:27:31,140
+you can just fire stuff off the one card,
+run some image processing, get it back.
+
+325
+00:27:31,140 --> 00:27:35,490
+You could probably set up four different threads,
+one to work on each GPU, get them all fired up
+
+326
+00:27:35,490 --> 00:27:40,630
+and running completely in parallel with
+each other, that's the ideal, okay?
+
+327
+00:27:40,630 --> 00:27:46,810
+Another thing to watch out for is, while we just talked
+about how the resource synchronization stuff works
+
+328
+00:27:46,810 --> 00:27:51,640
+in multiple context, don't rely on
+that to get the best performance.
+
+329
+00:27:51,640 --> 00:27:55,680
+You know, before we can pull data off of
+one GPU, we have to synchronously wait
+
+330
+00:27:55,680 --> 00:27:58,830
+for it to be done before we can pull it off.
+
+331
+00:27:58,830 --> 00:28:05,340
+Okay, so ideally, you want to find some way, be
+it whatever API you're working with, GL or CL,
+
+332
+00:28:05,340 --> 00:28:09,170
+to make sure that that data has
+somehow gotten back to system memory.
+
+333
+00:28:09,170 --> 00:28:14,280
+So, consider using extra buffering sort of to
+double or triple buffer your data if this is cases
+
+334
+00:28:14,280 --> 00:28:19,130
+where you know you're going to be streaming data from one
+GPU to the other, you want to get those two things working
+
+335
+00:28:19,130 --> 00:28:22,090
+and parallel as much as you possibly can.
+
+336
+00:28:22,090 --> 00:28:27,600
+Another thing is, if you've got some compute device in the
+background, or GL doing offline rendering in the background,
+
+337
+00:28:27,600 --> 00:28:32,590
+make sure you don't wind up bottlenecking yourself behind
+trying to display ever single frame that you get out,
+
+338
+00:28:32,590 --> 00:28:37,530
+it's really not necessary, show a progress
+bar, or just take snapshots, you know,
+
+339
+00:28:37,530 --> 00:28:42,560
+every now and then of where the GPU's at, but don't
+try and shove every single frame that you compute
+
+340
+00:28:42,560 --> 00:28:44,910
+onto the display, it's just going to slow everything down.
+
+341
+00:28:44,910 --> 00:28:52,540
+All right, so now I am going to bring up Abe Stevens,
+one of our OpenCL Engineers to show you a couple of demos
+
+342
+00:28:52,540 --> 00:28:55,000
+that use multiple GPU's at the same time.
+
+343
+00:28:55,000 --> 00:28:56,510
+Abe?
+
+344
+00:28:56,510 --> 00:28:59,300
+[Applause]
+
+345
+00:28:59,300 --> 00:29:03,170
+>>Hi, my name is Abe Stevens, and I
+work with the OpenCL group at Apple.
+
+346
+00:29:03,170 --> 00:29:10,770
+Yesterday during the OpenCL, OpenGL sharing talk, we
+showed a simple demo that was, that consisted of a number
+
+347
+00:29:10,770 --> 00:29:17,780
+of objects that bounced around the desktop with some post
+process effects that were rendered in, rendered in OpenCL.
+
+348
+00:29:17,780 --> 00:29:23,450
+What we've done for this demo is we've taken
+that same code and made a certain number
+
+349
+00:29:23,450 --> 00:29:27,060
+of changes to it, to enable Multi-GPU support.
+
+350
+00:29:27,060 --> 00:29:33,030
+So first, let's take a look at the demo that
+we saw, or that some people saw yesterday.
+
+351
+00:29:33,030 --> 00:29:39,900
+In this example, the spheres that are bouncing
+around the image are rendered with OpenGL,
+
+352
+00:29:39,900 --> 00:29:46,860
+using a GLSLShader that computes refractions
+and reflections and then the caustic effect
+
+353
+00:29:46,860 --> 00:29:50,960
+that you see is rendered in OpenCL as a post process.
+
+354
+00:29:50,960 --> 00:29:58,270
+Now with only a few spheres bouncing around the desktop,
+there really isn't much need for an additional GPU, however,
+
+355
+00:29:58,270 --> 00:30:07,200
+if we switch to a more complicated example, with a much
+larger number of spheres, if we look at the frame rate,
+
+356
+00:30:07,200 --> 00:30:12,930
+which is displayed in the lower corner here in milliseconds,
+
+357
+00:30:12,930 --> 00:30:16,700
+the caustic is relatively expensive
+and incurs a relatively high latency.
+
+358
+00:30:16,700 --> 00:30:22,450
+If I switch to the physic step in this program, which
+right now is running in OpenCL on the GeForce card,
+
+359
+00:30:22,450 --> 00:30:30,810
+over to the Radeon card, the performance will
+increase by about, in this case, about 35% or so.
+
+360
+00:30:30,810 --> 00:30:34,310
+This increase in performance isn't, you
+know, it's not a 2X increase in performance,
+
+361
+00:30:34,310 --> 00:30:40,830
+but in this case all we've done is we've taken a simple
+CL application and made a small modification to it
+
+362
+00:30:40,830 --> 00:30:45,800
+that allows some of that CL work
+to be performed on the second GPU.
+
+363
+00:30:45,800 --> 00:30:51,770
+If we wanted to take this application and design it from the
+ground up, and I'll show another example in just a moment
+
+364
+00:30:51,770 --> 00:30:59,390
+that does this, we could set up our application so that
+more work could be run concurrently between the two devices.
+
+365
+00:30:59,390 --> 00:31:04,620
+In that case, we might have to double buffer our
+data, so that one GPU doesn't always have to wait
+
+366
+00:31:04,620 --> 00:31:09,080
+for the other GPU before it can perform work concurrently.
+
+367
+00:31:09,080 --> 00:31:14,840
+So this is another demo that was built from
+the ground up to run on multiple devices.
+
+368
+00:31:19,070 --> 00:31:24,190
+In this case, we're running the demo on the Radeon
+for graphics, so all the OpenGL rendering happens
+
+369
+00:31:24,190 --> 00:31:30,790
+on the ATI device, and the simulation, which is simulating
+the movement of these particles around the desktop,
+
+370
+00:31:30,790 --> 00:31:34,890
+is occurring in OpenCL on our NVIDIA device.
+
+371
+00:31:34,890 --> 00:31:42,160
+Now if we switch to the Radeon device for both graphics and
+compute, the performance changes significantly because now
+
+372
+00:31:42,160 --> 00:31:53,070
+that one GPU has to perform both task, both the OpenGL
+display and the compute process to render the position
+
+373
+00:31:53,070 --> 00:31:57,310
+of the particles, and of course, if I switch
+that back, our performance goes back up.
+
+374
+00:31:57,310 --> 00:32:01,090
+But this application is very different than
+the one that I showed just a second ago.
+
+375
+00:32:01,090 --> 00:32:06,510
+In this case, we've set up the application to double buffer
+the data, and we have really designed it from the ground
+
+376
+00:32:06,510 --> 00:32:14,600
+up to use both devices, so if you consider using both
+devices and allowing work to execute concurrently
+
+377
+00:32:14,600 --> 00:32:20,270
+on the two pieces of hardware, you might be
+able to get about a 2X performance increase.
+
+378
+00:32:20,270 --> 00:32:25,610
+If you just take your application
+and add support for multiple devices
+
+379
+00:32:25,610 --> 00:32:28,710
+or multi GPU's the performance increase will be a lot less,
+
+380
+00:32:28,710 --> 00:32:34,990
+but were still able to achieve
+that, about a 20 to 30% improvement.
+
+381
+00:32:34,990 --> 00:32:41,510
+Anyway, I'm going to hand this back over to Ken who
+will talk about another advanced multi GPU topic.
+
+382
+00:32:41,510 --> 00:32:44,580
+[Applause]
+
+383
+00:32:44,580 --> 00:32:45,930
+>>Ken: Okay.
+
+384
+00:32:45,930 --> 00:32:48,130
+So let's talk a little bit about IOSurface.
+
+385
+00:32:48,130 --> 00:32:53,640
+So this API was introduced in Mac
+OS 10.6 with not a lot of fanfare,
+
+386
+00:32:53,640 --> 00:32:57,720
+this is actually the first place we're talking about it.
+
+387
+00:32:57,720 --> 00:33:03,340
+The whole point of IOSurface, and what's relevant
+to this talk, is that it makes resource sharing
+
+388
+00:33:03,340 --> 00:33:08,830
+between different parts of the system
+a lot easier than it used to be.
+
+389
+00:33:08,830 --> 00:33:16,870
+IOSurface is basically nothing more than a really nice high
+level abstraction around a chunk of system shared memory.
+
+390
+00:33:16,870 --> 00:33:25,530
+So, what this is designed for is to do very efficient
+cross process and/or cross API data sharing, you know,
+
+391
+00:33:25,530 --> 00:33:33,350
+you might need to send some data from CoreImage to OpenGL
+and you don't have control over the context involved,
+
+392
+00:33:33,350 --> 00:33:39,870
+so you can't set up sharing, this can help you with that.
+
+393
+00:33:39,870 --> 00:33:43,200
+Germane to this talk is that it's integrated directly
+
+394
+00:33:43,200 --> 00:33:47,750
+into the GPU software set, for all
+supported hardware on Mac OS X.
+
+395
+00:33:47,750 --> 00:33:52,620
+This is what allows us to pull off some really cool
+tricks that we'll talk about a little bit later.
+
+396
+00:33:52,620 --> 00:33:58,980
+Now the really neat thing about it is that
+from the app developer's point of view,
+
+397
+00:33:58,980 --> 00:34:04,120
+it hides nearly all of the details
+about moving data from GPU to the other,
+
+398
+00:34:04,120 --> 00:34:08,030
+or between the CPU and GPU and vice versa, okay?
+
+399
+00:34:08,030 --> 00:34:12,320
+If you follow a few simple rules, it
+pretty much is designed to just work.
+
+400
+00:34:12,320 --> 00:34:19,940
+So, let's talk about the GPU integrations
+stuff, because it's important for this talk.
+
+401
+00:34:19,940 --> 00:34:25,100
+So, an OpenGL texture can be bound to an IOSurface.
+
+402
+00:34:25,100 --> 00:34:31,990
+This is sort of a live connection, it means that anytime
+the contents of that surface are modified anywhere
+
+403
+00:34:31,990 --> 00:34:37,780
+in the system, that texture at anytime it gets it used
+is going to see those modifications happen right away,
+
+404
+00:34:37,780 --> 00:34:41,110
+you don't have to keep copying the data into the texture.
+
+405
+00:34:41,110 --> 00:34:47,580
+Also, IOSurface does support planar image type, so you
+can bind and OpenGL texture to a single image plane,
+
+406
+00:34:47,580 --> 00:34:56,090
+for example, say you had an IOSurface with NV12 42.0
+style video in it, you can bind an IOSurface once
+
+407
+00:34:56,090 --> 00:35:00,800
+to the luminants plane once to the cromonent and
+write a shader together to do RGB conversion,
+
+408
+00:35:00,800 --> 00:35:03,670
+works out really well, and we do
+that internally in some cases.
+
+409
+00:35:03,670 --> 00:35:11,530
+If you want to modify an IOSurface, you just take your
+IOSurface back to OpenGLTexture, bind it to an FBO and go,
+
+410
+00:35:11,530 --> 00:35:13,670
+it's really no more complicated than that.
+
+411
+00:35:13,670 --> 00:35:19,090
+For the most part, you just get to use
+the standard OpenGL techniques to do it.
+
+412
+00:35:19,090 --> 00:35:27,530
+Now, OpenCL itself doesn't have direct binding to IOSurface
+at this time, but via the resource sharing stuff we talked
+
+413
+00:35:27,530 --> 00:35:34,780
+about before, you can more or less take and OpenGL texture,
+bind it to an IOSurface, then take that OpenGLTexture
+
+414
+00:35:34,780 --> 00:35:39,770
+and use it with the appropriate extension, whose name
+escapes me at the moment, but you can take that texture
+
+415
+00:35:39,770 --> 00:35:43,590
+and use it in OpenCL's and image
+and get access to it that way.
+
+416
+00:35:43,590 --> 00:35:49,690
+Now, what's also cool about IOSurfaceTexture,
+is it doesn't matter how many textures
+
+417
+00:35:49,690 --> 00:35:51,730
+in the system get bound to that IOSurface.
+
+418
+00:35:51,730 --> 00:35:56,840
+They all are going to use exactly the
+same video memory, on any given GPU.
+
+419
+00:35:56,840 --> 00:36:03,410
+Okay, so this mean, if I have two different processes
+in the system, both looking at the same IOSurface,
+
+420
+00:36:03,410 --> 00:36:09,370
+and they both create a texture off of it, and they're both
+using the same GPU, there's not going to be any copies
+
+421
+00:36:09,370 --> 00:36:18,220
+that happen back to host memory, just because were crossing
+process boundaries, okay, that's part of the just works part
+
+422
+00:36:18,220 --> 00:36:22,470
+of the whole API, and it's a good performance thing as well.
+
+423
+00:36:22,470 --> 00:36:26,450
+Also, no matter how many different
+renderers we have in the system,
+
+424
+00:36:26,450 --> 00:36:30,310
+the host memory backing for IOSurface
+is shared between them.
+
+425
+00:36:30,310 --> 00:36:35,500
+So if we do have to transfer stuff from one
+GPU to host memory and up to another card,
+
+426
+00:36:35,500 --> 00:36:39,230
+they're aren't every any CPU copies
+involved in this process.
+
+427
+00:36:39,230 --> 00:36:45,110
+With regular OpenGLTexture objects, there actually
+can be, in this case it's DMA to system memory,
+
+428
+00:36:45,110 --> 00:36:49,720
+DMA up to the other card and that's
+it, CPU does not touch all of the data.
+
+429
+00:36:49,720 --> 00:36:56,300
+So this is just a really simple example of creating
+an IOSurface and getting it usable inside of OpenGL.
+
+430
+00:36:56,300 --> 00:37:05,540
+So, IOSurface is standard, sort of Mac OS X, Core
+foundation based API, you give it a dictionary of all
+
+431
+00:37:05,540 --> 00:37:08,290
+of the properties you want for
+the IOSurface and away it goes.
+
+432
+00:37:08,290 --> 00:37:13,580
+In this came I'm cheating a little bit and using
+toll-free bridging because it's a lot less code.
+
+433
+00:37:13,580 --> 00:37:19,260
+In this case, I'm just going to create a
+simple 256 by 256 IOSurface, 4-bytes per pixel,
+
+434
+00:37:19,260 --> 00:37:23,380
+and that's pretty much all I need to
+specify as far as IOSurface is concerned.
+
+435
+00:37:23,380 --> 00:37:27,720
+IOSurfaces do not have an intrinsic
+format associated with them.
+
+436
+00:37:27,720 --> 00:37:34,910
+You can give it a pixel format identifier, like you know,
+BGRA or any of the sort of quick draw style 4CC or NB12
+
+437
+00:37:34,910 --> 00:37:37,750
+or anything like that, but IOSurface really doesn't care.
+
+438
+00:37:37,750 --> 00:37:43,000
+The only reason that's there at all is just so that
+two processes can sort of pick something to agree upon.
+
+439
+00:37:43,000 --> 00:37:52,370
+Now from the OpenGL side, all I really have to do is
+basically generate a new texture object and call this,
+
+440
+00:37:52,370 --> 00:37:58,780
+you know, Mac OS X specific API,
+CGLTextImageIOSurface2D, it's kind of a mouthful,
+
+441
+00:37:58,780 --> 00:38:04,470
+and that will take that currently bound texture object
+and bind it to the backing store of that IOSurface.
+
+442
+00:38:04,470 --> 00:38:11,800
+Okay in this case, I'm telling OpenGL I want the internal
+format of this texture treated as RGBA, that's 256 by 256,
+
+443
+00:38:11,800 --> 00:38:15,720
+and I want OpenGL to look at that
+data as if it's BGRA onsite,
+
+444
+00:38:15,720 --> 00:38:22,030
+and 888Reverse, which is just your basic ARGB format.
+
+445
+00:38:22,030 --> 00:38:28,010
+And you give it the surface that's involved and, in this
+case it's not a planar surface, so I just specify zero.
+
+446
+00:38:28,010 --> 00:38:31,730
+If the IOSurface had multiple planes, this
+is where you would stick that argument.
+
+447
+00:38:31,730 --> 00:38:38,450
+I want to call out this, again, because
+it's kind of an important point.
+
+448
+00:38:38,450 --> 00:38:43,960
+OpenGL is going to view that data in
+the IOSurface, via these parameters.
+
+449
+00:38:43,960 --> 00:38:47,560
+It doesn't really matter what the
+data is, or what format it is,
+
+450
+00:38:47,560 --> 00:38:51,670
+what you specify here is what OpenGL
+is going to interpret that data as.
+
+451
+00:38:51,670 --> 00:38:56,790
+When we transfer it back and forth between host
+memory and the GPU, there's no CPU touching,
+
+452
+00:38:56,790 --> 00:39:03,670
+there's no data formatting, it's straight copy up, straight
+copy back, you know the GPU's might do hidden tiling
+
+453
+00:39:03,670 --> 00:39:11,450
+or that sort of thing in their local video memory, but
+that's not exposed to the app developer in any way.
+
+454
+00:39:11,450 --> 00:39:17,230
+Now, the nice thing is, IOSurface follows the same
+synchronization rules that we talked about earlier,
+
+455
+00:39:17,230 --> 00:39:21,780
+there isn't anything new to learn here,
+they work exactly the same way, okay?
+
+456
+00:39:21,780 --> 00:39:28,010
+If you're going to take a texture on one context, and
+modify it with the GPU and ship it over to another context,
+
+457
+00:39:28,010 --> 00:39:32,110
+you just have to do the Flush and you just
+have to do the bind, behind the scenes,
+
+458
+00:39:32,110 --> 00:39:36,590
+IOSurface sort of works outside the
+Share Group to figure out in the system,
+
+459
+00:39:36,590 --> 00:39:39,520
+that hey, this data is not in the right card.
+
+460
+00:39:39,520 --> 00:39:47,220
+Now the neat part about this too, is that the two contexts
+involved in this don't have to know about each other at all
+
+461
+00:39:47,220 --> 00:39:52,540
+and they don't have to even share the same renderers, this
+is where, because this is integrated at such a low level
+
+462
+00:39:52,540 --> 00:39:54,630
+on the system, we can still get at a GPU
+
+463
+00:39:54,630 --> 00:40:00,710
+that your app doesn't even necessarily
+know about to go pull the data off of it.
+
+464
+00:40:00,710 --> 00:40:05,900
+Now the other sort of neat thing about IOSurface is that
+it lets you get direct access to that backing memory.
+
+465
+00:40:05,900 --> 00:40:10,710
+You know, for regular textures, if you're not using
+all of the texture range extension and client storage
+
+466
+00:40:10,710 --> 00:40:15,790
+and all of that stuff, normally you can't get at the
+sort of shared system memory copy of the textures.
+
+467
+00:40:15,790 --> 00:40:21,160
+With IOSurface, you can get direct access to it,
+but you have to be careful about synchronization.
+
+468
+00:40:21,160 --> 00:40:26,760
+If you're going to write into an IOSurface directly
+with the CPU and then consume it using the GPU,
+
+469
+00:40:26,760 --> 00:40:31,470
+you have to do what we are doing here, you have
+to lock it, put your data in it, unlock it.
+
+470
+00:40:31,470 --> 00:40:36,280
+At that point, we realize that you've changed
+the host memory copy and then you can go off
+
+471
+00:40:36,280 --> 00:40:39,810
+and use it with OpenGL and everything is good.
+
+472
+00:40:39,810 --> 00:40:47,850
+For the opposite case, where you're consume some data using
+the CPU, after you've used a GPU to modify it, you, again,
+
+473
+00:40:47,850 --> 00:40:51,480
+you have to make sure that all of the
+commands that may have been buffered
+
+474
+00:40:51,480 --> 00:40:54,410
+to that GPU, have been Flushed and are in flight.
+
+475
+00:40:54,410 --> 00:41:00,580
+If they're not, the kernel part of IOSurface has no way
+of knowing how long it has to wait before it can DMA
+
+476
+00:41:00,580 --> 00:41:04,340
+that copy back to host memory so
+that you can use it, so, again,
+
+477
+00:41:04,340 --> 00:41:08,580
+follow the same synchronization rules as you would before.
+
+478
+00:41:08,580 --> 00:41:12,880
+So, let's talk a little bit about some
+performance tips when using IOSurface.
+
+479
+00:41:12,880 --> 00:41:21,760
+So, as I alluded to earlier, the automatic synchronization
+that we do when data is on the wrong GPU, it's easy to use,
+
+480
+00:41:21,760 --> 00:41:26,640
+but it's not asynchronous, you know, if you've got one GPU
+consuming some data, and you immediately need to use it
+
+481
+00:41:26,640 --> 00:41:30,980
+on the second one, there's a synchronization
+point there that we just simply can't avoid,
+
+482
+00:41:30,980 --> 00:41:34,610
+and we don't want to give you bad data, so
+we're going to go ahead and wait for the data
+
+483
+00:41:34,610 --> 00:41:39,220
+to be done before we pull it back to host memory.
+
+484
+00:41:39,220 --> 00:41:44,580
+One trick you can pull here, and this is a little
+bit advanced, because you can force IOSurface
+
+485
+00:41:44,580 --> 00:41:50,480
+to page the data back to host memory by performing a lock,
+one trick you might consider if you want to use IOSurface
+
+486
+00:41:50,480 --> 00:41:56,370
+for doing double buffering between different
+GPU's, is you could produce some content,
+
+487
+00:41:56,370 --> 00:41:58,690
+and on that same thread immediately do a lock.
+
+488
+00:41:58,690 --> 00:42:01,610
+What that means is that the GPU is going to do all
+of its work and then the first thing it's going
+
+489
+00:42:01,610 --> 00:42:03,850
+to do is page it back to host memory so it's ready to go.
+
+490
+00:42:03,850 --> 00:42:07,180
+Then you could go and do a second frame, do the same thing.
+
+491
+00:42:07,180 --> 00:42:11,960
+Get a couple of those frames going like that in
+buffered and host memory, then fire up the second GPU
+
+492
+00:42:11,960 --> 00:42:17,250
+and start consuming the data, that way you get a nice
+overlap, you know if you go ahead and bind to the IOSurface
+
+493
+00:42:17,250 --> 00:42:20,810
+and the host memory copy is already
+up to date on a downstream GPU,
+
+494
+00:42:20,810 --> 00:42:24,620
+you won't pay any synchronization penalty for that.
+
+495
+00:42:25,630 --> 00:42:32,080
+All right, and again, this gives you really good
+tight control over exactly when that DMA happens.
+
+496
+00:42:32,080 --> 00:42:37,250
+And again, earlier, I talked, said there's no
+CPU copies, that's true in this case as well,
+
+497
+00:42:37,250 --> 00:42:46,230
+so you're not going to pay any extra CPU overhead, other
+than the wait, for getting the data from one GPU to another.
+
+498
+00:42:46,230 --> 00:42:52,540
+Another really neat trick you can do is, remember
+in the slide before I showed you that, you know,
+
+499
+00:42:52,540 --> 00:42:56,300
+IOSurface is going to, you know, view
+that texture based on the format and type.
+
+500
+00:42:56,300 --> 00:43:03,030
+Well, one thing you might want to do, for whatever reason,
+is say you've got, you know a luminants playing a video,
+
+501
+00:43:03,030 --> 00:43:06,340
+and you want to do something with all the
+luminent channels, like run some kind of filter
+
+502
+00:43:06,340 --> 00:43:10,860
+or something interesting like that, you
+know, change a gamma, setting, something,
+
+503
+00:43:10,860 --> 00:43:15,370
+what you could do is basically lie to OpenGL
+and say, you know what, you know, 19, 20,
+
+504
+00:43:15,370 --> 00:43:24,380
+or let's do something that I can do in my head, 640 by
+480 video frame, it's really 160 by 480 luminant, or RGBA,
+
+505
+00:43:24,380 --> 00:43:28,870
+even though it's really luminants, now
+I need to basically process four pixels
+
+506
+00:43:28,870 --> 00:43:31,730
+at the same time and save to my shader instead of one.
+
+507
+00:43:31,730 --> 00:43:37,720
+So, the neat thing about this is that you can have different
+textures all pointing at the same piece of video memory,
+
+508
+00:43:37,720 --> 00:43:46,030
+viewing it as different pixel formats, which again,
+sort of cool trick for doing image processing stuff.
+
+509
+00:43:46,030 --> 00:43:52,110
+Now if you're going to do that trick, the total data sizes
+have to match, you know, if you're going to say, you know,
+
+510
+00:43:52,110 --> 00:44:00,290
+it was 640 by 480 four bytes per pixel, whatever width tie
+in to sort of bytes per pixel OpenGL is going to use works
+
+511
+00:44:00,290 --> 00:44:04,260
+out to, it's going to have to work out
+to that same amount, or things will fail.
+
+512
+00:44:04,260 --> 00:44:11,940
+So what are some sort of cool examples for using
+IOSurface and how does it apply to the Multi-GPU stuff?
+
+513
+00:44:11,940 --> 00:44:16,520
+Well, say your plug-in, you know, you're an
+application developer and you want to support plug-ins
+
+514
+00:44:16,520 --> 00:44:21,930
+and you're really having this quandary about, well,
+do I make this CPU based, or do I make it GPU based,
+
+515
+00:44:21,930 --> 00:44:25,460
+and if we're going to make it GPU based, how do
+we tell them what renderer to use and Oh my God,
+
+516
+00:44:25,460 --> 00:44:28,020
+this is really complicated, what do I do?
+
+517
+00:44:28,020 --> 00:44:33,520
+If you just say, here's an IOSurface, go modify it and
+hand it back to me, we'll abstract everything for you.
+
+518
+00:44:33,520 --> 00:44:37,820
+You could be looking at it with a CPU, they'll look at it
+with a GPU, they do their thing, they ship it back to you.
+
+519
+00:44:37,820 --> 00:44:41,130
+Or, if you're really lucky, they're
+going to use the same GPU you are,
+
+520
+00:44:41,130 --> 00:44:46,350
+and there's not going to be any copies
+back and forth, so that's pretty cool.
+
+521
+00:44:46,350 --> 00:44:51,330
+Another really cool thing to use IOSurface
+for is Client Server applications.
+
+522
+00:44:51,330 --> 00:44:57,890
+Because we can pass stuff back and forth across process
+boundaries so cheaply, even keeping them on the same GPU,
+
+523
+00:44:57,890 --> 00:45:05,370
+this is just really good if you need to use like a renderer
+server type operation, we use this internally in Mac OS X
+
+524
+00:45:05,370 --> 00:45:10,520
+in a couple of situations as well, just to,
+you know, do things in sort of a secure manner.
+
+525
+00:45:10,520 --> 00:45:18,830
+And again, even in the Client Server
+situation any resources that are up on the GPU,
+
+526
+00:45:18,830 --> 00:45:24,250
+will stay there if the downstream sort of
+client process is using those exact same GPU's,
+
+527
+00:45:24,250 --> 00:45:26,540
+so again, there won't be any copies involved.
+
+528
+00:45:26,540 --> 00:45:29,080
+Now, probably the coolest thing
+you could do is combine both.
+
+529
+00:45:29,080 --> 00:45:34,180
+You could actually run your plug-in, in a different
+address space, on a different host architecture,
+
+530
+00:45:34,180 --> 00:45:40,070
+and even on a different GPU, and it would all still just
+work, you know it's a really nice case to say, you know,
+
+531
+00:45:40,070 --> 00:45:44,910
+as an app developer, "Hey, my plug-in guy
+crashes, it's not going to take down my app,
+
+532
+00:45:44,910 --> 00:45:46,980
+I don't have to care if he's using a CPU to do his work,
+
+533
+00:45:46,980 --> 00:45:51,410
+I don't care if he's using the GPU,
+everything is all pretty cool."
+
+534
+00:45:51,410 --> 00:45:53,550
+So, let me give you a real quick demo.
+
+535
+00:45:53,550 --> 00:45:58,980
+Okay, so this app here, this is the server,
+he's just generating Atlantis Frames and waiting
+
+536
+00:45:58,980 --> 00:46:01,390
+for clients to come can check in with him.
+
+537
+00:46:01,390 --> 00:46:05,680
+The client checks in with the server, and then the
+server basically starts sending these Atlantis Frames
+
+538
+00:46:05,680 --> 00:46:07,450
+over to this other application.
+
+539
+00:46:07,450 --> 00:46:12,100
+Now in this case, they're both on the same GPU, there
+shouldn't be any transfers going back and forth.
+
+540
+00:46:12,100 --> 00:46:16,340
+But I can say, "Hey, server, start using
+the hardware, the other hardware renderer."
+
+541
+00:46:16,340 --> 00:46:21,210
+Now the system is just automatically still just shipping
+the frames across GPU's to the other application.
+
+542
+00:46:21,210 --> 00:46:23,460
+Now again, you can't really see any visual difference.
+
+543
+00:46:23,460 --> 00:46:25,510
+I can even force this guy to use the software renderer,
+
+544
+00:46:25,510 --> 00:46:32,550
+and it starts writing into the IOSurface
+directly and the client is still just going.
+
+545
+00:46:32,550 --> 00:46:37,740
+Now, I wrote this server to actually support multiple
+clients simultaneously, so I can make a duplicate
+
+546
+00:46:37,740 --> 00:46:44,570
+of this client, start it up, and just to be
+interesting, I'll force it to run 32-bit, okay,
+
+547
+00:46:44,570 --> 00:46:46,840
+and now the server's running 64-bit in this case.
+
+548
+00:46:46,840 --> 00:46:52,080
+So I can launch another copy of it and now he's
+running, you know the ponies are in different positions,
+
+549
+00:46:52,080 --> 00:46:57,980
+but they're basically on two different, or actually in
+this case let's even make it more interesting, so now,
+
+550
+00:46:57,980 --> 00:47:04,000
+the software renderer is writing into the IOSurface, it
+has no idea what GPU either of the two clients are using.
+
+551
+00:47:04,000 --> 00:47:07,350
+The clients, in this case, each one
+of them is using a different GPU
+
+552
+00:47:07,350 --> 00:47:12,330
+and one of them is even a different architecture
+than the first, and it all still just works.
+
+553
+00:47:12,330 --> 00:47:14,510
+I think that's pretty cool, I don't know about you guys.
+
+554
+00:47:14,510 --> 00:47:19,660
+[ Applause ]
+
+555
+00:47:19,660 --> 00:47:33,060
+So the code for this, you can check out the sample, it's
+really not all that complicated, let's see, here's where,
+
+556
+00:47:33,060 --> 00:47:37,830
+you know, I set up a little pool of IOSurface buffers and
+I am going to do frame rendering in here, I'm using two
+
+557
+00:47:37,830 --> 00:47:45,400
+or four, something like that, a bunch of mock port goo to
+get the stuff between the two guys, but for the most part,
+
+558
+00:47:45,400 --> 00:47:48,850
+the server really doesn't have
+to do too much complicated stuff.
+
+559
+00:47:48,850 --> 00:47:55,660
+When it starts up, I set up a texture and an FBO with a
+depth buffer all together so I can render into an IOSurface,
+
+560
+00:47:55,660 --> 00:48:01,100
+I set it up so that if I, you know, had to stretch the
+IOSurface I get linear filtering, that sort of thing.
+
+561
+00:48:01,100 --> 00:48:04,300
+Then I have a little routine that lets me
+render that IOSurface, not that complicated,
+
+562
+00:48:04,300 --> 00:48:10,620
+I bind the FBO that's attached to it, do all the Atlantis
+fun stuff, and then bind back into the system drawable,
+
+563
+00:48:10,620 --> 00:48:13,910
+then I'd turn around and, just so
+you can visualize what I just drew,
+
+564
+00:48:13,910 --> 00:48:17,760
+it just draws a copy of that IOSurface back into the window.
+
+565
+00:48:17,760 --> 00:48:21,520
+Now the client, he knows even less about what's going on.
+
+566
+00:48:21,520 --> 00:48:29,530
+For the most part, where is it, so again, he doesn't have
+to set up an FBO, he's just rendering from the IOSurface,
+
+567
+00:48:29,530 --> 00:48:32,510
+it's not a big deal, so I just set up
+a texture, turn on linear filtering,
+
+568
+00:48:32,510 --> 00:48:35,900
+clamp to edge, a few things like that and go.
+
+569
+00:48:35,900 --> 00:48:42,730
+I modified the blue pony code a little bit, so that I
+could pass in a texture name, and a set of dimensions,
+
+570
+00:48:42,730 --> 00:48:46,650
+but that's pretty much all I had to do, and now I
+can have this guy rendering stuff that was generated
+
+571
+00:48:46,650 --> 00:48:52,880
+on a completely different GPU, in a different
+process entirely, and everything just works.
+
+572
+00:48:52,880 --> 00:49:01,500
+Okay, all right, so in summary, please support systems
+with multiple GPU's whenever possible for you guys.
+
+573
+00:49:01,500 --> 00:49:04,270
+They're becoming more and more common, they probably,
+
+574
+00:49:04,270 --> 00:49:10,400
+they're not going to go away anytime
+soon and your users will be happier.
+
+575
+00:49:10,400 --> 00:49:15,360
+Again, if it's advantageous to your app and
+you can get a performance win out of it,
+
+576
+00:49:15,360 --> 00:49:19,340
+please try and take advantage of
+multiple GPU's are available as well.
+
+577
+00:49:19,340 --> 00:49:24,270
+Again, the person who spent money on his big
+scary Mac Pro is going to be very happy with you.
+
+578
+00:49:24,270 --> 00:49:31,080
+I know I wish more apps supported it on my system,
+so please take advantage of it if it helps you.
+
+579
+00:49:31,080 --> 00:49:36,470
+And lastly, you know, if you need to use,
+if you're in one of these tricky situations
+
+580
+00:49:36,470 --> 00:49:40,990
+where you can't use OpenGLContext sharing, or you need to
+be a different process, or you don't want to have to care
+
+581
+00:49:40,990 --> 00:49:49,160
+about what GPU you're on and you want to be using multiple
+GPU's, IOSurface is a great tool to help let you do that.
+
+582
+00:49:49,160 --> 00:49:51,930
+And read the sample code, you know,
+they're not particularly complicated,
+
+583
+00:49:51,930 --> 00:49:55,110
+the whole idea of IOSurface is it's
+not this insanely complicated API.
+
+584
+00:49:55,110 --> 00:49:58,380
+It is kind of a big API when you look at the header file,
+
+585
+00:49:58,380 --> 00:50:03,820
+but don't let it seem too daunting,
+it's really not that big a deal.
+
+586
+00:50:03,820 --> 00:50:10,220
+So, for more information, please contact Allen Shaffer,
+he's our Graphics and Game Technology Evangelist at Apple,
+
+587
+00:50:10,220 --> 00:50:15,260
+or check out our Apple Developer forum, you can ask
+questions in there and hopefully we can get back to you.
+
+588
+00:50:15,260 --> 00:50:21,340
+Related sessions, unfortunately, have all happened
+before this, but please use these for reference,
+
+589
+00:50:21,340 --> 00:50:26,760
+and go and check them out, there's, you know, more
+details on OpenCL and how to do the sharing in that case,
+
+590
+00:50:26,760 --> 00:50:32,200
+with the previous session to this, some
+performance, cool performance stuff for Mac OS X.
+
+591
+00:50:32,200 --> 00:50:35,010
+And with that, thank you very much.
+
+592
+00:50:35,010 --> 00:50:46,730
+[Applause]
+

@@ -1,0 +1,2560 @@
+1
+00:00:06,600 --> 00:00:07,590
+>> Good morning, everyone.
+
+2
+00:00:07,590 --> 00:00:08,890
+My name is Steve Canon.
+
+3
+00:00:08,890 --> 00:00:11,560
+I'm a Senior Engineer in the Vector Numerics Group.
+
+4
+00:00:11,560 --> 00:00:16,820
+And today, I'm going to be taking to you
+about the Accelerate framework for iPhone OS.
+
+5
+00:00:16,820 --> 00:00:23,420
+I'm going to start off with a little
+bit of overview of the ARM architecture,
+
+6
+00:00:23,420 --> 00:00:28,610
+and then we're going to go a very high-level
+overview of what's in the Accelerate framework,
+
+7
+00:00:28,610 --> 00:00:31,370
+and we're going to have a few examples
+of how to use it effectively.
+
+8
+00:00:31,370 --> 00:00:35,930
+What I really want you to take away from this
+is first, what's in the Accelerate framework.
+
+9
+00:00:35,930 --> 00:00:37,750
+It's new to iOS 4.
+
+10
+00:00:37,750 --> 00:00:41,800
+So if you haven't developed for the Mac
+before, you're probably not familiar with it.
+
+11
+00:00:41,800 --> 00:00:49,170
+I want you to learn where to look for references
+and documentation on the API's that are in there,
+
+12
+00:00:49,170 --> 00:00:52,980
+and I also want to give you some
+pointers on using Accelerate effectively.
+
+13
+00:00:52,980 --> 00:00:58,880
+So let's start with a little bit about the ARM architecture.
+
+14
+00:00:58,880 --> 00:01:01,700
+Apple has shipped two versions of the ARM architecture.
+
+15
+00:01:01,700 --> 00:01:03,200
+The first one we shipped was ARMv6.
+
+16
+00:01:03,200 --> 00:01:12,660
+This was used in the original iPhone, the iPhone 3G,
+then the first and second generation, iPod touches.
+
+17
+00:01:12,660 --> 00:01:21,440
+ARMv6 has a general purpose integer unit with 16
+registers, and it also has hardware floating point support,
+
+18
+00:01:21,440 --> 00:01:29,220
+that's called VFP, and it has 32 single precision
+registers and 16 double precision registers.
+
+19
+00:01:29,220 --> 00:01:33,250
+So it's got hardware support for
+both single and double precision.
+
+20
+00:01:33,250 --> 00:01:38,090
+Now, in the newer products, we're
+using an architecture called ARMv7.
+
+21
+00:01:38,090 --> 00:01:41,250
+This is used in the iPhone 3GS.
+
+22
+00:01:41,250 --> 00:01:49,390
+It's used in the third generation iPod touch, it's
+used in the iPad, and it's also used in the iPhone 4.
+
+23
+00:01:49,390 --> 00:01:56,310
+ARMv7, like ARMv6, has an integer unit with 16 registers.
+
+24
+00:01:56,310 --> 00:02:02,000
+It's-- unlike ARMv6, it's capable of
+executing two instructions simultaneously.
+
+25
+00:02:02,000 --> 00:02:09,730
+It also has legacy support for the VFP instructions,
+it's the hardware floating point model on ARMv6.
+
+26
+00:02:09,730 --> 00:02:13,410
+But it also has new SIMD unit which is called NEON.
+
+27
+00:02:13,410 --> 00:02:17,160
+SIMD stands for Single Instruction Multiple Dispatch.
+
+28
+00:02:17,160 --> 00:02:22,430
+NEON unit has 16 128-bit registers.
+
+29
+00:02:22,430 --> 00:02:28,950
+And all single precision floating point on the
+ARMv7 architecture executes on the NEON unit.
+
+30
+00:02:28,950 --> 00:02:30,900
+NEON does not have double precision support.
+
+31
+00:02:30,900 --> 00:02:36,210
+So double precision happens on the Legacy VFP unit.
+
+32
+00:02:36,210 --> 00:02:40,160
+A NEON register, as I said, it was a 128 bits wide.
+
+33
+00:02:40,160 --> 00:02:46,220
+But the operations that the NEON instructions
+perform don't treat it as 128-bit block.
+
+34
+00:02:46,220 --> 00:02:51,990
+Because it's SIMD registers, what they do they
+treat it as though it's several smaller units,
+
+35
+00:02:51,990 --> 00:02:54,810
+and perform the same operation on each of those units.
+
+36
+00:02:54,810 --> 00:03:01,230
+So their instructions did operate as though
+it were sixteen 8-bit fields, as you see here,
+
+37
+00:03:01,230 --> 00:03:07,680
+there's instructions that operate as though it were eight
+16-bit integer fields, there's instructions that treat it
+
+38
+00:03:07,680 --> 00:03:14,400
+as four 32-bit integers, as four 32-bit floating point
+numbers, that's a single precision floating point number,
+
+39
+00:03:14,400 --> 00:03:18,260
+or there's even a few instructions
+that treat as two 64-bit integers.
+
+40
+00:03:18,260 --> 00:03:21,440
+Not a lot, but there's a few.
+
+41
+00:03:21,440 --> 00:03:24,990
+So this is an example of a NEON instruction.
+
+42
+00:03:24,990 --> 00:03:30,770
+This is the vadd.i16 instruction, it's a 16-bit integer add,
+
+43
+00:03:30,770 --> 00:03:34,980
+and so what this instruction does is
+it takes these two 128-bit registers,
+
+44
+00:03:34,980 --> 00:03:38,530
+treats them as though they contain eight 16-bit integers,
+
+45
+00:03:38,530 --> 00:03:44,730
+and it simultaneously adds all eight pairs
+of integers to give you eight results.
+
+46
+00:03:44,730 --> 00:03:49,470
+Another example, a floating point example
+here, this is a vmul.f32 instruction,
+
+47
+00:03:49,470 --> 00:03:56,130
+and this takes the two 128-bit registers, treats
+them as though they contain four 32-bit floats each,
+
+48
+00:03:56,130 --> 00:04:00,650
+and it simultaneously multiplies them
+to give you four floating point results.
+
+49
+00:04:00,650 --> 00:04:03,810
+So that's sort of a couple of examples from NEON.
+
+50
+00:04:03,810 --> 00:04:06,710
+There are several different types
+of load and store instructions.
+
+51
+00:04:06,710 --> 00:04:09,640
+NEON actually has a really rich set of loads and stores.
+
+52
+00:04:09,640 --> 00:04:11,830
+It has a good aligned load support, good aligned store--
+
+53
+00:04:11,830 --> 00:04:17,090
+unaligned store support, it has some
+strided loads, it's got all kinds of stuff.
+
+54
+00:04:17,090 --> 00:04:22,500
+It has single precision floating point arithmetic,
+all the basic operations, conversations,
+
+55
+00:04:22,500 --> 00:04:25,950
+it also has a faster reciprocal and
+square root estimate instruction.
+
+56
+00:04:25,950 --> 00:04:29,020
+As I said before, it does not have
+double precision arithmetic.
+
+57
+00:04:29,020 --> 00:04:32,760
+And it also has a fairly complete set of integer operations.
+
+58
+00:04:32,760 --> 00:04:40,780
+It's got 8, 16, 32 bit, signed and unsigned, integer
+operations, and it's got all your favorite things.
+
+59
+00:04:40,780 --> 00:04:47,170
+Multiply-accumulate, multiply-add,
+subtract, reverse subtract, wide multiplies.
+
+60
+00:04:47,170 --> 00:04:52,480
+And then it also has a few more specialized
+things that are useful in fixed point arithmetic,
+
+61
+00:04:52,480 --> 00:04:55,830
+and sort of digital signal processing applications.
+
+62
+00:04:55,830 --> 00:05:00,980
+NEON, however, does not have double precision.
+
+63
+00:05:00,980 --> 00:05:07,970
+So on ARMv7, all double precision happens on the VFP
+unit, and that is much slower than the NEON unit.
+
+64
+00:05:07,970 --> 00:05:15,860
+Another thing about NEON is that although
+NEON instructions typically consume more power
+
+65
+00:05:15,860 --> 00:05:21,530
+than do either scalar instructions
+or general purpose instructions,
+
+66
+00:05:21,530 --> 00:05:25,480
+they tend to consume less energy
+overall if your code is written well.
+
+67
+00:05:25,480 --> 00:05:31,260
+The reason for that is that the energy consumed is
+actually the amount of power consumed over time.
+
+68
+00:05:31,260 --> 00:05:38,910
+So whereas a general-- if you have your code using
+general purpose instructions, you graph the power consumed
+
+69
+00:05:38,910 --> 00:05:45,440
+versus time for it, you typically see, see your
+graph like this, were initially, the processors idle,
+
+70
+00:05:45,440 --> 00:05:51,810
+it ramps up to do some work, it consumes power
+at a relatively steady state for the period
+
+71
+00:05:51,810 --> 00:05:54,700
+of the time it takes to do work, and then it ramps back down.
+
+72
+00:05:54,700 --> 00:06:00,930
+Now, if you use NEON effectively, if you take good
+advantage of it, you write good code, what happens is,
+
+73
+00:06:00,930 --> 00:06:07,820
+you consume much more power, or sometimes, only a
+little bit of more power, but for much less time.
+
+74
+00:06:07,820 --> 00:06:12,600
+And so, by using NEON efficiently,
+you're able to use less energy overall
+
+75
+00:06:12,600 --> 00:06:15,730
+which makes your battery last longer,
+which is something we all like.
+
+76
+00:06:15,730 --> 00:06:21,510
+So that's a little overview of NEON. And now,
+we're going to dive into the Accelerate framework.
+
+77
+00:06:21,510 --> 00:06:26,400
+The Accelerate framework was introduced
+by the iOS 4 launch event
+
+78
+00:06:26,400 --> 00:06:31,000
+as having 2000 API's for hardware
+accelerated math functions.
+
+79
+00:06:31,000 --> 00:06:35,870
+Now, what kind of math functions are we talking about?
+
+80
+00:06:35,870 --> 00:06:42,940
+Accelerate framework in Mac OS X is an umbrella
+framework that consists of many libraries.
+
+81
+00:06:42,940 --> 00:06:47,460
+Not all of those libraries are
+going to be available in iOS 4.
+
+82
+00:06:47,460 --> 00:06:50,740
+We're bringing three of them to iOS 4 right now.
+
+83
+00:06:50,740 --> 00:06:54,460
+Those are the vDSP, LAPACK, and BLAS libraries.
+
+84
+00:06:54,460 --> 00:06:55,270
+Let's start with vDSP.
+
+85
+00:06:55,270 --> 00:07:00,340
+It stands for the Digital Signal Processing Library,
+
+86
+00:07:00,340 --> 00:07:05,920
+and it provides a lot of basic operations
+and more complicated operations.
+
+87
+00:07:05,920 --> 00:07:10,440
+We're going to start with one of the absolute
+simplest functions in the vDSP library just
+
+88
+00:07:10,440 --> 00:07:13,570
+to give you a feel for it, the dot product.
+
+89
+00:07:13,570 --> 00:07:16,000
+You may be familiar with dot product already.
+
+90
+00:07:16,000 --> 00:07:17,740
+If you're not, I'll remind you.
+
+91
+00:07:17,740 --> 00:07:25,490
+The dot product is the sum of pair of the products
+of corresponding elements from two vectors.
+
+92
+00:07:25,490 --> 00:07:30,220
+So you have two vectors, your inputs, I've called them
+A and B here, and it gives you a scaler as an output.
+
+93
+00:07:30,220 --> 00:07:35,280
+And the way it gets back is by multiplying the first element
+of one vector by the first element of the other vector,
+
+94
+00:07:35,280 --> 00:07:40,290
+second element of one vector by the second element
+of the other, third element by the third element.
+
+95
+00:07:40,290 --> 00:07:45,480
+Take all those products, sum them together,
+that's the dot product of two vectors.
+
+96
+00:07:45,480 --> 00:07:48,830
+So suppose we need to use this in our program.
+
+97
+00:07:48,830 --> 00:07:54,760
+The dot product is a really basic operation, gets used
+all the time, it's used heavily in audio processing,
+
+98
+00:07:54,760 --> 00:07:59,600
+it's used heavily in lighting calculations
+for games, gets used all over the place.
+
+99
+00:07:59,600 --> 00:08:02,940
+So say, you're writing a program,
+and you need to compute it.
+
+100
+00:08:02,940 --> 00:08:06,080
+You might just write a simple for loop to compute it.
+
+101
+00:08:06,080 --> 00:08:14,030
+This is a simple piece of C99 code to compute a dot
+product, we just iterate over the length of the two vectors,
+
+102
+00:08:14,030 --> 00:08:16,030
+we take the products, and we add them together.
+
+103
+00:08:16,030 --> 00:08:17,850
+What could be easier?
+
+104
+00:08:17,850 --> 00:08:22,260
+This is fine, but I think we can do better.
+
+105
+00:08:22,260 --> 00:08:26,110
+So we can use Accelerate to compute the dot product.
+
+106
+00:08:26,110 --> 00:08:30,820
+Here, I have included the Accelerate headers
+so that I get the definitions we need,
+
+107
+00:08:30,820 --> 00:08:40,530
+and I've called this function vDSP_dotpr, stands for dot
+product, and it takes pointers to the two arrays, A and B,
+
+108
+00:08:40,530 --> 00:08:43,300
+they're these two arguments one,
+which we're not really going to worry
+
+109
+00:08:43,300 --> 00:08:45,980
+about right now, but we'll talk about them later.
+
+110
+00:08:45,980 --> 00:08:51,680
+It takes a pointer for the return value, the dot
+product, and it takes the length as an argument.
+
+111
+00:08:51,680 --> 00:08:55,480
+Now, I haven't really saved a lot of code by doing this.
+
+112
+00:08:55,480 --> 00:08:57,470
+My code is about as long as it was before.
+
+113
+00:08:57,470 --> 00:09:00,120
+It's not a lot simpler.
+
+114
+00:09:00,120 --> 00:09:04,380
+Maybe it's less likely that I introduced a bug because
+I'm using a library function instead of writing it myself.
+
+115
+00:09:04,380 --> 00:09:06,970
+But why should you do this?
+
+116
+00:09:06,970 --> 00:09:11,810
+The first thing that most people would
+probably thing of is performance.
+
+117
+00:09:11,810 --> 00:09:16,010
+So let's take a look at the execution
+time on the ARMv7 architecture.
+
+118
+00:09:16,010 --> 00:09:22,910
+What I've got here is the execution time
+for a length 1024 Dot Product on ARMv7.
+
+119
+00:09:22,910 --> 00:09:26,860
+This is something that would typically
+be used on audio processing applications.
+
+120
+00:09:26,860 --> 00:09:34,720
+And the vDSP_dotpr function is about eight times faster
+than that simple for loop that we started out with.
+
+121
+00:09:34,720 --> 00:09:35,720
+So that's great.
+
+122
+00:09:35,720 --> 00:09:37,810
+What else did we get?
+
+123
+00:09:37,810 --> 00:09:39,170
+This is my favorite.
+
+124
+00:09:39,170 --> 00:09:40,630
+We used a lot less energy.
+
+125
+00:09:40,630 --> 00:09:48,700
+This is again, that same 1024 element dot product on
+the ARMv7 architecture, and the vDSP_dotpr is consuming
+
+126
+00:09:48,700 --> 00:09:54,520
+about one quarter-- actually, a little less than
+one quarter, of the energy than that for loop would.
+
+127
+00:09:54,520 --> 00:09:58,720
+So that means that hypothetically, if your
+application was doing nothing but Dot Products,
+
+128
+00:09:58,720 --> 00:10:03,270
+you could do more than four times
+as much work on the same battery.
+
+129
+00:10:03,270 --> 00:10:06,120
+So that's fantastic.
+
+130
+00:10:06,120 --> 00:10:09,040
+Now, what about on older processors?
+
+131
+00:10:09,040 --> 00:10:11,260
+What about the ARMv6 architecture?
+
+132
+00:10:11,260 --> 00:10:16,200
+As I mentioned, it has a very different
+floating point unit than the ARMv7 does.
+
+133
+00:10:16,200 --> 00:10:20,250
+And code that performs well on one
+may not perform well on the other.
+
+134
+00:10:20,250 --> 00:10:24,380
+Here's the graph where we're looking
+at the performance on ARMv6.
+
+135
+00:10:24,380 --> 00:10:31,900
+And that same code that we have, just calling the Accelerate
+framework dotpr function, gives us great performance
+
+136
+00:10:31,900 --> 00:10:34,350
+on the ARMv6 architecture, as well as on the ARMv7.
+
+137
+00:10:34,350 --> 00:10:38,220
+So you don't need to write a lot
+of architecture specific code.
+
+138
+00:10:38,220 --> 00:10:47,100
+Now, there may be some graphics programmers out there
+in the audience who are saying, "This guy is crazy.
+
+139
+00:10:47,100 --> 00:10:50,160
+Why would you want to do a 1024 element dot product?"
+
+140
+00:10:50,160 --> 00:10:52,970
+I want to do a three element dot product.
+
+141
+00:10:52,970 --> 00:10:59,370
+So I'll tell you right up front that that's pretty much
+the worst use case possible for the Accelerate framework,
+
+142
+00:10:59,370 --> 00:11:02,220
+because you're only going to do three things worth of work,
+
+143
+00:11:02,220 --> 00:11:06,600
+and you are going to pay for a
+function call, all these overhead.
+
+144
+00:11:06,600 --> 00:11:11,020
+The good new is that you still
+get pretty descent performance,
+
+145
+00:11:11,020 --> 00:11:14,920
+more than twice as fast as that simple for loop would be.
+
+146
+00:11:14,920 --> 00:11:18,030
+Now, I would say, you shouldn't use it in this case.
+
+147
+00:11:18,030 --> 00:11:20,390
+But if you do, the performance would be good.
+
+148
+00:11:20,390 --> 00:11:27,050
+Let's take a look at what makes the dotpr function faster.
+
+149
+00:11:27,050 --> 00:11:32,750
+This is that simple for loop that we
+started out with, and this is disassembly
+
+150
+00:11:32,750 --> 00:11:35,920
+of the compiled code that resulted from it.
+
+151
+00:11:35,920 --> 00:11:41,590
+Now, I'm going to highlight the instructions that
+are doing, sort of the critical work in the loop,
+
+152
+00:11:41,590 --> 00:11:44,500
+the actual floating point operations
+that we're interested in.
+
+153
+00:11:44,500 --> 00:11:46,040
+There they are.
+
+154
+00:11:46,040 --> 00:11:50,840
+One thing you'll notice right away is that the compiler
+didn't do a great job of structuring this loop.
+
+155
+00:11:50,840 --> 00:11:53,900
+So it's using a lot of overhead for the computation.
+
+156
+00:11:53,900 --> 00:11:56,100
+Now, let's take a look at what it is doing.
+
+157
+00:11:56,100 --> 00:12:01,940
+These first two instructions, these flds instructions,
+these load the floating point value from each array,
+
+158
+00:12:01,940 --> 00:12:06,270
+and then we multiple those two
+values together with the fmuls--
+
+159
+00:12:06,270 --> 00:12:14,680
+the vmul.f32 instruction, and then we add dot product
+to a running sum with the vadd.f32 instruction.
+
+160
+00:12:14,680 --> 00:12:17,370
+I mentioned the overhead.
+
+161
+00:12:17,370 --> 00:12:24,410
+There's another thing that makes this loop slow, which
+is that the multiply comes immediately after the loads,
+
+162
+00:12:24,410 --> 00:12:28,960
+but it can't execute until the data
+that being loaded is in register.
+
+163
+00:12:28,960 --> 00:12:34,780
+So in the best case scenario, where those loads are
+coming from the L1 cache, it's still going to take
+
+164
+00:12:34,780 --> 00:12:41,220
+about three cycles before that data is loaded into
+register, and the vmul instruction can execute.
+
+165
+00:12:41,220 --> 00:12:44,250
+So your processor is doing nothing at all for three cycles.
+
+166
+00:12:44,250 --> 00:12:49,840
+Now three cycles isn't a lot, but if this is a loop that
+gets called a lot, your processor is doing nothing at all
+
+167
+00:12:49,840 --> 00:12:52,840
+for three cycles every iteration of the loop.
+
+168
+00:12:52,840 --> 00:12:54,250
+That's wasting energy.
+
+169
+00:12:54,250 --> 00:12:57,760
+The same thing happens on the add instruction.
+
+170
+00:12:57,760 --> 00:13:02,440
+Again, we're waiting for the result of the
+multiple before we can add it to the accumulator.
+
+171
+00:13:02,440 --> 00:13:06,240
+So for a couple of cycles, the
+processor is doing no useful work.
+
+172
+00:13:06,240 --> 00:13:07,950
+It's just spending energy.
+
+173
+00:13:07,950 --> 00:13:16,620
+Let's take a look at the vDSP_dotpr
+function and see what we did to do better.
+
+174
+00:13:16,620 --> 00:13:21,860
+This is sort of the critical interloop
+of the vDSP_dotpr function.
+
+175
+00:13:21,860 --> 00:13:24,550
+Not all cases fall through this.
+
+176
+00:13:24,550 --> 00:13:26,850
+If you have a very short vector,
+you won't end up in this loop.
+
+177
+00:13:26,850 --> 00:13:28,780
+If your vectors are misaligned, you won't end up here.
+
+178
+00:13:28,780 --> 00:13:34,670
+But in general, most of the time, this is the
+core loop that's doing the bulk of the work.
+
+179
+00:13:34,670 --> 00:13:38,910
+Again, I'm going to highlight the
+instructions that are doing useful work here.
+
+180
+00:13:38,910 --> 00:13:42,530
+First thing to notice is that we have a lot less overhead.
+
+181
+00:13:42,530 --> 00:13:49,820
+Whereas, that simple for loop we had was computing
+one term of the dot product every iteration
+
+182
+00:13:49,820 --> 00:13:52,420
+that had six instructions worth of overhead.
+
+183
+00:13:52,420 --> 00:13:57,140
+Here, we have only two instructions of
+overhead, but we're computing 16 terms
+
+184
+00:13:57,140 --> 00:14:00,980
+of the dot product every pass to this loop.
+
+185
+00:14:00,980 --> 00:14:03,380
+Now, how are you doing 16 at once?
+
+186
+00:14:03,380 --> 00:14:07,110
+This loop actually has four separate chains
+of computation interleaved with each other.
+
+187
+00:14:07,110 --> 00:14:09,980
+I'm going to highlight one of them.
+
+188
+00:14:09,980 --> 00:14:15,130
+This is going to compute four terms of the
+dot product using the NEON vector instructions
+
+189
+00:14:15,130 --> 00:14:17,330
+that we were talking about before.
+
+190
+00:14:17,330 --> 00:14:26,300
+So first, we load four floats simultaneously from A, we
+load four floats from B, we multiply those four pairs
+
+191
+00:14:26,300 --> 00:14:30,700
+of floating point numbers together to
+get four pairwise products, and then--
+
+192
+00:14:30,700 --> 00:14:33,110
+this actually happens on the next
+iteration through the loop--
+
+193
+00:14:33,110 --> 00:14:37,630
+we add those four products to the four
+running sums that we're maintaining.
+
+194
+00:14:38,730 --> 00:14:40,660
+Now, you could do that yourself.
+
+195
+00:14:40,660 --> 00:14:44,230
+You can write that code-- it's not terribly hard.
+
+196
+00:14:44,230 --> 00:14:45,460
+It takes some work.
+
+197
+00:14:45,460 --> 00:14:49,360
+But you use Accelerate, it's really easy.
+
+198
+00:14:49,360 --> 00:14:55,460
+You get all the performance benefits of that, but
+you just have to write that one function column.
+
+199
+00:14:55,460 --> 00:14:58,410
+I think that's great.
+
+200
+00:14:58,410 --> 00:15:01,520
+What else is in the vDSP library?
+
+201
+00:15:01,520 --> 00:15:06,390
+Besides dot products, we have lots
+of other basic operations on arrays.
+
+202
+00:15:06,390 --> 00:15:12,840
+You can add, subtract, multiply arrays of floating
+point data, there are conversions between types,
+
+203
+00:15:12,840 --> 00:15:15,760
+there's an accumulation function like the dot product,
+
+204
+00:15:15,760 --> 00:15:19,640
+there's also things that sum arrays,
+there are lots of other stuff.
+
+205
+00:15:19,640 --> 00:15:23,280
+You'll have to look through the
+manual to learn about all of them.
+
+206
+00:15:23,280 --> 00:15:27,520
+There's also more complicated functions
+that are not so easy to write yourself.
+
+207
+00:15:27,520 --> 00:15:34,590
+There's convolution and correlation functions, and
+there's also a nice set of fast Fourier transforms.
+
+208
+00:15:34,590 --> 00:15:39,520
+There's both complex to complex, and
+real to complex Fourier transforms,
+
+209
+00:15:39,520 --> 00:15:46,120
+and there's support for any power-of-two
+size and some non-power-of-two sizes.
+
+210
+00:15:46,120 --> 00:15:53,130
+The data type supported by vDSP support both single
+and double precision, have real and complex data,
+
+211
+00:15:53,130 --> 00:15:56,170
+and there's also support for strided data access.
+
+212
+00:15:56,170 --> 00:16:00,580
+This is those two ones that we saw
+on the vDSP_dotpr signature before.
+
+213
+00:16:00,580 --> 00:16:08,440
+What strided data access is, is it lets you operate not on
+every element of array, but on every nth element of array.
+
+214
+00:16:08,440 --> 00:16:12,840
+So if I wanted to operate on the 0th
+element, the 2nd element, the 4th element,
+
+215
+00:16:12,840 --> 00:16:15,840
+the 6th element, I would use a stride of 2.
+
+216
+00:16:15,840 --> 00:16:19,450
+If I wanted to operate on every third
+element, I would have a stride of 3.
+
+217
+00:16:19,450 --> 00:16:26,110
+So sometimes, you need to do this because your data
+comes in in a format where it's laid out that way.
+
+218
+00:16:26,110 --> 00:16:31,140
+Strided data access is there as a utility so
+that you can still use the Accelerate functions,
+
+219
+00:16:31,140 --> 00:16:35,660
+but you don't have to first deinterleave yourself.
+
+220
+00:16:35,660 --> 00:16:40,550
+Alright. So now, let's take a look at the FFT.
+
+221
+00:16:40,550 --> 00:16:44,160
+Here, I've got the basic setup for calling an FFT.
+
+222
+00:16:44,160 --> 00:16:47,000
+The first thing is, I'm including the Accelerate header,
+
+223
+00:16:47,000 --> 00:16:50,790
+and I'm also including standard lib
+because I'm going to use malloc.
+
+224
+00:16:50,790 --> 00:16:58,550
+The FFTs in vDSP take the length as
+actually, the logarithm base 2 of the length.
+
+225
+00:16:58,550 --> 00:17:01,800
+So I'm going to perform a 1024 element FFT.
+
+226
+00:17:01,800 --> 00:17:08,160
+The log base 2 of the 1024 is 10,
+so I'm just constructing a variable
+
+227
+00:17:08,160 --> 00:17:11,450
+to hold the length here, and also the log of the length.
+
+228
+00:17:11,450 --> 00:17:17,880
+The FFTs take their input and output
+in these DSP split complex objects.
+
+229
+00:17:17,880 --> 00:17:22,480
+They have a pointer to the real part
+and a pointer to the imaginary part.
+
+230
+00:17:22,480 --> 00:17:28,300
+By laying them out this way, we can make things a
+little bit more efficient in the body of the FFT,
+
+231
+00:17:28,300 --> 00:17:35,350
+and I'm just allocating space for a 1024 real parts
+in the input, a 1024 imaginary parts in the input,
+
+232
+00:17:35,350 --> 00:17:42,270
+1024 real parts in the output, and
+in the imaginary part of the output.
+
+233
+00:17:42,270 --> 00:17:48,140
+This last line is creating this
+opaque structure called an fftsetup.
+
+234
+00:17:48,140 --> 00:17:54,580
+fftsetup contains weights and other data that's
+needed by the FFT routines to do their computation.
+
+235
+00:17:54,580 --> 00:18:02,650
+You have to create a setup before you can do an FFT,
+but you really only want to create a setup once.
+
+236
+00:18:02,650 --> 00:18:07,290
+Creating setup is expensive and it's slow.
+
+237
+00:18:07,290 --> 00:18:11,550
+And so, what you want to do is make one
+setup and then use that to perform many FFTs.
+
+238
+00:18:11,550 --> 00:18:15,560
+You can reuse it over and over again for lots of FFTs.
+
+239
+00:18:15,560 --> 00:18:18,190
+Now, I have that setup.
+
+240
+00:18:18,190 --> 00:18:25,090
+Suppose I had put some useful data into my input array,
+something that I want to take a Fourier transform of,
+
+241
+00:18:25,090 --> 00:18:29,610
+I'm going to call this function, vDSP_fft_zop.
+
+242
+00:18:29,610 --> 00:18:36,190
+That stands for a complex to complex, that's
+Z for complex, and OP is "out of place".
+
+243
+00:18:36,190 --> 00:18:38,680
+So it's not going to overwrite its input.
+
+244
+00:18:38,680 --> 00:18:41,980
+It's going to store the result of
+the FFT in the output structure.
+
+245
+00:18:41,980 --> 00:18:50,960
+So I pass it the setup that I created, I pass it
+the input that 1 is the stride for the inputs,
+
+246
+00:18:50,960 --> 00:18:59,290
+I pass it the output again, with stride 1, I
+give it its length is a log 2, and this flag,
+
+247
+00:18:59,290 --> 00:19:04,520
+FFT_FOWARD, that tells it to perform a forward FFT.
+
+248
+00:19:05,530 --> 00:19:08,500
+That's all you have to do.
+
+249
+00:19:08,500 --> 00:19:15,470
+Now, suppose I then want to do the inverse
+transform and get back to where I started.
+
+250
+00:19:15,470 --> 00:19:20,250
+Here, I'm using the fft_zip function instead of zop.
+
+251
+00:19:20,250 --> 00:19:28,310
+Zip is a complex to complex in place FFT, so it
+overrides its inputs with the result of the transform.
+
+252
+00:19:28,310 --> 00:19:32,800
+So what this is going to do, it takes that same
+setup, the call looks almost the same as zop,
+
+253
+00:19:32,800 --> 00:19:40,730
+except it only has one DSP split complex structure, so
+it's going to take the output of the forward transform
+
+254
+00:19:40,730 --> 00:19:48,330
+that we did and override it with the inverse transform of
+the forward transform, and we give it that FFT INVERSE flag
+
+255
+00:19:48,330 --> 00:19:53,640
+to tell it that it's doing an inverse Fourier transform.
+
+256
+00:19:53,640 --> 00:20:02,370
+Now, you might think that the inverse transform of
+forward transform for a discrete FFT is the original data.
+
+257
+00:20:02,370 --> 00:20:07,080
+And it almost is, except that you have to rescale.
+
+258
+00:20:07,080 --> 00:20:13,090
+Everything gets scaled by a factor of N when
+you do a forward followed by inverse TFT.
+
+259
+00:20:13,090 --> 00:20:20,790
+Here, I'm using another vDSP function, the
+vDSP_vsmul function, to undo that scaling.
+
+260
+00:20:20,790 --> 00:20:27,600
+Create a scale factor of 1 over N, and the vsmul
+function stands for Vector Scalar Multiply.
+
+261
+00:20:27,600 --> 00:20:32,890
+And so, what it's going to do is it's going to take
+both that-- the first line, takes that real pointer,
+
+262
+00:20:32,890 --> 00:20:36,620
+and scales all of the real results by 1 over N.
+
+263
+00:20:36,620 --> 00:20:40,960
+The second one takes the imaginary pointer,
+scales all the imaginary results by 1 over N.
+
+264
+00:20:40,960 --> 00:20:47,300
+So now, up to floating point rounding, we've
+gotten back the data that we started with.
+
+265
+00:20:47,300 --> 00:20:53,650
+Usually, we would do some useful work with the data at
+some point here, rather than just going forward and back.
+
+266
+00:20:53,650 --> 00:20:58,530
+But I leave that up to you to come up with cool
+things you can do in your app with the FFT.
+
+267
+00:20:58,530 --> 00:21:00,060
+That's not my department.
+
+268
+00:21:00,060 --> 00:21:05,250
+This last line, the vDSP destroy
+setup, just cleans up that data
+
+269
+00:21:05,250 --> 00:21:09,080
+in that opaque structure that was allocated by vDSP setup.
+
+270
+00:21:09,080 --> 00:21:12,650
+So basically, free for a vDSP setup.
+
+271
+00:21:12,650 --> 00:21:16,520
+So that's an example of the FFTs.
+
+272
+00:21:16,520 --> 00:21:19,090
+What about performance?
+
+273
+00:21:19,090 --> 00:21:25,060
+Now, I can't really compare the
+FFTs to a simple for loop in C.
+
+274
+00:21:25,060 --> 00:21:26,960
+They're a lot more complicated.
+
+275
+00:21:26,960 --> 00:21:32,880
+And even if I did compare them to a simple C
+program, it would be so much slower, the C program,
+
+276
+00:21:32,880 --> 00:21:36,120
+that it wouldn't even really show up on the graph.
+
+277
+00:21:36,120 --> 00:21:39,250
+So instead, I'm going to compare to FFTW.
+
+278
+00:21:39,250 --> 00:21:44,610
+FFTW stands for the Fastest Fourier Transform in the West.
+
+279
+00:21:44,610 --> 00:21:50,170
+It's pretty much the best commercial portable FFT library.
+
+280
+00:21:50,170 --> 00:21:54,450
+You can build it for power PC, you can build it for Intel,
+you can build it on ARM, you can build it on all kinds
+
+281
+00:21:54,450 --> 00:22:00,070
+of platforms, and it gives you really quite
+good performance on all of those platforms.
+
+282
+00:22:00,070 --> 00:22:05,650
+If you want to learn more about it, you can
+go to fftw.org, you can download it there.
+
+283
+00:22:05,650 --> 00:22:07,440
+It's a really nice library.
+
+284
+00:22:07,440 --> 00:22:10,340
+So how do we compare?
+
+285
+00:22:10,340 --> 00:22:15,230
+Here, I'm graphing the execution time
+for 1024 element single-precision FFT.
+
+286
+00:22:15,230 --> 00:22:20,700
+So this is something that typically would be used in
+audio processing, but also on a lot of other things.
+
+287
+00:22:20,700 --> 00:22:27,420
+A lot of audio processing both on the Mac and
+the phone uses exactly this case very frequently.
+
+288
+00:22:27,420 --> 00:22:28,910
+And smaller bars are better here.
+
+289
+00:22:28,910 --> 00:22:32,410
+We're looking at the actual time it takes to execute.
+
+290
+00:22:32,410 --> 00:22:35,930
+vDSP_fft-zop is five times as fast as FFTW.
+
+291
+00:22:35,930 --> 00:22:41,200
+FFTW is an excellent library, but we're better.
+
+292
+00:22:41,200 --> 00:22:44,950
+[ Applause ]
+
+293
+00:22:44,950 --> 00:22:47,170
+I'm not holding my breath for them to rename it though.
+
+294
+00:22:47,170 --> 00:22:50,280
+Maybe the Faster Fourier Transform in the East.
+
+295
+00:22:50,280 --> 00:22:51,840
+So that's the FFTs.
+
+296
+00:22:51,840 --> 00:22:56,890
+Let's talk a little bit about LAPACK which
+stands for the Linear Algebra Package.
+
+297
+00:22:56,890 --> 00:22:59,940
+Now, LAPACK is a very venerable library.
+
+298
+00:22:59,940 --> 00:23:02,850
+Its roots go way back in time.
+
+299
+00:23:02,850 --> 00:23:05,330
+Its roots in fact, predate the C language even.
+
+300
+00:23:05,330 --> 00:23:09,440
+It's been around the long time in one form or another.
+
+301
+00:23:09,440 --> 00:23:13,130
+It provides high-level linear algebra operations.
+
+302
+00:23:13,130 --> 00:23:15,350
+It can solve linear systems.
+
+303
+00:23:15,350 --> 00:23:20,250
+If you have a system of linear equations, four
+equations and four unknowns, LAPACK can solve it.
+
+304
+00:23:20,250 --> 00:23:26,220
+It can also solve it even if you have six equations and four
+unknowns, or two equations and eight unknowns or, whatever.
+
+305
+00:23:26,220 --> 00:23:28,750
+It's got all kinds of solves.
+
+306
+00:23:28,750 --> 00:23:31,330
+It provides matrix factorizations.
+
+307
+00:23:31,330 --> 00:23:34,820
+It lets you compute eigenvalues and eigenvectors.
+
+308
+00:23:34,820 --> 00:23:43,310
+So this provides a lot of abstract linear algebra
+operations that you'd like to be able to do on matrices.
+
+309
+00:23:43,310 --> 00:23:45,620
+LAPACK supports a bunch of different data types.
+
+310
+00:23:45,620 --> 00:23:51,660
+It supports both single and double
+precision, it supports real and complex data,
+
+311
+00:23:51,660 --> 00:23:56,040
+it has lots of support for special matrix types.
+
+312
+00:23:56,040 --> 00:23:59,870
+You can do operations on symmetric
+matrices, triangular matrices,
+
+313
+00:23:59,870 --> 00:24:04,820
+banded matrices, Hermitian matrices, lots of stuff.
+
+314
+00:24:04,820 --> 00:24:06,950
+There's one gotcha though.
+
+315
+00:24:06,950 --> 00:24:15,450
+Data in the LAPACK library, because its roots go
+way back in time, is laid out in column-major order.
+
+316
+00:24:15,450 --> 00:24:18,380
+Anytime you're building matrices that
+are are going to interact with LAPACK,
+
+317
+00:24:18,380 --> 00:24:19,890
+you're going to need to lay them out this way.
+
+318
+00:24:19,890 --> 00:24:23,310
+And what does that mean?
+
+319
+00:24:23,310 --> 00:24:28,930
+Those of us who speak western languages are
+used to reading left to right, top to bottom.
+
+320
+00:24:28,930 --> 00:24:34,610
+So we might read this matrix as
+1 minus 1, 1 minus 1, 1, 2, 4, 8.
+
+321
+00:24:34,610 --> 00:24:37,950
+That's not the order that's used by LAPACK.
+
+322
+00:24:37,950 --> 00:24:45,080
+Column-major order means that first, the
+first column is stored contiguously in memory.
+
+323
+00:24:45,080 --> 00:24:50,720
+Then, the next column, the next column, and the next column.
+
+324
+00:24:50,720 --> 00:24:53,390
+So each column is contiguous.
+
+325
+00:24:53,390 --> 00:24:56,990
+Whereas, if you're reading across a
+row, the axis is going to be strided.
+
+326
+00:24:56,990 --> 00:25:01,170
+Let's look at the example of using LAPACK
+to solve the system of linear equations.
+
+327
+00:25:01,170 --> 00:25:04,310
+This is one of the most basic things
+that LAPACK has support for.
+
+328
+00:25:04,310 --> 00:25:07,930
+It also has support for lots of,
+much more complicated stuff.
+
+329
+00:25:07,930 --> 00:25:14,970
+So here, I've got a matrix A and a vector B,
+and I want to solve the equation Ax equals B.
+
+330
+00:25:14,970 --> 00:25:19,840
+So I'm looking for a vector x that satisfies this.
+
+331
+00:25:19,840 --> 00:25:24,830
+First thing, I'm going to set up my matrix A.
+
+332
+00:25:24,830 --> 00:25:30,630
+I've got two nested for loops here, I'm iterating
+first over the rows, and then over the columns.
+
+333
+00:25:30,630 --> 00:25:33,870
+And here, I'm setting up the lower triangle.
+
+334
+00:25:33,870 --> 00:25:36,780
+Those are all the minus one elements of that matrix.
+
+335
+00:25:36,780 --> 00:25:46,280
+Then I'm going to set up the diagonal elements, these
+are all one, and then set up the right most columns,
+
+336
+00:25:46,280 --> 00:25:50,950
+all ones as well, and then we have these
+inner upper triangle elements that are zeros.
+
+337
+00:25:50,950 --> 00:25:53,520
+So I've set up my matrix here.
+
+338
+00:25:53,520 --> 00:25:58,600
+You notice that the matrix access
+that I have here, I'm using A, j, i.
+
+339
+00:25:58,600 --> 00:26:03,830
+Normally-- and if you took a linear algebra class, you're
+probably starting A, i, j when you're describing the ith row
+
+340
+00:26:03,830 --> 00:26:10,220
+and the jth column of matrix, they're transposed
+explicitly so that we get that column-major ordering.
+
+341
+00:26:10,220 --> 00:26:14,140
+This is one easy way to get the column-major access.
+
+342
+00:26:14,140 --> 00:26:15,220
+You can't always use this trick.
+
+343
+00:26:15,220 --> 00:26:17,770
+Sometimes, you need to actually
+explicitly write out your axises.
+
+344
+00:26:17,770 --> 00:26:19,780
+But when you can use this, it works nicely.
+
+345
+00:26:19,780 --> 00:26:22,890
+So now, let's look at actually solving that system.
+
+346
+00:26:22,890 --> 00:26:30,090
+We've got our right hand side vector here B, that's the
+vector that we're trying to-- we're trying to solve for.
+
+347
+00:26:30,090 --> 00:26:34,240
+And then we make a call to the sgesv function.
+
+348
+00:26:34,240 --> 00:26:39,990
+sgesv stands for Single Precision, General Solve.
+
+349
+00:26:39,990 --> 00:26:43,810
+So our data here is floats, that's single precision.
+
+350
+00:26:43,810 --> 00:26:47,460
+General is what we use for just a normal rectangular matrix.
+
+351
+00:26:47,460 --> 00:26:48,430
+It's not anything fancy.
+
+352
+00:26:48,430 --> 00:26:50,770
+It's not symmetric, it's not banded.
+
+353
+00:26:50,770 --> 00:26:55,230
+If you're just working with the matrix and you don't know
+anything special about it, you're always going to be looking
+
+354
+00:26:55,230 --> 00:26:57,770
+at these routines that have the GE prefix.
+
+355
+00:26:57,770 --> 00:27:07,050
+Now, what we passed to the SGESV routine is the size
+of the system and the number of right hand sides.
+
+356
+00:27:07,050 --> 00:27:09,180
+That's the number of vectors B that we're solving for.
+
+357
+00:27:09,180 --> 00:27:11,520
+That's nrhs.
+
+358
+00:27:11,520 --> 00:27:14,110
+We give it the matrix A.
+
+359
+00:27:14,110 --> 00:27:18,400
+The next n parameter here is the
+leading dimension of the matrix.
+
+360
+00:27:18,400 --> 00:27:22,100
+Most of the time, this is just going to
+be the dimension of your matrix for you.
+
+361
+00:27:22,100 --> 00:27:24,560
+If you're working with the matrix that you built yourself,
+
+362
+00:27:24,560 --> 00:27:28,640
+it's almost always going to be
+just the dimension of the matrix.
+
+363
+00:27:28,640 --> 00:27:35,560
+In special circumstances, it may be something else, I leave
+you to look at the LAPACK documentation to learn about that.
+
+364
+00:27:35,560 --> 00:27:39,780
+We're also going to give it our
+vector B that we're solving for.
+
+365
+00:27:39,780 --> 00:27:42,500
+We give it this info parameter.
+
+366
+00:27:42,500 --> 00:27:48,070
+That is a value that it uses as a flag, to
+indicate whether it was able to solve the system.
+
+367
+00:27:48,070 --> 00:27:50,650
+Not all systems have solutions.
+
+368
+00:27:50,650 --> 00:27:56,230
+So if it can't solve it, info will
+return with a nonzero value.
+
+369
+00:27:56,230 --> 00:28:01,020
+There's also this one value, ipiv, that's
+a temporary workspace that's needed by it.
+
+370
+00:28:01,020 --> 00:28:05,110
+On return, it contains some of the
+factorization information on the matrix.
+
+371
+00:28:05,110 --> 00:28:07,990
+So that's all we do, and then I'm
+going to print out the result.
+
+372
+00:28:07,990 --> 00:28:12,760
+You know that the result has overwritten
+the right hand side B that we started with.
+
+373
+00:28:12,760 --> 00:28:14,930
+This is something that happens throughout LAPACK.
+
+374
+00:28:14,930 --> 00:28:21,310
+Almost all the LAPACK routines overwrite
+some of their inputs to hold the results.
+
+375
+00:28:21,310 --> 00:28:25,090
+This means that if you need to keep the
+inputs around, you're usual going to need
+
+376
+00:28:25,090 --> 00:28:28,040
+to make a copy of them when you're working with LAPACK.
+
+377
+00:28:28,040 --> 00:28:30,970
+That's something important to be aware of.
+
+378
+00:28:30,970 --> 00:28:35,200
+So I have compiled it here, I'm going to run it.
+
+379
+00:28:35,200 --> 00:28:37,330
+You note that I'm linking against the Accelerate framework.
+
+380
+00:28:37,330 --> 00:28:40,310
+You have to link it against the Accelerate
+framework in order to take advantage of it.
+
+381
+00:28:40,310 --> 00:28:46,000
+Most of the time, you're going to be doing this in Xcode,
+so you just need to go to the Add Frameworks menu item,
+
+382
+00:28:46,000 --> 00:28:48,150
+select the Accelerate framework and bring it in.
+
+383
+00:28:48,150 --> 00:28:52,410
+Here, I'm compiling on command lines, so
+I used this "-framework Accelerate" flag.
+
+384
+00:28:52,410 --> 00:28:57,520
+So I'm going to build this and run
+it, and it solves our linear system.
+
+385
+00:28:57,520 --> 00:28:59,160
+This happens to be a very simple system.
+
+386
+00:28:59,160 --> 00:29:01,070
+It has a very simple solution.
+
+387
+00:29:01,070 --> 00:29:05,390
+But you can use it for all kinds of more complicated stuff.
+
+388
+00:29:05,390 --> 00:29:07,940
+So that's a little overview of LAPACK.
+
+389
+00:29:07,940 --> 00:29:10,770
+Let's talk about BLAS.
+
+390
+00:29:10,770 --> 00:29:15,600
+BLAS stands for the Basic Linear Algebra Subroutines.
+
+391
+00:29:15,600 --> 00:29:19,490
+It's sort of the low-level underpinnings beneath LAPACK.
+
+392
+00:29:19,490 --> 00:29:21,630
+But you can also call those routines yourself.
+
+393
+00:29:21,630 --> 00:29:22,830
+As I mentioned, it's low level.
+
+394
+00:29:22,830 --> 00:29:25,830
+It provides low-level linear algebra operations.
+
+395
+00:29:25,830 --> 00:29:33,960
+LAPACK gave you high-level abstract operation on
+matrices, solve this system, factor this matrix.
+
+396
+00:29:33,960 --> 00:29:42,790
+BLAS is low-level stuff that's really the
+basic arithmetic operations on matrices.
+
+397
+00:29:42,790 --> 00:29:49,450
+It gives you vector-vector operations like dot
+products, scalar products, and vector sums.
+
+398
+00:29:49,450 --> 00:29:54,730
+It gives you matrix-vector operations, like
+if you want to multiply a vector by a matrix,
+
+399
+00:29:54,730 --> 00:29:59,310
+or if you want to take the outer product
+of two vectors to update a matrix.
+
+400
+00:29:59,310 --> 00:30:00,290
+It gives you that.
+
+401
+00:30:00,290 --> 00:30:04,980
+And it also gives you operations on
+two matrices like the matrix multiply.
+
+402
+00:30:04,980 --> 00:30:11,920
+BLAS, like LAPACK, supports lots of different data types,
+supports both single and double precision, supports real
+
+403
+00:30:11,920 --> 00:30:17,050
+and complex data, and it has support
+for multiple data layouts.
+
+404
+00:30:17,050 --> 00:30:21,730
+It's got-- unlike LAPACK, it supports
+both row and column-major order.
+
+405
+00:30:21,730 --> 00:30:24,980
+This is good news because it means
+that if you're not working with LAPACK,
+
+406
+00:30:24,980 --> 00:30:30,230
+if you're only going to use the BLAS routines, you can lay
+out your data in row-major order, which is the natural order
+
+407
+00:30:30,230 --> 00:30:34,330
+for most C programmers, and just use it easily that way.
+
+408
+00:30:34,330 --> 00:30:37,770
+If you're going to work with LAPACK as well though,
+you're probably going to want to lay your data
+
+409
+00:30:37,770 --> 00:30:41,790
+out in column-major order still so you
+don't have to explicitly transpose it
+
+410
+00:30:41,790 --> 00:30:45,740
+when you're passing data to the LAPACK routines.
+
+411
+00:30:45,740 --> 00:30:54,410
+Like LAPACK, it has support for dense matrices, banded
+matrices, triangle matrices, lots of different matrix types.
+
+412
+00:30:54,410 --> 00:31:03,860
+Another nice thing about the BLAS routines is that they can
+operate on your matrix data as though it were transposed,
+
+413
+00:31:03,860 --> 00:31:06,190
+or as though they were a conjugate transpose.
+
+414
+00:31:06,190 --> 00:31:11,460
+So you don't need to explicitly transpose the data
+yourself often times when you're working with some.
+
+415
+00:31:11,460 --> 00:31:15,910
+This is really useful, and if you're using the
+BLAS, I encourage you to take advantage of this
+
+416
+00:31:15,910 --> 00:31:18,990
+because transposition is reasonably expensive.
+
+417
+00:31:18,990 --> 00:31:26,750
+And in general, we can do it more efficiently if we do
+it as part of whatever other operations you're doing.
+
+418
+00:31:26,750 --> 00:31:30,360
+This is a really, really basic example of the BLAS.
+
+419
+00:31:30,360 --> 00:31:36,910
+This is matrix multiply, and it's multiplying two 2 by
+2 matrices, A and B together here, to get a matrix C.
+
+420
+00:31:36,910 --> 00:31:38,360
+This is a 2 by 2 example.
+
+421
+00:31:38,360 --> 00:31:42,370
+You can do a 1000 by 1000, whatever you want.
+
+422
+00:31:42,370 --> 00:31:48,950
+It's pretty easy to use, it's got a clean C interface,
+it's a little nicer to work with than LAPACK.
+
+423
+00:31:48,950 --> 00:31:57,100
+Here, I'm passing it the CblasRowMajor flag that tells
+it-- that my matrices are laid out in a row-major order.
+
+424
+00:31:57,100 --> 00:32:04,320
+The CblasNoTrans flag is indicating that I don't want
+it to do a transposition as part of the multiplication.
+
+425
+00:32:04,320 --> 00:32:11,050
+If I wanted to implicitly transpose one of the
+matrices, I would pass it a CblasTrans flag.
+
+426
+00:32:11,050 --> 00:32:15,770
+The sea of 2's in the call are
+the dimensions of the matrices.
+
+427
+00:32:15,770 --> 00:32:20,530
+The first three are the dimensions of A, B, and C.
+
+428
+00:32:20,530 --> 00:32:26,140
+The floating point 1 value, that's a
+scale factor to apply to the product.
+
+429
+00:32:26,140 --> 00:32:32,890
+So I'm saying multiply A times B, scale that by 1,
+the 0 before the C is a scale factor to apply to C.
+
+430
+00:32:32,890 --> 00:32:37,290
+So here, I-- well, it's actually going
+to use A times B plus a scaled C,
+
+431
+00:32:37,290 --> 00:32:40,490
+I'm scaling C by zero, so the result
+I get is just A times B.
+
+432
+00:32:40,490 --> 00:32:43,170
+It's basic matrix multiply.
+
+433
+00:32:43,170 --> 00:32:47,080
+That's a very basic example of what's available in the BLAS.
+
+434
+00:32:47,080 --> 00:32:53,250
+Let's talk a little bit about how
+to use Accelerate effectively.
+
+435
+00:32:53,250 --> 00:32:55,510
+First off, why should you use Accelerate?
+
+436
+00:32:55,510 --> 00:33:02,700
+We saw some things already that Accelerate gives
+you great performance, assuming you use it properly.
+
+437
+00:33:02,700 --> 00:33:06,960
+Another thing that's really nice about
+it is it gives you functionality.
+
+438
+00:33:06,960 --> 00:33:09,170
+Dot product is really easy to write.
+
+439
+00:33:09,170 --> 00:33:12,720
+You can write your own dot product
+in, you know, a couple of seconds.
+
+440
+00:33:12,720 --> 00:33:15,850
+But if you want to compute the eigenvalues of a matrix,
+
+441
+00:33:15,850 --> 00:33:21,340
+or you want to compute a 1024 element
+FFT, those are not easy routines to write.
+
+442
+00:33:21,340 --> 00:33:24,640
+You know, if you write them a lot, maybe
+you can write them off the top of your head.
+
+443
+00:33:24,640 --> 00:33:30,180
+But most people are going to need to go look on
+Wikipedia or dig out an old reference book from college,
+
+444
+00:33:30,180 --> 00:33:34,600
+something like that, find out how to implement
+it, have to spend a couple of days debugging it.
+
+445
+00:33:34,600 --> 00:33:35,850
+You really don't want to do that.
+
+446
+00:33:35,850 --> 00:33:38,750
+You want to spend time writing a great app.
+
+447
+00:33:38,750 --> 00:33:43,710
+So take advantage of Accelerate, all these routines
+are written for you already, you can spend your time
+
+448
+00:33:43,710 --> 00:33:50,080
+on adding features, doing other cool stuff
+that users of your app will appreciate.
+
+449
+00:33:50,080 --> 00:33:51,430
+It's also easy to use.
+
+450
+00:33:51,430 --> 00:33:53,370
+This goes back to what I was just talking about.
+
+451
+00:33:53,370 --> 00:33:57,190
+You don't need to know a lot about
+what's going on behind the scenes.
+
+452
+00:33:57,190 --> 00:33:58,860
+If you do know a lot, that's great.
+
+453
+00:33:58,860 --> 00:34:02,860
+It will make it even easier to-- for
+you to find what you're looking for.
+
+454
+00:34:02,860 --> 00:34:07,890
+But if you don't know a lot about these abstracts
+mathematical operations that you're performing,
+
+455
+00:34:07,890 --> 00:34:14,580
+you can still take advantage of Accelerate
+and get good performance, good energy usage,
+
+456
+00:34:14,580 --> 00:34:17,660
+and you're also going to get architecture independence.
+
+457
+00:34:17,660 --> 00:34:23,850
+Normally, if you want to get great performance and great
+energy usage, you have to write architecture specific code.
+
+458
+00:34:23,850 --> 00:34:27,770
+This goes back to what I was talking
+about with how the ARMv6 architecture,
+
+459
+00:34:27,770 --> 00:34:30,110
+the ARMv7 architecture are very different.
+
+460
+00:34:30,110 --> 00:34:37,060
+If you want to support the iPhone 3G, which a lot of people
+have, then-- and you still want to get great performance,
+
+461
+00:34:37,060 --> 00:34:40,770
+you're going to need to have two separate
+code paths if you write this yourself.
+
+462
+00:34:40,770 --> 00:34:44,100
+If you use Accelerate, we already
+have those two separate code paths.
+
+463
+00:34:44,100 --> 00:34:47,710
+We're going to give you good performance on both platforms,
+
+464
+00:34:47,710 --> 00:34:50,800
+and you're going to get-- it's
+going to work in the simulator too.
+
+465
+00:34:50,800 --> 00:34:56,010
+You don't have to write a separate set of fall back
+code for your ARM assembly to use in the simulator.
+
+466
+00:34:56,010 --> 00:34:57,440
+Those are some reasons to use Accelerate.
+
+467
+00:34:57,440 --> 00:35:03,630
+There are some design trade offs that we make in
+working on Accelerate that you should be aware
+
+468
+00:35:03,630 --> 00:35:09,160
+of for your own useful library to make
+sure you can take good advantage of it.
+
+469
+00:35:09,160 --> 00:35:12,480
+We always try to make the common cases fast.
+
+470
+00:35:12,480 --> 00:35:16,060
+It's because they're the common cases, they're
+where most of the work is going to be done.
+
+471
+00:35:16,060 --> 00:35:18,820
+We want those to be as fast as possible.
+
+472
+00:35:18,820 --> 00:35:21,850
+So we spent a lot of effort making the common cases fast.
+
+473
+00:35:21,850 --> 00:35:24,680
+But because we want to provide general functionality,
+
+474
+00:35:24,680 --> 00:35:28,670
+we want to make sure you can use the
+Accelerate framework for all your stuff.
+
+475
+00:35:28,670 --> 00:35:31,440
+You don't need to worry about writing an FFT.
+
+476
+00:35:31,440 --> 00:35:35,110
+Some-- we also support lots of
+cases that aren't the common case.
+
+477
+00:35:35,110 --> 00:35:37,190
+Now, they're usually be fast.
+
+478
+00:35:37,190 --> 00:35:39,020
+We make them fast too.
+
+479
+00:35:39,020 --> 00:35:44,570
+But the uncommon cases are usually the uncommon
+cases because there's something weird about them.
+
+480
+00:35:44,570 --> 00:35:47,280
+And the fact that there's something
+weird about them often means
+
+481
+00:35:47,280 --> 00:35:52,170
+that they just can't be as fast as the common case can.
+
+482
+00:35:52,170 --> 00:35:57,430
+Strided access will never be as fast as
+unstrided access on a vector processor.
+
+483
+00:35:57,430 --> 00:35:59,930
+It's just the way it is.
+
+484
+00:35:59,930 --> 00:36:04,020
+So when you're writing your application,
+when you're laying out your algorithms,
+
+485
+00:36:04,020 --> 00:36:08,160
+you want to use the simple common case as often as you can.
+
+486
+00:36:08,160 --> 00:36:11,710
+If you have to use the other case
+that supports there, it'll work,
+
+487
+00:36:11,710 --> 00:36:14,430
+but try to structure things so
+that you're using the common case.
+
+488
+00:36:14,430 --> 00:36:18,640
+Continuing with that, you should be aware of
+the size of the buffers that you're using.
+
+489
+00:36:18,640 --> 00:36:24,280
+If you're making lots and lots of calls with tiny
+buffers, then you're paying a lot of call overhead.
+
+490
+00:36:24,280 --> 00:36:27,140
+There are registers that need to
+be safe and restored on every call.
+
+491
+00:36:27,140 --> 00:36:28,350
+That takes time.
+
+492
+00:36:28,350 --> 00:36:30,790
+Calling a function takes time.
+
+493
+00:36:30,790 --> 00:36:33,050
+You want to spend as little time as possible doing that.
+
+494
+00:36:33,050 --> 00:36:37,400
+You want your processor spending as
+much time as possible doing real work.
+
+495
+00:36:37,400 --> 00:36:43,020
+So this means that you don't want to make
+a thousand calls with length 3 vectors.
+
+496
+00:36:43,020 --> 00:36:47,140
+It's much better to make three calls
+with vectors length a thousand.
+
+497
+00:36:47,140 --> 00:36:50,240
+So really try to structure algorithms so that you can use--
+
+498
+00:36:50,240 --> 00:36:54,320
+so you're not making tons and tons of
+tiny, tiny calls into the framework.
+
+499
+00:36:54,320 --> 00:37:00,180
+At the same time, you don't want your
+data, your buffers to be too large.
+
+500
+00:37:00,180 --> 00:37:05,570
+If they're too large, then it's much
+harder for the algorithms to benefit
+
+501
+00:37:05,570 --> 00:37:08,480
+from the cache that's available on the processor.
+
+502
+00:37:08,480 --> 00:37:14,120
+Usually, you call one vDSP function, you'll probably
+going to call another vDSP function with the output,
+
+503
+00:37:14,120 --> 00:37:16,730
+or your own code that takes the output and does something.
+
+504
+00:37:16,730 --> 00:37:21,640
+You'd really like all of the output
+to be in the cache on the processor
+
+505
+00:37:21,640 --> 00:37:24,470
+so that it's available for whatever comes next.
+
+506
+00:37:24,470 --> 00:37:26,510
+It doesn't need to fetch it from memory.
+
+507
+00:37:26,510 --> 00:37:29,020
+So it's good to aim for a working set.
+
+508
+00:37:29,020 --> 00:37:34,590
+What I mean by a working set is serve the amount of data
+that's live at any point and time in your algorithm.
+
+509
+00:37:34,590 --> 00:37:37,240
+What you're really computing with at any moment.
+
+510
+00:37:37,240 --> 00:37:41,660
+You want to aim for, you know, about 32
+kilobytes, about the size of L1 cache.
+
+511
+00:37:41,660 --> 00:37:43,980
+That's a good working set to aim for.
+
+512
+00:37:43,980 --> 00:37:49,720
+What this means is that, you know, if you're working with
+single precision data or integers, vectors, you know,
+
+513
+00:37:49,720 --> 00:37:53,950
+length a thousand to four thousand, that kind
+of range, that's a really nice range to aim for.
+
+514
+00:37:53,950 --> 00:37:55,710
+That's where you're going to get the best performance.
+
+515
+00:37:55,710 --> 00:37:58,060
+I keep coming back to this, but I'm going to say it again.
+
+516
+00:37:58,060 --> 00:38:00,270
+Use contiguous arrays if you can.
+
+517
+00:38:00,270 --> 00:38:02,490
+We have the strided access.
+
+518
+00:38:02,490 --> 00:38:05,260
+If you can avoid it, don't use it.
+
+519
+00:38:05,260 --> 00:38:07,310
+So how do you not use it?
+
+520
+00:38:07,310 --> 00:38:12,910
+A lot of times, you can't do-- you can't change
+a data structure that you're getting as input.
+
+521
+00:38:12,910 --> 00:38:16,470
+Some other guy wrote it, you can't
+go make him change all of his code,
+
+522
+00:38:16,470 --> 00:38:20,200
+it's coming from the internet,
+you can't change that, who knows.
+
+523
+00:38:20,200 --> 00:38:23,660
+You're getting data in, it's strided,
+you have to deal with it.
+
+524
+00:38:23,660 --> 00:38:30,050
+However, the fact that the input to one of these routines
+is strided doesn't mean the output has to be strided.
+
+525
+00:38:30,050 --> 00:38:39,310
+So what you want to try to do is on the very first call to a
+vDSP routine or a LAPACK or BLAS routine, let the input come
+
+526
+00:38:39,310 --> 00:38:44,480
+and stride it, but produce a contiguous stride 1 output.
+
+527
+00:38:44,480 --> 00:38:48,560
+That way, all the subsequent operations
+that you do can be faster.
+
+528
+00:38:48,560 --> 00:38:53,780
+If you have to produce a strided output at the
+end after-- at the end of your computation,
+
+529
+00:38:53,780 --> 00:39:01,290
+keep everything stride 1 write up until that last step,
+and then use a strided output for the final result.
+
+530
+00:39:01,290 --> 00:39:04,090
+Another thing to be aware of is just the architecture.
+
+531
+00:39:04,090 --> 00:39:11,340
+Assuming that you're supporting the ARMv6 products, make
+sure to build your binary path for both ARMv6 and ARMv7.
+
+532
+00:39:11,340 --> 00:39:16,720
+This will let your compiled code get the
+best performance on both architectures,
+
+533
+00:39:16,720 --> 00:39:23,610
+and you should also prefer single precision floating point,
+floats, to double precision, doubles, whenever you can.
+
+534
+00:39:23,610 --> 00:39:29,060
+Float is a little bit faster than double on ARMv6,
+mostly because you can fit more data in cache.
+
+535
+00:39:29,060 --> 00:39:35,380
+But on ARMv7, on the current architecture,
+float is enormously faster than double.
+
+536
+00:39:35,380 --> 00:39:40,280
+The reason for that is that float executes on
+the NEON unit, which is much faster than VFP,
+
+537
+00:39:40,280 --> 00:39:43,200
+double executes on the Legacy of VFP unit.
+
+538
+00:39:43,200 --> 00:39:48,130
+Also, because it executes on the NEON
+unit, float can benefit from vectorization.
+
+539
+00:39:48,130 --> 00:39:54,790
+When you call the Accelerate routines, we can take
+advantage of vectorization on single precision data.
+
+540
+00:39:54,790 --> 00:39:58,140
+There's not really many opportunities,
+not really any at all,
+
+541
+00:39:58,140 --> 00:40:03,740
+for vectorization on the ARMv6 architecture
+with either float or double data.
+
+542
+00:40:03,740 --> 00:40:10,450
+And the VFP unit, which is what's used for double on
+ARMv7, also doesn't really allow you to vectorize.
+
+543
+00:40:10,450 --> 00:40:18,010
+So if you can use single precision, you're going to get the
+best performance that way on ARMv7, both in your own code
+
+544
+00:40:18,010 --> 00:40:20,850
+and when you call the Accelerate framework.
+
+545
+00:40:20,850 --> 00:40:22,390
+You can't always use it.
+
+546
+00:40:22,390 --> 00:40:26,920
+Sometimes, your algorithm is so numerically
+sensitive that you just stuck with double.
+
+547
+00:40:26,920 --> 00:40:27,920
+That's how it is.
+
+548
+00:40:27,920 --> 00:40:29,420
+But a lot of times, you can use it.
+
+549
+00:40:29,420 --> 00:40:31,950
+So check, see if you can use float.
+
+550
+00:40:31,950 --> 00:40:34,870
+If you can, do, and you'll get better performance.
+
+551
+00:40:34,870 --> 00:40:44,920
+If you want more information about Accelerate, you can--
+make-- talk to our technology evangelist, Paul Danbold,
+
+552
+00:40:44,920 --> 00:40:50,790
+and you can also post on the Apple
+Developer Forums if you have questions.
+
+553
+00:40:50,790 --> 00:40:54,590
+We have some documentation available on the vDSP library.
+
+554
+00:40:54,590 --> 00:40:57,780
+LAPACK and BLAS are industry standard libraries.
+
+555
+00:40:57,780 --> 00:41:03,800
+Probably the best documentation for them is the
+freely available documentation at netlib.org.
+
+556
+00:41:03,800 --> 00:41:07,520
+There's also an excellent book on
+LAPACK, the LAPACK User's Guide.
+
+557
+00:41:07,520 --> 00:41:10,130
+There's links to purchase a copy if you want one.
+
+558
+00:41:10,130 --> 00:41:11,940
+They are on netlib.org.
+
+559
+00:41:11,940 --> 00:41:15,500
+And the headers for the system
+are also a great place to look.
+
+560
+00:41:15,500 --> 00:41:17,470
+That's where all these functions are defined.
+
+561
+00:41:17,470 --> 00:41:21,540
+You can start poking around in there, see what
+looks interesting, what you might like to use.
+

@@ -1,0 +1,3054 @@
+1
+00:00:06,960 --> 00:00:08,750
+>> Jason Beaver: Good afternoon.
+
+2
+00:00:08,750 --> 00:00:12,620
+Welcome to Understanding the Document
+Interaction Controller.
+
+3
+00:00:14,070 --> 00:00:15,500
+My name is Jason Beaver.
+
+4
+00:00:15,500 --> 00:00:19,820
+I'm an engineer on the iPhone Frameworks Team
+and I'll be joined in a little bit by Luke
+
+5
+00:00:19,820 --> 00:00:23,160
+who is also on the team, to go through a few demos.
+
+6
+00:00:23,160 --> 00:00:28,480
+So, what are we going to cover today?
+
+7
+00:00:28,480 --> 00:00:30,070
+Well, there's 5 basic things.
+
+8
+00:00:30,070 --> 00:00:35,750
+We're going to talk a little bit about what
+documents are like on the iPhone OS or iOS now.
+
+9
+00:00:35,750 --> 00:00:45,720
+We're going to talk about how you register your applications
+as owners or editors of a particular type of document.
+
+10
+00:00:45,720 --> 00:00:50,770
+Once you've registered for a document, we're going to talk
+about what you need to do to actually open the document
+
+11
+00:00:50,770 --> 00:00:53,460
+when you're asked about the operating system.
+
+12
+00:00:56,960 --> 00:01:02,260
+And if your application allows users to
+interact with documents, as an example of this,
+
+13
+00:01:02,260 --> 00:01:08,660
+consider the mail application where attachments can
+get mailed to the user and the user can click on those
+
+14
+00:01:08,660 --> 00:01:12,260
+and open them and preview and things like that.
+
+15
+00:01:12,260 --> 00:01:15,830
+We're going to talk about a new class
+called the UIDocumentInteractionController
+
+16
+00:01:15,830 --> 00:01:19,340
+that automates a lot of this behavior for you.
+
+17
+00:01:19,340 --> 00:01:24,340
+And finally, we're going to spend a little
+time covering the QuickLook framework.
+
+18
+00:01:24,340 --> 00:01:27,750
+The QuickLook framework has been
+around on the desktop for quite awhile.
+
+19
+00:01:27,750 --> 00:01:34,880
+It's new to iOS and DocumentInteractionController uses
+it to handle preview functionality, but it's public
+
+20
+00:01:34,880 --> 00:01:36,510
+and you can use it yourself, if the way
+
+21
+00:01:36,510 --> 00:01:42,920
+that the DocumentInteractionController exposes
+it is not appropriate in your application.
+
+22
+00:01:42,920 --> 00:01:49,240
+Alright, so let's start with the basics of documents on iOS.
+
+23
+00:01:49,240 --> 00:01:57,000
+So this is a sample of what a document
+might look like by default,
+
+24
+00:01:57,000 --> 00:02:01,550
+and the frameworks provide a view
+for you that represent a document.
+
+25
+00:02:01,550 --> 00:02:09,150
+This is left up to you to build in a way that's
+appropriate for your look and feel in your application.
+
+26
+00:02:09,150 --> 00:02:17,660
+To the operating system, know you specify
+documents by URL and these will be file URLs.
+
+27
+00:02:17,660 --> 00:02:26,470
+Here it's going to be the file type and there'll be some
+path into the sandbox in your application and in this case,
+
+28
+00:02:26,470 --> 00:02:30,080
+the last path component is Beach Party.pdf.
+
+29
+00:02:30,080 --> 00:02:35,570
+And we'll extract that last path component
+as the name that's visible to the user,
+
+30
+00:02:35,570 --> 00:02:45,260
+and then we'll also extract the path extension from
+that name, and from that we're going to derive a UTI.
+
+31
+00:02:46,600 --> 00:02:49,840
+We use UTIs for a wide variety of purposes.
+
+32
+00:02:49,840 --> 00:02:55,730
+In this case, for PDF, the UTI for that is com.adobe.pdf.
+
+33
+00:02:55,730 --> 00:03:02,250
+Now, maybe then in your application, the last path
+component of URL isn't appropriate to display to the user.
+
+34
+00:03:02,250 --> 00:03:09,950
+For example, if you use some sort of unique identifier for
+a document, in this case, you can actually replace the name,
+
+35
+00:03:09,950 --> 00:03:16,150
+in this case, Beach Party.pdf and we'll still
+derive the UTI from the extension of that name.
+
+36
+00:03:16,150 --> 00:03:23,300
+You can also specify the UTI separately if that
+can't be derived from the extension of the name.
+
+37
+00:03:23,300 --> 00:03:28,760
+And finally, documents have icons associated with them.
+
+38
+00:03:28,760 --> 00:03:34,760
+These icons are provided by the application that registers
+itself as the owner of this particular file type.
+
+39
+00:03:34,760 --> 00:03:42,600
+And so for the Pages document for example, the
+Pages icon will come from the Pages applications.
+
+40
+00:03:44,860 --> 00:03:51,010
+OK, let's move on to registering for documents.
+
+41
+00:03:51,010 --> 00:03:54,460
+Just like on the desktop, if you're
+familiar with Mac OS X development,
+
+42
+00:03:54,460 --> 00:03:58,740
+you register for documents via your applications Info.plist.
+
+43
+00:03:58,740 --> 00:04:04,120
+And there's a specific key in there called
+CFBundleDocumentTypes, and this is the exact same key we use
+
+44
+00:04:04,120 --> 00:04:07,400
+on the desktop to register for documents types.
+
+45
+00:04:07,400 --> 00:04:10,480
+And this is an array of dictionaries.
+
+46
+00:04:10,480 --> 00:04:15,120
+Now, these dictionaries can have quite a number of keys.
+
+47
+00:04:15,120 --> 00:04:18,300
+The documentation goes over all of the possible keys,
+
+48
+00:04:18,300 --> 00:04:22,050
+but there are four that we're going
+to sort of touch on briefly today.
+
+49
+00:04:22,050 --> 00:04:31,730
+The first is CFBundleTypeExtensions, and this is an array
+of extensions that you know how to open, in this case, PDF.
+
+50
+00:04:31,730 --> 00:04:38,750
+The second is LSItemContentTypes, and this is
+just an array of the UTIs that are associated
+
+51
+00:04:38,750 --> 00:04:44,290
+with these extensions, and so in this example com.adobe.pdf.
+
+52
+00:04:44,290 --> 00:04:49,990
+The third is CFBundleTypeName, and this is just
+the user visible string for this type of document,
+
+53
+00:04:49,990 --> 00:04:55,600
+not for the specific document but for the
+generic type, in this case, PDF document.
+
+54
+00:04:55,600 --> 00:05:07,670
+And finally, LSHandlerRank, and this allows you to fine
+tune the document's association with your application.
+
+55
+00:05:07,670 --> 00:05:11,900
+There should be one application on the system
+which is defined as the owner typically.
+
+56
+00:05:11,900 --> 00:05:15,380
+In the pages example we talked about,
+that would be the page's application.
+
+57
+00:05:15,380 --> 00:05:19,700
+It is the only one that actually owns pages type documents.
+
+58
+00:05:19,700 --> 00:05:24,960
+But if other apps on the system like yours can open
+pages of documents, you would specify yourself as default
+
+59
+00:05:24,960 --> 00:05:29,600
+or alternate and the documentation goes into some
+specifics as to why you might choose one over the other.
+
+60
+00:05:29,600 --> 00:05:37,560
+If you just leave that key out, you'll get the
+default behavior and that's typically the most useful.
+
+61
+00:05:37,560 --> 00:05:40,870
+So this is what it looks like in your Info.plist.
+
+62
+00:05:40,870 --> 00:05:47,940
+You have the key CFBundleDocumentTypes and as you see,
+it's an array of dictionaries, so this whole bundle worth
+
+63
+00:05:47,940 --> 00:05:55,160
+of key value pairs could get duplicated for other
+extensions that you might want to register for.
+
+64
+00:05:55,160 --> 00:06:01,260
+First key CFBundleTypeExtensions, as I mention,
+that's an array of strings, in this case PDF.
+
+65
+00:06:01,260 --> 00:06:06,940
+LSItemContentTypes is also an array of
+strings, in this case, com.abode.pdf.
+
+66
+00:06:06,940 --> 00:06:14,840
+And CFBundleTypeName is just a
+simple string in that PDF document.
+
+67
+00:06:14,840 --> 00:06:20,410
+OK. So, now you've registered your
+application to open a certain document type.
+
+68
+00:06:20,410 --> 00:06:24,860
+How do you actually open that?
+
+69
+00:06:24,860 --> 00:06:29,820
+Well, you do that with a couple of methods
+on the UIApplicationDelegate Protocol.
+
+70
+00:06:29,820 --> 00:06:35,650
+So your application's delegate will receive
+these methods when needed to open a document.
+
+71
+00:06:35,650 --> 00:06:40,340
+The first is application didFinishLaunchingWithOptions.
+
+72
+00:06:40,340 --> 00:06:43,300
+So right after your application is launched,
+this is one of the first methods you'll receive.
+
+73
+00:06:43,300 --> 00:06:49,380
+And that Options dictionary as the second
+argument there has a large number of parameters,
+
+74
+00:06:49,380 --> 00:06:54,570
+but there are three that are specific to opening documents.
+
+75
+00:06:54,570 --> 00:07:05,620
+The first is UIApplicationLaunchOptionsURLKey and this is
+just that URL for that document that you're asked to open.
+
+76
+00:07:05,620 --> 00:07:11,470
+The second is UIApplicationLaunchOptions
+SourceApplicationKey, and this is the bundle identifier
+
+77
+00:07:11,470 --> 00:07:14,860
+of the application which has asked
+that this document be opened.
+
+78
+00:07:14,860 --> 00:07:20,080
+So if users in mail and they click on a document
+to open it and your application launches,
+
+79
+00:07:20,080 --> 00:07:22,940
+you'll be sent the bundle identifier
+of our mail application.
+
+80
+00:07:22,940 --> 00:07:29,360
+And the final key is UIApplicationLaunchOptions
+AnnotationKey.
+
+81
+00:07:29,360 --> 00:07:35,580
+Now, this is just an extra bag of information which
+is of a plist type that you can use if you want
+
+82
+00:07:35,580 --> 00:07:38,280
+to pass information from one application to another.
+
+83
+00:07:38,280 --> 00:07:43,660
+So let's say you have a suite of applications and
+you want to transfer a document from one to another
+
+84
+00:07:43,660 --> 00:07:47,560
+and pass on a little bit of extra information
+so that resulting application can, let's say,
+
+85
+00:07:47,560 --> 00:07:50,450
+open to the same spot in a document or something like that.
+
+86
+00:07:50,450 --> 00:07:56,560
+This is a good way to do that by default from
+nearby applications, this key won't be present.
+
+87
+00:07:56,560 --> 00:08:02,700
+So, when you're sent this message, you're not expected
+to actually open the document inside this method.
+
+88
+00:08:02,700 --> 00:08:06,750
+This is just an indictor of whether
+you can open it or should open it.
+
+89
+00:08:06,750 --> 00:08:08,640
+The return value for this is a Boolean.
+
+90
+00:08:08,640 --> 00:08:14,140
+And if you return yes from that, you'll be sent a
+second method which is application handleOpenURL,
+
+91
+00:08:14,140 --> 00:08:17,050
+and this is where you actually need to open the document.
+
+92
+00:08:17,050 --> 00:08:23,060
+In fact, if your application is already running, you'll only
+receive the second method there to open a second document.
+
+93
+00:08:23,060 --> 00:08:33,100
+With that, I'd like to bring Luke up on stage and he
+can run to a demo of what we covered at this point.
+
+94
+00:08:33,100 --> 00:08:35,840
+>> Luke Hiesterman: OK, thank you, Jason.
+
+95
+00:08:35,840 --> 00:08:44,970
+So what I want to show you guys today is a practical example
+of how do we actually register to open some documents
+
+96
+00:08:44,970 --> 00:08:48,600
+and then how do we actually go
+about opening those documents.
+
+97
+00:08:48,600 --> 00:08:57,940
+So, as Jason talked about before, registering for documents
+is as simple as putting some keys into your Info.plist.
+
+98
+00:08:57,940 --> 00:09:01,060
+So, I'm going to show you what
+that actually looks like in Xcode.
+
+99
+00:09:01,060 --> 00:09:05,830
+You got to see the XML before, so let's zoom in on this.
+
+100
+00:09:05,830 --> 00:09:09,350
+Hopefully, I'd see a little better.
+
+101
+00:09:09,350 --> 00:09:15,340
+OK. So this document is called PDF viewer,
+and it registers for two types of applications
+
+102
+00:09:15,340 --> 00:09:19,870
+or two types of documents that is, text and PDF.
+
+103
+00:09:19,870 --> 00:09:25,150
+So here we have CFBundleDocumentTypes which
+as Jason said is an array of dictionaries.
+
+104
+00:09:25,150 --> 00:09:29,880
+The first dictionary here is going
+to register for a text document,
+
+105
+00:09:29,880 --> 00:09:33,650
+and so we have CFBundleTypeExtensions, so it's text.
+
+106
+00:09:33,650 --> 00:09:38,150
+And we have CFBundleTypeName, that's the text document.
+
+107
+00:09:38,150 --> 00:09:44,280
+And I'm also going to provide an icon
+file which uses CFBundleTypeIconFile.
+
+108
+00:09:44,280 --> 00:09:49,080
+And we set the UTI using LSItemContentTypes
+which for this public all text.
+
+109
+00:09:49,080 --> 00:09:52,450
+And then we do the same thing for PDF documents.
+
+110
+00:09:52,450 --> 00:09:58,240
+I have CFBundleTypeExtension PDF,
+CFBundleTypeName PDF document.
+
+111
+00:09:58,240 --> 00:10:07,140
+Again, I defined an icon file which is using CFBundleType
+icon file, and the UTI for this is comwww.pdf.
+
+112
+00:10:07,140 --> 00:10:11,250
+And really that's all I need to do to
+register to open PDF and text documents.
+
+113
+00:10:11,250 --> 00:10:15,750
+It's simple entries in the Info.plist and I'm done.
+
+114
+00:10:15,750 --> 00:10:21,030
+So, let's see what that actually does for
+me in the context of other applications
+
+115
+00:10:21,030 --> 00:10:25,920
+that might use UIDocumentInteractionController
+to open documents.
+
+116
+00:10:25,920 --> 00:10:33,180
+I've installed PDF viewer along with another application
+called plain text viewer into my iPhone simulator,
+
+117
+00:10:33,180 --> 00:10:38,360
+and plain text viewer is the same as PDF viewer
+except it only registers for the text file types.
+
+118
+00:10:38,360 --> 00:10:44,120
+And I have also put in this application called doc
+interaction which is a very simple implementation
+
+119
+00:10:44,120 --> 00:10:47,880
+that is going to use UIDocumentInteractionController
+gto show us what happens
+
+120
+00:10:47,880 --> 00:10:50,750
+when we actually register for these types.
+
+121
+00:10:50,750 --> 00:10:55,490
+OK. So this application is a representation
+of a few documents
+
+122
+00:10:55,490 --> 00:10:59,400
+that holds the text document image, PDF and HTML document.
+
+123
+00:10:59,400 --> 00:11:08,150
+And simply by having registered for those document
+types, namely PDF and text in those two applications,
+
+124
+00:11:08,150 --> 00:11:15,580
+PDF viewer and text viewer, we'll see what happens when
+in this application I press and hold on this image,
+
+125
+00:11:15,580 --> 00:11:21,810
+DocumentInteractionController gives me an option
+to open in PDF viewer and that comes simply
+
+126
+00:11:21,810 --> 00:11:24,760
+from the Info.plist keys that I put in the Info.plist.
+
+127
+00:11:24,760 --> 00:11:28,160
+It knows-- the PDF viewer knows
+how to handle that document type.
+
+128
+00:11:28,160 --> 00:11:33,790
+And similarly, if we over the text document
+and do the same, I get Open In PDF viewer.
+
+129
+00:11:33,790 --> 00:11:39,690
+This also, this Open In button that we get
+here, if we click on, we see both PDF viewer
+
+130
+00:11:39,690 --> 00:11:44,120
+and plain text viewer are registered for this document type.
+
+131
+00:11:44,120 --> 00:11:50,650
+So, all that sort of external visibility that other
+applications get the opportunity to show the user
+
+132
+00:11:50,650 --> 00:11:57,770
+that our application opens these documents
+come simply from these Info.plist keys.
+
+133
+00:11:57,770 --> 00:12:02,160
+OK, so we've learned how to register
+an application for document.
+
+134
+00:12:02,160 --> 00:12:07,200
+But probably what we're more interested
+in doing is opening the document,
+
+135
+00:12:07,200 --> 00:12:10,790
+when we actually are asked to by another application.
+
+136
+00:12:10,790 --> 00:12:17,100
+So, as Jason talked about, we need to use
+some methods on the application delegate.
+
+137
+00:12:17,100 --> 00:12:24,150
+So this application delegate already has application, did
+Finish Launching With Options, and now it returns Yes.
+
+138
+00:12:24,150 --> 00:12:27,230
+This code is going to be very familiar to you.
+
+139
+00:12:27,230 --> 00:12:35,010
+But what is going to be interesting for us to open
+a document is to use application: handleOpenURL.
+
+140
+00:12:35,010 --> 00:12:40,870
+Now this application, PDF viewer, is going
+to have a very simple implementation.
+
+141
+00:12:40,870 --> 00:12:46,420
+It's just going to use a web view
+and load any URL that comes into it.
+
+142
+00:12:46,420 --> 00:12:48,980
+We're going to take advantage of
+the fact that web views know how
+
+143
+00:12:48,980 --> 00:12:52,220
+to handle text content and they
+know how to handle PDF content.
+
+144
+00:12:52,220 --> 00:12:56,650
+So any text or PDF document that comes through
+us, we can just load into our Web View.
+
+145
+00:12:56,650 --> 00:13:00,060
+So, let's implement application handleOpenURL.
+
+146
+00:13:01,070 --> 00:13:07,320
+The first time we run it, we just need to
+create our web view and add it into the window.
+
+147
+00:13:07,320 --> 00:13:09,420
+That's very simple.
+
+148
+00:13:09,420 --> 00:13:16,530
+The actual work is going to be done simply by loading the
+URL that is sent to us as the argument to handleOpenURL.
+
+149
+00:13:16,530 --> 00:13:22,810
+So that's simply WebView loadrequest using an
+NSURLRequest with the URL that's handed to us.
+
+150
+00:13:22,810 --> 00:13:27,910
+And application: handleOpenURL takes a Boolean
+argument, so we're just going to return "yes"
+
+151
+00:13:27,910 --> 00:13:33,740
+that we successfully open the document, and
+that's really all the code we need to write
+
+152
+00:13:33,740 --> 00:13:36,060
+to handle opening a document in this case.
+
+153
+00:13:36,060 --> 00:13:41,810
+Obviously, your application is likely to
+have unique things that you do to a document.
+
+154
+00:13:41,810 --> 00:13:46,990
+But the important thing to remember is that
+application handleOpenURL is the place that you need
+
+155
+00:13:46,990 --> 00:13:52,270
+to implement your special code that does
+what you do best to use the documents.
+
+156
+00:13:52,270 --> 00:13:59,730
+So, let's go back to our simulator
+and just see this working.
+
+157
+00:13:59,730 --> 00:14:02,150
+We'll see that we actually can.
+
+158
+00:14:02,150 --> 00:14:06,500
+Now, open a text document in PDF viewer, and there it is.
+
+159
+00:14:06,500 --> 00:14:13,670
+Very simple text document but our viewer is able to open
+it by running the code in application handleOpenURL.
+
+160
+00:14:13,670 --> 00:14:19,500
+So, that's how simple it is to register for an application--
+or to register for a document type and then to open it.
+
+161
+00:14:19,500 --> 00:14:25,800
+Remember, we register using the Info.plist keys, and
+then we open the document by implementing handleOpenURL,
+
+162
+00:14:25,800 --> 00:14:30,880
+which can be called any point in the
+application lifecycle at launch or later.
+
+163
+00:14:30,880 --> 00:14:36,910
+Perhaps if your application is backgrounded, they
+might be brought back to the foreground to open a URL.
+
+164
+00:14:36,910 --> 00:14:43,920
+So that's registering for and opening
+documents using UIDocumentInteractionController.
+
+165
+00:14:43,920 --> 00:14:45,360
+So, I'll hand you back to Jason.
+
+166
+00:14:45,360 --> 00:14:51,770
+Thank you, Jason.
+
+167
+00:14:51,770 --> 00:14:52,810
+[ Applause ]
+
+168
+00:14:52,810 --> 00:14:55,460
+>> Jason Beaver: Thanks, Luke.
+
+169
+00:14:55,460 --> 00:14:58,530
+OK, let's move on to interacting with documents
+
+170
+00:14:58,530 --> 00:15:05,050
+and specifically using the new
+UIDocumentInteractionController class to provide a lot
+
+171
+00:15:05,050 --> 00:15:07,190
+of the same functionality that we just saw with demo.
+
+172
+00:15:07,190 --> 00:15:19,380
+So, as we mentioned, we don't provide a-- of a view
+by default to attach or to represent the document
+
+173
+00:15:19,380 --> 00:15:20,880
+and to attach these to do a--
+
+174
+00:15:20,880 --> 00:15:25,160
+to a DocumentInteractionController,
+but this is what it might look like.
+
+175
+00:15:25,160 --> 00:15:27,780
+This is mail with a couple of different documents.
+
+176
+00:15:27,780 --> 00:15:33,520
+And what does the DocumentInteractionController
+actually do for us?
+
+177
+00:15:33,520 --> 00:15:38,580
+Well, the first thing it can do is actually
+present a full screen preview of these documents.
+
+178
+00:15:38,580 --> 00:15:42,390
+This is what it looks like on iPhone and iPad.
+
+179
+00:15:42,390 --> 00:15:48,500
+The DocumentInteractionController
+can also present an Options menu.
+
+180
+00:15:48,500 --> 00:15:53,170
+This gives the user a few high level
+choices, whether they want to Quick Look it,
+
+181
+00:15:53,170 --> 00:15:55,600
+which is that preview functionality we just saw,
+
+182
+00:15:55,600 --> 00:15:59,620
+or open it in whatever the default
+application for that document type is.
+
+183
+00:15:59,620 --> 00:16:05,140
+Or if there are multiple applications, you can even open
+the-- choose Open In and pick one of the other ones.
+
+184
+00:16:05,140 --> 00:16:13,690
+If they do pick Open In, the DocumentInteractionController
+can automatically take care of presenting the user interface
+
+185
+00:16:13,690 --> 00:16:17,960
+to show all of the applications which
+register for that document type on the system,
+
+186
+00:16:17,960 --> 00:16:21,320
+and it takes care of the differences between
+iPhone or iPad just like we're seeing here.
+
+187
+00:16:21,320 --> 00:16:30,830
+So, the first thing we need to do is
+create a UIDocumentInteractionController,
+
+188
+00:16:30,830 --> 00:16:36,040
+and we do that with the class method
+interactionControllerWithURL.
+
+189
+00:16:36,040 --> 00:16:42,380
+Next, there are a few different properties we can
+use to configure the DocumentInteractionController,
+
+190
+00:16:42,380 --> 00:16:46,780
+the first is that the URL, so even after
+you create it, you can change the document
+
+191
+00:16:46,780 --> 00:16:51,030
+that the DocumentInteractionController
+refers to by just replacing the URL.
+
+192
+00:16:51,030 --> 00:17:00,160
+And like I said before, you can override the name in UTI
+if they can't be derived from the URL that you give us.
+
+193
+00:17:05,590 --> 00:17:09,220
+So, that's almost all the information
+that you need to draw your view.
+
+194
+00:17:09,220 --> 00:17:13,030
+There's one more piece that you need, and that is the icons.
+
+195
+00:17:13,030 --> 00:17:17,280
+So there's an additional property on
+UIDocumentInteractionController called icons,
+
+196
+00:17:17,280 --> 00:17:25,750
+and that just returns an array of UIImages that the
+owning application has defined for this document type.
+
+197
+00:17:25,750 --> 00:17:30,630
+And these UIImages are sorted from smallest to
+largest so you can look through there and find the one
+
+198
+00:17:30,630 --> 00:17:35,940
+that makes the most sense for you in
+whichever, whatever way you're presenting it.
+
+199
+00:17:37,830 --> 00:17:47,530
+So with that, we have all the information that you
+need to define your view and present it to the user.
+
+200
+00:17:47,530 --> 00:17:52,880
+But we still need to tie the view that you've provided
+to the DocumentInteractionController that you created
+
+201
+00:17:52,880 --> 00:17:55,340
+on the backend so that you can get
+some of this automatic behavior.
+
+202
+00:17:55,340 --> 00:17:58,630
+Fortunately, it is really easy to do that.
+
+203
+00:17:58,630 --> 00:18:04,210
+There's an additional property on the
+DocumentInteractionController called rs.
+
+204
+00:18:04,210 --> 00:18:08,970
+Now, Gesture Recognizers were introduced in iOS 3.2.
+
+205
+00:18:08,970 --> 00:18:12,350
+And if you haven't had a chance to take a
+look at them, I strongly encourage you to.
+
+206
+00:18:12,350 --> 00:18:19,130
+Gesture Recognizers allow you to decouple gesture
+recognition from your view's implementation.
+
+207
+00:18:19,130 --> 00:18:26,790
+And so, all you need to do to get the default set of
+Gesture Recognizers that we provide so that your views feel
+
+208
+00:18:26,790 --> 00:18:29,970
+like every other view on the system
+that represents documents is
+
+209
+00:18:29,970 --> 00:18:33,070
+to assign your view's Gesture Recognizer property
+
+210
+00:18:33,070 --> 00:18:37,030
+to the Gesture Recognizer property returned
+by the DocumentInteractionController.
+
+211
+00:18:37,030 --> 00:18:39,510
+So what does that actually get you?
+
+212
+00:18:39,510 --> 00:18:44,290
+So again, we're-- here is our example
+with a couple of document views.
+
+213
+00:18:44,290 --> 00:18:54,120
+And what I get you right off the box is if a user taps
+on your view, full screen preview will get presented.
+
+214
+00:18:54,120 --> 00:18:59,250
+If instead of tapping on your view, they
+press and hold on your view for a moment,
+
+215
+00:18:59,250 --> 00:19:01,270
+they'll automatically get the Options menu.
+
+216
+00:19:01,270 --> 00:19:06,520
+And if they click on the Open In button there,
+they'll automatically get the Open In menu.
+
+217
+00:19:10,430 --> 00:19:15,220
+So there's one more bit of work that we need to
+do to actually support the Quick Look behavior
+
+218
+00:19:15,220 --> 00:19:16,850
+so that you can get that full screen preview.
+
+219
+00:19:16,850 --> 00:19:22,910
+You need to assign the delegate of the
+DocumentInteractionController to some object
+
+220
+00:19:22,910 --> 00:19:29,000
+in your application, and then there's a
+few methods that you need to implement.
+
+221
+00:19:29,000 --> 00:19:37,110
+The first one to support Quick Look as required and that
+is documentInteractionController ViewControllerForPreview.
+
+222
+00:19:37,110 --> 00:19:42,720
+Basically, what happens under the cover is that
+the Quick Look framework provides a view controller
+
+223
+00:19:42,720 --> 00:19:44,270
+to display that preview.
+
+224
+00:19:44,270 --> 00:19:48,970
+But it needs to get presented somewhere in your
+application, and it's going to be presented modally
+
+225
+00:19:48,970 --> 00:19:51,740
+on top of a view controller that you provide.
+
+226
+00:19:51,740 --> 00:19:57,860
+This is the way you return that view controller so
+that we know where to present that full screen preview.
+
+227
+00:19:57,860 --> 00:20:03,470
+Now on iPad, there are a couple of more methods that you
+can implement to control that scale animation that comes up.
+
+228
+00:20:03,470 --> 00:20:11,110
+If you've actually played with attachments in mail on iPad,
+you'll know that the full screen preview zooms up from
+
+229
+00:20:11,110 --> 00:20:17,210
+that document icon, and you can do that by the
+methods documentInteractionController ViewForPreview
+
+230
+00:20:17,210 --> 00:20:21,990
+and documentInteractionControllerRectForPreview,
+and we'll talk about those here in a second.
+
+231
+00:20:21,990 --> 00:20:28,180
+So, in this sample, this is mail,
+the view controller's view is
+
+232
+00:20:28,180 --> 00:20:31,900
+that entire message view, so the entire size of the screen.
+
+233
+00:20:31,900 --> 00:20:36,390
+But we don't want the preview to scale up
+from the full screen so we need to implement
+
+234
+00:20:36,390 --> 00:20:45,410
+that method documentInteractionController ViewForPreview
+to return the specific view that we want to scale up from,
+
+235
+00:20:45,410 --> 00:20:47,070
+in this case, the one that the user clicked on.
+
+236
+00:20:47,070 --> 00:20:51,960
+But we really don't even want to scale up from
+that full view, we really want to scale up from
+
+237
+00:20:51,960 --> 00:20:55,890
+that icon inside the view, and maybe
+there isn't a view associated with that.
+
+238
+00:20:55,890 --> 00:21:00,380
+If the view that you've provided simply
+uses a drawRect to draw all the pieces,
+
+239
+00:21:00,380 --> 00:21:08,700
+that's where that last method documentInteractionController
+RectForPreview, that lets you specify the subRect
+
+240
+00:21:08,700 --> 00:21:13,370
+within that view where the preview
+should start scaling from.
+
+241
+00:21:18,150 --> 00:21:24,390
+Alright, there's a bunch of delegate notifications that the
+DocumentInteractionController sends to you that you can use
+
+242
+00:21:24,390 --> 00:21:30,910
+to change your UI in response to various actions happening
+automatically by the DocumentInteractionController.
+
+243
+00:21:30,910 --> 00:21:34,010
+The first pair we're going to look
+
+244
+00:21:34,010 --> 00:21:38,630
+at is documentInteractionControllerWillBeginPreview
+and DidEndPreview.
+
+245
+00:21:38,630 --> 00:21:43,260
+So if the user taps on your view and that preview appears,
+
+246
+00:21:43,260 --> 00:21:46,930
+you'll get these notifications
+when the preview ends or begins.
+
+247
+00:21:46,930 --> 00:21:54,460
+And then when the user clicks the Close or Done button,
+you'll get the second notification that the preview ended.
+
+248
+00:21:55,970 --> 00:22:04,520
+There are similar pairs of methods to be notified
+when the Options menu first appears or is dismissed,
+
+249
+00:22:07,910 --> 00:22:11,160
+and there's a similar set for the Open In...
+
+250
+00:22:11,160 --> 00:22:14,730
+menu. So when that pops up, you'll
+get that first notification.
+
+251
+00:22:14,730 --> 00:22:18,790
+When the user dismisses it either by
+clicking the Cancel button on the iPhone case
+
+252
+00:22:18,790 --> 00:22:22,730
+or just anywhere outside the popover in
+the iPad case, you'll get the DidDismiss.
+
+253
+00:22:22,730 --> 00:22:33,780
+Now, if the user actually clicks on one of those
+applications to open it in another application,
+
+254
+00:22:33,780 --> 00:22:40,430
+your application will receive the
+documentInteractionController willBeginSendingToApplication.
+
+255
+00:22:40,430 --> 00:22:44,770
+And once the copy has made it over
+to the other application sandbox,
+
+256
+00:22:44,770 --> 00:22:48,500
+you're sent documentInteractionController
+didEndSendingToApplication.
+
+257
+00:22:48,500 --> 00:22:52,730
+And this is a really good time for
+you to clean up any temporary state
+
+258
+00:22:52,730 --> 00:22:55,460
+that you had that was associated with that document.
+
+259
+00:22:55,460 --> 00:23:01,450
+So again, the user clicks on one of these, you'll
+receive these methods in sequence as that icon--
+
+260
+00:23:01,450 --> 00:23:05,530
+or as the document is copied over
+the other applications sandbox.
+
+261
+00:23:09,170 --> 00:23:18,760
+Now, you can also control that Options menu, and
+what appears in there with this method or this pair
+
+262
+00:23:18,760 --> 00:23:22,420
+of methods here, documentInteractionController
+canPerformAction.
+
+263
+00:23:22,420 --> 00:23:31,320
+Now, right now in UIDocumentInteractionController,
+there is one additional action that you can associate
+
+264
+00:23:31,320 --> 00:23:34,180
+with that Options menu, and that's the Copy action.
+
+265
+00:23:34,180 --> 00:23:39,250
+You'll be sent documentInteractionController
+canPerformAction and the actual will be the copy action.
+
+266
+00:23:39,250 --> 00:23:45,610
+And if you return Yes from that, will automatically
+insert a Copy menu item in that Options menu.
+
+267
+00:23:45,610 --> 00:23:50,070
+And if the user clicks on that Copy menu
+item, you'll be sent the second method,
+
+268
+00:23:50,070 --> 00:23:53,300
+documentInteractionController performAction.
+
+269
+00:23:53,300 --> 00:23:59,920
+And although right now, the only methods we send
+or the only actions we send are the copy actions,
+
+270
+00:23:59,920 --> 00:24:01,560
+you shouldn't assume that will always be the case.
+
+271
+00:24:01,560 --> 00:24:04,110
+We may add other actions overtime, so be sure
+
+272
+00:24:04,110 --> 00:24:07,700
+and sort of code defensively make sure
+you're checking for the action that you want.
+
+273
+00:24:07,700 --> 00:24:16,910
+With that, let's bring Luke up
+again and take you to all of these.
+
+274
+00:24:16,910 --> 00:24:20,920
+>> Luke Hiesterman: OK, thank you again, Jason.
+
+275
+00:24:20,920 --> 00:24:31,580
+Alright, so in the last demo, we saw how to register for
+the document type and then how to implement handleOpenURL
+
+276
+00:24:31,580 --> 00:24:35,190
+in your application delegate to actually open a document.
+
+277
+00:24:35,190 --> 00:24:37,360
+Now, to build on what Jason just talked about,
+
+278
+00:24:37,360 --> 00:24:42,900
+I want to show you how to actually create a
+UIDocumentInteractionController in your application
+
+279
+00:24:42,900 --> 00:24:50,200
+so that you can provide the user things like preview
+and ability to send a document to other applications.
+
+280
+00:24:50,200 --> 00:24:55,400
+And then also, we're going to show you a few examples
+of using the properties and the delegate methods
+
+281
+00:24:55,400 --> 00:25:00,030
+of UIDocumentInteractionController
+to customize it a little bit.
+
+282
+00:25:00,030 --> 00:25:09,380
+So, let's start by going into these applications,
+this doc interaction, and I'll show you--
+
+283
+00:25:09,380 --> 00:25:15,430
+I'll begin just by showing you what it looks like.
+
+284
+00:25:15,430 --> 00:25:24,120
+OK, so this is similar to what you saw
+before, sort of an unfinished version
+
+285
+00:25:24,120 --> 00:25:28,360
+and it represents the four documents,
+text, image, PDF, and HTML.
+
+286
+00:25:28,360 --> 00:25:35,880
+But it really doesn't do much else other than display
+some text and, you know, tell us what the document is.
+
+287
+00:25:35,880 --> 00:25:37,690
+There is no icon there.
+
+288
+00:25:37,690 --> 00:25:40,600
+I can't do anything by clicking on it.
+
+289
+00:25:40,600 --> 00:25:42,680
+It really just is text.
+
+290
+00:25:42,680 --> 00:25:48,640
+So, we want to enhance that by using our document
+interaction controller to give the users some interactivity
+
+291
+00:25:48,640 --> 00:25:52,950
+with the documents, and also to
+enhance the look a little bit.
+
+292
+00:25:52,950 --> 00:26:00,760
+So, let's go into my custom UITableViewCell
+code, and it has this method, set document name,
+
+293
+00:26:00,760 --> 00:26:03,140
+the extension, index, and table view controller.
+
+294
+00:26:03,140 --> 00:26:09,510
+And it's simply a method on the table view cell
+to associate a document with the table view cell,
+
+295
+00:26:09,510 --> 00:26:14,050
+and we're going to compose that with the
+document and its extension and the index
+
+296
+00:26:14,050 --> 00:26:17,970
+in the table view controller give us
+some back preferences that we'll be able
+
+297
+00:26:17,970 --> 00:26:20,070
+to support interaction with the controller in preview.
+
+298
+00:26:20,070 --> 00:26:26,510
+So, in order to set up UIDocumentInteractionController,
+we're going to need a URL.
+
+299
+00:26:26,510 --> 00:26:33,910
+So we're going to build that URL from the file path which
+we've gotten from NSBundle using a document and extension.
+
+300
+00:26:33,910 --> 00:26:38,650
+So we get doc URL simply by alloc
+initing with the file URL path.
+
+301
+00:26:38,650 --> 00:26:43,470
+No one used that URL to actually
+build UIDocumentInteractionController.
+
+302
+00:26:43,470 --> 00:26:51,070
+So let's create one with alloc init and then we set
+the DocumentInteractionController's URL property
+
+303
+00:26:51,070 --> 00:26:53,370
+to the URL that we built.
+
+304
+00:26:53,370 --> 00:26:57,440
+We also need to set the delegate of
+the UIDocumentInteractionController.
+
+305
+00:26:57,440 --> 00:27:03,830
+We'll set that to self and then we can
+go ahead and release the document URL.
+
+306
+00:27:03,830 --> 00:27:06,710
+So, now we've created a document interaction controller.
+
+307
+00:27:06,710 --> 00:27:13,390
+We want to use it to enhance the look of our cell a little
+bit, so we're going to take advantage of the icons property
+
+308
+00:27:13,390 --> 00:27:18,870
+on the document interaction controller to actually be able
+to put an icon in the cell that represents the document.
+
+309
+00:27:18,870 --> 00:27:27,900
+The icons property is an array of icons ordered from
+smallest to largest and we're going to get the count
+
+310
+00:27:27,900 --> 00:27:30,070
+of the icons from the DocumentInteractionController.
+
+311
+00:27:30,070 --> 00:27:36,350
+As long as that's greater than zero, we will just
+take the last one, which will be the largest,
+
+312
+00:27:36,350 --> 00:27:41,000
+and set that as the image of the cells image view.
+
+313
+00:27:41,000 --> 00:27:46,060
+So using just that, we can run our application.
+
+314
+00:27:46,060 --> 00:27:53,200
+And now, simply by creating a
+UIDocumentInteractionController and using the icon from it,
+
+315
+00:27:53,200 --> 00:27:56,330
+you see that we've improved the look
+of our application a little bit.
+
+316
+00:27:56,330 --> 00:28:00,760
+We now have icons associated with
+the various document types.
+
+317
+00:28:00,760 --> 00:28:03,270
+The thing that we don't have is interaction.
+
+318
+00:28:03,270 --> 00:28:09,800
+So, DocumentInteractionController, as Jason talked
+about before, comes with a great way to add canned,
+
+319
+00:28:09,800 --> 00:28:14,990
+consistent interaction that the user will
+recognize across all applications in the system,
+
+320
+00:28:14,990 --> 00:28:18,420
+and we do that via the gesture Recognizer's property.
+
+321
+00:28:18,420 --> 00:28:22,970
+The gestureRecognizer property, as Jason said
+before, gives us two gesture Recognizers.
+
+322
+00:28:22,970 --> 00:28:29,250
+One that if you-- user taps on the view, it will
+provide a preview, and two, if the user presses
+
+323
+00:28:29,250 --> 00:28:32,000
+and hold, that's UILongPressGestureRecognizer.
+
+324
+00:28:32,000 --> 00:28:36,240
+It will present the Options menu from
+the DocumentInteractionController.
+
+325
+00:28:36,240 --> 00:28:43,830
+So actually, adding the gestureRecognizer
+to your view is as simple as this line,
+
+326
+00:28:43,830 --> 00:28:47,430
+self.gestureRecognizers = documentInteractionController.
+
+327
+00:28:47,430 --> 00:28:49,050
+gestureRecognizers.
+
+328
+00:28:49,050 --> 00:28:55,230
+Now, if I had other Gesture Recognizers on my view, I could
+have gone through a loop and added the Gesture Recognizers
+
+329
+00:28:55,230 --> 00:28:58,820
+from the DocumentInteractionController
+to my view one at a time.
+
+330
+00:28:58,820 --> 00:29:01,890
+But in this case, I don't have any other
+Gesture Recognizers so it's very simple,
+
+331
+00:29:01,890 --> 00:29:06,750
+I can just do self.gestureRecognizers equals
+the ones from the DocumentInteractionController.
+
+332
+00:29:06,750 --> 00:29:16,310
+So, now that I've done that, I need to do one more thing to
+actually support Quick Look and preview in my application.
+
+333
+00:29:16,310 --> 00:29:22,030
+And that's to implement the delegate method
+documentInteractionControllerViewControllerForPreview
+
+334
+00:29:22,030 --> 00:29:23,780
+as Jason said before.
+
+335
+00:29:23,780 --> 00:29:31,390
+Now, I've saved a way, the table view
+controller in my setDocumentName method.
+
+336
+00:29:31,390 --> 00:29:34,860
+So for me, this is as simple as
+returning that table view controller.
+
+337
+00:29:34,860 --> 00:29:40,030
+So now we have
+documentInteractionControllerViewControllerForPreview,
+
+338
+00:29:40,030 --> 00:29:41,510
+that simply return the table view controller.
+
+339
+00:29:41,510 --> 00:29:47,830
+Now that DocumentInteractionController has a view controller
+to provide the preview on, we should have all we need
+
+340
+00:29:47,830 --> 00:29:53,770
+to support both preview and opening
+the Options menu on our cell.
+
+341
+00:29:53,770 --> 00:29:56,640
+So let's take a look at that.
+
+342
+00:29:56,640 --> 00:29:59,200
+OK, everything looks the same as before.
+
+343
+00:29:59,200 --> 00:30:05,370
+Now, let's see what happens when I tap on a cell:
+Preview pops up; that's exactly what we wanted.
+
+344
+00:30:05,370 --> 00:30:11,160
+We got that simply from setting the Gesture
+Recognizers on our view, which is the cell.
+
+345
+00:30:11,160 --> 00:30:16,550
+Furthermore, if I tap and hold on say
+text document, I get the ability to--
+
+346
+00:30:16,550 --> 00:30:22,030
+I get the Options menu which gives the user a Quick Look
+option and also the ability to open in any other documents
+
+347
+00:30:22,030 --> 00:30:24,730
+that are registered for that document type.
+
+348
+00:30:24,730 --> 00:30:29,780
+Both of those actions came simply from
+setting the gesture recognizers on the view.
+
+349
+00:30:29,780 --> 00:30:34,210
+And of course implementing ViewControllerForPreview
+Support Preview.
+
+350
+00:30:34,210 --> 00:30:35,940
+OK, so that's good.
+
+351
+00:30:35,940 --> 00:30:40,730
+Now I'd like to customize a little bit.
+
+352
+00:30:40,730 --> 00:30:50,410
+If you look at this view, we see we have the
+document name is Text Document, dub text actually.
+
+353
+00:30:50,410 --> 00:30:55,530
+And that has survived form the URL that we
+provided to the document interaction controller.
+
+354
+00:30:55,530 --> 00:31:03,230
+Now Jason said before, we divide the name from
+the URL unless you derive the UTI from the name.
+
+355
+00:31:03,230 --> 00:31:10,930
+So I want to give it a custom name, say I just want to call
+it "my doc" or whatever makes sense for my application.
+
+356
+00:31:10,930 --> 00:31:18,810
+I can do that by going back to my code where
+I create the document interaction controller.
+
+357
+00:31:18,810 --> 00:31:24,710
+And I'll simply change the name,
+DocumentInteractionController.name = mydoc.
+
+358
+00:31:24,710 --> 00:31:27,720
+Let's give that a shot.
+
+359
+00:31:27,720 --> 00:31:36,030
+OK, so now I QuickLook my doc, or rather text
+document, when actually it's called "my doc".
+
+360
+00:31:36,030 --> 00:31:39,480
+But something weird happened, our icons went away.
+
+361
+00:31:39,480 --> 00:31:40,170
+Why did that happen?
+
+362
+00:31:40,170 --> 00:31:49,100
+Well, as I said and as Jason said, the UTI is derived form
+the name and I change the name to an obviously ambiguous one
+
+363
+00:31:49,100 --> 00:31:52,180
+"my doc," how could we possibly
+know what kind of document that is?
+
+364
+00:31:52,180 --> 00:31:58,700
+So if I'm going to override the name to something
+ambiguous like my doc then I need to also override the UTI
+
+365
+00:31:58,700 --> 00:32:03,500
+so that the document interaction controller
+knows what kind of document I'm talking about.
+
+366
+00:32:03,500 --> 00:32:13,690
+Now in this case, all I ever really wanted to do was change
+the name so rather than trying to calculate the UTI myself
+
+367
+00:32:13,690 --> 00:32:17,700
+from the URL, I'm going to let the
+document interaction controller do that.
+
+368
+00:32:17,700 --> 00:32:22,280
+So the point that I change the name, the
+DocumentInteractionController already knew the UTI.
+
+369
+00:32:22,280 --> 00:32:26,860
+So I'm just going to store that
+away before I change the name.
+
+370
+00:32:26,860 --> 00:32:34,340
+Create a variable called UTI and store the
+DocumentInteractionController.UTI which is an NSString.
+
+371
+00:32:34,340 --> 00:32:42,850
+Then after I set the name, I simply restore that value
+by doing DocumentInteractionController.UTI = UTI.
+
+372
+00:32:42,850 --> 00:32:47,070
+I'd set the UTI right back after I change the name.
+
+373
+00:32:47,070 --> 00:32:49,670
+So now doing that, I can run again.
+
+374
+00:32:49,670 --> 00:32:55,170
+I got my icons back and I still
+have my custom name "my doc."
+
+375
+00:32:55,170 --> 00:33:01,280
+So that's how I can use the name property
+and the UTI property to customize the name
+
+376
+00:33:01,280 --> 00:33:06,330
+that you'll see in the preview a little bit.
+
+377
+00:33:06,330 --> 00:33:11,630
+OK, so now, let's look at this one more time.
+
+378
+00:33:11,630 --> 00:33:15,550
+You see I have these checkmarks on the UITableView cells.
+
+379
+00:33:15,550 --> 00:33:16,970
+Right now I'm not doing anything.
+
+380
+00:33:16,970 --> 00:33:22,230
+But my intention is that this checkmarks
+indicate a document that is not read.
+
+381
+00:33:22,230 --> 00:33:29,020
+And I want to respond to the user actually sort of opening
+or looking at the document by removing that checkmark
+
+382
+00:33:29,020 --> 00:33:31,580
+and indicating that this is a read document.
+
+383
+00:33:31,580 --> 00:33:37,800
+I can do that by using a couple of delegate
+methods from the document interaction controller.
+
+384
+00:33:37,800 --> 00:33:42,780
+Namely, I'm going to use
+documentInteractionControllerDidEndPreview.
+
+385
+00:33:42,780 --> 00:33:49,510
+And it's also possible that the user instead of previewing
+looked at the document by sending into another application.
+
+386
+00:33:49,510 --> 00:33:54,500
+So I'm also going to implement
+documentInteractionControllerDidEndSendingToApplication.
+
+387
+00:33:54,500 --> 00:33:57,470
+So this code is going to be very simple.
+
+388
+00:33:57,470 --> 00:34:01,840
+We'll start by implementing
+documentInteractionControllerDidEndPreview.
+
+389
+00:34:01,840 --> 00:34:09,790
+So my cell knows how to display
+itself by the document read property.
+
+390
+00:34:09,790 --> 00:34:15,970
+Namely, if the document is read, don't show the
+checkmark and if it is not read do show the check mark.
+
+391
+00:34:15,970 --> 00:34:23,380
+So all I need to do in my didEndPreview method is change
+the value of document read so do that setting to "yes".
+
+392
+00:34:23,380 --> 00:34:28,110
+And the second things I'm going to do is simply
+notify my table view control of the read state.
+
+393
+00:34:28,110 --> 00:34:30,520
+And that's all I need to do.
+
+394
+00:34:30,520 --> 00:34:37,020
+My cell will update its view based on
+the document read state and I'll be done.
+
+395
+00:34:37,020 --> 00:34:41,350
+Now let's go ahead and see that running.
+
+396
+00:34:41,350 --> 00:34:47,490
+You see now that I can preview the image.
+
+397
+00:34:47,490 --> 00:34:51,560
+And when I let it go, a check mark
+goes away indicating to the user
+
+398
+00:34:51,560 --> 00:34:56,490
+that I've read the document, or in this case, viewed it.
+
+399
+00:34:56,490 --> 00:35:01,140
+So the other case is if the user actually
+opens the document in another application.
+
+400
+00:35:01,140 --> 00:35:05,710
+For that, we're going to use
+documentInteractionControllerDidEndSendingToApplication.
+
+401
+00:35:05,710 --> 00:35:09,900
+The code is going to be exactly the
+same because I'll again all I need
+
+402
+00:35:09,900 --> 00:35:15,500
+to do is update the document read
+state of my table view cell.
+
+403
+00:35:15,500 --> 00:35:18,130
+So, we set document read again.
+
+404
+00:35:18,130 --> 00:35:20,870
+And again, notify the table view controller.
+
+405
+00:35:20,870 --> 00:35:28,660
+And with this very simple code implemented in
+Interaction Controller didEndSendingToApplication,
+
+406
+00:35:28,660 --> 00:35:36,790
+I'll be able to use the same document as read feature
+when I sent the document to another application.
+
+407
+00:35:36,790 --> 00:35:41,970
+So let's try sending this document to
+the PDF Viewer which we looked for.
+
+408
+00:35:41,970 --> 00:35:45,870
+OK. PDF viewer displays the text.
+
+409
+00:35:45,870 --> 00:35:52,740
+And now, since this is iOS 40, our application is
+suspended in the background and when we go back
+
+410
+00:35:52,740 --> 00:35:57,990
+to that application it will continue running and
+we've gotten our documentInteractionController:
+
+411
+00:35:57,990 --> 00:36:07,250
+didEndSendingToApplication, so the viewer when they return
+to the application see that our text document is now read.
+
+412
+00:36:07,250 --> 00:36:11,640
+So using those simple delegate callbacks we're able
+
+413
+00:36:11,640 --> 00:36:16,270
+to add a little bit more polish and
+custom behavior to our application.
+
+414
+00:36:16,270 --> 00:36:22,640
+And in that, we've seen just how simple it is to add
+a UIDocumentInteractionController to your applications
+
+415
+00:36:22,640 --> 00:36:29,370
+so that you can begin to allow the user to Quick Look
+documents as well as send them to other applications
+
+416
+00:36:29,370 --> 00:36:33,960
+and we've also seen how we can customize that a
+little bit using the name and the UTI properties
+
+417
+00:36:33,960 --> 00:36:37,300
+and using the delegate callbacks to
+add more polish to our application.
+
+418
+00:36:37,300 --> 00:36:43,250
+So let's getting started building
+a UIDocumentInterActionController
+
+419
+00:36:43,250 --> 00:36:46,110
+and I'll hand you back to Jason again for some more sights.
+
+420
+00:36:46,110 --> 00:36:48,190
+[ Applause ]
+
+421
+00:36:48,190 --> 00:36:50,560
+>> Jason Beaver: Thanks again, Luke.
+
+422
+00:36:51,930 --> 00:36:57,360
+So that shows you how easy it is to
+use the built-in Gesture Recognizers
+
+423
+00:36:57,360 --> 00:37:01,030
+to provide a bunch of automatic interaction with your view.
+
+424
+00:37:01,030 --> 00:37:07,920
+But it may not be appropriate in your application
+for tap to bring up the preview or press
+
+425
+00:37:07,920 --> 00:37:09,970
+and hold to bring up those options menus.
+
+426
+00:37:09,970 --> 00:37:16,370
+Say for example you've-- that the view that represents
+a document in your application is a cell in a table view
+
+427
+00:37:16,370 --> 00:37:19,770
+and you want tap to be able to select that row.
+
+428
+00:37:19,770 --> 00:37:22,190
+You don't have to look up those gesture recognizers.
+
+429
+00:37:22,190 --> 00:37:26,180
+All that same functionality is exposed in
+methods on document interaction controller
+
+430
+00:37:26,180 --> 00:37:30,110
+and so you can drive all those interface elements directly.
+
+431
+00:37:30,110 --> 00:37:32,660
+Start with Present Preview.
+
+432
+00:37:32,660 --> 00:37:34,710
+There are two methods that you want to know about.
+
+433
+00:37:34,710 --> 00:37:39,990
+The first is presentPreviewAnimated
+and dismissPreviewAnimated.
+
+434
+00:37:39,990 --> 00:37:45,150
+When you call that, a full screen preview will be
+shown just like it would if the user had tapped on it
+
+435
+00:37:45,150 --> 00:37:50,030
+and you have the Gesture Recognizers hooked up and
+we'll use all the same machinery under the covers,
+
+436
+00:37:50,030 --> 00:37:56,670
+the view controller that you return to us direct the view,
+all those sort of things are used to present the preview.
+
+437
+00:37:56,670 --> 00:38:00,880
+You can also directly present the options menu.
+
+438
+00:38:00,880 --> 00:38:03,550
+There are two ways you can do this.
+
+439
+00:38:03,550 --> 00:38:07,680
+The first is presentOptionsMenuFromRect inView.
+
+440
+00:38:07,680 --> 00:38:10,990
+That will give you that for scale up that we talked about.
+
+441
+00:38:10,990 --> 00:38:14,800
+The other is presentOptionsMenuFromBarButtonItem.
+
+442
+00:38:14,800 --> 00:38:26,950
+And if you want to dismiss the Options Menu you do that
+with dismissMenuAnimated and you'll get the option menu.
+
+443
+00:38:26,950 --> 00:38:36,140
+Similarly, there are cool set of method to present the
+Open In Menu, presentOpenInMenuFromRect: inView: animated:
+
+444
+00:38:36,140 --> 00:38:39,760
+and presentOpenInMenuFromBarButtonItem: animated:
+
+445
+00:38:39,760 --> 00:38:46,230
+and use the exact same dismissMenuAnimated
+method to tear down the Open In Menu.
+
+446
+00:38:46,230 --> 00:38:49,670
+If you do that again, that forces
+the Open In Menu on screen.
+
+447
+00:38:49,670 --> 00:38:57,720
+So let's now look at a demo where we use
+an alternate way to present some of this UI
+
+448
+00:38:57,720 --> 00:39:00,080
+from the Document Interaction Controller.
+
+449
+00:39:00,080 --> 00:39:06,610
+>> Luke Hiesterman: So in the last application, we saw
+basic usage of creating a UIDocumentInteractionController,
+
+450
+00:39:06,610 --> 00:39:12,740
+when using the Can Gesture Recognizers
+to add some interactivity to our view.
+
+451
+00:39:12,740 --> 00:39:20,590
+But as Jason just walked through, you know, sometimes we
+want to explicitly show the preview in code-- via code--
+
+452
+00:39:20,590 --> 00:39:24,620
+or show the options menu via code or even the Open In Menu.
+
+453
+00:39:24,620 --> 00:39:30,440
+So I'm going to go back to your code here and we're
+going to implement basically the same thing we had before
+
+454
+00:39:30,440 --> 00:39:39,600
+but we're just going to modify to show you an example of
+how we might do this if we wanted to handle the showing
+
+455
+00:39:39,600 --> 00:39:42,380
+of the preview and the options menu ourselves.
+
+456
+00:39:42,380 --> 00:39:46,170
+So the first thing I did, there you
+see as I commented out self to adjust
+
+457
+00:39:46,170 --> 00:39:50,300
+to recognizers equals
+documentInteractionContoller.gestureRecognizers.
+
+458
+00:39:50,300 --> 00:39:52,730
+That was the thing that did all that work for us before.
+
+459
+00:39:52,730 --> 00:39:57,080
+We want to make life a little more difficult this time.
+
+460
+00:39:57,080 --> 00:40:03,930
+And so what we're going to do is we're going to allow
+the table views, didSelectRowAtIndexPath method,
+
+461
+00:40:03,930 --> 00:40:08,100
+that's going to be what we're going to use to
+display the preview and the user selects a row.
+
+462
+00:40:08,100 --> 00:40:10,380
+We're going to display the preview.
+
+463
+00:40:10,380 --> 00:40:18,500
+And then we're going to move our sort of long press
+gesture to the actual image view in the table view cell.
+
+464
+00:40:18,500 --> 00:40:22,230
+So let's start with that long press gesture.
+
+465
+00:40:22,230 --> 00:40:30,870
+If you're not familiar with gesture recognizers they, you
+know, go on a specific view and they calculate the gestures
+
+466
+00:40:30,870 --> 00:40:35,590
+that happened on that view that did the touch
+handling for you and hopefully you'll go
+
+467
+00:40:35,590 --> 00:40:37,860
+to the gesture recognizer session tomorrow.
+
+468
+00:40:37,860 --> 00:40:45,070
+So this is going to be as simple as creating a UI long
+press gesture recognizer, just like that, we alloc init.
+
+469
+00:40:45,070 --> 00:40:47,730
+Gesture Recognizers use a target action pattern.
+
+470
+00:40:47,730 --> 00:40:55,150
+So we use self as a target and the action is "handle long
+press," which is a method that we'll write in a second
+
+471
+00:40:55,150 --> 00:40:58,980
+and then we just need to add that
+Gesture Recognizer to the image view.
+
+472
+00:40:58,980 --> 00:41:03,820
+Since we're going to use a long press now, only
+on the image view not the entire cell itself.
+
+473
+00:41:03,820 --> 00:41:07,240
+So, we have image view adjust Recognizer.
+
+474
+00:41:07,240 --> 00:41:09,900
+Now, we can release our gesture.
+
+475
+00:41:09,900 --> 00:41:16,500
+And maybe one more thing because image views
+have user interaction disabled by default,
+
+476
+00:41:16,500 --> 00:41:21,010
+we're going to enable user interaction on our image view.
+
+477
+00:41:21,010 --> 00:41:25,660
+So we used the action "handle long
+press" for our Gesture Recognizer.
+
+478
+00:41:25,660 --> 00:41:28,360
+So, it's something that we need to
+implement and this is why we're going
+
+479
+00:41:28,360 --> 00:41:34,860
+to actually tell the document interaction
+controller to present the Options menu.
+
+480
+00:41:34,860 --> 00:41:41,390
+OK. So handle long press-- it's going
+to look sort of like this in the shell.
+
+481
+00:41:41,390 --> 00:41:47,710
+Gestures Recognizers use a series of
+states from possible begun, ended, cancel,
+
+482
+00:41:47,710 --> 00:41:52,440
+change, things like that in their action.
+
+483
+00:41:52,440 --> 00:41:57,560
+So all we're interested for a long press the begun
+state, because that's when the user has pressed
+
+484
+00:41:57,560 --> 00:42:00,950
+and held long enough for a long press to begin.
+
+485
+00:42:00,950 --> 00:42:07,130
+So in that begun state, now all we need to do is tell our
+document interaction controller to present the Options menu.
+
+486
+00:42:07,130 --> 00:42:14,210
+That looks like this, documentInteractionController:
+presentOptionsMenuFromRect: inView: animated.
+
+487
+00:42:14,210 --> 00:42:19,900
+Now, as Jason touched on before, the
+rect and the view don't mean anything
+
+488
+00:42:19,900 --> 00:42:24,300
+on an iPhone because we just display an action sheet.
+
+489
+00:42:24,300 --> 00:42:29,200
+On iPad this would be the view interacts that
+the animation for the preview comes from.
+
+490
+00:42:29,200 --> 00:42:32,910
+So that's the long press.
+
+491
+00:42:32,910 --> 00:42:36,980
+Now, we're going to go to the table viewController.
+
+492
+00:42:36,980 --> 00:42:42,910
+Now we need to do is implement
+table view didSelectRowAtIndexPath
+
+493
+00:42:42,910 --> 00:42:49,390
+and tell the DocumentInteractionController to present
+a preview since we want to do this manually now.
+
+494
+00:42:49,390 --> 00:42:54,820
+So in didSelectRowAtIndexPath, first thing we need to
+do is actually get the Document Interaction Controller.
+
+495
+00:42:54,820 --> 00:42:58,990
+Each one of our cells has a Document
+Interaction Controller associated with it.
+
+496
+00:42:58,990 --> 00:43:01,530
+So we need to get the cell from the table view.
+
+497
+00:43:01,530 --> 00:43:05,270
+Table view cell for RowAtIndexPath and then query that cell
+
+498
+00:43:05,270 --> 00:43:08,410
+for its Document Interaction Controller,
+that's what we do here.
+
+499
+00:43:08,410 --> 00:43:14,880
+So now we have the Document Interaction Controller,
+we just need to tell it to present its preview.
+
+500
+00:43:14,880 --> 00:43:19,360
+DocumentInteractionController: presentPreviewAnimated: yes.
+
+501
+00:43:19,360 --> 00:43:29,480
+So we've eliminated the self to adjust to recognizers
+equals documentInteractionController.gestureRecognizers
+
+502
+00:43:29,480 --> 00:43:35,220
+and we've used actual explicit calls to the
+display the Options Menu and the preview.
+
+503
+00:43:35,220 --> 00:43:38,310
+And we'll see that work now.
+
+504
+00:43:38,310 --> 00:43:44,080
+When I select the cell, the preview
+is displayed for us just as before.
+
+505
+00:43:44,080 --> 00:43:50,550
+And similarly, when I go and if I long press on
+the cell, we'll see it doesn't do anything anymore
+
+506
+00:43:50,550 --> 00:43:53,950
+since we're no longer using the
+gesture recognizers on the cell itself.
+
+507
+00:43:53,950 --> 00:44:00,200
+But if I go over here and I long press on the image
+view which is the icon I get my Options Menu again
+
+508
+00:44:00,200 --> 00:44:04,220
+which I am manually displaying with the code.
+
+509
+00:44:04,220 --> 00:44:10,860
+So obviously, it's very easy and in general we're going
+to recommend that you use the canned gesture recognizers
+
+510
+00:44:10,860 --> 00:44:13,080
+that come with UIDocumentInteractionController.
+
+511
+00:44:13,080 --> 00:44:19,180
+But if it makes sense for your application to manually
+present the Options Menu, the opening menu or the preview
+
+512
+00:44:19,180 --> 00:44:23,800
+in code that's exactly how you do that
+and you see of course it's very easy.
+
+513
+00:44:23,800 --> 00:44:35,510
+So that's all I need to show you there and I'll hand
+you back to Jason once again for some more sights.
+
+514
+00:44:35,510 --> 00:44:36,360
+[ Applause ]
+
+515
+00:44:36,360 --> 00:44:38,970
+>> Jason Beaver: Thanks again, Luke.
+
+516
+00:44:38,970 --> 00:44:42,350
+Alright, finally, let's talk a little
+bit about the Quick Look Framework.
+
+517
+00:44:42,350 --> 00:44:47,350
+As I mentioned before the Quick Look framework sits
+below the Document Interaction Controller and provides
+
+518
+00:44:47,350 --> 00:44:53,900
+that full screen preview but you can control that
+more directly if that makes sense in your application.
+
+519
+00:44:53,900 --> 00:44:55,580
+So what does it provide to you?
+
+520
+00:44:55,580 --> 00:45:03,200
+Well it provides a dedicated view
+controller that's used to preview documents.
+
+521
+00:45:03,200 --> 00:45:07,850
+Here's a simple example of the preview
+print and preview in a numbers document
+
+522
+00:45:07,850 --> 00:45:14,550
+but the QLPreviewController supports
+a wide variety of document types.
+
+523
+00:45:16,070 --> 00:45:20,200
+We support PDF, HTML, and a wide variety of rich formats--
+
+524
+00:45:20,200 --> 00:45:29,790
+rich text formats as well as a wide variety of plain text
+formats, a large number of image types are supported,
+
+525
+00:45:29,790 --> 00:45:34,760
+contacts, and events can be previewed
+directly as well as all
+
+526
+00:45:34,760 --> 00:45:40,060
+of the Apple iWork document types
+and Microsoft Office document types.
+
+527
+00:45:40,060 --> 00:45:46,010
+And if you were, like I said before, familiar with Quick
+Look on the desktop, the API is very similar on the device.
+
+528
+00:45:46,010 --> 00:45:55,910
+So to get started, all we need to
+do is create a QLPreviewController
+
+529
+00:45:55,910 --> 00:46:01,990
+and we do that by importing the Quick Look header out
+of the Quick Look framework and then simply allocating
+
+530
+00:46:01,990 --> 00:46:04,600
+and initializing the QLPreviewController.
+
+531
+00:46:04,600 --> 00:46:11,380
+Now this is just a subclass of UIViewController so you
+present it like you would in any other view controller.
+
+532
+00:46:11,380 --> 00:46:17,770
+You can either use UIViewControllers
+presentModalViewController: animated:
+
+533
+00:46:17,770 --> 00:46:22,630
+method which will present the preview controller
+in a modal fashion on top of your view controller
+
+534
+00:46:22,630 --> 00:46:26,850
+and that's what the Document Interaction
+Controller typically does
+
+535
+00:46:26,850 --> 00:46:31,970
+or you can push a view controller onto a navigation stack.
+
+536
+00:46:31,970 --> 00:46:37,140
+Now the Document Interaction Controller actually will also
+do this one too if the view controller that you happen
+
+537
+00:46:37,140 --> 00:46:39,820
+to returned to us is a navigation controller.
+
+538
+00:46:39,820 --> 00:46:47,450
+So that gets the view controller on screen
+but we haven't given it any content yet.
+
+539
+00:46:47,450 --> 00:46:55,010
+The QLPreviewController uses a data source model to get
+its content and there are two methods you need to implement
+
+540
+00:46:55,010 --> 00:46:58,080
+to provide data to the QLPreviewController.
+
+541
+00:46:58,080 --> 00:47:06,890
+The first is numberOfPreviewItemsInPreviewController: and
+the second one is previewController: previewItemAtIndex.
+
+542
+00:47:06,890 --> 00:47:10,530
+So here's a simple sort of graphical example.
+
+543
+00:47:10,530 --> 00:47:14,200
+In your model, you have some number
+of items that you want to preview.
+
+544
+00:47:14,200 --> 00:47:20,160
+And using these two methods, you tell the preview
+controller how many you have and when asked
+
+545
+00:47:20,160 --> 00:47:24,490
+by the preview controller you return
+the appropriate one at that index.
+
+546
+00:47:24,490 --> 00:47:31,530
+Now in order to actually display these, these
+items need to implement the QLPreviewItem protocol.
+
+547
+00:47:31,530 --> 00:47:34,030
+So what's that?
+
+548
+00:47:34,030 --> 00:47:37,830
+Well first I should mention that
+there is one class in our system
+
+549
+00:47:37,830 --> 00:47:42,380
+that already implements the QLPreviewItem
+protocol and that's NSURL.
+
+550
+00:47:42,380 --> 00:47:52,100
+So if the URL for your document expresses everything
+you want to display the last path component has the name
+
+551
+00:47:52,100 --> 00:47:57,420
+that you would like to display visually, you can
+just return the URL to the QLPreview Controller.
+
+552
+00:47:57,420 --> 00:48:00,370
+Your document will be previewed.
+
+553
+00:48:00,370 --> 00:48:05,730
+But if you want to change that name that appears at the
+top like we did in the Document Interaction Controller,
+
+554
+00:48:05,730 --> 00:48:09,130
+you'll want to provide some alternate object
+and this can be a really simple little object.
+
+555
+00:48:09,130 --> 00:48:13,810
+There are only two methods that you need
+to implement in the QLPreviewItem protocol.
+
+556
+00:48:13,810 --> 00:48:15,410
+The first is that URL.
+
+557
+00:48:15,410 --> 00:48:18,740
+You obviously already had that so just return it.
+
+558
+00:48:18,740 --> 00:48:21,350
+And the second is the title which is the
+thing you want to display at the top.
+
+559
+00:48:21,350 --> 00:48:23,050
+So again, this is a really tiny little class.
+
+560
+00:48:23,050 --> 00:48:26,220
+It's trivial to implement if you
+do need to change the behavior.
+
+561
+00:48:26,220 --> 00:48:34,830
+There are a few delegate methods that are
+interesting that the QLPreviewController offers.
+
+562
+00:48:34,830 --> 00:48:42,300
+The first two are notifications on dismissal of the preview.
+
+563
+00:48:42,300 --> 00:48:48,130
+When the dismissal is about to happen and after it
+did dismiss, you're sent these delegate messages.
+
+564
+00:48:48,130 --> 00:48:53,730
+The third preview controller should
+open URL for preview item--
+
+565
+00:48:53,730 --> 00:49:00,230
+is called if the document that's being previewed has
+a clickable link in it and the user clicks on it,
+
+566
+00:49:00,230 --> 00:49:02,660
+you're sent this message and there's a Boolean return here
+
+567
+00:49:02,660 --> 00:49:07,970
+and you can indicate whether the
+user is allowed to open that link.
+
+568
+00:49:10,630 --> 00:49:17,150
+With that, let's bring Luke up one last time and take
+a look at how to use QLPreviewController directly.
+
+569
+00:49:17,150 --> 00:49:21,510
+>> Luke Hiesterman: OK, thanks Jason.
+
+570
+00:49:21,510 --> 00:49:26,470
+Alright. So up to this point, we've seen
+how to use a UIDocumentInteractionController
+
+571
+00:49:26,470 --> 00:49:28,790
+and the various things that we can do with that.
+
+572
+00:49:28,790 --> 00:49:33,540
+And that's great for interacting with one
+document in time but sometimes we want to go down
+
+573
+00:49:33,540 --> 00:49:39,940
+and actually use the QLPreviewController and one of the main
+advantages that we get from that is we can allow the user
+
+574
+00:49:39,940 --> 00:49:47,530
+to Quick Look a set of documents sort of as a set
+rather than one document at a time as we saw before.
+
+575
+00:49:47,530 --> 00:49:55,980
+So let's go back to our application and we're going to
+change the implementation to use QLPreviewController.
+
+576
+00:49:55,980 --> 00:50:02,290
+So we're here back in our table view controller
+and this is the table view didSelectRowAtIndexPath
+
+577
+00:50:02,290 --> 00:50:05,310
+that we just implemented to present the preview.
+
+578
+00:50:05,310 --> 00:50:13,570
+Well, we're going to go ahead and get rid of that because
+we're going to now do Quick Look via QLPreviewController.
+
+579
+00:50:13,570 --> 00:50:15,780
+And let's see just how easy that is.
+
+580
+00:50:15,780 --> 00:50:20,210
+So obviously, first thing we need to
+do is create a QLPreviewController.
+
+581
+00:50:20,210 --> 00:50:21,970
+Do that with alloc init.
+
+582
+00:50:21,970 --> 00:50:25,520
+We want to delegate in the data source to be our self.
+
+583
+00:50:25,520 --> 00:50:26,940
+So we'll do that.
+
+584
+00:50:26,940 --> 00:50:32,290
+We need to tell the preview controller what index to
+start at in the set of documents that we're getting that
+
+585
+00:50:32,290 --> 00:50:37,940
+and we get that easily from the index path that was
+sent in to table viewed didSelectRowAtIndexPath.
+
+586
+00:50:37,940 --> 00:50:40,260
+So we set the current preview item index to the--
+
+587
+00:50:40,260 --> 00:50:44,720
+to the section because each document
+gets its own section in our application.
+
+588
+00:50:44,720 --> 00:50:47,800
+And then we simply need to display the preview controller.
+
+589
+00:50:47,800 --> 00:50:52,270
+So we do that with presentModalViewController,
+animate the preview controller.
+
+590
+00:50:52,270 --> 00:50:54,880
+Then we can go ahead and release the preview controller.
+
+591
+00:50:54,880 --> 00:51:00,400
+So we need to implement to the data source
+methods, the two data source methods,
+
+592
+00:51:00,400 --> 00:51:02,350
+so that our preview controller will work.
+
+593
+00:51:02,350 --> 00:51:06,660
+We need to tell it how many preview
+items are in the QLPreviewController.
+
+594
+00:51:06,660 --> 00:51:10,130
+So we do that with numberOfPreviewItemsInPreviewController.
+
+595
+00:51:10,130 --> 00:51:12,470
+For us, it's very simple.
+
+596
+00:51:12,470 --> 00:51:16,900
+We return a macro num docs which represents
+the four documents that our application uses.
+
+597
+00:51:16,900 --> 00:51:19,080
+So that's just four, very simple.
+
+598
+00:51:19,080 --> 00:51:28,300
+And then we need to return a QLPreview item
+for each item that the user might Quick Look.
+
+599
+00:51:28,300 --> 00:51:33,580
+As Jason talked about before, NSURL already
+implements the QLPreview item protocol.
+
+600
+00:51:33,580 --> 00:51:36,640
+So it is a fully qualified preview item.
+
+601
+00:51:36,640 --> 00:51:42,850
+And we'll take advantage of that in our app
+to just return NSURLs for each preview item.
+
+602
+00:51:42,850 --> 00:51:50,290
+So previewController: previewItemAtIndex:, we're going
+to get the file path from NSBundle the same way we did
+
+603
+00:51:50,290 --> 00:51:55,720
+in the cell before when we used that file
+patch to create a URL, same as we did before.
+
+604
+00:51:55,720 --> 00:51:59,260
+Set the URL to null and then we have a valid file path.
+
+605
+00:51:59,260 --> 00:52:07,130
+We can just create it using NSURL-- URLWithPath
+and then all we need to do is return that URL.
+
+606
+00:52:07,130 --> 00:52:14,730
+OK. So we've implemented the two data source
+methods, numberOfPreviewItemsInPreviewController:
+
+607
+00:52:14,730 --> 00:52:18,910
+and PreviewController preview Item
+At Index And that would be enough
+
+608
+00:52:18,910 --> 00:52:22,700
+to get started using the preview--
+QLPreviewController in our application.
+
+609
+00:52:22,700 --> 00:52:29,970
+So now, when the user taps on the
+document, we get a preview, a Quick Look,
+
+610
+00:52:29,970 --> 00:52:37,060
+just the same as before except there's one little
+difference and you'll see down here, there's a little bar
+
+611
+00:52:37,060 --> 00:52:40,940
+and that actually allows the user to
+interact with the documents as a set.
+
+612
+00:52:40,940 --> 00:52:51,060
+We have a set of four that the user can now arrow
+through and Quick Look each one of them in turn.
+
+613
+00:52:51,060 --> 00:52:53,900
+Now, something else has changed.
+
+614
+00:52:53,900 --> 00:52:59,510
+You'll see that our check marks no longer
+disappear when we view the documents.
+
+615
+00:52:59,510 --> 00:53:04,870
+If we're going to be using QLPreviewController,
+this is something that we need to re-implement
+
+616
+00:53:04,870 --> 00:53:10,760
+for the QLPreviewController since that was
+set up UIDocumentInteractionController before.
+
+617
+00:53:10,760 --> 00:53:19,550
+Fortunately for us, this is going to be a trivial task as
+we simply need to mark each document as read as we hit it
+
+618
+00:53:19,550 --> 00:53:22,640
+in previewController: previewItemAtIndex.
+
+619
+00:53:22,640 --> 00:53:29,680
+So as soon as we create the URL, we can simply
+use the index that's given to us as an argument
+
+620
+00:53:29,680 --> 00:53:41,230
+and set the document read based on that index and now
+when we run it, see, I can quickly click text document.
+
+621
+00:53:41,230 --> 00:53:47,140
+I can arrow over to image document and when that's
+done, both of those document types are marked as read.
+
+622
+00:53:47,140 --> 00:53:52,520
+So I was able to re-implement that
+using the QLPreview Controller.
+
+623
+00:53:52,520 --> 00:53:57,810
+As Jason talked about before, I could also
+re-implement the custom naming if I wanted
+
+624
+00:53:57,810 --> 00:54:06,710
+to create my own QLPreview item compliant object, but in
+this case, I'll leave it at that and I encourage any of you
+
+625
+00:54:06,710 --> 00:54:09,440
+who are interested to explore writing that yourself.
+
+626
+00:54:09,440 --> 00:54:14,010
+So that's another option that we
+can use, QLPreviewController.
+
+627
+00:54:14,010 --> 00:54:18,220
+We have both UIDocumentInteractionController
+and QLPreviewController.
+
+628
+00:54:18,220 --> 00:54:23,930
+Document Interaction Controller allows us to interact as
+one document at a time and the QLPreviewController allows us
+
+629
+00:54:23,930 --> 00:54:30,560
+to use-- allows us to present them to the user as a set,
+so these are couple of options that we have at our behesty
+
+630
+00:54:30,560 --> 00:54:33,040
+as programmers and I hope you enjoy using them.
+
+631
+00:54:33,040 --> 00:54:37,610
+So thank you very much and I'll
+hand you back once more to Jason.
+
+632
+00:54:37,610 --> 00:54:43,340
+[ Applause ]
+
+633
+00:54:43,340 --> 00:54:47,860
+>> Jason Beaver: Alright, thanks again Luke.
+
+634
+00:54:47,860 --> 00:54:54,440
+If you wanted more information, the application frameworks
+evangelist is Bill Dudney and his contact info is here.
+
+635
+00:54:54,440 --> 00:55:00,300
+There's also Documentation for the
+UIDocumentInteractionController up on developer.apple.com.
+
+636
+00:55:00,300 --> 00:55:04,160
+So the URL is a little long here
+but you can search for that.
+
+637
+00:55:04,160 --> 00:55:07,390
+And of course the Developer Forums are a
+great place to get your questions answered.
+
+638
+00:55:07,390 --> 00:55:11,900
+There's a bunch of the engineers who hang
+out there as well as a lot of you guys
+
+639
+00:55:11,900 --> 00:55:14,380
+and you don't have to go through this alone.
+
+640
+00:55:14,380 --> 00:55:18,440
+There're a lot of people out there that can help.
+
+641
+00:55:18,440 --> 00:55:20,080
+There are a couple of related sessions.
+
+642
+00:55:20,080 --> 00:55:23,620
+We talked about Gesture Recognizers and their use briefly.
+
+643
+00:55:23,620 --> 00:55:30,270
+But Gesture Recognizers are really powerful and allow you to
+add a lot of really rich interaction to your applications.
+
+644
+00:55:30,270 --> 00:55:32,330
+There are two sessions tomorrow.
+
+645
+00:55:32,330 --> 00:55:36,150
+The first one talks about how to use
+all the built-in Gesture Recognizers.
+
+646
+00:55:36,150 --> 00:55:41,110
+The second one talks about how to
+write your own Gesture Recognizers.
+
+647
+00:55:41,110 --> 00:55:47,510
+So quickly in summary, adding support for
+documents in your application is really simple.
+
+648
+00:55:47,510 --> 00:55:50,430
+Hopefully, I've shown it's-- not
+much work for you to do that.
+
+649
+00:55:50,430 --> 00:55:51,580
+And so, I encourage you to do that.
+
+650
+00:55:51,580 --> 00:55:57,320
+And secondly, if you're going to allow interaction with
+documents, please use UIDocumentInteractionController.
+
+651
+00:55:57,320 --> 00:56:03,430
+It'll not only automate a lot of work for you, it'll
+provide a level of consistency in your application with all
+
+652
+00:56:03,430 --> 00:56:06,670
+of the built-in application and other
+applications provided by third party developers.
+
