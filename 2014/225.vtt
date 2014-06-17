@@ -1,0 +1,3790 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:13.896 A:middle
+[ Silence ]
+
+00:00:14.396 --> 00:00:18.726 A:middle
+&gt;&gt; Hello. Welcome to Session
+225, What's New in Core Data.
+
+00:00:19.296 --> 00:00:20.266 A:middle
+I am Melissa Turner.
+
+00:00:20.266 --> 00:00:21.916 A:middle
+I am one of the engineers
+who works on Core Data,
+
+00:00:21.916 --> 00:00:24.196 A:middle
+and I'm going to be here
+talking to you about sort
+
+00:00:24.196 --> 00:00:26.066 A:middle
+of all the new stuff
+that we have been doing,
+
+00:00:26.576 --> 00:00:28.456 A:middle
+stuff that you're likely
+to be interested in.
+
+00:00:29.336 --> 00:00:31.486 A:middle
+So, what are we going
+to talk about today?
+
+00:00:31.666 --> 00:00:35.236 A:middle
+Well, first on the list, first
+on the agenda is some new API,
+
+00:00:36.176 --> 00:00:38.156 A:middle
+batch updates, and
+asynchronous fetching.
+
+00:00:38.546 --> 00:00:41.836 A:middle
+I am going to talk about the
+implications of those two APIs
+
+00:00:41.836 --> 00:00:43.716 A:middle
+for those of you have
+implemented your own
+
+00:00:43.716 --> 00:00:44.706 A:middle
+incremental stores.
+
+00:00:44.886 --> 00:00:47.946 A:middle
+I'm going to talk about the
+Core Data concurrency story.
+
+00:00:48.416 --> 00:00:50.056 A:middle
+That's the theme
+that seems to come
+
+00:00:50.056 --> 00:00:51.486 A:middle
+up every year in
+our presentations.
+
+00:00:51.726 --> 00:00:54.916 A:middle
+I'm going to give an iCloud
+update, state of affairs,
+
+00:00:55.076 --> 00:00:57.416 A:middle
+and I'm going to talk
+about what I'm sure is
+
+00:00:57.416 --> 00:00:58.966 A:middle
+on all your minds, Swift.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:02.396 --> 00:01:06.136 A:middle
+Batch updates, what are
+they, why do you care?
+
+00:01:07.136 --> 00:01:12.936 A:middle
+Well, they're a way to mass
+update data in the database,
+
+00:01:12.936 --> 00:01:14.986 A:middle
+bypassing the Managed
+Object Context
+
+00:01:14.986 --> 00:01:18.346 A:middle
+and editing the store directly.
+
+00:01:18.456 --> 00:01:21.906 A:middle
+It's primarily centrally
+intended
+
+00:01:21.906 --> 00:01:24.326 A:middle
+for updating attribute values,
+
+00:01:24.766 --> 00:01:26.556 A:middle
+and it's really a
+performance optimization
+
+00:01:26.556 --> 00:01:30.196 A:middle
+because if you think about how
+Core Data works, up until now,
+
+00:01:30.886 --> 00:01:35.546 A:middle
+if you wanted to edit, say
+10,000, 20,000 lines in a field,
+
+00:01:36.036 --> 00:01:39.166 A:middle
+you've gone on vacation and left
+your phone behind and come back
+
+00:01:39.226 --> 00:01:41.686 A:middle
+to discover that your coworkers
+have been really, really busy,
+
+00:01:41.966 --> 00:01:44.516 A:middle
+and you have a lot
+of SCM messages.
+
+00:01:44.516 --> 00:01:48.416 A:middle
+If you wanted to mark all of
+those read in one fell swoop,
+
+00:01:48.416 --> 00:01:51.216 A:middle
+you would have to load
+all of the objects
+
+00:01:51.336 --> 00:01:54.866 A:middle
+into the Managed Object Context,
+edit them, and save them,
+
+00:01:54.866 --> 00:01:59.746 A:middle
+and there was a problem
+here, which will kind of look
+
+00:01:59.746 --> 00:02:02.206 A:middle
+like this, which is on a
+memory-constrained device,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:59.746 --> 00:02:02.206 A:middle
+like this, which is on a
+memory-constrained device,
+
+00:02:02.606 --> 00:02:04.126 A:middle
+loading every single object
+
+00:02:04.806 --> 00:02:07.596 A:middle
+into memory doesn't
+necessarily work that well.
+
+00:02:08.376 --> 00:02:10.306 A:middle
+Jetsam may take offense.
+
+00:02:11.826 --> 00:02:15.856 A:middle
+So version 2 was simply that
+you would do this in batches.
+
+00:02:15.986 --> 00:02:20.496 A:middle
+You'd load a few objects,
+edit them, save them.
+
+00:02:21.606 --> 00:02:26.066 A:middle
+Load a few more objects,
+edit them, save them.
+
+00:02:26.306 --> 00:02:29.266 A:middle
+Well, there's sort of a problem
+with this approach as well,
+
+00:02:29.626 --> 00:02:31.146 A:middle
+and it kind of looks like this.
+
+00:02:31.736 --> 00:02:35.256 A:middle
+It takes time, and
+users are likely
+
+00:02:35.256 --> 00:02:37.976 A:middle
+to encounter a progress
+indicator as they wait
+
+00:02:37.976 --> 00:02:40.556 A:middle
+for whatever set of changes
+it was that you were making.
+
+00:02:41.166 --> 00:02:45.086 A:middle
+So what we've done now is
+we've added a new method
+
+00:02:45.086 --> 00:02:46.796 A:middle
+to NSManagedObjectContext.
+
+00:02:46.796 --> 00:02:48.346 A:middle
+It's executeRequest:error.
+
+00:02:49.126 --> 00:02:51.056 A:middle
+It takes an
+NSPersistentStoreRequest,
+
+00:02:51.056 --> 00:02:53.606 A:middle
+some of you are probably
+familiar with that class name.
+
+00:02:53.606 --> 00:02:56.416 A:middle
+It's the base class
+for NSFetchRequest
+
+00:02:56.416 --> 00:02:58.136 A:middle
+and NSSaveChangesRequest.
+
+00:02:58.136 --> 00:03:02.836 A:middle
+It's now the new parent class
+for NSBatchUpdateRequest
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:58.136 --> 00:03:02.836 A:middle
+It's now the new parent class
+for NSBatchUpdateRequest
+
+00:03:02.836 --> 00:03:04.526 A:middle
+as well, and we'll talk
+about that in this slide.
+
+00:03:05.786 --> 00:03:08.406 A:middle
+ExecuteRequest returns
+a PersistentStoreResult.
+
+00:03:08.566 --> 00:03:09.596 A:middle
+That's a new class.
+
+00:03:09.596 --> 00:03:12.226 A:middle
+It's sort of an abstract super
+class intended to be the parent
+
+00:03:12.226 --> 00:03:14.426 A:middle
+of anything that's
+returned from this method.
+
+00:03:14.766 --> 00:03:17.406 A:middle
+And we've added
+NSBatchUpdateResult
+
+00:03:17.406 --> 00:03:21.326 A:middle
+as its first child subclass
+to return the results
+
+00:03:21.366 --> 00:03:23.876 A:middle
+of a BatchUpdateRequest.
+
+00:03:24.586 --> 00:03:27.526 A:middle
+BatchUpdateRequest itself should
+look pretty familiar to those
+
+00:03:27.526 --> 00:03:30.246 A:middle
+of you who are familiar
+with FetchRequests.
+
+00:03:30.246 --> 00:03:32.186 A:middle
+It allows you to
+specify an entity;
+
+00:03:32.186 --> 00:03:34.596 A:middle
+it's the entity whose
+instances you want changed.
+
+00:03:35.336 --> 00:03:37.606 A:middle
+It allows you to specify
+the affected stores,
+
+00:03:37.606 --> 00:03:40.256 A:middle
+one or more stores containing
+data that you want to change.
+
+00:03:40.866 --> 00:03:43.686 A:middle
+It allows you to give
+a predicate specifying
+
+00:03:43.686 --> 00:03:45.896 A:middle
+which specific instances
+you're interested in changing.
+
+00:03:45.896 --> 00:03:48.766 A:middle
+It's the same kind of predicate
+you set on NSFetchRequest,
+
+00:03:48.766 --> 00:03:50.586 A:middle
+has all the same
+power and flexibility.
+
+00:03:51.276 --> 00:03:52.756 A:middle
+You can use subqueries
+if you want to.
+
+00:03:53.196 --> 00:03:55.876 A:middle
+It allows you to specify
+the properties to update.
+
+00:03:56.376 --> 00:03:57.636 A:middle
+This is a dictionary.
+
+00:03:57.636 --> 00:04:00.526 A:middle
+It specifies the
+property as a key
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:57.636 --> 00:04:00.526 A:middle
+It specifies the
+property as a key
+
+00:04:00.526 --> 00:04:02.106 A:middle
+that will be either
+the property name
+
+00:04:02.106 --> 00:04:03.396 A:middle
+or the NSPropertyDescription
+
+00:04:04.036 --> 00:04:07.506 A:middle
+and NSExpression describing
+the update as a value.
+
+00:04:07.506 --> 00:04:09.316 A:middle
+This can be a constant
+value expression,
+
+00:04:09.316 --> 00:04:14.486 A:middle
+a function expression operating
+on keypads in the object graph,
+
+00:04:15.166 --> 00:04:17.236 A:middle
+pretty much anything
+that's supported as part
+
+00:04:17.236 --> 00:04:19.276 A:middle
+of PropertiesToFetch
+is supported here.
+
+00:04:19.276 --> 00:04:21.745 A:middle
+Pretty much anything that's
+either a valid left-hand side
+
+00:04:21.745 --> 00:04:23.886 A:middle
+or a right-hand side in a
+fetch predicate is going
+
+00:04:23.886 --> 00:04:24.456 A:middle
+to valid here.
+
+00:04:24.876 --> 00:04:27.676 A:middle
+It also allows you to
+specify a result type,
+
+00:04:27.826 --> 00:04:29.646 A:middle
+and the result type
+is kind of interesting
+
+00:04:29.646 --> 00:04:32.726 A:middle
+because you'll always get
+an NSBatchUpdateResult
+
+00:04:33.226 --> 00:04:35.376 A:middle
+from executeRequest.
+
+00:04:35.776 --> 00:04:39.926 A:middle
+That will indicate whether, you
+know, your operation succeeded
+
+00:04:39.926 --> 00:04:44.066 A:middle
+or failed-- the existence
+of the instance itself.
+
+00:04:44.136 --> 00:04:50.916 A:middle
+But it may also have
+result properties set on it.
+
+00:04:50.916 --> 00:04:52.736 A:middle
+This result property can
+be a couple of things.
+
+00:04:53.326 --> 00:04:55.136 A:middle
+If you're just interested
+in finding out whether
+
+00:04:55.136 --> 00:04:58.506 A:middle
+or not anything changed in
+the database, you can set it
+
+00:04:58.506 --> 00:05:01.666 A:middle
+to return Account, which will
+just give you the number of rows
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:58.506 --> 00:05:01.666 A:middle
+to return Account, which will
+just give you the number of rows
+
+00:05:01.666 --> 00:05:04.026 A:middle
+that were actually
+changed as a result
+
+00:05:04.026 --> 00:05:07.466 A:middle
+of that batch update
+operation, or if you want,
+
+00:05:07.606 --> 00:05:10.726 A:middle
+you can get a list of the
+object IDs of the rows
+
+00:05:10.726 --> 00:05:12.176 A:middle
+that were changed
+in that operation,
+
+00:05:12.676 --> 00:05:14.866 A:middle
+and that's interesting
+for one particular reason,
+
+00:05:14.866 --> 00:05:17.546 A:middle
+which is that because this
+is a batch update operation,
+
+00:05:17.786 --> 00:05:20.596 A:middle
+and because we're operating
+directly on the store itself
+
+00:05:20.596 --> 00:05:24.066 A:middle
+and bypassing the Manage Object
+Context, none of the changes
+
+00:05:24.066 --> 00:05:25.896 A:middle
+that are made in the
+store as a result
+
+00:05:25.896 --> 00:05:27.656 A:middle
+of that operation
+will be reflected
+
+00:05:27.656 --> 00:05:29.016 A:middle
+in the Managed Object Context
+
+00:05:29.386 --> 00:05:32.596 A:middle
+until you call refresh
+Object on those objects.
+
+00:05:33.176 --> 00:05:36.386 A:middle
+So if you're interested in
+updating your database en masse,
+
+00:05:37.386 --> 00:05:40.636 A:middle
+setting a flag on a
+particular column for example,
+
+00:05:40.916 --> 00:05:42.796 A:middle
+and then reflecting those
+changes in the UI, you're going
+
+00:05:42.796 --> 00:05:46.936 A:middle
+to need to get the results or
+the Managed Object IDs back,
+
+00:05:47.086 --> 00:05:49.646 A:middle
+so you can tell the object,
+tell the Managed Object Context
+
+00:05:49.976 --> 00:05:53.406 A:middle
+to refresh the objects
+with those IDs.
+
+00:05:53.536 --> 00:05:58.336 A:middle
+Another implication of the way
+this is set up is that, well,
+
+00:05:58.336 --> 00:06:00.396 A:middle
+context doesn't know anything
+about the changes you're making,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:58.336 --> 00:06:00.396 A:middle
+context doesn't know anything
+about the changes you're making,
+
+00:06:00.396 --> 00:06:03.796 A:middle
+so the validation
+rules are not run.
+
+00:06:04.306 --> 00:06:06.266 A:middle
+This means it is
+now possible for you
+
+00:06:06.266 --> 00:06:08.006 A:middle
+to add bad data to
+your database.
+
+00:06:08.216 --> 00:06:09.066 A:middle
+Please don't do that.
+
+00:06:09.206 --> 00:06:11.496 A:middle
+Your customers will
+not appreciate it.
+
+00:06:13.066 --> 00:06:16.406 A:middle
+But if you do do this,
+accidentally fill
+
+00:06:16.406 --> 00:06:19.006 A:middle
+in a bad field, what it
+means is that your customers,
+
+00:06:19.006 --> 00:06:22.556 A:middle
+the next time they load that
+object, edit the object, and try
+
+00:06:22.556 --> 00:06:24.926 A:middle
+and save, are going to
+get a validation failure,
+
+00:06:24.926 --> 00:06:27.476 A:middle
+and they may be fairly
+confused as to what happened,
+
+00:06:27.476 --> 00:06:29.736 A:middle
+since that may not have
+changed that actual field.
+
+00:06:31.236 --> 00:06:34.286 A:middle
+We do update the optimistic
+locking version in the database
+
+00:06:34.286 --> 00:06:36.166 A:middle
+for all of the rows
+that are changed.
+
+00:06:36.586 --> 00:06:38.816 A:middle
+This means now that
+even if you're
+
+00:06:38.816 --> 00:06:41.336 A:middle
+in a single persistent
+store coordinator
+
+00:06:41.976 --> 00:06:43.636 A:middle
+or single managed
+object context,
+
+00:06:43.736 --> 00:06:45.916 A:middle
+single persistent store
+coordinator, single instance
+
+00:06:45.916 --> 00:06:48.776 A:middle
+of NSPersistentStore, and all
+of the changes you make go
+
+00:06:48.776 --> 00:06:52.576 A:middle
+through that setup, you can
+now create a merge conflict
+
+00:06:52.576 --> 00:06:54.766 A:middle
+with yourself as you go
+down and edit the database,
+
+00:06:55.346 --> 00:06:57.686 A:middle
+and the context doesn't know
+anything about those changes.
+
+00:06:57.686 --> 00:07:00.416 A:middle
+So you're going to need to
+remember to set a merge policy
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:57.686 --> 00:07:00.416 A:middle
+So you're going to need to
+remember to set a merge policy
+
+00:07:00.416 --> 00:07:02.256 A:middle
+on your Managed Object Context
+
+00:07:02.256 --> 00:07:05.036 A:middle
+if you're using this
+API because, well,
+
+00:07:05.096 --> 00:07:07.466 A:middle
+otherwise you may confuse
+the heck out of your users
+
+00:07:07.466 --> 00:07:08.616 A:middle
+as they get save failures.
+
+00:07:09.066 --> 00:07:11.586 A:middle
+And now I'm going to do a demo,
+
+00:07:11.986 --> 00:07:16.526 A:middle
+show you that this
+actually does really work.
+
+00:07:17.346 --> 00:07:23.566 A:middle
+OK, what I have here is a
+simulacrum of a mail system,
+
+00:07:23.566 --> 00:07:27.126 A:middle
+since this is the case where I
+most frequently see this kind
+
+00:07:27.126 --> 00:07:28.156 A:middle
+of batch update happening.
+
+00:07:28.346 --> 00:07:31.046 A:middle
+Got a little application
+that displays, you know,
+
+00:07:31.046 --> 00:07:33.246 A:middle
+messages coming in,
+my manager asking me
+
+00:07:33.246 --> 00:07:35.316 A:middle
+if I got my graphics ready
+for the presentation.
+
+00:07:35.686 --> 00:07:38.756 A:middle
+Managers are so demanding,
+and you say no.
+
+00:07:38.936 --> 00:07:39.906 A:middle
+This is a few days old.
+
+00:07:40.206 --> 00:07:43.646 A:middle
+I can come through and as I edit
+the, as I select these messages,
+
+00:07:43.646 --> 00:07:47.276 A:middle
+you can see that the Read
+indicator is being marked
+
+00:07:47.276 --> 00:07:50.906 A:middle
+as well, or the Unread
+indicator is being vanished.
+
+00:07:51.196 --> 00:07:52.476 A:middle
+I'm going to come down here.
+
+00:07:52.476 --> 00:07:54.416 A:middle
+I'm going to look at
+this other mailbox,
+
+00:07:55.046 --> 00:07:59.346 A:middle
+which contains a whole bunch of
+random SCM messages that, well,
+
+00:07:59.996 --> 00:08:01.946 A:middle
+nobody cares about, and I forgot
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:59.996 --> 00:08:01.946 A:middle
+nobody cares about, and I forgot
+
+00:08:01.946 --> 00:08:03.236 A:middle
+to reset my database,
+but oh well.
+
+00:08:03.436 --> 00:08:08.916 A:middle
+And I can come up here and
+batch mark these as Read,
+
+00:08:08.916 --> 00:08:16.196 A:middle
+and we're going to wait, wait,
+wait, wait, wait, wait, because,
+
+00:08:16.196 --> 00:08:21.326 A:middle
+well, this mailbox
+contains 200,000 messages,
+
+00:08:21.436 --> 00:08:23.506 A:middle
+and Core Data is going to
+have to load every single one
+
+00:08:23.506 --> 00:08:25.086 A:middle
+of those, edit them,
+and save them again,
+
+00:08:25.086 --> 00:08:26.266 A:middle
+and that takes a little while.
+
+00:08:26.946 --> 00:08:29.756 A:middle
+As a matter of fact, if
+I come down here and look
+
+00:08:33.876 --> 00:08:38.436 A:middle
+at my project, I'll find
+out it took several seconds.
+
+00:08:39.966 --> 00:08:41.576 A:middle
+Then I'm going to come down,
+
+00:08:41.576 --> 00:08:44.035 A:middle
+this mailbox contains the
+exact same set of messages
+
+00:08:44.035 --> 00:08:45.456 A:middle
+that the previous mailbox did.
+
+00:08:46.046 --> 00:08:48.736 A:middle
+We can come down here and
+mark it as Read, New style.
+
+00:08:51.186 --> 00:08:51.966 A:middle
+That took less than a second.
+
+00:08:52.516 --> 00:08:57.926 A:middle
+[ Applause ]
+
+00:08:58.426 --> 00:09:00.326 A:middle
+So yeah, we think your
+developers are going to be kind
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:58.426 --> 00:09:00.326 A:middle
+So yeah, we think your
+developers are going to be kind
+
+00:09:00.326 --> 00:09:03.206 A:middle
+of happy with this, and just
+as, or your customers are going
+
+00:09:03.206 --> 00:09:06.246 A:middle
+to be happy with this, and just
+as sort of a frame of reference,
+
+00:09:07.526 --> 00:09:11.706 A:middle
+this is the effective command
+that I'm running in SQLite
+
+00:09:12.786 --> 00:09:17.116 A:middle
+to make that update
+happen, and you can see
+
+00:09:17.116 --> 00:09:22.626 A:middle
+that we're pretty close to
+just the raw SQL update times.
+
+00:09:22.896 --> 00:09:25.926 A:middle
+So as I said, changes are
+not reflected in the database
+
+00:09:26.206 --> 00:09:29.136 A:middle
+when the UI updated in that
+application; that was being done
+
+00:09:29.136 --> 00:09:32.206 A:middle
+by KVO tracking that I had
+updated the root property.
+
+00:09:32.636 --> 00:09:34.786 A:middle
+I refreshed the objects
+that were being displayed
+
+00:09:34.786 --> 00:09:36.306 A:middle
+in the table because
+the table view was set
+
+00:09:36.306 --> 00:09:37.386 A:middle
+up to do lazy fetching.
+
+00:09:37.906 --> 00:09:41.366 A:middle
+All your standard Core Data
+make this app perform nice
+
+00:09:41.366 --> 00:09:42.516 A:middle
+and responsive tricks.
+
+00:09:42.996 --> 00:09:44.946 A:middle
+Validation rules, as
+I said, are not run.
+
+00:09:45.756 --> 00:09:47.116 A:middle
+This is kind of running
+with scissors.
+
+00:09:47.656 --> 00:09:49.636 A:middle
+Please don't hurt
+yourself or anybody else.
+
+00:09:50.296 --> 00:09:52.496 A:middle
+We update the optimistic
+locking version in the database.
+
+00:09:52.496 --> 00:09:55.776 A:middle
+I'm just repeating all of this
+to reinforce it, bring it home.
+
+00:09:56.026 --> 00:09:59.116 A:middle
+You can create merge
+conflicts on yourself, so,
+
+00:09:59.116 --> 00:10:00.266 A:middle
+you know, set a merge policy.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:59.116 --> 00:10:00.266 A:middle
+you know, set a merge policy.
+
+00:10:02.076 --> 00:10:03.746 A:middle
+So that's our first new API.
+
+00:10:04.906 --> 00:10:08.586 A:middle
+Our second new API is
+asynchronous fetching.
+
+00:10:09.076 --> 00:10:09.496 A:middle
+What is that?
+
+00:10:09.986 --> 00:10:10.716 A:middle
+Why do you care?
+
+00:10:11.216 --> 00:10:12.946 A:middle
+Well this is actually
+a feature that a lot
+
+00:10:12.946 --> 00:10:15.096 A:middle
+of developers have been asking
+for, for quite some time.
+
+00:10:15.816 --> 00:10:19.766 A:middle
+It allows you to execute a fetch
+in a Managed Object Context
+
+00:10:19.766 --> 00:10:21.846 A:middle
+that will populate that
+Managed Object Context
+
+00:10:21.946 --> 00:10:25.656 A:middle
+without actually blocking
+access to that context
+
+00:10:25.656 --> 00:10:26.886 A:middle
+for the duration of the fetch.
+
+00:10:28.266 --> 00:10:32.116 A:middle
+It's cancellable, which means
+if your user loses interest
+
+00:10:32.116 --> 00:10:34.146 A:middle
+in whatever triggers that
+fetch, you can tell us
+
+00:10:34.146 --> 00:10:34.836 A:middle
+to stop doing it,
+
+00:10:34.836 --> 00:10:40.446 A:middle
+and it provides progress
+reporting along the way.
+
+00:10:40.506 --> 00:10:43.186 A:middle
+Little brief refresh of how
+synchronous fetching works.
+
+00:10:43.476 --> 00:10:48.526 A:middle
+You've got a Managed Object
+Context, you get a FetchRequest,
+
+00:10:49.916 --> 00:10:52.226 A:middle
+execute FetchRequest on
+the Managed Object Context,
+
+00:10:52.616 --> 00:10:55.256 A:middle
+sends the request
+down to the store,
+
+00:10:56.276 --> 00:10:58.716 A:middle
+which takes some
+time, thinks about it,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:03.226 --> 00:11:06.126 A:middle
+returns a response in
+the shape of an NSArray,
+
+00:11:07.366 --> 00:11:08.956 A:middle
+updates the Managed
+Object Context,
+
+00:11:09.256 --> 00:11:10.546 A:middle
+and returns the result to you.
+
+00:11:12.296 --> 00:11:17.666 A:middle
+Well, asynchronous fetching
+is a little bit different.
+
+00:11:17.666 --> 00:11:20.386 A:middle
+It returns a future, which
+is returned immediately
+
+00:11:20.386 --> 00:11:22.366 A:middle
+from executeRequest.
+
+00:11:22.636 --> 00:11:23.406 A:middle
+There's no waiting.
+
+00:11:23.666 --> 00:11:27.466 A:middle
+The request specifies
+a callback block
+
+00:11:27.466 --> 00:11:32.626 A:middle
+that will be invoked whenever
+the fetch finishes executing.
+
+00:11:33.996 --> 00:11:37.426 A:middle
+If the fetch specifies
+this is an NSFetchRequest,
+
+00:11:37.516 --> 00:11:40.006 A:middle
+we'll go into more
+detail in a couple slides,
+
+00:11:40.646 --> 00:11:44.036 A:middle
+the context should be updated
+as a result of the fetch.
+
+00:11:44.236 --> 00:11:45.026 A:middle
+That will happen.
+
+00:11:45.556 --> 00:11:48.956 A:middle
+And this means that asynchronous
+fetching is only supported
+
+00:11:49.266 --> 00:11:50.936 A:middle
+for Managed Object Context
+
+00:11:50.976 --> 00:11:53.526 A:middle
+that are using either the
+PrivateQueueConcurrencyType
+
+00:11:53.526 --> 00:11:55.136 A:middle
+or the
+NSMainQueueConcurrencyType
+
+00:11:55.606 --> 00:11:59.396 A:middle
+because this is the only way
+that we have a separate queue
+
+00:11:59.396 --> 00:12:03.576 A:middle
+that we know has sole
+access to the state
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:59.396 --> 00:12:03.576 A:middle
+that we know has sole
+access to the state
+
+00:12:03.576 --> 00:12:04.806 A:middle
+in the Managed Object Context.
+
+00:12:05.146 --> 00:12:08.306 A:middle
+It's not supported for the
+ConfinementConcurrencyType.
+
+00:12:09.856 --> 00:12:12.236 A:middle
+So this is sort of how
+asynchronous fetching works.
+
+00:12:12.546 --> 00:12:14.406 A:middle
+Again, you have Managed
+Object Context,
+
+00:12:14.406 --> 00:12:17.366 A:middle
+only now you have an
+NSAsynchronousFetchRequest.
+
+00:12:18.616 --> 00:12:20.596 A:middle
+Execute Request on the context,
+
+00:12:21.046 --> 00:12:23.346 A:middle
+and the context immediately
+creates
+
+00:12:23.346 --> 00:12:25.236 A:middle
+and returns an
+AsynchronousFetchResult.
+
+00:12:25.716 --> 00:12:29.076 A:middle
+At the same time, it takes the
+AsynchronousFetchRequest you
+
+00:12:29.076 --> 00:12:31.376 A:middle
+gave us and sends it
+down to the store.
+
+00:12:32.156 --> 00:12:34.846 A:middle
+You can now continue
+editing managed objects
+
+00:12:34.846 --> 00:12:36.356 A:middle
+in that Managed Object Context.
+
+00:12:36.356 --> 00:12:38.286 A:middle
+You can do fetches,
+faults, yeah,
+
+00:12:38.496 --> 00:12:40.366 A:middle
+all kind of work you're
+going to want to do
+
+00:12:40.366 --> 00:12:41.516 A:middle
+on your managed objects.
+
+00:12:42.226 --> 00:12:44.456 A:middle
+And at some point, the
+store will finish executing
+
+00:12:44.456 --> 00:12:48.406 A:middle
+that request and send the
+results back, update the context
+
+00:12:48.406 --> 00:12:53.866 A:middle
+as necessary, and invoke the
+callback on the NSFetch that is
+
+00:12:53.866 --> 00:12:57.526 A:middle
+on the AsynchronousFetchRequest,
+and tell you, hey,
+
+00:12:57.696 --> 00:13:00.126 A:middle
+you have data, maybe you
+should do something with it.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:57.696 --> 00:13:00.126 A:middle
+you have data, maybe you
+should do something with it.
+
+00:13:03.216 --> 00:13:06.266 A:middle
+So NSAsynchronousFetchRequest
+is a new subclass
+
+00:13:06.266 --> 00:13:07.926 A:middle
+of NSPersistentStoreRequest.
+
+00:13:08.706 --> 00:13:11.466 A:middle
+As I said, it's initialized
+with a fetch request,
+
+00:13:11.516 --> 00:13:12.916 A:middle
+an instance of NSFetchRequest,
+
+00:13:13.416 --> 00:13:15.436 A:middle
+and a completion block
+should be invoked
+
+00:13:15.566 --> 00:13:17.346 A:middle
+when the fetch is finished.
+
+00:13:17.476 --> 00:13:20.456 A:middle
+You pass it to
+executeRequest:error,
+
+00:13:20.556 --> 00:13:25.216 A:middle
+which will return immediately
+the NSAsynchronousFetchResult,
+
+00:13:25.706 --> 00:13:27.106 A:middle
+or nil if there's
+something badly,
+
+00:13:27.106 --> 00:13:30.606 A:middle
+badly wrong with
+your fetch request.
+
+00:13:31.206 --> 00:13:34.326 A:middle
+And NSAsynchronousFetchResults
+are also pretty simple classes.
+
+00:13:34.916 --> 00:13:38.146 A:middle
+Again, it's a subclass of
+NSPersistentStoreResult,
+
+00:13:38.796 --> 00:13:42.046 A:middle
+and this will provide results
+immediately on a property
+
+00:13:42.236 --> 00:13:45.816 A:middle
+on a fetch result, or
+there'll be an error on it
+
+00:13:46.046 --> 00:13:49.356 A:middle
+after completion if for some
+reason the fetch failed.
+
+00:13:50.516 --> 00:13:54.046 A:middle
+It's returned immediately
+from executeRequest:error or,
+
+00:13:54.046 --> 00:13:56.146 A:middle
+you know, nil if
+there is an issue.
+
+00:13:56.746 --> 00:13:58.766 A:middle
+How do you set one up?
+
+00:13:59.086 --> 00:13:59.746 A:middle
+It's pretty simple.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:00.606 --> 00:14:03.126 A:middle
+Here, we're just setting up a
+fetch request that does fetch
+
+00:14:03.126 --> 00:14:04.656 A:middle
+for all instances of my entity.
+
+00:14:05.106 --> 00:14:08.006 A:middle
+I could, if I wanted to, add a
+predicate, add sort descriptors.
+
+00:14:08.436 --> 00:14:10.456 A:middle
+All the usual goodness
+is fully supported.
+
+00:14:11.996 --> 00:14:14.136 A:middle
+Create an
+NSAsynchronousFetchRequest
+
+00:14:14.136 --> 00:14:16.456 A:middle
+with that fetch request
+and a completion block.
+
+00:14:16.516 --> 00:14:18.646 A:middle
+Completion block here
+just takes an id,
+
+00:14:18.646 --> 00:14:21.236 A:middle
+but it would normally take
+an NSAsynchronousFetchResult;
+
+00:14:21.456 --> 00:14:24.816 A:middle
+that's just a little bit
+too long to put on a slide.
+
+00:14:25.306 --> 00:14:27.266 A:middle
+Completion block checks to see
+
+00:14:27.266 --> 00:14:30.846 A:middle
+if the result has a
+final result, and if so,
+
+00:14:30.846 --> 00:14:33.456 A:middle
+it does whatever processing
+you want done as a result
+
+00:14:33.456 --> 00:14:34.406 A:middle
+of that fetch finishing.
+
+00:14:34.806 --> 00:14:36.296 A:middle
+Otherwise, you'll need
+to handle the error.
+
+00:14:37.246 --> 00:14:39.196 A:middle
+Once you set up the
+AsynchronousFetchRequest,
+
+00:14:39.196 --> 00:14:42.596 A:middle
+you just tell the context to
+performBlock, executeRequest,
+
+00:14:42.596 --> 00:14:45.316 A:middle
+AsynchronousFetchRequest,
+and away things go.
+
+00:14:45.856 --> 00:14:51.106 A:middle
+I said something about
+it tracking progress.
+
+00:14:51.106 --> 00:14:51.816 A:middle
+How does that work?
+
+00:14:52.116 --> 00:14:54.336 A:middle
+It's pretty simple.
+
+00:14:54.776 --> 00:14:58.536 A:middle
+We use NSProgress,
+standard use of NSProgress.
+
+00:14:58.536 --> 00:15:01.146 A:middle
+You create your own before
+you call executeRequest.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:58.536 --> 00:15:01.146 A:middle
+You create your own before
+you call executeRequest.
+
+00:15:02.226 --> 00:15:06.236 A:middle
+Core Data will notice if you
+have done this and will go off
+
+00:15:06.486 --> 00:15:09.096 A:middle
+and create nested
+child NS Progresses,
+
+00:15:09.096 --> 00:15:11.896 A:middle
+which will report their
+progress to the parent.
+
+00:15:12.436 --> 00:15:14.816 A:middle
+And this is also how
+we allow cancellations.
+
+00:15:14.816 --> 00:15:17.386 A:middle
+If you want to cancel the
+request, cancel the NSProgress.
+
+00:15:17.666 --> 00:15:19.956 A:middle
+How does the setup
+for this work?
+
+00:15:19.956 --> 00:15:21.286 A:middle
+Well, again it's pretty simple.
+
+00:15:21.636 --> 00:15:23.266 A:middle
+Create an instance
+of NSProgress,
+
+00:15:23.516 --> 00:15:24.756 A:middle
+set the unit count to 1.
+
+00:15:25.946 --> 00:15:28.646 A:middle
+Why do we set the unit count
+to 1 as opposed to the number
+
+00:15:28.646 --> 00:15:30.116 A:middle
+of objects we expect
+to get back?
+
+00:15:30.116 --> 00:15:32.276 A:middle
+Well, because database
+operations are streams,
+
+00:15:32.276 --> 00:15:35.056 A:middle
+and it's kind of indefinite
+how many objects you're going
+
+00:15:35.056 --> 00:15:35.636 A:middle
+to get back.
+
+00:15:35.836 --> 00:15:36.786 A:middle
+You may get 100.
+
+00:15:36.786 --> 00:15:37.796 A:middle
+You may get 1.
+
+00:15:38.226 --> 00:15:42.336 A:middle
+We can't tell up front, so we
+only ever say we're finished,
+
+00:15:42.336 --> 00:15:43.186 A:middle
+or we're not finished.
+
+00:15:44.016 --> 00:15:46.166 A:middle
+Progress become current
+with pending unit count 1,
+
+00:15:46.826 --> 00:15:49.416 A:middle
+and this is the same
+context performBlock we saw
+
+00:15:49.416 --> 00:15:54.446 A:middle
+on the last slide, progress
+resignCurrent, and you're done.
+
+00:15:54.446 --> 00:16:00.276 A:middle
+And at this point, I'm going
+to bring my manager, Ben,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:54.446 --> 00:16:00.276 A:middle
+And at this point, I'm going
+to bring my manager, Ben,
+
+00:16:00.276 --> 00:16:02.256 A:middle
+up and he's going
+to show you how all
+
+00:16:02.256 --> 00:16:05.006 A:middle
+of this works in real life.
+
+00:16:08.516 --> 00:16:14.596 A:middle
+[ Applause ]
+
+00:16:15.096 --> 00:16:16.086 A:middle
+&gt;&gt; Good morning, everyone.
+
+00:16:16.086 --> 00:16:18.926 A:middle
+My name is Ben Trumbull, and
+I'm the apparently unreasonable
+
+00:16:18.926 --> 00:16:20.526 A:middle
+manager of the Core Data team.
+
+00:16:21.106 --> 00:16:25.836 A:middle
+So, to give you a
+little demonstration
+
+00:16:25.836 --> 00:16:27.396 A:middle
+about what we've
+been working on,
+
+00:16:27.536 --> 00:16:29.766 A:middle
+we have asynchronous fetching
+and progress reporting.
+
+00:16:30.086 --> 00:16:33.506 A:middle
+We're going to show you a little
+simple app here, and in order
+
+00:16:33.506 --> 00:16:35.706 A:middle
+to give you something that
+you guys can actually witness,
+
+00:16:35.706 --> 00:16:37.526 A:middle
+we're actually going to
+need a pretty long operation
+
+00:16:37.526 --> 00:16:38.866 A:middle
+so you can observe the progress.
+
+00:16:39.206 --> 00:16:40.606 A:middle
+So in this case we're
+going actually be working
+
+00:16:40.606 --> 00:16:42.946 A:middle
+with database that has 10
+million rows, and we're going
+
+00:16:42.946 --> 00:16:45.126 A:middle
+to be fetching about 5
+million of them into memory.
+
+00:16:45.956 --> 00:16:49.226 A:middle
+And for the purposes
+of the demo,
+
+00:16:49.226 --> 00:16:51.526 A:middle
+the app has pre-computed
+the total number
+
+00:16:51.526 --> 00:16:52.776 A:middle
+of objects in the database.
+
+00:16:53.006 --> 00:16:54.446 A:middle
+I don't actually
+recommend doing this.
+
+00:16:54.446 --> 00:16:57.366 A:middle
+That can actually be kind of
+slow in and of itself, but,
+
+00:16:57.906 --> 00:16:59.046 A:middle
+as Melissa had mentioned,
+
+00:16:59.186 --> 00:17:01.096 A:middle
+database queries
+are sort of streams.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:59.186 --> 00:17:01.096 A:middle
+database queries
+are sort of streams.
+
+00:17:01.096 --> 00:17:02.586 A:middle
+You don't really know how many
+rows you're going to get back
+
+00:17:02.586 --> 00:17:05.356 A:middle
+until you're done, and sometimes
+your audience must positively
+
+00:17:05.356 --> 00:17:06.465 A:middle
+know exactly what's going on.
+
+00:17:06.796 --> 00:17:08.415 A:middle
+So, we've already
+preflighted that.
+
+00:17:08.415 --> 00:17:11.935 A:middle
+So, I'm going to give you
+a quick demonstration here,
+
+00:17:12.096 --> 00:17:14.596 A:middle
+and you can see in the status
+bar it's counting along.
+
+00:17:20.465 --> 00:17:25.506 A:middle
+And we've populated the last
+few objects in the array
+
+00:17:25.506 --> 00:17:26.425 A:middle
+up here in the table view.
+
+00:17:26.425 --> 00:17:29.146 A:middle
+I have not actually just
+put 5 million objects
+
+00:17:29.146 --> 00:17:33.216 A:middle
+into a table view because
+that would be pretty cool.
+
+00:17:33.216 --> 00:17:35.476 A:middle
+And as you can see sort
+of in the background there
+
+00:17:35.476 --> 00:17:38.256 A:middle
+from the fetch request, it
+actually goes by pretty quickly.
+
+00:17:38.536 --> 00:17:40.416 A:middle
+Core Data will actually
+spin up multiple cores
+
+00:17:40.416 --> 00:17:41.726 A:middle
+if the fetch request
+is long enough,
+
+00:17:41.846 --> 00:17:44.176 A:middle
+and I've been logging some of
+the KVO updates we see there.
+
+00:17:44.366 --> 00:17:47.526 A:middle
+So then, one of the other things
+we can do here is cancellation.
+
+00:17:47.826 --> 00:17:48.726 A:middle
+It's pretty straightforward.
+
+00:17:48.726 --> 00:17:50.236 A:middle
+So we're going to do
+the same fetch again,
+
+00:17:51.376 --> 00:17:54.066 A:middle
+and as we're going along,
+we can decide to cancel it.
+
+00:17:54.676 --> 00:17:57.856 A:middle
+And what will end up happening
+is the fetch will abort,
+
+00:17:57.856 --> 00:18:00.186 A:middle
+and Core Data will return
+an NSUserCancelled Error.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:57.856 --> 00:18:00.186 A:middle
+and Core Data will return
+an NSUserCancelled Error.
+
+00:18:00.186 --> 00:18:02.246 A:middle
+And you can see the
+status bar update there,
+
+00:18:02.416 --> 00:18:03.676 A:middle
+that we've canceled that,
+
+00:18:04.126 --> 00:18:06.436 A:middle
+and that's pretty much
+all there is to it.
+
+00:18:06.636 --> 00:18:10.746 A:middle
+We, basically most of the
+work here is going to be
+
+00:18:10.746 --> 00:18:14.856 A:middle
+in your KVO observer for doing
+something on the NSProgress,
+
+00:18:14.916 --> 00:18:17.096 A:middle
+so in this case, I'm dispatching
+back to the main thread
+
+00:18:17.096 --> 00:18:18.296 A:middle
+to update the status bar
+
+00:18:18.686 --> 00:18:20.816 A:middle
+and doing some throttling
+of the updates.
+
+00:18:21.136 --> 00:18:23.016 A:middle
+So you'll get progress bar
+updates probably a little bit
+
+00:18:23.016 --> 00:18:25.106 A:middle
+faster than you might
+otherwise want
+
+00:18:25.106 --> 00:18:28.876 A:middle
+if you're fetching 10 million
+rows, and that's what we have.
+
+00:18:30.516 --> 00:18:38.136 A:middle
+[ Applause ]
+
+00:18:38.636 --> 00:18:39.666 A:middle
+&gt;&gt; So onward.
+
+00:18:40.086 --> 00:18:41.166 A:middle
+Incremental stores.
+
+00:18:42.086 --> 00:18:43.816 A:middle
+We know some of you
+have implemented them.
+
+00:18:43.956 --> 00:18:46.676 A:middle
+We've seen them out there on the
+web, and that means that some
+
+00:18:46.676 --> 00:18:48.196 A:middle
+of you are going to
+have a few questions
+
+00:18:48.196 --> 00:18:51.406 A:middle
+about how these new
+APIs affect you,
+
+00:18:51.496 --> 00:18:53.306 A:middle
+if these new APIs affect you.
+
+00:18:54.626 --> 00:18:57.536 A:middle
+Well, they kind of do.
+
+00:18:58.906 --> 00:19:02.156 A:middle
+If you want to just publish
+your store and have it used
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:58.906 --> 00:19:02.156 A:middle
+If you want to just publish
+your store and have it used
+
+00:19:02.156 --> 00:19:05.226 A:middle
+by random people, your
+implementation of executeRequest
+
+00:19:05.226 --> 00:19:07.516 A:middle
+on your incremental store
+is going to now need
+
+00:19:07.516 --> 00:19:09.636 A:middle
+to handle the new Core
+Data request types.
+
+00:19:10.086 --> 00:19:12.426 A:middle
+And if you're curious, and
+some of you probably are,
+
+00:19:12.536 --> 00:19:15.226 A:middle
+saying well, does that mean
+I can now implement my own
+
+00:19:15.226 --> 00:19:19.186 A:middle
+subclasses of
+NSPersistentStoreRequest
+
+00:19:19.186 --> 00:19:20.556 A:middle
+and NSPersistentStoreResponse?
+
+00:19:20.556 --> 00:19:22.596 A:middle
+And the answer is yes, you
+can do that if you want.
+
+00:19:22.756 --> 00:19:26.126 A:middle
+We'll talk a little bit about
+that in a couple slides.
+
+00:19:27.136 --> 00:19:30.216 A:middle
+If you don't want to support
+any new request types,
+
+00:19:30.826 --> 00:19:31.866 A:middle
+please fail gracefully.
+
+00:19:32.206 --> 00:19:34.966 A:middle
+By this, I mean do
+what seems reasonable.
+
+00:19:34.966 --> 00:19:38.566 A:middle
+Probably you're going to want
+to return an error and say,
+
+00:19:38.626 --> 00:19:39.626 A:middle
+I don't know how to do that.
+
+00:19:39.956 --> 00:19:41.826 A:middle
+This is why the
+PersistentStoreRequest allows
+
+00:19:41.826 --> 00:19:44.536 A:middle
+you to specify which stores
+you actually want to target
+
+00:19:44.956 --> 00:19:49.376 A:middle
+with any given
+PersistentStoreRequest.
+
+00:19:49.376 --> 00:19:52.386 A:middle
+I mean, it doesn't make sense
+to send a request to a store
+
+00:19:52.386 --> 00:19:54.616 A:middle
+that doesn't know
+what to do with it.
+
+00:19:55.716 --> 00:19:57.756 A:middle
+Whatever you do, don't
+throw in an exception.
+
+00:19:58.416 --> 00:19:58.976 A:middle
+That never ends well.
+
+00:19:59.406 --> 00:20:03.036 A:middle
+New request types.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:59.406 --> 00:20:03.036 A:middle
+New request types.
+
+00:20:03.416 --> 00:20:06.216 A:middle
+You should still be using
+
+00:20:06.536 --> 00:20:08.986 A:middle
+with your new request types
+NSManagedObjectContext
+
+00:20:08.986 --> 00:20:10.286 A:middle
+executeRequest:Error.
+
+00:20:10.286 --> 00:20:12.486 A:middle
+This will cause the access
+
+00:20:12.486 --> 00:20:14.556 A:middle
+to your Persistent Store
+Coordinator to be serialized.
+
+00:20:14.556 --> 00:20:15.626 A:middle
+This is kind of important
+
+00:20:15.696 --> 00:20:17.686 A:middle
+if you want multiple
+things running around,
+
+00:20:18.366 --> 00:20:19.586 A:middle
+talking to the same coordinator.
+
+00:20:19.586 --> 00:20:22.136 A:middle
+You'll want to do what
+we've done with fetching
+
+00:20:22.136 --> 00:20:24.656 A:middle
+and batch updates, create
+a request/response pair.
+
+00:20:25.416 --> 00:20:28.226 A:middle
+The context is going to
+return an aggregated result,
+
+00:20:28.226 --> 00:20:30.926 A:middle
+which will contain the results
+of all of the individual stores
+
+00:20:30.926 --> 00:20:34.816 A:middle
+that knew what to do
+with your new subclass,
+
+00:20:35.206 --> 00:20:37.216 A:middle
+and the default stores
+aren't actually going
+
+00:20:37.216 --> 00:20:39.036 A:middle
+to recognize custom
+request types.
+
+00:20:39.036 --> 00:20:44.146 A:middle
+So if you're using a Core Data
+stack that has multiple stores,
+
+00:20:44.146 --> 00:20:45.576 A:middle
+some of which are
+defaults and some
+
+00:20:45.576 --> 00:20:48.096 A:middle
+of which is your custom store
+types, you're going to want
+
+00:20:48.096 --> 00:20:51.346 A:middle
+to target the request being
+executed, specifically
+
+00:20:51.346 --> 00:20:55.566 A:middle
+at the stores that know
+what to do with them.
+
+00:20:56.296 --> 00:21:00.016 A:middle
+Why might you want to
+add your own subclass
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:56.296 --> 00:21:00.016 A:middle
+Why might you want to
+add your own subclass
+
+00:21:00.196 --> 00:21:02.266 A:middle
+of NSPersistentStoreRequest?
+
+00:21:02.976 --> 00:21:06.236 A:middle
+One of the big things that we've
+heard repeatedly is that well,
+
+00:21:06.386 --> 00:21:09.876 A:middle
+I want to minimize requests,
+minimize trips to the store.
+
+00:21:09.876 --> 00:21:12.626 A:middle
+This is particularly
+relevant in cases
+
+00:21:12.626 --> 00:21:16.096 A:middle
+where you've got a
+disjoint object graph,
+
+00:21:16.096 --> 00:21:19.906 A:middle
+and as part of your app launch,
+you want to bring in instances
+
+00:21:19.906 --> 00:21:21.266 A:middle
+of lots of different entities.
+
+00:21:21.266 --> 00:21:23.886 A:middle
+You don't want to have
+call executeFetchRequest
+
+00:21:24.156 --> 00:21:27.356 A:middle
+for n different parts
+of your subgraphs.
+
+00:21:27.556 --> 00:21:31.736 A:middle
+That can get expensive if you've
+got 10 chunks of your graph,
+
+00:21:31.736 --> 00:21:34.156 A:middle
+you're having to make 10
+separate network calls, that a,
+
+00:21:34.156 --> 00:21:38.196 A:middle
+takes time, and b, there may
+be a lot of overhead involved
+
+00:21:38.196 --> 00:21:40.676 A:middle
+in those calls going
+across cellular networks
+
+00:21:40.676 --> 00:21:42.876 A:middle
+that your users don't want
+to waste that bandwidth.
+
+00:21:43.166 --> 00:21:45.626 A:middle
+So that's one thing you might
+want to consider implementing
+
+00:21:45.626 --> 00:21:48.866 A:middle
+or put in a special request
+for is a launch time setup.
+
+00:21:49.796 --> 00:21:52.566 A:middle
+You may want to do
+something with object refresh.
+
+00:21:52.916 --> 00:21:53.796 A:middle
+Hi, database.
+
+00:21:53.836 --> 00:21:55.166 A:middle
+I've got these 10 objects.
+
+00:21:55.246 --> 00:21:57.746 A:middle
+Send me back data for
+the objects that need
+
+00:21:57.746 --> 00:21:59.336 A:middle
+to be refreshed and
+only the objects
+
+00:21:59.336 --> 00:22:00.506 A:middle
+that need to be refreshed.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:59.336 --> 00:22:00.506 A:middle
+that need to be refreshed.
+
+00:22:00.506 --> 00:22:03.066 A:middle
+You may want to do status
+checks, that kind of thing.
+
+00:22:03.066 --> 00:22:04.286 A:middle
+That's just a few of the things
+
+00:22:04.366 --> 00:22:06.366 A:middle
+that people have talked
+about over the years.
+
+00:22:06.516 --> 00:22:10.046 A:middle
+If you're going to do
+an AsynchronousRequest,
+
+00:22:10.046 --> 00:22:12.026 A:middle
+you want to model it pretty
+much on what we've done
+
+00:22:12.026 --> 00:22:13.796 A:middle
+with NSAsynchronousFetchRequest.
+
+00:22:14.206 --> 00:22:18.476 A:middle
+Return a future immediately,
+message that future call back
+
+00:22:18.766 --> 00:22:19.946 A:middle
+when the request completes.
+
+00:22:20.446 --> 00:22:22.236 A:middle
+And if you're going to
+be updating context,
+
+00:22:22.446 --> 00:22:25.606 A:middle
+as a result of whatever
+you do asynchronously,
+
+00:22:25.996 --> 00:22:28.646 A:middle
+remember to use perform
+block to update the context
+
+00:22:28.816 --> 00:22:29.816 A:middle
+because that will make sure
+
+00:22:29.816 --> 00:22:36.066 A:middle
+that only your request updates
+are happening in the context
+
+00:22:36.066 --> 00:22:38.036 A:middle
+at any one time, will
+make sure the [inaudible]
+
+00:22:38.036 --> 00:22:41.846 A:middle
+and as an implication, yes this
+does mean that if you're going
+
+00:22:41.846 --> 00:22:43.376 A:middle
+to be implementing
+your own request types,
+
+00:22:44.116 --> 00:22:46.396 A:middle
+then your context must be
+using either the private queue
+
+00:22:46.396 --> 00:22:50.786 A:middle
+concurrency type or the
+main queue concurrency type,
+
+00:22:50.896 --> 00:22:52.626 A:middle
+which brings us to concurrency.
+
+00:22:53.286 --> 00:22:56.466 A:middle
+And at this point, I'm
+going to take a little bit
+
+00:22:56.466 --> 00:23:00.796 A:middle
+of a winding path to get
+to our new stuff and sort
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:56.466 --> 00:23:00.796 A:middle
+of a winding path to get
+to our new stuff and sort
+
+00:23:00.796 --> 00:23:01.996 A:middle
+of do a retrospective
+
+00:23:01.996 --> 00:23:04.116 A:middle
+of the evolving Core
+Data concurrency story
+
+00:23:04.116 --> 00:23:04.816 A:middle
+over the years.
+
+00:23:04.816 --> 00:23:05.836 A:middle
+Why am I going to do this?
+
+00:23:06.266 --> 00:23:10.346 A:middle
+Well, it has changed a number of
+times, and well, if you go out
+
+00:23:10.346 --> 00:23:13.496 A:middle
+and hit up your favorite
+search engine Duck Duck Go
+
+00:23:13.496 --> 00:23:18.186 A:middle
+and Yosemite, for example,
+or iOS 8 and say, OK,
+
+00:23:18.186 --> 00:23:19.676 A:middle
+tell me how to do
+Core Data concurrency.
+
+00:23:19.676 --> 00:23:21.566 A:middle
+You're going to get a lot
+of different responses,
+
+00:23:21.566 --> 00:23:23.866 A:middle
+and this is sort of intended to
+help you filter through those
+
+00:23:23.866 --> 00:23:24.596 A:middle
+and figure out, you know,
+
+00:23:24.596 --> 00:23:28.066 A:middle
+what really is the best current
+advice, and I'll talk about,
+
+00:23:28.066 --> 00:23:30.456 A:middle
+you know, also the
+new state of affairs.
+
+00:23:31.766 --> 00:23:34.636 A:middle
+So, making sense of what
+you see on Stack Overflow.
+
+00:23:35.256 --> 00:23:39.866 A:middle
+In the beginning,
+NSManagedObjectContext
+
+00:23:39.866 --> 00:23:41.976 A:middle
+and NSPersistentStoreCoordinator
+implemented the
+
+00:23:41.976 --> 00:23:43.056 A:middle
+NSLocking protocol.
+
+00:23:43.986 --> 00:23:45.286 A:middle
+And what this meant was
+
+00:23:45.286 --> 00:23:48.506 A:middle
+that before a developer started
+accessing the Managed Object
+
+00:23:48.506 --> 00:23:51.856 A:middle
+Context, and that included
+things like accessing properties
+
+00:23:51.856 --> 00:23:54.866 A:middle
+on NSManagedObjects created by
+that managed object context,
+
+00:23:55.246 --> 00:23:57.076 A:middle
+the developer had
+to lock the context.
+
+00:23:57.576 --> 00:24:00.716 A:middle
+If they wanted to message
+PersistentStoreCoordinator,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:57.576 --> 00:24:00.716 A:middle
+If they wanted to message
+PersistentStoreCoordinator,
+
+00:24:00.716 --> 00:24:04.596 A:middle
+they needed to manually lock
+PersistentStoreCoordinator
+
+00:24:04.596 --> 00:24:06.876 A:middle
+before they sent whatever
+message they wanted.
+
+00:24:07.316 --> 00:24:09.966 A:middle
+And, you know, because
+this is a locking protocol,
+
+00:24:09.966 --> 00:24:12.266 A:middle
+they are also going to need
+to unlock after they're done
+
+00:24:12.266 --> 00:24:14.106 A:middle
+with the context or
+coordinator, respectively.
+
+00:24:14.556 --> 00:24:19.306 A:middle
+And this kind of works like
+this, you've got a context.
+
+00:24:19.306 --> 00:24:20.206 A:middle
+It has an object in it.
+
+00:24:20.236 --> 00:24:21.056 A:middle
+You want to do something.
+
+00:24:21.766 --> 00:24:22.746 A:middle
+You lock the context.
+
+00:24:23.116 --> 00:24:26.696 A:middle
+You make your edits,
+maybe more than one.
+
+00:24:28.126 --> 00:24:31.906 A:middle
+You save a revert,
+unlock, and things go away.
+
+00:24:32.666 --> 00:24:35.426 A:middle
+But this actually has a
+couple of problems with it,
+
+00:24:35.596 --> 00:24:37.206 A:middle
+the biggest of which
+is that it's easy
+
+00:24:37.206 --> 00:24:38.586 A:middle
+to forget a lock or unlock.
+
+00:24:39.256 --> 00:24:40.896 A:middle
+Well, forget is probably
+the wrong word.
+
+00:24:41.206 --> 00:24:42.686 A:middle
+Occasionally something
+would throw,
+
+00:24:42.756 --> 00:24:45.826 A:middle
+you fed Core Data
+a bad predicate,
+
+00:24:45.826 --> 00:24:48.056 A:middle
+passed [inaudible] through,
+the exception went straight up,
+
+00:24:48.056 --> 00:24:49.476 A:middle
+and now you're context
+is locked.
+
+00:24:49.476 --> 00:24:54.836 A:middle
+That's kind of a bad state of
+affairs because anything you try
+
+00:24:54.836 --> 00:24:56.446 A:middle
+and do now is going
+to dead lock.
+
+00:24:57.736 --> 00:25:00.416 A:middle
+It's also kind of tricky
+doing some UI programming
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:57.736 --> 00:25:00.416 A:middle
+It's also kind of tricky
+doing some UI programming
+
+00:25:00.416 --> 00:25:01.896 A:middle
+because a lot of
+the binding stuff
+
+00:25:01.896 --> 00:25:05.006 A:middle
+for example doesn't really have
+a place you can hook in a lock
+
+00:25:05.006 --> 00:25:07.716 A:middle
+or unlock as you attempt to
+populate your table view,
+
+00:25:08.466 --> 00:25:11.886 A:middle
+so that really wasn't a
+satisfying answer and we moved
+
+00:25:11.886 --> 00:25:13.436 A:middle
+on to Thread Confinement.
+
+00:25:14.226 --> 00:25:17.176 A:middle
+This is sort of the first
+step of our evolution towards,
+
+00:25:17.176 --> 00:25:20.066 A:middle
+you know, more interesting
+and robust answer to how
+
+00:25:20.066 --> 00:25:22.146 A:middle
+to do concurrency in Core Data.
+
+00:25:22.146 --> 00:25:25.326 A:middle
+And Thread Confinement is
+basically stepping back
+
+00:25:25.326 --> 00:25:29.256 A:middle
+and saying, OK, why are
+developers trying to, you know,
+
+00:25:29.596 --> 00:25:31.076 A:middle
+edit the same context
+and it turns
+
+00:25:31.076 --> 00:25:32.206 A:middle
+out there weren't actually a lot
+
+00:25:32.206 --> 00:25:33.266 A:middle
+of really great reasons
+for that.
+
+00:25:33.586 --> 00:25:36.296 A:middle
+So we said, OK, just
+don't do that.
+
+00:25:36.296 --> 00:25:39.176 A:middle
+A Managed Object Context
+should only be edited
+
+00:25:39.176 --> 00:25:40.136 A:middle
+from a single thread.
+
+00:25:40.696 --> 00:25:43.836 A:middle
+The developer is making sure,
+responsible for making sure
+
+00:25:43.836 --> 00:25:46.516 A:middle
+that only one thread ever
+uses Managed Object Context,
+
+00:25:46.516 --> 00:25:49.416 A:middle
+and at this point, a lot
+of us learned about things
+
+00:25:49.416 --> 00:25:52.746 A:middle
+like thread local variables
+because that was the easiest way
+
+00:25:52.746 --> 00:25:56.286 A:middle
+to associate a context
+with a thread and make sure
+
+00:25:56.286 --> 00:25:58.126 A:middle
+that no other context
+ever had access to it.
+
+00:25:58.126 --> 00:26:01.746 A:middle
+And in this model, the
+developer still had
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:58.126 --> 00:26:01.746 A:middle
+And in this model, the
+developer still had
+
+00:26:01.746 --> 00:26:03.316 A:middle
+to lock the Coordinator
+before they used it
+
+00:26:03.316 --> 00:26:05.036 A:middle
+and this kind of
+looked like this.
+
+00:26:05.126 --> 00:26:05.966 A:middle
+You had a thread.
+
+00:26:06.446 --> 00:26:07.666 A:middle
+That thread had a context.
+
+00:26:07.716 --> 00:26:09.166 A:middle
+That context had objects.
+
+00:26:09.766 --> 00:26:12.776 A:middle
+You could edit the context
+as much as you want, and no,
+
+00:26:12.836 --> 00:26:14.406 A:middle
+you don't have to lock it.
+
+00:26:15.056 --> 00:26:20.616 A:middle
+And sort of because people do
+want to do things in parallel,
+
+00:26:21.006 --> 00:26:23.586 A:middle
+if you wanted to actually
+make changes to, you know,
+
+00:26:23.686 --> 00:26:25.796 A:middle
+other objects, you would
+set up a separate thread
+
+00:26:25.796 --> 00:26:28.516 A:middle
+that had its own context, and
+if you wanted to pass data back
+
+00:26:28.516 --> 00:26:31.346 A:middle
+and forth between these, you'd
+generally do it by, well,
+
+00:26:31.576 --> 00:26:33.956 A:middle
+passing managed object
+IDs back and forth
+
+00:26:33.956 --> 00:26:36.256 A:middle
+and having the context
+refresh data from the store.
+
+00:26:37.966 --> 00:26:38.906 A:middle
+This was kind of awkward.
+
+00:26:38.906 --> 00:26:42.606 A:middle
+It's still a little bit
+difficult to get right.
+
+00:26:42.606 --> 00:26:44.286 A:middle
+I mean, it involved, you know,
+
+00:26:44.466 --> 00:26:46.806 A:middle
+making sure that you didn't
+accidentally message a thread
+
+00:26:46.976 --> 00:26:48.536 A:middle
+or a context from another thread
+
+00:26:48.536 --> 00:26:50.066 A:middle
+or fire a fault on
+another thread.
+
+00:26:51.546 --> 00:26:56.266 A:middle
+So we wanted to make working
+with the context easier,
+
+00:26:56.266 --> 00:26:58.226 A:middle
+and about this time
+another group
+
+00:26:58.226 --> 00:27:01.746 A:middle
+at Apple was inventing a really
+cool technology or technology we
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:58.226 --> 00:27:01.746 A:middle
+at Apple was inventing a really
+cool technology or technology we
+
+00:27:01.746 --> 00:27:04.446 A:middle
+at least thought was really
+cool, you're probably familiar
+
+00:27:04.446 --> 00:27:07.296 A:middle
+with it, called GCD or
+[inaudible] dispatch
+
+00:27:07.296 --> 00:27:08.196 A:middle
+if you're working
+at the [inaudible].
+
+00:27:08.196 --> 00:27:10.516 A:middle
+And we looked at
+this, and we said,
+
+00:27:11.516 --> 00:27:14.636 A:middle
+you guys are solving this
+huge problem that we have.
+
+00:27:14.896 --> 00:27:15.416 A:middle
+We like you.
+
+00:27:16.686 --> 00:27:20.906 A:middle
+And in this case, the
+context encapsulates the
+
+00:27:20.906 --> 00:27:21.556 A:middle
+threading model.
+
+00:27:21.556 --> 00:27:25.036 A:middle
+Basically each context
+got its very own queue
+
+00:27:25.346 --> 00:27:26.616 A:middle
+and that queue was
+the only thing
+
+00:27:26.616 --> 00:27:28.086 A:middle
+that would ever access
+the internal state
+
+00:27:28.086 --> 00:27:29.406 A:middle
+of that managed object context.
+
+00:27:29.406 --> 00:27:31.446 A:middle
+This is called the actor
+[phonetic] pattern for those
+
+00:27:31.446 --> 00:27:32.776 A:middle
+of who are familiar
+with patterns.
+
+00:27:33.106 --> 00:27:35.316 A:middle
+There were a few
+concurrency types we set
+
+00:27:35.316 --> 00:27:37.266 A:middle
+up Private Queue
+Concurrency Type,
+
+00:27:37.266 --> 00:27:39.836 A:middle
+which says this context
+has its own private queue
+
+00:27:39.916 --> 00:27:41.296 A:middle
+and everything should
+happen there.
+
+00:27:41.946 --> 00:27:44.096 A:middle
+A Main Thread Concurrency
+Type, which was used
+
+00:27:44.096 --> 00:27:49.356 A:middle
+for operating primarily from the
+UI because AppKit, as well know,
+
+00:27:49.356 --> 00:27:51.926 A:middle
+likes to run in the main thread.
+
+00:27:52.146 --> 00:27:53.806 A:middle
+This basically said that as long
+
+00:27:53.806 --> 00:27:56.646 A:middle
+as whatever is happening is
+happening on the main thread,
+
+00:27:56.646 --> 00:27:58.236 A:middle
+you can message the
+Managed Object Context
+
+00:27:58.236 --> 00:27:59.046 A:middle
+as much as you want.
+
+00:27:59.886 --> 00:28:03.386 A:middle
+And we also had the Concurrency
+Thread Confinement Type,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:59.886 --> 00:28:03.386 A:middle
+And we also had the Concurrency
+Thread Confinement Type,
+
+00:28:04.416 --> 00:28:07.536 A:middle
+well that said, well, I've
+got Legacy code and I want
+
+00:28:07.536 --> 00:28:09.956 A:middle
+to continue using that
+Legacy code in the same way
+
+00:28:10.276 --> 00:28:13.626 A:middle
+that I have had it working
+for however many releases.
+
+00:28:13.626 --> 00:28:15.496 A:middle
+I don't want to have to
+rewrite my application.
+
+00:28:16.666 --> 00:28:18.996 A:middle
+Under this model, when
+you wanted to do something
+
+00:28:18.996 --> 00:28:21.956 A:middle
+with Managed Object Context,
+you would pass it a block,
+
+00:28:22.266 --> 00:28:24.306 A:middle
+tell it to performBlock
+or performBlockAndWait,
+
+00:28:24.306 --> 00:28:26.236 A:middle
+and in this model you
+also no longer had
+
+00:28:26.236 --> 00:28:27.776 A:middle
+to lock the coordinator
+before use.
+
+00:28:28.416 --> 00:28:30.456 A:middle
+I forgot I had that slide.
+
+00:28:31.126 --> 00:28:33.736 A:middle
+That's just the concurrency
+types I talked about, main,
+
+00:28:33.856 --> 00:28:34.886 A:middle
+private, and confinement.
+
+00:28:34.886 --> 00:28:37.876 A:middle
+And this kind of inverts
+the previous order.
+
+00:28:38.696 --> 00:28:42.226 A:middle
+We go from having a thread that
+has a Managed Object Context
+
+00:28:42.726 --> 00:28:45.596 A:middle
+to a Managed Object
+Context that has a queue
+
+00:28:46.036 --> 00:28:51.576 A:middle
+and any thread can create a work
+block and dispatch that block
+
+00:28:51.576 --> 00:28:54.726 A:middle
+over the queue for processing
+or the context for processing.
+
+00:28:54.726 --> 00:28:56.726 A:middle
+The context will do
+whatever it wants to,
+
+00:28:56.726 --> 00:28:59.346 A:middle
+update all of its internal
+state, and then return
+
+00:28:59.806 --> 00:29:01.026 A:middle
+to the calling thread.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:59.806 --> 00:29:01.026 A:middle
+to the calling thread.
+
+00:29:01.586 --> 00:29:03.936 A:middle
+This actually made things a
+lot neater, a lot cleaner.
+
+00:29:03.936 --> 00:29:06.426 A:middle
+It was much easier to
+talk to the context
+
+00:29:06.476 --> 00:29:07.636 A:middle
+and get it doing things right.
+
+00:29:08.516 --> 00:29:12.036 A:middle
+And at this point, we had
+a debugging mechanism.
+
+00:29:12.136 --> 00:29:13.456 A:middle
+It was default.
+
+00:29:13.826 --> 00:29:15.026 A:middle
+If you launched your application
+
+00:29:15.026 --> 00:29:17.676 A:middle
+with com.apple.CoreData
+.ConcurrencyDebug 1,
+
+00:29:18.046 --> 00:29:20.896 A:middle
+we would be very, very picky
+about how you message threads,
+
+00:29:20.896 --> 00:29:23.496 A:middle
+and we would very, very
+vocally let you know
+
+00:29:23.496 --> 00:29:24.486 A:middle
+if you had done something wrong.
+
+00:29:24.486 --> 00:29:27.566 A:middle
+But this required
+downloading a debugged version
+
+00:29:27.566 --> 00:29:29.976 A:middle
+of the framework from ADC.
+
+00:29:30.046 --> 00:29:32.516 A:middle
+It was-- I think
+it's WWDR these days.
+
+00:29:32.786 --> 00:29:36.706 A:middle
+It had one problem, which
+is that it often got stale
+
+00:29:36.706 --> 00:29:38.876 A:middle
+because it's hard to
+push debug frameworks
+
+00:29:38.876 --> 00:29:41.416 A:middle
+through that mechanism at the
+same time we push OS updates,
+
+00:29:41.416 --> 00:29:43.926 A:middle
+and it wasn't available
+on iOS because, you know,
+
+00:29:43.926 --> 00:29:46.296 A:middle
+iOS didn't allow you to install
+new versions of frameworks.
+
+00:29:46.866 --> 00:29:51.326 A:middle
+So that brings us to today.
+
+00:29:51.516 --> 00:29:54.686 A:middle
+Well, the story at the context
+level is exactly the same.
+
+00:29:55.336 --> 00:29:56.656 A:middle
+Context is still an actor.
+
+00:29:56.906 --> 00:29:58.566 A:middle
+It still has a queue.
+
+00:29:58.566 --> 00:29:59.956 A:middle
+It still has concurrency types.
+
+00:29:59.956 --> 00:30:00.976 A:middle
+It still has the same
+concurrency types.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:59.956 --> 00:30:00.976 A:middle
+It still has the same
+concurrency types.
+
+00:30:01.196 --> 00:30:06.136 A:middle
+You still message it
+using performBlock
+
+00:30:06.136 --> 00:30:07.116 A:middle
+and performBlockAndWait.
+
+00:30:09.486 --> 00:30:11.866 A:middle
+We've also added
+the performBlock,
+
+00:30:11.866 --> 00:30:15.386 A:middle
+performBlockAndWait API to
+NSPersistentStoreCoordinator.
+
+00:30:15.586 --> 00:30:17.086 A:middle
+This is mostly relevant
+to those of you
+
+00:30:17.086 --> 00:30:19.296 A:middle
+who are subclassing
+NSPersistentStoreCoordinator.
+
+00:30:19.296 --> 00:30:21.386 A:middle
+You should now be
+using these methods,
+
+00:30:22.426 --> 00:30:24.166 A:middle
+which is what our
+existing methods do.
+
+00:30:24.166 --> 00:30:25.526 A:middle
+They all wrap call
+through to performBlock,
+
+00:30:25.526 --> 00:30:26.306 A:middle
+performBlockandWait.
+
+00:30:27.016 --> 00:30:28.536 A:middle
+PersistentStoreCoordinator,
+though,
+
+00:30:28.536 --> 00:30:32.086 A:middle
+because it doesn't actually
+need to be messaged directly
+
+00:30:32.086 --> 00:30:35.526 A:middle
+by AppKit always uses
+its own private queue.
+
+00:30:37.496 --> 00:30:39.976 A:middle
+The debugging default is
+now available everywhere.
+
+00:30:40.876 --> 00:30:41.976 A:middle
+As of Yosemite,
+
+00:30:42.516 --> 00:30:45.386 A:middle
+[ Applause ]
+
+00:30:45.886 --> 00:30:49.106 A:middle
+As of Yosemite and iOS
+8, if you launch your app
+
+00:30:49.216 --> 00:30:52.506 A:middle
+with com.apple .CoreData
+ConcurrencyDebug 1,
+
+00:30:52.846 --> 00:30:55.626 A:middle
+we will be very, very picky
+about how you do concurrency,
+
+00:30:55.626 --> 00:30:57.586 A:middle
+and we will let you know if
+you have done something wrong.
+
+00:30:58.056 --> 00:30:59.676 A:middle
+And this is available
+on iOS as well.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:00.896 --> 00:31:03.316 A:middle
+No special debug version
+of the framework necessary.
+
+00:31:05.256 --> 00:31:07.946 A:middle
+Looking ahead, and this
+isn't a sort of predictions,
+
+00:31:07.946 --> 00:31:10.206 A:middle
+not promises, because
+making promises is way
+
+00:31:10.206 --> 00:31:11.046 A:middle
+above my pay grade.
+
+00:31:12.276 --> 00:31:14.196 A:middle
+NSThreadConfinement is
+pretty much obsolete.
+
+00:31:14.846 --> 00:31:17.066 A:middle
+That includes the
+confinement concurrency type.
+
+00:31:17.186 --> 00:31:19.586 A:middle
+We saw earlier with the
+asynchronous fetching
+
+00:31:19.586 --> 00:31:20.896 A:middle
+that it just can't be supported
+
+00:31:20.896 --> 00:31:24.986 A:middle
+in a confinement concurrency
+model, so as we move forward,
+
+00:31:24.986 --> 00:31:26.976 A:middle
+it's likely there will
+be more kinds of changes
+
+00:31:27.156 --> 00:31:29.176 A:middle
+that also only work for contexts
+
+00:31:29.176 --> 00:31:30.546 A:middle
+that are using either
+the private queue
+
+00:31:30.546 --> 00:31:31.896 A:middle
+or main queue concurrency types.
+
+00:31:32.416 --> 00:31:35.946 A:middle
+As a bonus API, make that
+go down a little bit easier
+
+00:31:36.256 --> 00:31:38.026 A:middle
+because debugging is
+hard enough already,
+
+00:31:38.216 --> 00:31:41.746 A:middle
+we've added a name property
+to the NSManagedObjectContext
+
+00:31:42.136 --> 00:31:43.556 A:middle
+and PersistentStoreCoordinator.
+
+00:31:43.846 --> 00:31:48.216 A:middle
+It only applies if your actor
+is using the Private Queue
+
+00:31:48.216 --> 00:31:51.316 A:middle
+Concurrency Type, but if you
+do set a name on your context
+
+00:31:51.316 --> 00:31:56.516 A:middle
+or your coordinator, this will
+be displayed in LLDB and Xcode
+
+00:31:56.516 --> 00:31:58.636 A:middle
+when you're debugging,
+so you'll be able to see
+
+00:31:58.636 --> 00:32:00.466 A:middle
+which queues are
+actually associated
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:58.636 --> 00:32:00.466 A:middle
+which queues are
+actually associated
+
+00:32:00.556 --> 00:32:05.896 A:middle
+with which managed object
+context in your application.
+
+00:32:06.516 --> 00:32:09.906 A:middle
+[ Applause ]
+
+00:32:10.406 --> 00:32:12.976 A:middle
+On to iCloud, this
+is actually going
+
+00:32:12.976 --> 00:32:14.946 A:middle
+to be a fairly short session
+because most of what you need
+
+00:32:14.946 --> 00:32:16.596 A:middle
+to know is encapsulated
+on this slide.
+
+00:32:18.156 --> 00:32:21.626 A:middle
+Internally, I'm sure you--
+at the conference so far,
+
+00:32:21.626 --> 00:32:23.006 A:middle
+I'm sure you've heard
+some buzz about,
+
+00:32:23.006 --> 00:32:24.406 A:middle
+you know, changes to iCloud.
+
+00:32:25.476 --> 00:32:27.316 A:middle
+We are transitioning
+to new infrastructure.
+
+00:32:27.846 --> 00:32:30.136 A:middle
+You should see some
+reliability improvements
+
+00:32:30.136 --> 00:32:31.846 A:middle
+and some performance
+improvements for those of you
+
+00:32:31.846 --> 00:32:34.456 A:middle
+who are using the Core
+Data with iCloud stuff,
+
+00:32:34.596 --> 00:32:37.276 A:middle
+but all of the changes should
+be completely transparent
+
+00:32:37.276 --> 00:32:38.136 A:middle
+to developers.
+
+00:32:38.136 --> 00:32:42.086 A:middle
+If you're using the
+patterns that Nick
+
+00:32:42.086 --> 00:32:43.236 A:middle
+and Ben showed you last year
+
+00:32:43.236 --> 00:32:46.126 A:middle
+in their presentation,
+nothing has changed.
+
+00:32:46.676 --> 00:32:49.876 A:middle
+Your application
+completely, completely,
+
+00:32:51.196 --> 00:32:53.586 A:middle
+everything will migrate
+over just transparently.
+
+00:32:53.586 --> 00:32:54.486 A:middle
+Everything should work.
+
+00:32:54.486 --> 00:32:56.886 A:middle
+It should just be more
+reliable and faster.
+
+00:32:58.516 --> 00:33:01.616 A:middle
+[ Applause ]
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:58.516 --> 00:33:01.616 A:middle
+[ Applause ]
+
+00:33:02.116 --> 00:33:04.436 A:middle
+And I do want to talk about
+CloudKit since that sort
+
+00:33:04.436 --> 00:33:06.976 A:middle
+of a new and related technology
+that might be of some interest
+
+00:33:06.976 --> 00:33:08.996 A:middle
+to you but in order to
+do that, I sort of want
+
+00:33:09.266 --> 00:33:13.266 A:middle
+to assess the full scope of
+the iCloud-related technologies
+
+00:33:13.266 --> 00:33:15.426 A:middle
+at Apple and sort of give
+you some context to decide
+
+00:33:15.426 --> 00:33:17.286 A:middle
+if it really makes sense
+for your application.
+
+00:33:18.496 --> 00:33:21.356 A:middle
+The basic iCloud technology
+is the Key Value Store.
+
+00:33:21.796 --> 00:33:23.906 A:middle
+This allows you to store
+small amounts of data
+
+00:33:23.906 --> 00:33:25.936 A:middle
+on an application-by-application
+basis.
+
+00:33:26.486 --> 00:33:28.936 A:middle
+It's great for things like
+preferences or, you know,
+
+00:33:29.156 --> 00:33:30.876 A:middle
+view state, that kind of thing.
+
+00:33:31.166 --> 00:33:32.856 A:middle
+It's asynchronously
+kept up to date
+
+00:33:32.856 --> 00:33:36.996 A:middle
+and it has some data limit
+constraints, only allows you
+
+00:33:37.046 --> 00:33:39.486 A:middle
+to store a small amount of data.
+
+00:33:40.756 --> 00:33:42.256 A:middle
+There's iCloud documents.
+
+00:33:42.586 --> 00:33:44.586 A:middle
+This is probably
+familiar to those of you
+
+00:33:44.586 --> 00:33:46.556 A:middle
+who implement document-based
+applications.
+
+00:33:46.636 --> 00:33:50.336 A:middle
+It's fairly simple API,
+basically replace all
+
+00:33:50.336 --> 00:33:53.616 A:middle
+of whatever is in the cloud with
+whatever I have just created.
+
+00:33:54.896 --> 00:33:57.826 A:middle
+Mac OS X is greedy and
+will automatically download
+
+00:33:57.826 --> 00:33:58.936 A:middle
+everything that's in the cloud,
+
+00:33:58.936 --> 00:34:01.836 A:middle
+so you've got a full offline
+cache of all of your documents.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:58.936 --> 00:34:01.836 A:middle
+so you've got a full offline
+cache of all of your documents.
+
+00:34:02.136 --> 00:34:03.926 A:middle
+This is good for
+unstructured data
+
+00:34:03.926 --> 00:34:05.366 A:middle
+and is tied to the file system.
+
+00:34:05.506 --> 00:34:08.485 A:middle
+This is good if you want to
+replace everything on all
+
+00:34:09.295 --> 00:34:12.286 A:middle
+of your devices with whatever
+the latest greatest state
+
+00:34:12.286 --> 00:34:14.346 A:middle
+from one device is.
+
+00:34:14.656 --> 00:34:15.956 A:middle
+Now we come to iCloud Core Data.
+
+00:34:17.246 --> 00:34:20.876 A:middle
+This is good for when you want
+to merge data that is created
+
+00:34:20.876 --> 00:34:23.556 A:middle
+across multiple devices,
+instead of replacing it.
+
+00:34:23.815 --> 00:34:26.926 A:middle
+If you add a contact on machine
+1, you want that to be added
+
+00:34:26.985 --> 00:34:28.466 A:middle
+to your global cloud data store.
+
+00:34:28.466 --> 00:34:30.926 A:middle
+You don't want it to replace
+your global cloud data store.
+
+00:34:31.406 --> 00:34:36.295 A:middle
+It's used to keep private data,
+user data, structured data
+
+00:34:36.545 --> 00:34:39.926 A:middle
+in sync across multiple devices
+and it's replicated between all
+
+00:34:39.926 --> 00:34:42.216 A:middle
+of your devices, but
+it is single-user data,
+
+00:34:43.036 --> 00:34:44.106 A:middle
+which brings us to CloudKit.
+
+00:34:45.646 --> 00:34:49.565 A:middle
+CloudKit is the new API
+in Yosemite and iOS 8.
+
+00:34:50.065 --> 00:34:51.235 A:middle
+It's a client server model,
+
+00:34:51.426 --> 00:34:53.275 A:middle
+which means that it
+has no local store.
+
+00:34:53.275 --> 00:34:55.716 A:middle
+If you're going to be using it,
+your users are going to need
+
+00:34:55.716 --> 00:34:57.816 A:middle
+to be connected to the
+network at all times.
+
+00:34:58.836 --> 00:35:01.806 A:middle
+It allows for predicate-based
+queries, not the full power
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:58.836 --> 00:35:01.806 A:middle
+It allows for predicate-based
+queries, not the full power
+
+00:35:01.806 --> 00:35:04.366 A:middle
+that Core Data gives you,
+but a really substantial
+
+00:35:04.366 --> 00:35:07.206 A:middle
+and pretty much everything
+you're reasonably going
+
+00:35:07.206 --> 00:35:07.636 A:middle
+to want to do.
+
+00:35:07.636 --> 00:35:09.946 A:middle
+And it's application-centered
+data.
+
+00:35:10.126 --> 00:35:10.846 A:middle
+What does that mean?
+
+00:35:11.046 --> 00:35:13.996 A:middle
+Well, the data is public
+and shared by all users
+
+00:35:13.996 --> 00:35:15.616 A:middle
+of your application or can be.
+
+00:35:15.676 --> 00:35:18.516 A:middle
+If you want to implement
+a, I don't know,
+
+00:35:18.896 --> 00:35:20.366 A:middle
+restaurant reviewing
+application,
+
+00:35:20.606 --> 00:35:23.956 A:middle
+where all of your users can
+see what everybody else thought
+
+00:35:23.956 --> 00:35:24.886 A:middle
+about a given restaurant,
+
+00:35:25.476 --> 00:35:27.936 A:middle
+this is probably the
+technology you want to look at.
+
+00:35:27.936 --> 00:35:29.736 A:middle
+It's good for structured
+and bulk data
+
+00:35:29.736 --> 00:35:31.446 A:middle
+and it allows for
+a large data set.
+
+00:35:31.446 --> 00:35:34.176 A:middle
+The data set will scale
+proportionately with the number
+
+00:35:34.176 --> 00:35:36.726 A:middle
+of users of your application.
+
+00:35:36.726 --> 00:35:41.596 A:middle
+It uses iCloud accounts and has
+client-directed data transfer,
+
+00:35:41.856 --> 00:35:43.446 A:middle
+and I don't know what
+either of those means.
+
+00:35:43.446 --> 00:35:46.206 A:middle
+You should probably go watch
+the video of their session.
+
+00:35:46.476 --> 00:35:49.416 A:middle
+Somebody gave me these
+slides and asked me please
+
+00:35:49.596 --> 00:35:51.366 A:middle
+to talk to you guys about it.
+
+00:35:52.836 --> 00:35:57.826 A:middle
+So that's the iCloud
+alternatives
+
+00:35:57.826 --> 00:35:59.196 A:middle
+that you have on our platform.
+
+00:35:59.196 --> 00:36:01.726 A:middle
+Some of you may want to actually
+go look at CloudKit, and,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:59.196 --> 00:36:01.726 A:middle
+Some of you may want to actually
+go look at CloudKit, and,
+
+00:36:01.836 --> 00:36:04.876 A:middle
+you know, do interesting
+things with it, which brings us
+
+00:36:04.876 --> 00:36:07.966 A:middle
+to the session I'm sure
+all of you have wondered
+
+00:36:07.966 --> 00:36:11.536 A:middle
+about since Monday's
+announcement, which is Swift.
+
+00:36:12.436 --> 00:36:15.066 A:middle
+You have questions, and I'm
+here to give you answers.
+
+00:36:18.936 --> 00:36:21.486 A:middle
+This is a fragment from an
+email that came through one
+
+00:36:21.486 --> 00:36:24.576 A:middle
+of my mailboxes sometime
+over the last several months.
+
+00:36:25.126 --> 00:36:27.016 A:middle
+It basically says-- well,
+
+00:36:27.376 --> 00:36:30.386 A:middle
+the rest of the message
+basically said,
+
+00:36:30.666 --> 00:36:34.496 A:middle
+Swift is intended as a
+language for Cocoa programmers.
+
+00:36:35.076 --> 00:36:37.616 A:middle
+Cocoa is nice and
+powerful and dynamic.
+
+00:36:38.176 --> 00:36:41.286 A:middle
+Core Data is a very dynamic and
+very powerful piece of Cocoa.
+
+00:36:41.856 --> 00:36:46.416 A:middle
+Well, Swift must support
+Core Data, period.
+
+00:36:49.106 --> 00:36:49.656 A:middle
+So it does.
+
+00:36:50.596 --> 00:36:53.196 A:middle
+You get the full power
+of Core Data in Swift.
+
+00:36:53.756 --> 00:36:58.956 A:middle
+You can create managed
+object subclasses in Swift.
+
+00:36:59.416 --> 00:37:00.926 A:middle
+I'll show you how to do
+that on the next slide,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:59.416 --> 00:37:00.926 A:middle
+I'll show you how to do
+that on the next slide,
+
+00:37:01.336 --> 00:37:03.716 A:middle
+and if it makes sense for
+your application, you can mix
+
+00:37:03.716 --> 00:37:07.016 A:middle
+and match between Core
+Data and SWF files.
+
+00:37:07.396 --> 00:37:10.176 A:middle
+It's all the same story as
+they've been telling you in all
+
+00:37:10.176 --> 00:37:11.936 A:middle
+of the other Swift
+sessions and Swift labs.
+
+00:37:12.606 --> 00:37:16.556 A:middle
+How do you create a
+managed object subclass?
+
+00:37:16.606 --> 00:37:19.866 A:middle
+Well, they're pretty much
+like Objective-C, only instead
+
+00:37:19.866 --> 00:37:24.116 A:middle
+of using @dynamic, you'll
+be using @NSManaged.
+
+00:37:24.156 --> 00:37:26.026 A:middle
+This is a Core Data
+specific property
+
+00:37:26.506 --> 00:37:28.326 A:middle
+that tells the Swift compiler
+
+00:37:28.326 --> 00:37:31.156 A:middle
+that the Core Data runtime
+is going to be responsible
+
+00:37:31.156 --> 00:37:36.606 A:middle
+for managing the data storage
+and accessors for the properties
+
+00:37:36.606 --> 00:37:38.046 A:middle
+that you specified is at manage.
+
+00:37:39.416 --> 00:37:42.666 A:middle
+Unfortunately, you're not
+going to be able to, you know,
+
+00:37:42.866 --> 00:37:45.576 A:middle
+create your own dynamic
+mechanisms.
+
+00:37:45.926 --> 00:37:47.196 A:middle
+Talk to the Swift
+guys about that.
+
+00:37:47.886 --> 00:37:51.046 A:middle
+The one change other than this
+that you'll need to remember
+
+00:37:51.046 --> 00:37:52.796 A:middle
+that might trip a few of
+you up is that you now need
+
+00:37:52.796 --> 00:37:55.146 A:middle
+to add the module
+name in the data model
+
+00:37:55.726 --> 00:38:00.026 A:middle
+when you specify the class
+that your entity is going
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:55.726 --> 00:38:00.026 A:middle
+when you specify the class
+that your entity is going
+
+00:38:00.026 --> 00:38:02.416 A:middle
+to be using, and
+that's just done up here
+
+00:38:02.956 --> 00:38:06.856 A:middle
+in the data modeling tool, where
+you used to specify the class,
+
+00:38:06.856 --> 00:38:09.556 A:middle
+now you need to specify
+the fully qualified class,
+
+00:38:09.946 --> 00:38:11.256 A:middle
+namespace.classname.
+
+00:38:12.076 --> 00:38:13.726 A:middle
+But that's really
+the only change.
+
+00:38:15.996 --> 00:38:18.496 A:middle
+This is what an Objective-C
+subclass looks like.
+
+00:38:18.496 --> 00:38:20.316 A:middle
+You should mostly be
+familiar with this
+
+00:38:20.316 --> 00:38:21.246 A:middle
+if you're in this session.
+
+00:38:21.366 --> 00:38:25.036 A:middle
+Import Core Data,
+declare your interface,
+
+00:38:25.136 --> 00:38:27.256 A:middle
+declare the properties,
+you're done.
+
+00:38:28.086 --> 00:38:29.586 A:middle
+But you've also got
+a separate file
+
+00:38:29.706 --> 00:38:31.526 A:middle
+and this file is actually
+pretty basic looking.
+
+00:38:31.866 --> 00:38:34.176 A:middle
+Import your header file because,
+well, that's how C works.
+
+00:38:34.886 --> 00:38:37.146 A:middle
+Declare your implementation,
+
+00:38:37.146 --> 00:38:38.736 A:middle
+declare that Core
+Data is responsible
+
+00:38:38.736 --> 00:38:40.246 A:middle
+for these properties,
+and you're done.
+
+00:38:41.106 --> 00:38:43.766 A:middle
+Swift collapses both of
+these into a single file
+
+00:38:43.766 --> 00:38:45.596 A:middle
+that looks a lot like this.
+
+00:38:46.196 --> 00:38:48.506 A:middle
+Small, sleek, contains all
+of the same information
+
+00:38:48.506 --> 00:38:52.576 A:middle
+that you saw in the previous
+two files in one place without,
+
+00:38:52.646 --> 00:38:53.916 A:middle
+you know, duplication of lines.
+
+00:38:54.586 --> 00:39:01.376 A:middle
+Some things to remember about
+Swift is that it uses types.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:54.586 --> 00:39:01.376 A:middle
+Some things to remember about
+Swift is that it uses types.
+
+00:39:02.106 --> 00:39:04.406 A:middle
+It's very, very firm
+in the beliefs
+
+00:39:04.406 --> 00:39:06.826 A:middle
+that static typing is a
+good and important thing.
+
+00:39:07.226 --> 00:39:11.266 A:middle
+Core Data has not, does not
+use types, but if you want
+
+00:39:11.306 --> 00:39:14.196 A:middle
+to use types, and you probably
+will in your Swift code,
+
+00:39:14.196 --> 00:39:19.636 A:middle
+you probably want to be creating
+your own NSManagedObject
+
+00:39:19.636 --> 00:39:22.346 A:middle
+subclasses, custom
+subclasses, so you can use
+
+00:39:22.346 --> 00:39:23.856 A:middle
+that subclass name
+as a type name.
+
+00:39:24.236 --> 00:39:26.476 A:middle
+Otherwise, you're going to
+have to use NSManagedObject
+
+00:39:26.476 --> 00:39:28.296 A:middle
+because entity names
+are not going
+
+00:39:28.296 --> 00:39:30.046 A:middle
+to suffice as type specifiers.
+
+00:39:30.426 --> 00:39:33.426 A:middle
+It's going to kind
+of look like this,
+
+00:39:34.186 --> 00:39:38.026 A:middle
+should be what you pretty much
+expect having had a chance
+
+00:39:38.026 --> 00:39:38.626 A:middle
+to look at Swift.
+
+00:39:38.956 --> 00:39:41.456 A:middle
+And now I'm going to do a demo,
+
+00:39:42.926 --> 00:39:47.376 A:middle
+talk about how things
+work in Swift.
+
+00:39:48.796 --> 00:39:54.546 A:middle
+So here we have a Swift
+application or a project
+
+00:39:54.736 --> 00:39:56.976 A:middle
+that builds an application
+that looks awfully
+
+00:39:56.976 --> 00:39:59.076 A:middle
+like the last thing I demoed.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:00.336 --> 00:40:01.586 A:middle
+It's got an app delegate.
+
+00:40:02.276 --> 00:40:08.516 A:middle
+It's got all of your standard
+code, sets up IB outlets
+
+00:40:08.516 --> 00:40:12.596 A:middle
+for your controllers, adds key
+value observers, so you notice
+
+00:40:12.596 --> 00:40:13.856 A:middle
+when things have changed,
+
+00:40:13.856 --> 00:40:15.956 A:middle
+you can refresh contents
+of controllers.
+
+00:40:18.546 --> 00:40:23.116 A:middle
+It's got batch update
+code to run batch updates.
+
+00:40:24.246 --> 00:40:25.406 A:middle
+All the same stuff you'd expect.
+
+00:40:25.706 --> 00:40:28.316 A:middle
+It's got a utilities class,
+
+00:40:28.316 --> 00:40:32.716 A:middle
+and I've actually split my
+Core Data stack setup off
+
+00:40:32.716 --> 00:40:35.236 A:middle
+into utilities and
+that's due to the way
+
+00:40:35.236 --> 00:40:38.046 A:middle
+that Swift handles
+variable initialization,
+
+00:40:39.446 --> 00:40:43.906 A:middle
+either initialize
+something to a simple type
+
+00:40:44.196 --> 00:40:46.186 A:middle
+or you set up computer property.
+
+00:40:46.186 --> 00:40:47.646 A:middle
+But if you set up
+computer property,
+
+00:40:48.066 --> 00:40:50.926 A:middle
+that gets reevaluated every time
+somebody accesses the property,
+
+00:40:51.326 --> 00:40:52.146 A:middle
+which is not what you want
+
+00:40:52.146 --> 00:40:53.456 A:middle
+when you're setting
+up a Core Data stack.
+
+00:40:54.136 --> 00:40:57.006 A:middle
+You only want to access it once.
+
+00:40:57.976 --> 00:40:59.486 A:middle
+I was playing around
+as I built this,
+
+00:40:59.486 --> 00:41:04.856 A:middle
+so you can see a lazy
+property, deferring binding
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:59.486 --> 00:41:04.856 A:middle
+so you can see a lazy
+property, deferring binding
+
+00:41:04.856 --> 00:41:07.016 A:middle
+to managed object models data
+
+00:41:07.016 --> 00:41:09.076 A:middle
+until you actually
+try and access it.
+
+00:41:09.876 --> 00:41:13.636 A:middle
+Computer property for Persistent
+Store Coordinator sets
+
+00:41:13.636 --> 00:41:14.166 A:middle
+up my stack.
+
+00:41:15.276 --> 00:41:17.086 A:middle
+Computer properties
+can deal with nil.
+
+00:41:17.086 --> 00:41:18.466 A:middle
+@lazy is not happy with nil,
+
+00:41:18.466 --> 00:41:20.526 A:middle
+so there's another
+minor gotcha there.
+
+00:41:20.946 --> 00:41:25.216 A:middle
+Here, we've got our
+function that sets up
+
+00:41:25.216 --> 00:41:28.266 A:middle
+and returns our managed
+object context.
+
+00:41:28.266 --> 00:41:32.486 A:middle
+It looks pretty familiar to
+those of you who are familiar
+
+00:41:32.486 --> 00:41:35.906 A:middle
+with Core Data, all of the
+[inaudible] calls are the same.
+
+00:41:36.496 --> 00:41:40.836 A:middle
+Our mailbox, here we've
+got our message instance,
+
+00:41:40.836 --> 00:41:46.746 A:middle
+which has a KVO observer setup,
+set it up in the init method.
+
+00:41:47.186 --> 00:41:49.896 A:middle
+Whenever the observer
+gets triggered,
+
+00:41:49.896 --> 00:41:53.356 A:middle
+we'll update our read badge.
+
+00:41:53.576 --> 00:41:56.306 A:middle
+Messages controller does the
+same thing the previous messages
+
+00:41:56.306 --> 00:41:57.046 A:middle
+controller did.
+
+00:41:57.286 --> 00:42:01.676 A:middle
+I'm going to build and run.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:57.286 --> 00:42:01.676 A:middle
+I'm going to build and run.
+
+00:42:01.676 --> 00:42:08.776 A:middle
+Whew. It's a Swift
+application using Core Data.
+
+00:42:09.056 --> 00:42:10.536 A:middle
+It's actually a little
+bit faster
+
+00:42:10.536 --> 00:42:11.556 A:middle
+than the Objective-C version.
+
+00:42:12.516 --> 00:42:17.576 A:middle
+[ Applause ]
+
+00:42:18.076 --> 00:42:26.786 A:middle
+So, yeah, and if I come up here,
+Mark as Read, whew, it's read.
+
+00:42:27.746 --> 00:42:29.646 A:middle
+So I talked about batch updates.
+
+00:42:30.046 --> 00:42:32.176 A:middle
+We talked about asynchronous
+fetching and incremental stores
+
+00:42:32.176 --> 00:42:33.246 A:middle
+and what that means for you,
+
+00:42:33.666 --> 00:42:36.236 A:middle
+talked about our
+concurrency changes
+
+00:42:36.236 --> 00:42:39.196 A:middle
+and our concurrency story over
+the years, gave you a sense of,
+
+00:42:39.446 --> 00:42:43.386 A:middle
+you know, where we were, where
+we wanted to be, iCloud update,
+
+00:42:43.476 --> 00:42:44.346 A:middle
+and I talked about Swift.
+
+00:42:44.426 --> 00:42:45.286 A:middle
+I think I've covered everything.
+
+00:42:45.836 --> 00:42:47.146 A:middle
+This is where you get
+
+00:42:47.146 --> 00:42:49.196 A:middle
+to see Anthony the alligator
+telling you to file bugs.
+
+00:42:49.606 --> 00:42:52.746 A:middle
+We can't fix what
+we don't know about.
+
+00:42:52.746 --> 00:42:55.876 A:middle
+We don't guarantee we'll fix
+what we do know about, but,
+
+00:42:55.966 --> 00:42:58.476 A:middle
+you know, we can't fix
+what we don't know about.
+
+00:42:58.986 --> 00:43:00.436 A:middle
+File a bug report.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:42:58.986 --> 00:43:00.436 A:middle
+File a bug report.
+
+00:43:00.436 --> 00:43:03.376 A:middle
+It helps if you give us steps
+to reproduce, really helps
+
+00:43:03.376 --> 00:43:04.286 A:middle
+if you give us an app.
+
+00:43:04.526 --> 00:43:06.976 A:middle
+If you give us an app that
+reproduces your problem, well,
+
+00:43:07.026 --> 00:43:10.866 A:middle
+we fix those first because,
+you know, we know what to fix.
+
+00:43:10.956 --> 00:43:14.326 A:middle
+If you want feature requests,
+enhancement requests,
+
+00:43:14.326 --> 00:43:16.026 A:middle
+performance issues,
+documentation stuff,
+
+00:43:16.176 --> 00:43:17.236 A:middle
+all goes through Bug Reporter.
+
+00:43:19.876 --> 00:43:22.546 A:middle
+For more information, you
+can talk to Dave DeLong.
+
+00:43:22.546 --> 00:43:25.156 A:middle
+He's our technology
+evangelist, delong@apple.com,
+
+00:43:25.346 --> 00:43:28.826 A:middle
+or you can send whatever
+your feedback is
+
+00:43:28.826 --> 00:43:30.496 A:middle
+to cocoa-feedback@apple.com.
+
+00:43:30.566 --> 00:43:34.386 A:middle
+We have a lot of documentation
+online at developer website.
+
+00:43:34.386 --> 00:43:36.856 A:middle
+There's a programming guide,
+some examples, tutorials,
+
+00:43:36.856 --> 00:43:38.856 A:middle
+code fragments, that
+kind of thing,
+
+00:43:38.856 --> 00:43:41.306 A:middle
+and there's always the
+Apple developer forums.
+
+00:43:43.176 --> 00:43:45.316 A:middle
+Related sessions,
+I mentioned this.
+
+00:43:45.316 --> 00:43:46.386 A:middle
+There was a CloudKit session,
+
+00:43:46.386 --> 00:43:49.016 A:middle
+Introducing CloudKit,
+Tuesday at 3:15.
+
+00:43:49.016 --> 00:43:50.216 A:middle
+If you're interested in that,
+
+00:43:50.216 --> 00:43:51.616 A:middle
+you probably want
+to watch the video.
+
+00:43:52.126 --> 00:43:54.526 A:middle
+There's also, although it is
+not appearing on this slide,
+
+00:43:54.526 --> 00:43:56.956 A:middle
+was a What's New in
+Cocoa session on Tuesday.
+
+00:43:56.956 --> 00:43:58.996 A:middle
+You may be interested in
+watching that as well,
+
+00:43:59.596 --> 00:44:02.916 A:middle
+and welcome and thanks
+for coming.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:43:59.596 --> 00:44:02.916 A:middle
+and welcome and thanks
+for coming.
+
+00:44:03.516 --> 00:44:07.850 A:middle
+[ Applause ]
+

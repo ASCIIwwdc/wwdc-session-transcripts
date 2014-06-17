@@ -1,0 +1,4342 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:00.506 --> 00:00:10.906 A:middle
+[ Silence ]
+
+00:00:11.406 --> 00:00:11.966 A:middle
+&gt;&gt; Alright.
+
+00:00:12.546 --> 00:00:14.536 A:middle
+Hello and welcome to
+the Advanced Graphics
+
+00:00:14.536 --> 00:00:16.486 A:middle
+and Animations for
+iOS Apps talk.
+
+00:00:17.056 --> 00:00:18.506 A:middle
+I'm Axel. Mike is over there.
+
+00:00:18.506 --> 00:00:20.956 A:middle
+He will take over in
+the middle of the talk.
+
+00:00:21.366 --> 00:00:22.796 A:middle
+And with today's
+talk we're going
+
+00:00:22.796 --> 00:00:24.116 A:middle
+to cover the following topics.
+
+00:00:24.196 --> 00:00:26.126 A:middle
+The first part we'll be talking
+
+00:00:26.126 --> 00:00:27.526 A:middle
+about the Core Animation
+pipeline
+
+00:00:27.526 --> 00:00:28.996 A:middle
+and how it interacts
+with the application.
+
+00:00:29.086 --> 00:00:31.726 A:middle
+After this I'll introduce
+a few rendering concepts
+
+00:00:31.726 --> 00:00:34.416 A:middle
+that are required to
+understand our new two classes,
+
+00:00:34.416 --> 00:00:36.216 A:middle
+UIBlurEffect and
+UIVibrancyEffect
+
+00:00:36.916 --> 00:00:39.466 A:middle
+and after this Mike will
+take over and walk you
+
+00:00:39.466 --> 00:00:40.896 A:middle
+through existing Profiling Tools
+
+00:00:40.896 --> 00:00:42.716 A:middle
+and demonstrate a
+few case studies.
+
+00:00:43.256 --> 00:00:45.906 A:middle
+To iterate the frameworks
+that we'll be looking
+
+00:00:45.906 --> 00:00:48.916 A:middle
+at in this talk, in the first
+part of the talk we're looking
+
+00:00:48.916 --> 00:00:51.486 A:middle
+at Core Animation and how
+it interacts with OpenGL
+
+00:00:51.486 --> 00:00:53.686 A:middle
+or some hardware with metal,
+the graphics hardware.
+
+00:00:54.666 --> 00:00:57.096 A:middle
+And then in the second
+half of my part I will talk
+
+00:00:57.096 --> 00:00:59.186 A:middle
+about the UIBlurEffect
+and UIVibrancyEffect
+
+00:00:59.186 --> 00:01:00.196 A:middle
+that are a part of UIKit.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.186 --> 00:01:00.196 A:middle
+that are a part of UIKit.
+
+00:01:01.096 --> 00:01:03.986 A:middle
+So let's get started with
+the Core Animation pipeline.
+
+00:01:04.646 --> 00:01:07.466 A:middle
+So it all starts
+in the application.
+
+00:01:07.466 --> 00:01:09.126 A:middle
+The application builds
+a view hierarchy.
+
+00:01:09.346 --> 00:01:12.366 A:middle
+These are indirectly with UIKit
+or directly with Core Animation.
+
+00:01:13.156 --> 00:01:15.196 A:middle
+One thing worth noticing now is
+
+00:01:15.196 --> 00:01:18.156 A:middle
+that the application process is
+actually not doing the actual
+
+00:01:18.156 --> 00:01:19.316 A:middle
+rendering work for
+Core Animation.
+
+00:01:19.886 --> 00:01:23.206 A:middle
+Instead this view hierarchy is
+committed to the render server
+
+00:01:23.206 --> 00:01:24.556 A:middle
+which is a separate process
+
+00:01:24.966 --> 00:01:26.876 A:middle
+and this render server
+has a server side version
+
+00:01:26.876 --> 00:01:28.876 A:middle
+of Core Animation that
+receives this view hierarchy.
+
+00:01:29.316 --> 00:01:32.476 A:middle
+The view hierarchy is then
+rendered with Core Animation
+
+00:01:32.506 --> 00:01:35.266 A:middle
+with OpenGL or metal,
+that's the GPU.
+
+00:01:35.356 --> 00:01:36.416 A:middle
+It's GPU accelerated.
+
+00:01:37.186 --> 00:01:39.786 A:middle
+And then once the view hierarchy
+is being rendered we can finally
+
+00:01:39.786 --> 00:01:40.646 A:middle
+display it to the user.
+
+00:01:41.886 --> 00:01:44.566 A:middle
+So the interesting part
+is now how does this look
+
+00:01:44.566 --> 00:01:46.126 A:middle
+like time wise within
+the application?
+
+00:01:46.126 --> 00:01:48.316 A:middle
+So, therefore, I would like to
+introduce the following grid.
+
+00:01:49.366 --> 00:01:52.066 A:middle
+The vertical lines represent
+particular blanking interrupts
+
+00:01:52.066 --> 00:01:55.026 A:middle
+and since you're rendering at
+60 hertz of UI the distance
+
+00:01:55.026 --> 00:01:58.096 A:middle
+between those vertical
+lines is 16.67ms.
+
+00:01:59.366 --> 00:02:01.636 A:middle
+So, the first thing that
+happens in the application,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:59.366 --> 00:02:01.636 A:middle
+So, the first thing that
+happens in the application,
+
+00:02:01.786 --> 00:02:04.526 A:middle
+you receive an event
+probably because of a touch,
+
+00:02:04.666 --> 00:02:08.175 A:middle
+and therefore, the usual case,
+I mean to handling this case is
+
+00:02:08.175 --> 00:02:09.856 A:middle
+that we want to update
+a view hierarchy.
+
+00:02:10.866 --> 00:02:12.096 A:middle
+And this happens in a phase
+
+00:02:12.096 --> 00:02:13.986 A:middle
+that we call the commit
+transaction phase.
+
+00:02:13.986 --> 00:02:15.536 A:middle
+It is in our application.
+
+00:02:16.476 --> 00:02:19.896 A:middle
+At the end of this phase the
+view hierarchy is then encoded
+
+00:02:19.896 --> 00:02:20.916 A:middle
+and sent to the render server.
+
+00:02:20.916 --> 00:02:23.646 A:middle
+The first thing that the
+render server then asks is
+
+00:02:23.646 --> 00:02:24.716 A:middle
+to decode this view hierarchy.
+
+00:02:25.996 --> 00:02:28.516 A:middle
+The render server then has
+to wait for the next resync
+
+00:02:28.656 --> 00:02:31.976 A:middle
+in order to wait for buffers
+to get back from a display
+
+00:02:31.976 --> 00:02:34.206 A:middle
+that they can actually render to
+
+00:02:34.206 --> 00:02:37.796 A:middle
+and then it finally starts
+issuing draw calls for the GPU,
+
+00:02:38.066 --> 00:02:40.656 A:middle
+this OpenGL or metal again.
+
+00:02:41.106 --> 00:02:43.106 A:middle
+Then once this is
+completed hopefully
+
+00:02:43.106 --> 00:02:45.866 A:middle
+with the review sources now
+available it can finally start
+
+00:02:45.866 --> 00:02:48.916 A:middle
+rendering and so the GPU starts
+doing its rendering work.
+
+00:02:49.816 --> 00:02:52.636 A:middle
+Hopefully this rendering work
+finishes before the next resync
+
+00:02:52.916 --> 00:02:56.156 A:middle
+because then we can
+swap in the frame buffer
+
+00:02:56.156 --> 00:02:57.586 A:middle
+and show the view
+hierarchy to the user.
+
+00:02:58.516 --> 00:03:00.986 A:middle
+As you can these various steps
+span over multiple frames.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:58.516 --> 00:03:00.986 A:middle
+As you can these various steps
+span over multiple frames.
+
+00:03:00.986 --> 00:03:02.426 A:middle
+In this case it's three frames
+
+00:03:02.926 --> 00:03:05.106 A:middle
+and let's say we
+would now continue
+
+00:03:05.106 --> 00:03:06.906 A:middle
+with the next handler event
+and Commit Transaction
+
+00:03:06.906 --> 00:03:09.726 A:middle
+after the display then we would
+only be able to render 20 hertz.
+
+00:03:09.726 --> 00:03:10.676 A:middle
+I know that's 60 hertz.
+
+00:03:10.866 --> 00:03:13.786 A:middle
+So, therefore, what we're
+doing is we are overlaying
+
+00:03:13.956 --> 00:03:14.576 A:middle
+these stages.
+
+00:03:14.576 --> 00:03:16.296 A:middle
+So in parallel with
+the draw codes
+
+00:03:16.296 --> 00:03:18.886 A:middle
+that you can see here we will
+do the next handler event,
+
+00:03:19.076 --> 00:03:21.976 A:middle
+handler event and commit
+transaction and so at the end
+
+00:03:21.976 --> 00:03:23.706 A:middle
+of this flowing step diagram.
+
+00:03:24.016 --> 00:03:27.406 A:middle
+In the next few slides
+I would like to focus
+
+00:03:27.406 --> 00:03:28.726 A:middle
+on the commit transaction stage
+
+00:03:28.726 --> 00:03:31.326 A:middle
+because that's what affects
+application developers the most.
+
+00:03:32.396 --> 00:03:34.676 A:middle
+So let's take a look
+at commit transaction.
+
+00:03:35.056 --> 00:03:37.436 A:middle
+Commit transaction itself
+consists of four phases.
+
+00:03:37.436 --> 00:03:39.156 A:middle
+The first phase is
+the layout phase.
+
+00:03:39.156 --> 00:03:41.136 A:middle
+This is where we
+set up the views.
+
+00:03:41.586 --> 00:03:43.446 A:middle
+Then the next phase
+is the display phase.
+
+00:03:43.446 --> 00:03:44.626 A:middle
+This is where we draw the views.
+
+00:03:45.386 --> 00:03:47.576 A:middle
+The third phase is the
+prepare commit phase
+
+00:03:47.576 --> 00:03:49.826 A:middle
+where we do some additional
+Core Animation work
+
+00:03:50.396 --> 00:03:53.556 A:middle
+and the last phase is where we
+actually package up the layers
+
+00:03:53.556 --> 00:03:55.476 A:middle
+and send them to the
+render server in the commit.
+
+00:03:56.906 --> 00:03:59.176 A:middle
+So let's look in detail
+at those four phases.
+
+00:03:59.336 --> 00:04:00.976 A:middle
+First the layout phase.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:59.336 --> 00:04:00.976 A:middle
+First the layout phase.
+
+00:04:01.726 --> 00:04:03.646 A:middle
+In the Layout phase the
+layoutSubviews overrides
+
+00:04:03.646 --> 00:04:04.216 A:middle
+are invoked.
+
+00:04:04.216 --> 00:04:05.896 A:middle
+This is where view
+creation happens.
+
+00:04:05.976 --> 00:04:07.876 A:middle
+This is where we add
+layers to the view hierarchy
+
+00:04:07.876 --> 00:04:10.756 A:middle
+with addSubview and this
+is where populate content
+
+00:04:10.756 --> 00:04:12.516 A:middle
+and do some lightweight
+database lookups.
+
+00:04:12.516 --> 00:04:14.236 A:middle
+And I'm saying lightweight
+because we don't want
+
+00:04:14.236 --> 00:04:15.096 A:middle
+to stall here too long.
+
+00:04:15.656 --> 00:04:17.786 A:middle
+The lightweights could be,
+for example, localized strings
+
+00:04:17.786 --> 00:04:19.516 A:middle
+because we need them
+at this point in order
+
+00:04:19.516 --> 00:04:20.986 A:middle
+to do our label layout.
+
+00:04:21.976 --> 00:04:25.366 A:middle
+Because of this, this phase is
+usually CPU bound or I/O bound.
+
+00:04:27.016 --> 00:04:28.336 A:middle
+The second phase is
+the Display phase.
+
+00:04:28.336 --> 00:04:30.626 A:middle
+This is where the draw
+contents this drawRect
+
+00:04:30.626 --> 00:04:32.286 A:middle
+if it's overridden
+or do string drawing.
+
+00:04:32.816 --> 00:04:37.986 A:middle
+One thing worth noting here is
+that this phase is actually CPU
+
+00:04:37.986 --> 00:04:39.696 A:middle
+or memory bound, because the
+rendering is [inaudible].
+
+00:04:39.806 --> 00:04:42.516 A:middle
+We use here the core
+graphics for this rendering.
+
+00:04:43.026 --> 00:04:45.666 A:middle
+And so we usually do this
+rendering with CG context.
+
+00:04:45.666 --> 00:04:48.666 A:middle
+So the point is here that
+we want to minimize the work
+
+00:04:48.666 --> 00:04:50.176 A:middle
+that we do with core graphics
+
+00:04:50.456 --> 00:04:53.246 A:middle
+to avoid a large
+performance set in this stage.
+
+00:04:53.776 --> 00:04:55.906 A:middle
+The next phase is
+the Prepare phase.
+
+00:04:55.906 --> 00:04:58.146 A:middle
+This is where image decoding
+and image conversion happens.
+
+00:04:58.936 --> 00:05:00.476 A:middle
+Image decoding should
+be straightforward.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:58.936 --> 00:05:00.476 A:middle
+Image decoding should
+be straightforward.
+
+00:05:00.476 --> 00:05:01.726 A:middle
+This happens if you
+have any images
+
+00:05:01.726 --> 00:05:04.046 A:middle
+and in your view
+hierarchy and these JPEGs
+
+00:05:04.046 --> 00:05:05.936 A:middle
+or PNGs are getting
+decoded at this point.
+
+00:05:07.036 --> 00:05:09.366 A:middle
+Image conversation is not
+quite so straightforward.
+
+00:05:09.636 --> 00:05:11.896 A:middle
+What happens here is
+that we might have images
+
+00:05:11.926 --> 00:05:15.006 A:middle
+that are not supported
+by the GPU.
+
+00:05:15.866 --> 00:05:17.686 A:middle
+And, therefore, we need
+to convert these images.
+
+00:05:17.686 --> 00:05:20.366 A:middle
+A good example for this could
+be index bitmap so you want
+
+00:05:20.366 --> 00:05:21.776 A:middle
+to avoid certain image formats.
+
+00:05:23.196 --> 00:05:26.676 A:middle
+In the last phase the Commit
+phase, we package up the layers
+
+00:05:26.676 --> 00:05:28.846 A:middle
+and send them to
+the render server.
+
+00:05:28.846 --> 00:05:29.936 A:middle
+This process is recursive.
+
+00:05:29.936 --> 00:05:31.516 A:middle
+You have to reiterate
+over the whole layer tree
+
+00:05:31.516 --> 00:05:32.486 A:middle
+and this is expensive.
+
+00:05:32.486 --> 00:05:33.546 A:middle
+The layer tree is complex.
+
+00:05:33.546 --> 00:05:35.846 A:middle
+So this is why we want to
+keep the layer tree as flat
+
+00:05:35.846 --> 00:05:39.076 A:middle
+as possible to make sure
+that this part of the phase
+
+00:05:39.076 --> 00:05:43.136 A:middle
+and as efficient as it can be.
+
+00:05:43.266 --> 00:05:45.376 A:middle
+So let's take a look with how
+this works with animation.
+
+00:05:45.506 --> 00:05:47.716 A:middle
+Animations themselves are
+a three stage process.
+
+00:05:47.716 --> 00:05:50.226 A:middle
+Two of those happen
+inside the application
+
+00:05:50.226 --> 00:05:51.786 A:middle
+and the last stage happens
+on the render server.
+
+00:05:51.786 --> 00:05:55.586 A:middle
+The first stage is where
+we create the animation,
+
+00:05:55.586 --> 00:05:56.486 A:middle
+update view hierarchy.
+
+00:05:56.486 --> 00:05:58.706 A:middle
+This happens usually with
+the animate restoration
+
+00:05:58.706 --> 00:05:59.616 A:middle
+animations method.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:00.746 --> 00:06:03.006 A:middle
+Then the second stage
+is where we prepare
+
+00:06:03.006 --> 00:06:04.206 A:middle
+and commit your animation.
+
+00:06:04.476 --> 00:06:07.176 A:middle
+This is where layoutSubview
+is being called drawRect
+
+00:06:07.176 --> 00:06:08.736 A:middle
+and that probably
+sounds familiar.
+
+00:06:08.736 --> 00:06:11.376 A:middle
+And it is, because these are
+the four phases we were just
+
+00:06:11.376 --> 00:06:12.466 A:middle
+looking at.
+
+00:06:13.116 --> 00:06:14.536 A:middle
+The only difference here is
+
+00:06:14.536 --> 00:06:16.106 A:middle
+that with the commit
+we don't just commit
+
+00:06:16.106 --> 00:06:16.916 A:middle
+to the view hierarchy.
+
+00:06:16.916 --> 00:06:18.236 A:middle
+We commit as well the animation.
+
+00:06:18.826 --> 00:06:20.106 A:middle
+And that's for a
+reason, because we would
+
+00:06:20.106 --> 00:06:22.316 A:middle
+like to handle the animation
+work to render server
+
+00:06:22.316 --> 00:06:26.626 A:middle
+so that we can continue
+to update your animation
+
+00:06:26.666 --> 00:06:28.996 A:middle
+without using interprocess
+communication to talk back
+
+00:06:28.996 --> 00:06:31.126 A:middle
+to the application or force
+them back to the application.
+
+00:06:32.156 --> 00:06:34.276 A:middle
+So that's for efficiency
+reasons.
+
+00:06:34.726 --> 00:06:39.656 A:middle
+So, let's take a look at a few
+rendering concepts that require
+
+00:06:39.656 --> 00:06:41.926 A:middle
+to understand the
+new visual effects
+
+00:06:41.926 --> 00:06:43.666 A:middle
+that we are providing
+you with in iOS 8.
+
+00:06:44.666 --> 00:06:47.326 A:middle
+So in this part of the talk
+I'm covering three areas;
+
+00:06:47.326 --> 00:06:49.706 A:middle
+first tile based rendering
+is how all GPUs work.
+
+00:06:50.576 --> 00:06:52.956 A:middle
+Then I'm going to introduce
+the concept of render passes
+
+00:06:53.126 --> 00:06:55.406 A:middle
+because our new effects
+they use render passes.
+
+00:06:56.196 --> 00:06:58.076 A:middle
+And then I'm doing
+a first example
+
+00:06:58.076 --> 00:07:00.506 A:middle
+by showing you how masking
+works with render passes.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:58.076 --> 00:07:00.506 A:middle
+by showing you how masking
+works with render passes.
+
+00:07:01.876 --> 00:07:04.486 A:middle
+So let's take a look at
+tile based rendering.
+
+00:07:04.486 --> 00:07:06.066 A:middle
+With tile based rendering,
+the screen is split
+
+00:07:06.066 --> 00:07:07.696 A:middle
+into tiles of NxN pixels.
+
+00:07:08.196 --> 00:07:10.196 A:middle
+I've put here a screenshot
+together and overlaid it
+
+00:07:10.196 --> 00:07:12.926 A:middle
+with a grid where you can see
+actually what a tile size would
+
+00:07:12.926 --> 00:07:13.446 A:middle
+be like.
+
+00:07:14.266 --> 00:07:18.026 A:middle
+The tile size is chosen so that
+it fits into the SoC cache.
+
+00:07:18.766 --> 00:07:21.006 A:middle
+And the idea here is that
+the geometry is split
+
+00:07:21.006 --> 00:07:22.006 A:middle
+into tile buckets.
+
+00:07:22.006 --> 00:07:24.016 A:middle
+And I would like
+to demonstrate this
+
+00:07:24.016 --> 00:07:26.516 A:middle
+by using the phone
+icon as an example.
+
+00:07:27.066 --> 00:07:29.966 A:middle
+As you can see the phone
+icon spans multiple tiles
+
+00:07:30.306 --> 00:07:32.936 A:middle
+and the phone icon itself
+is rendered as a CA layer.
+
+00:07:33.036 --> 00:07:35.506 A:middle
+And the CA layer in
+CA is two triangles.
+
+00:07:36.406 --> 00:07:38.406 A:middle
+And if you look at the two
+triangles they are still
+
+00:07:38.406 --> 00:07:40.916 A:middle
+spanning multiple
+triangles, multiple tiles.
+
+00:07:41.816 --> 00:07:44.936 A:middle
+And so what a GP will do now,
+it will now start splitting
+
+00:07:44.936 --> 00:07:47.606 A:middle
+up those triangles, where
+we committed the tile
+
+00:07:47.606 --> 00:07:49.506 A:middle
+so that each tile can be
+rendered individually.
+
+00:07:50.656 --> 00:07:52.746 A:middle
+The idea is here that
+we do this process now
+
+00:07:52.746 --> 00:07:55.196 A:middle
+for the hue geometries so at
+some point we have the geometry
+
+00:07:55.196 --> 00:07:57.676 A:middle
+for each tile collected and
+then we can make decisions
+
+00:07:57.676 --> 00:07:59.006 A:middle
+on what pixels are visible
+
+00:07:59.006 --> 00:08:01.236 A:middle
+and then decide what
+pixel shade to run.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:59.006 --> 00:08:01.236 A:middle
+and then decide what
+pixel shade to run.
+
+00:08:01.236 --> 00:08:04.626 A:middle
+So we run each pixel
+shade only once per pixel.
+
+00:08:04.716 --> 00:08:07.446 A:middle
+Obviously if you do blending
+this doesn't quite work.
+
+00:08:07.616 --> 00:08:09.646 A:middle
+Then we still have the
+problem of overdraw.
+
+00:08:12.636 --> 00:08:16.106 A:middle
+So, let's take a look at what
+type of rendering passes are.
+
+00:08:16.346 --> 00:08:18.796 A:middle
+So let's assume application
+has built a view hierarchy
+
+00:08:18.796 --> 00:08:19.936 A:middle
+with Core Animation.
+
+00:08:19.936 --> 00:08:22.296 A:middle
+It's committed to render server
+
+00:08:22.296 --> 00:08:25.736 A:middle
+and Core Animation has decoded
+it and now it needs to render it
+
+00:08:25.736 --> 00:08:27.696 A:middle
+and it will use OpenGL or metal.
+
+00:08:27.696 --> 00:08:28.846 A:middle
+In the slide I'm
+just saying metal
+
+00:08:28.846 --> 00:08:31.336 A:middle
+for simplicity to render it.
+
+00:08:31.336 --> 00:08:34.066 A:middle
+And it will generate
+with OpenGL command
+
+00:08:34.066 --> 00:08:35.626 A:middle
+but it is then submitted
+to a GPU.
+
+00:08:36.006 --> 00:08:38.525 A:middle
+And the GPU will receive
+this command buffer
+
+00:08:38.525 --> 00:08:39.956 A:middle
+and then start doing its work.
+
+00:08:40.456 --> 00:08:43.806 A:middle
+The first thing that GPU will
+do is vertex processing is
+
+00:08:43.806 --> 00:08:44.806 A:middle
+where the vertex shader runs.
+
+00:08:44.806 --> 00:08:47.176 A:middle
+And the idea here is that
+you transform all of vertices
+
+00:08:47.176 --> 00:08:48.386 A:middle
+into screen space at this stage
+
+00:08:49.056 --> 00:08:51.006 A:middle
+so that we can then
+do the second stage,
+
+00:08:51.006 --> 00:08:52.366 A:middle
+which is the actual tiling.
+
+00:08:52.366 --> 00:08:54.596 A:middle
+Where we actually tile the
+geometry for our tile buckets.
+
+00:08:55.566 --> 00:08:58.406 A:middle
+And this part of the stage
+is called the tiler stage.
+
+00:08:58.446 --> 00:09:00.476 A:middle
+You will be able to find
+this in the instruments,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:58.446 --> 00:09:00.476 A:middle
+You will be able to find
+this in the instruments,
+
+00:09:00.596 --> 00:09:03.146 A:middle
+in the OpenGL ES
+driver instrument
+
+00:09:03.146 --> 00:09:04.296 A:middle
+and the tiler utilization.
+
+00:09:05.876 --> 00:09:07.836 A:middle
+The output of this
+stage is written
+
+00:09:07.836 --> 00:09:09.136 A:middle
+in something called
+the parameter buffer
+
+00:09:09.766 --> 00:09:12.166 A:middle
+and the next stage is
+not starting immediately.
+
+00:09:12.166 --> 00:09:15.676 A:middle
+Instead we wait now until all
+geometry is processed and sits
+
+00:09:15.676 --> 00:09:18.086 A:middle
+in the parameter buffer or until
+the parameter buffer is full.
+
+00:09:18.086 --> 00:09:19.176 A:middle
+Because the problem is
+
+00:09:19.176 --> 00:09:20.886 A:middle
+if the parameter buffer is
+full we have to flush it.
+
+00:09:21.486 --> 00:09:24.596 A:middle
+And that's actually performance
+it because then we need to start
+
+00:09:24.596 --> 00:09:26.166 A:middle
+at the vertex processing and get
+
+00:09:26.166 --> 00:09:28.116 A:middle
+and frontload pixel
+share at work.
+
+00:09:29.526 --> 00:09:34.376 A:middle
+And next stage is as I said
+the pixel shader stage.
+
+00:09:34.816 --> 00:09:36.546 A:middle
+This stage is actually
+called the renderer stage
+
+00:09:36.546 --> 00:09:37.766 A:middle
+and you can find this again
+
+00:09:37.766 --> 00:09:39.866 A:middle
+in the instruments
+OpenGL ES driver tool
+
+00:09:40.276 --> 00:09:42.236 A:middle
+under the name renderer
+utilization.
+
+00:09:42.766 --> 00:09:44.306 A:middle
+And the output of
+this stage is written
+
+00:09:44.306 --> 00:09:45.796 A:middle
+to something called
+the render buffer.
+
+00:09:45.796 --> 00:09:50.346 A:middle
+Okay, so next let's take a
+look at a practical example
+
+00:09:50.346 --> 00:09:51.426 A:middle
+by looking at masking.
+
+00:09:52.616 --> 00:09:54.696 A:middle
+So let's assume our view
+hierarchy is ready to go.
+
+00:09:54.696 --> 00:09:56.946 A:middle
+The command buffer is
+sitting with the GPU
+
+00:09:56.946 --> 00:09:58.316 A:middle
+and we can stop processing.
+
+00:09:58.836 --> 00:10:01.436 A:middle
+So the first thing happens
+in the first pass is
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:58.836 --> 00:10:01.436 A:middle
+So the first thing happens
+in the first pass is
+
+00:10:01.436 --> 00:10:03.886 A:middle
+that we render the
+layer mask to a texture.
+
+00:10:04.046 --> 00:10:05.496 A:middle
+In this case it's
+this camera icon.
+
+00:10:06.726 --> 00:10:09.416 A:middle
+Then in the second pass if
+you render the layer content
+
+00:10:09.416 --> 00:10:12.486 A:middle
+to a texture and in this case
+it's this kind of blue material.
+
+00:10:13.546 --> 00:10:14.826 A:middle
+And then in the last pass
+
+00:10:14.826 --> 00:10:17.566 A:middle
+that we call the compositing
+pass we apply the mass
+
+00:10:17.566 --> 00:10:20.256 A:middle
+to the content texture and
+composite to the reside
+
+00:10:20.256 --> 00:10:22.516 A:middle
+to screen and end up with
+this light blue camera icon.
+
+00:10:24.966 --> 00:10:27.286 A:middle
+So let's take a look
+at UIBlurEffect.
+
+00:10:27.286 --> 00:10:30.436 A:middle
+For those that don't know
+UIBlurEffect can be used
+
+00:10:30.436 --> 00:10:33.896 A:middle
+with UIVisualEffect view
+and this now a public API.
+
+00:10:34.266 --> 00:10:37.906 A:middle
+Since iOS 8, it basically
+allows you to use the Blurs
+
+00:10:37.906 --> 00:10:39.436 A:middle
+that we introduced as iOS 7.
+
+00:10:39.436 --> 00:10:42.626 A:middle
+And if we are providing you
+with three different Blur styles
+
+00:10:42.626 --> 00:10:43.646 A:middle
+that I want to demonstrate here.
+
+00:10:43.646 --> 00:10:45.916 A:middle
+I took this regular
+iOS wallpaper
+
+00:10:45.916 --> 00:10:48.296 A:middle
+and applied three
+different BlurEffects to it,
+
+00:10:48.396 --> 00:10:49.666 A:middle
+extra light, light and dark.
+
+00:10:51.236 --> 00:10:53.876 A:middle
+So let's take a look how
+this looks performance wise.
+
+00:10:53.876 --> 00:10:57.116 A:middle
+I'm using here the dark
+style as an example
+
+00:10:57.116 --> 00:10:58.116 A:middle
+for the rendering passes.
+
+00:10:58.116 --> 00:11:00.096 A:middle
+The dark style is actually
+using the lowest amount
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:58.116 --> 00:11:00.096 A:middle
+The dark style is actually
+using the lowest amount
+
+00:11:00.096 --> 00:11:01.036 A:middle
+of render passes.
+
+00:11:01.036 --> 00:11:04.146 A:middle
+And you also need to keep in
+mind this render pass depends
+
+00:11:04.146 --> 00:11:06.476 A:middle
+on the fact that we did
+certain optimizations
+
+00:11:06.476 --> 00:11:07.736 A:middle
+for certain passer hardware.
+
+00:11:07.736 --> 00:11:12.046 A:middle
+So in the first pass
+we render the content
+
+00:11:12.566 --> 00:11:14.386 A:middle
+that is going to be blurred.
+
+00:11:15.296 --> 00:11:17.306 A:middle
+Then in the second pass
+we captured the content
+
+00:11:17.306 --> 00:11:18.156 A:middle
+and downscale it.
+
+00:11:18.156 --> 00:11:20.396 A:middle
+The downscale depends
+on the hardware
+
+00:11:20.526 --> 00:11:22.996 A:middle
+so in this slide I kept
+it at a certain size
+
+00:11:22.996 --> 00:11:23.666 A:middle
+so it's still readable.
+
+00:11:24.666 --> 00:11:27.366 A:middle
+Then in the next two passes
+we applied the actual blur
+
+00:11:27.366 --> 00:11:30.226 A:middle
+algorithm, which is separated so
+we do first the horizontal blur
+
+00:11:30.226 --> 00:11:31.406 A:middle
+and then the vertical blur.
+
+00:11:31.956 --> 00:11:34.096 A:middle
+There's actually a
+common blur optimization.
+
+00:11:34.306 --> 00:11:35.636 A:middle
+We could do this
+in a single pass
+
+00:11:35.636 --> 00:11:38.946 A:middle
+but let's assume our blur
+corner would be 11x11.
+
+00:11:38.946 --> 00:11:41.766 A:middle
+This would mean we would
+need 121 samples per pixel
+
+00:11:42.426 --> 00:11:44.086 A:middle
+and by separating we only need
+
+00:11:44.086 --> 00:11:46.386 A:middle
+to read 11 samples per
+pixel in each pass.
+
+00:11:47.456 --> 00:11:50.766 A:middle
+So after the fourth pass
+we have this horizontally
+
+00:11:50.766 --> 00:11:53.026 A:middle
+and vertically blurred
+small tiny area.
+
+00:11:53.416 --> 00:11:55.436 A:middle
+And so what's left in the
+last pass is that we need
+
+00:11:55.436 --> 00:11:57.016 A:middle
+to upscale this blur
+and tint it.
+
+00:11:57.126 --> 00:11:59.806 A:middle
+In this case we end up
+then with our dark blur.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:00.666 --> 00:12:03.616 A:middle
+So that looks fine, but let's
+take a look how this looks
+
+00:12:03.616 --> 00:12:04.626 A:middle
+like performance wise.
+
+00:12:05.976 --> 00:12:08.846 A:middle
+So what I did as I test, I
+created a fullscreen layer
+
+00:12:08.846 --> 00:12:13.126 A:middle
+and applied the UIBlurEffect to
+it and measured the performance.
+
+00:12:13.126 --> 00:12:14.826 A:middle
+In this diagram you
+can see three rows.
+
+00:12:14.826 --> 00:12:17.046 A:middle
+The first row represents
+a tile activity,
+
+00:12:17.046 --> 00:12:20.746 A:middle
+the second row a render
+activity and the last row I put
+
+00:12:20.746 --> 00:12:21.546 A:middle
+in the VBlank interrupt
+
+00:12:21.546 --> 00:12:24.306 A:middle
+and we can actually see what
+our frame boundaries are.
+
+00:12:24.306 --> 00:12:26.636 A:middle
+And again, we are
+running at 60 hertz UI.
+
+00:12:27.156 --> 00:12:30.456 A:middle
+So, the time you
+have is 16.67ms.
+
+00:12:31.376 --> 00:12:33.736 A:middle
+So let's focus on
+a single frame.
+
+00:12:33.826 --> 00:12:38.856 A:middle
+As you can see as a first look
+here the first tiler pass is
+
+00:12:38.856 --> 00:12:40.776 A:middle
+happening before the first
+render pass and that's
+
+00:12:40.776 --> 00:12:43.356 A:middle
+because the tiler needs to
+pull this whole geometry,
+
+00:12:43.356 --> 00:12:45.746 A:middle
+so it's emphasized in what we
+just saw on previous slides.
+
+00:12:46.386 --> 00:12:48.936 A:middle
+So let's go quickly
+over the passes again.
+
+00:12:48.976 --> 00:12:51.036 A:middle
+So the first pass
+is the content pass.
+
+00:12:51.706 --> 00:12:54.996 A:middle
+The time for this really
+depends on the view hierarchy.
+
+00:12:54.996 --> 00:12:56.846 A:middle
+In this case it's
+just a simple image
+
+00:12:56.846 --> 00:12:59.646 A:middle
+so it might take longer
+if we involve the UI.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:01.156 --> 00:13:03.436 A:middle
+Then in the second
+pass we downscale
+
+00:13:03.436 --> 00:13:04.766 A:middle
+and capture the content.
+
+00:13:05.716 --> 00:13:07.256 A:middle
+It's actually fairly fast.
+
+00:13:07.256 --> 00:13:08.456 A:middle
+This is pretty much
+constant cost.
+
+00:13:09.596 --> 00:13:11.806 A:middle
+Then the subpass is
+the horizontal blur.
+
+00:13:11.846 --> 00:13:13.606 A:middle
+Again it's constant cost
+which is pretty fast
+
+00:13:13.606 --> 00:13:15.576 A:middle
+because we only apply
+it on a very small area.
+
+00:13:15.576 --> 00:13:18.856 A:middle
+And then in the fourth pass
+we do the vertical Blur,
+
+00:13:19.146 --> 00:13:22.526 A:middle
+again very fast and we end
+up with our blurred region.
+
+00:13:23.416 --> 00:13:26.356 A:middle
+And then in the last pass we
+upscale and tint the blur.
+
+00:13:27.916 --> 00:13:30.316 A:middle
+So one thing you will
+notice now are those gaps
+
+00:13:30.316 --> 00:13:31.136 A:middle
+between those passes.
+
+00:13:31.136 --> 00:13:32.276 A:middle
+I've marked them here in orange.
+
+00:13:33.046 --> 00:13:35.606 A:middle
+And those gaps are actually
+[inaudible] and they happen
+
+00:13:35.606 --> 00:13:39.266 A:middle
+because we do here run a
+contact switch on the GPU.
+
+00:13:39.996 --> 00:13:42.076 A:middle
+And this can actually
+add up quite quickly
+
+00:13:42.076 --> 00:13:43.296 A:middle
+because the time spent here
+
+00:13:43.296 --> 00:13:46.816 A:middle
+in idle time is passable
+at 0.1 to 0.2ms.
+
+00:13:47.266 --> 00:13:50.426 A:middle
+So in this case with four passes
+we have about idle time of 0.4
+
+00:13:50.426 --> 00:13:53.626 A:middle
+to 0.8ms, which is a
+good significant chunk
+
+00:13:53.626 --> 00:13:55.556 A:middle
+of our 16.67ms.
+
+00:13:57.016 --> 00:13:59.336 A:middle
+So let's take a look
+how the blur performs
+
+00:13:59.336 --> 00:14:00.306 A:middle
+on the various devices.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:59.336 --> 00:14:00.306 A:middle
+on the various devices.
+
+00:14:00.306 --> 00:14:04.586 A:middle
+So again this is the fullscreen
+blur that I used before
+
+00:14:04.586 --> 00:14:07.146 A:middle
+and I met it as well on
+iPad 3, 3rd generation.
+
+00:14:08.296 --> 00:14:10.836 A:middle
+And as you can see the iPad 3rd
+generation performs much worse
+
+00:14:10.836 --> 00:14:12.526 A:middle
+than the iPad Air.
+
+00:14:12.816 --> 00:14:18.526 A:middle
+In the case of the extra light
+blur the timing is 18.15ms,
+
+00:14:18.526 --> 00:14:21.446 A:middle
+so we can't render at 60 hertz
+this type of blur on iPad Air.
+
+00:14:22.026 --> 00:14:25.516 A:middle
+And for light and dark we are
+around 14.5ms, which leaves us
+
+00:14:25.636 --> 00:14:28.886 A:middle
+about 2ms for UI, which
+is not really enough
+
+00:14:28.886 --> 00:14:30.026 A:middle
+for rendering any compelling UI.
+
+00:14:31.006 --> 00:14:33.286 A:middle
+So the decision we
+made on iOS 7 RA was
+
+00:14:33.286 --> 00:14:35.516 A:middle
+that we would disable the
+blur on certain devices
+
+00:14:35.666 --> 00:14:37.686 A:middle
+and the iPad 3rd generation
+is one of these devices.
+
+00:14:37.686 --> 00:14:39.176 A:middle
+And this -- the performance
+
+00:14:39.176 --> 00:14:41.156 A:middle
+on the iPad 3rd generation
+changes to this.
+
+00:14:41.826 --> 00:14:43.736 A:middle
+You basically just apply
+a tint layer on top
+
+00:14:43.736 --> 00:14:46.176 A:middle
+so that we can make sure
+that legibility is the same
+
+00:14:46.176 --> 00:14:47.866 A:middle
+as without the BlurEffect.
+
+00:14:49.266 --> 00:14:53.296 A:middle
+So, and to reiterate on
+what devices we don't blur
+
+00:14:53.296 --> 00:14:56.306 A:middle
+and that we only do the
+tinting on the iPad 2
+
+00:14:56.306 --> 00:14:58.766 A:middle
+and iPad 3rd generation,
+we just apply the tint
+
+00:14:58.766 --> 00:15:00.076 A:middle
+and we skip the blur steps.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:58.766 --> 00:15:00.076 A:middle
+and we skip the blur steps.
+
+00:15:00.756 --> 00:15:03.296 A:middle
+On iPad 4th generation,
+iPad Air, iPad Mini,
+
+00:15:03.456 --> 00:15:06.016 A:middle
+iPad Mini with retina
+display, iPhones
+
+00:15:06.016 --> 00:15:10.046 A:middle
+and the iPod touch we do both
+the blur and the tinting.
+
+00:15:10.676 --> 00:15:13.436 A:middle
+So, in summary for
+the UIVisualEffectView
+
+00:15:13.436 --> 00:15:16.756 A:middle
+with UIBlurEffect, UIBlurEffect
+have multiple onscreen passes
+
+00:15:16.756 --> 00:15:17.736 A:middle
+depending on the style.
+
+00:15:18.796 --> 00:15:20.226 A:middle
+Only dirty regions are redrawn.
+
+00:15:20.376 --> 00:15:23.576 A:middle
+So it's actually fine if
+you have a large blur area
+
+00:15:23.576 --> 00:15:24.986 A:middle
+and you don't have
+the content behind it,
+
+00:15:24.986 --> 00:15:26.546 A:middle
+because we only applied
+the blur once.
+
+00:15:27.176 --> 00:15:30.816 A:middle
+The effect is very costly so
+UI can be easily GPU bound.
+
+00:15:31.156 --> 00:15:32.856 A:middle
+So, therefore, you
+should keep the bounds
+
+00:15:32.856 --> 00:15:34.366 A:middle
+of the view as small
+as possible.
+
+00:15:35.086 --> 00:15:37.106 A:middle
+And, therefore, as well
+you should make sure
+
+00:15:37.106 --> 00:15:40.516 A:middle
+to budget for effect.
+
+00:15:40.696 --> 00:15:43.616 A:middle
+So, next let's take a look
+at the UIVibrancyEffect.
+
+00:15:43.616 --> 00:15:45.946 A:middle
+UIVibrancyEffect is an
+effect that's used on the top
+
+00:15:45.946 --> 00:15:47.706 A:middle
+of the blur and it's meant
+to be used for contents
+
+00:15:47.706 --> 00:15:49.636 A:middle
+which can make sure
+that content stands out
+
+00:15:49.636 --> 00:15:51.246 A:middle
+and doesn't go under
+with the blurs.
+
+00:15:51.686 --> 00:15:53.776 A:middle
+So, let's take a look
+how this looks like.
+
+00:15:53.776 --> 00:15:55.436 A:middle
+This is our three
+blur styles again.
+
+00:15:55.696 --> 00:15:58.646 A:middle
+And let's assume we want
+to render the camera icon
+
+00:15:58.646 --> 00:16:01.016 A:middle
+from our masking example
+from before on top.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:58.646 --> 00:16:01.016 A:middle
+from our masking example
+from before on top.
+
+00:16:01.896 --> 00:16:03.526 A:middle
+And this could look like this
+
+00:16:03.526 --> 00:16:05.006 A:middle
+if you don't use
+any VibrancyEffect.
+
+00:16:05.006 --> 00:16:07.896 A:middle
+And as you can see with the
+light style there might be some
+
+00:16:07.896 --> 00:16:10.766 A:middle
+legibility issues because
+the gray starts bleeding out.
+
+00:16:11.646 --> 00:16:14.906 A:middle
+So, what we decided is that
+we edit some VibrancyEffect
+
+00:16:14.906 --> 00:16:17.466 A:middle
+and VibrancyEffect is a punch
+through and then you end
+
+00:16:17.466 --> 00:16:18.636 A:middle
+up with this nice vibrant look.
+
+00:16:20.376 --> 00:16:22.916 A:middle
+So, let's take a look how
+this affects performance.
+
+00:16:23.686 --> 00:16:25.606 A:middle
+So, back to our render
+pass diagram.
+
+00:16:26.496 --> 00:16:28.836 A:middle
+The first five passes
+are in this case
+
+00:16:28.836 --> 00:16:30.426 A:middle
+for the dark blur,
+the blur cost.
+
+00:16:31.306 --> 00:16:33.866 A:middle
+And then in a sixth pass
+we render the layer content
+
+00:16:33.866 --> 00:16:34.486 A:middle
+to a texture.
+
+00:16:34.566 --> 00:16:38.496 A:middle
+And then in the final
+compositing pass we take the
+
+00:16:38.496 --> 00:16:40.426 A:middle
+layer content and apply filter
+
+00:16:40.426 --> 00:16:41.856 A:middle
+and composite it
+on top of the blur.
+
+00:16:42.836 --> 00:16:43.856 A:middle
+Don't be fooled here.
+
+00:16:43.856 --> 00:16:46.476 A:middle
+The filter content is actually
+quite expensive and I want
+
+00:16:46.476 --> 00:16:48.196 A:middle
+to show this in the
+next couple of slides.
+
+00:16:50.566 --> 00:16:52.436 A:middle
+So this is our diagram
+from before.
+
+00:16:52.436 --> 00:16:55.826 A:middle
+This is the steps for the blur
+and let's add on now the steps
+
+00:16:55.826 --> 00:16:56.916 A:middle
+for the VibrancyEffect.
+
+00:16:57.806 --> 00:17:00.346 A:middle
+So, in pass six I'm adding
+in here some content,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:57.806 --> 00:17:00.346 A:middle
+So, in pass six I'm adding
+in here some content,
+
+00:17:00.346 --> 00:17:01.306 A:middle
+you saw a camera icon.
+
+00:17:02.196 --> 00:17:05.636 A:middle
+And then obviously the
+cost for this pass depends
+
+00:17:05.636 --> 00:17:08.746 A:middle
+on what you're rendering there,
+what view hierarchy looks like.
+
+00:17:08.846 --> 00:17:12.006 A:middle
+And then the last pass
+we apply the filter.
+
+00:17:12.006 --> 00:17:14.425 A:middle
+And as you can see the filter
+cost is actually very expensive.
+
+00:17:14.516 --> 00:17:16.665 A:middle
+It's actually the most
+expensive pass we have here.
+
+00:17:17.606 --> 00:17:19.695 A:middle
+One thing to keep
+in mind here is
+
+00:17:19.695 --> 00:17:22.226 A:middle
+that I apply the VibrancyEffect
+to a fullscreen area.
+
+00:17:22.965 --> 00:17:25.526 A:middle
+The recommendation is to
+not apply the VibrancyEffect
+
+00:17:25.526 --> 00:17:27.455 A:middle
+to a fullscreen area,
+instead to only apply it
+
+00:17:27.455 --> 00:17:30.656 A:middle
+to small content areas to avoid
+this huge performance penalty.
+
+00:17:30.656 --> 00:17:36.176 A:middle
+As well to emphasize -- we
+have now is way more gaps
+
+00:17:36.176 --> 00:17:37.566 A:middle
+because we have more
+render passes.
+
+00:17:37.566 --> 00:17:40.326 A:middle
+So, the GPU idle time
+has increased as well.
+
+00:17:40.326 --> 00:17:45.136 A:middle
+We have now six gaps and this
+can add up to 0.6 to 1.2ms
+
+00:17:45.136 --> 00:17:46.806 A:middle
+of idle time in our GPU.
+
+00:17:48.516 --> 00:17:50.506 A:middle
+So, let's take a
+look how this looks
+
+00:17:50.506 --> 00:17:52.356 A:middle
+on iPad 3rd generation
+and iPad Air.
+
+00:17:52.356 --> 00:17:56.666 A:middle
+There is the base cost
+from before, 4.59ms.
+
+00:17:56.666 --> 00:18:01.206 A:middle
+For the iPad 3rd generation we
+don't blur and different times
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:56.666 --> 00:18:01.206 A:middle
+For the iPad 3rd generation we
+don't blur and different times
+
+00:18:01.206 --> 00:18:02.786 A:middle
+for the iPad Air
+depending on the blur style.
+
+00:18:03.396 --> 00:18:05.986 A:middle
+So, let's add this on
+and what we can see is
+
+00:18:05.986 --> 00:18:08.056 A:middle
+for the fullscreen effect
+is that we are spending
+
+00:18:08.056 --> 00:18:11.396 A:middle
+on iPad 3rd generation
+about 27 to 26ms just
+
+00:18:11.706 --> 00:18:13.256 A:middle
+for applying the VibrancyEffect.
+
+00:18:14.446 --> 00:18:18.186 A:middle
+On the iPad Air we
+spend about 17.48ms
+
+00:18:18.186 --> 00:18:21.646 A:middle
+for the extra light style and
+around 14ms for light and dark.
+
+00:18:21.646 --> 00:18:24.156 A:middle
+So you don't have a lot of
+time left there on the GPU
+
+00:18:24.156 --> 00:18:25.226 A:middle
+to do any other rendering.
+
+00:18:25.226 --> 00:18:27.076 A:middle
+I mean 2ms is the
+best case here.
+
+00:18:27.726 --> 00:18:30.056 A:middle
+So to emphasize again, we
+should really restrict the
+
+00:18:30.056 --> 00:18:33.076 A:middle
+VibrancyEffect on a small area
+to avoid this huge GPU overhead.
+
+00:18:34.556 --> 00:18:38.926 A:middle
+So, in summary, UIVibrancyEffect
+adds two offscreen passes.
+
+00:18:39.426 --> 00:18:41.376 A:middle
+UIVibrancyEffect uses expensive,
+
+00:18:41.376 --> 00:18:43.436 A:middle
+uses expensive compositing
+filter for content.
+
+00:18:43.436 --> 00:18:46.226 A:middle
+So, therefore, you should
+only use the UIVibrancyEffect
+
+00:18:46.226 --> 00:18:47.496 A:middle
+on small regions.
+
+00:18:47.496 --> 00:18:50.746 A:middle
+Again likeness to blur only
+dirty regions are redrawn
+
+00:18:51.536 --> 00:18:54.496 A:middle
+and the UIVibrancyEffect is
+very costly on all devices.
+
+00:18:54.696 --> 00:18:58.716 A:middle
+So with the blurs UI can easily
+be GPU bound, keep the bounds
+
+00:18:58.716 --> 00:19:01.246 A:middle
+of the view as small as
+possible and make sure
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:58.716 --> 00:19:01.246 A:middle
+of the view as small as
+possible and make sure
+
+00:19:01.246 --> 00:19:04.356 A:middle
+to budget for the effects.
+
+00:19:04.356 --> 00:19:05.876 A:middle
+So, next I would
+like to give a couple
+
+00:19:05.876 --> 00:19:08.186 A:middle
+of automization techniques
+on the way.
+
+00:19:08.186 --> 00:19:09.486 A:middle
+One is rasterization.
+
+00:19:09.576 --> 00:19:11.326 A:middle
+Rasterization can
+be used to composite
+
+00:19:11.326 --> 00:19:12.676 A:middle
+to image once with the GPU.
+
+00:19:13.556 --> 00:19:14.256 A:middle
+This can be enabled
+
+00:19:14.256 --> 00:19:16.426 A:middle
+with shouldRasterize
+property on a CAlayer.
+
+00:19:16.426 --> 00:19:18.996 A:middle
+And there are a few things to
+keep in mind when doing this.
+
+00:19:18.996 --> 00:19:21.786 A:middle
+First extra offscreen
+passes are created
+
+00:19:21.786 --> 00:19:22.976 A:middle
+when we update the contents.
+
+00:19:22.976 --> 00:19:24.826 A:middle
+We should only use this
+for static content.
+
+00:19:25.616 --> 00:19:28.226 A:middle
+Secondly you should not overuse
+it because the cache size
+
+00:19:28.226 --> 00:19:31.296 A:middle
+for rasterization is limited to
+25.5 times of the screen size.
+
+00:19:31.296 --> 00:19:33.756 A:middle
+So if you start setting
+the rasterize property
+
+00:19:33.756 --> 00:19:36.756 A:middle
+of the last part of your view
+hierarchy you might blow the
+
+00:19:36.756 --> 00:19:43.126 A:middle
+cache flow over and over and end
+up as a lot of offscreen passes.
+
+00:19:43.126 --> 00:19:45.096 A:middle
+Last the rasterized images
+are evicted from the cache
+
+00:19:45.096 --> 00:19:47.726 A:middle
+if they are unused
+for more than 100ms.
+
+00:19:47.846 --> 00:19:49.796 A:middle
+So you want to make sure that
+you use this only for images
+
+00:19:49.796 --> 00:19:52.476 A:middle
+that are consistently used and
+not for infrequently used images
+
+00:19:52.476 --> 00:19:54.916 A:middle
+because then you will incur
+every time an onscreen pass.
+
+00:19:56.206 --> 00:19:58.196 A:middle
+So typically use cases are
+
+00:19:58.196 --> 00:20:01.286 A:middle
+to avoid redrawing expensive
+effects for static content
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:58.196 --> 00:20:01.286 A:middle
+to avoid redrawing expensive
+effects for static content
+
+00:20:01.286 --> 00:20:02.906 A:middle
+so you could rasterize,
+for example, a blur.
+
+00:20:03.756 --> 00:20:05.396 A:middle
+And the other thing
+is the redrawing
+
+00:20:05.396 --> 00:20:07.846 A:middle
+of complex view hierarchies
+so we could rasterize
+
+00:20:07.846 --> 00:20:09.626 A:middle
+for view hierarchy
+and composite on top
+
+00:20:09.626 --> 00:20:12.406 A:middle
+of a blur or under a blur.
+
+00:20:13.186 --> 00:20:15.866 A:middle
+So the last thing I have
+here is group opacity.
+
+00:20:16.196 --> 00:20:17.386 A:middle
+Group opacity can be disabled
+
+00:20:17.386 --> 00:20:19.756 A:middle
+because it allows GroupOpacity
+property on a CALayer.
+
+00:20:20.196 --> 00:20:22.896 A:middle
+Group Opacity will actually
+introduce offscreen passes
+
+00:20:22.896 --> 00:20:23.946 A:middle
+if a layer is not opaque.
+
+00:20:23.946 --> 00:20:26.996 A:middle
+So this means the opacity
+property is not equal to 1.0.
+
+00:20:27.756 --> 00:20:29.436 A:middle
+And if a layer has
+nontrivial content
+
+00:20:29.706 --> 00:20:32.056 A:middle
+that means it has child
+layers or a background image.
+
+00:20:32.556 --> 00:20:35.016 A:middle
+And what this means in turn is
+that sub view hierarchy needs
+
+00:20:35.016 --> 00:20:37.016 A:middle
+to be composited before
+its being blended.
+
+00:20:38.006 --> 00:20:38.956 A:middle
+Therefore my recommendation is
+
+00:20:38.956 --> 00:20:40.636 A:middle
+to always turn it off
+if it's not needed.
+
+00:20:40.906 --> 00:20:41.956 A:middle
+Be very careful with this.
+
+00:20:42.826 --> 00:20:44.476 A:middle
+And with this I would
+like to turn it
+
+00:20:44.476 --> 00:20:45.996 A:middle
+over to Mike for the Tools.
+
+00:20:47.516 --> 00:20:51.626 A:middle
+[ Applause ]
+
+00:20:52.126 --> 00:20:53.866 A:middle
+&gt;&gt; So, I am Mike Ingrassia.
+
+00:20:54.046 --> 00:20:56.926 A:middle
+I am a software engineer
+in the iOS performance team
+
+00:20:56.926 --> 00:20:59.136 A:middle
+and the first thing I want
+to talk about are Tools.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:00.996 --> 00:21:02.746 A:middle
+So before I get into
+Tools though,
+
+00:21:02.746 --> 00:21:04.326 A:middle
+I do want to mention
+the performance
+
+00:21:04.326 --> 00:21:05.626 A:middle
+investigation mindset.
+
+00:21:05.626 --> 00:21:07.346 A:middle
+So basically, what are
+the questions running
+
+00:21:07.346 --> 00:21:10.376 A:middle
+through my head when I encounter
+a performance issue and want
+
+00:21:10.376 --> 00:21:13.046 A:middle
+to start tracking down
+the source of that?
+
+00:21:13.046 --> 00:21:15.516 A:middle
+So, first thing I want to know
+is what is the frame rate?
+
+00:21:15.826 --> 00:21:16.816 A:middle
+You know it's always
+good to know
+
+00:21:16.816 --> 00:21:18.406 A:middle
+where you're starting
+performance wise
+
+00:21:18.406 --> 00:21:20.656 A:middle
+so that you can gauge how
+the changes you make are
+
+00:21:20.656 --> 00:21:21.526 A:middle
+affecting performance.
+
+00:21:21.926 --> 00:21:24.256 A:middle
+So our goal is always 60 fps.
+
+00:21:24.256 --> 00:21:27.256 A:middle
+We want to ensure that
+we have smooth scrolling
+
+00:21:27.256 --> 00:21:30.006 A:middle
+and nice smooth animations to
+provide a good user experience.
+
+00:21:30.416 --> 00:21:32.586 A:middle
+So, our target should
+always be 60 fps.
+
+00:21:34.016 --> 00:21:36.896 A:middle
+Next up I want to know
+are we CPU or GPU bound?
+
+00:21:37.716 --> 00:21:40.686 A:middle
+You know obviously the lower
+the utilization the better
+
+00:21:40.686 --> 00:21:42.556 A:middle
+because it will let us hit
+our performance targets
+
+00:21:42.556 --> 00:21:44.966 A:middle
+and also give us
+better battery life.
+
+00:21:44.966 --> 00:21:49.926 A:middle
+Next thing you want to know,
+are there any unnecessary,
+
+00:21:50.046 --> 00:21:51.696 A:middle
+is there any unnecessary
+CPU rendering?
+
+00:21:52.126 --> 00:21:55.116 A:middle
+So basically are we
+overriding drawRect somewhere
+
+00:21:55.116 --> 00:21:57.116 A:middle
+where we really shouldn't
+be you know and kind
+
+00:21:57.116 --> 00:21:58.546 A:middle
+of understanding
+what we're rendering
+
+00:21:58.546 --> 00:21:59.566 A:middle
+and how we're rendering it.
+
+00:21:59.636 --> 00:22:02.276 A:middle
+We want the GPU to do as
+much of this as makes sense.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:59.636 --> 00:22:02.276 A:middle
+We want the GPU to do as
+much of this as makes sense.
+
+00:22:02.276 --> 00:22:06.256 A:middle
+Next thing I want to know
+is do we have too many
+
+00:22:06.256 --> 00:22:07.166 A:middle
+offscreen passes?
+
+00:22:07.526 --> 00:22:11.676 A:middle
+As Axel pointed out previously
+offscreen passes basically give
+
+00:22:11.676 --> 00:22:14.176 A:middle
+the GPU idle time because it
+has to do contact switches
+
+00:22:14.456 --> 00:22:16.526 A:middle
+so we want to have
+fewer offscreen passes,
+
+00:22:16.526 --> 00:22:18.066 A:middle
+you know the fewer the better.
+
+00:22:18.066 --> 00:22:21.906 A:middle
+Next up I want to know is there
+too much blending in the UI?
+
+00:22:21.906 --> 00:22:24.606 A:middle
+We obviously want
+to do less blending
+
+00:22:24.606 --> 00:22:26.816 A:middle
+because blending is more
+expensive for the GPU
+
+00:22:26.816 --> 00:22:29.666 A:middle
+to than rendering just
+a normal opaque player.
+
+00:22:30.096 --> 00:22:31.716 A:middle
+So, less blending is better.
+
+00:22:31.716 --> 00:22:35.686 A:middle
+Next I want to know is are
+there any strange image formats
+
+00:22:35.686 --> 00:22:36.446 A:middle
+or sizes?
+
+00:22:36.716 --> 00:22:38.106 A:middle
+Basically we want to avoid
+
+00:22:38.106 --> 00:22:41.166 A:middle
+on the fly conversion
+of image formats.
+
+00:22:41.456 --> 00:22:45.346 A:middle
+As Axel pointed out previously
+if you are rendering an image
+
+00:22:45.346 --> 00:22:47.376 A:middle
+that is not, in a color
+format that is not supported
+
+00:22:47.376 --> 00:22:50.946 A:middle
+by the GPU then it has to
+be converted by the CPU.
+
+00:22:51.226 --> 00:22:53.936 A:middle
+And so we want to try and avoid
+anything on-the-fly like that.
+
+00:22:53.936 --> 00:22:58.496 A:middle
+Next up I want to know are there
+any expensive views or effects?
+
+00:22:58.886 --> 00:23:00.796 A:middle
+Blur and Vibrancy are
+awesome but we want
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:58.886 --> 00:23:00.796 A:middle
+Blur and Vibrancy are
+awesome but we want
+
+00:23:00.796 --> 00:23:02.956 A:middle
+to make sure we're using
+them sparingly in a way
+
+00:23:03.226 --> 00:23:05.486 A:middle
+that will give us the scrolling
+performance that we want.
+
+00:23:06.756 --> 00:23:09.506 A:middle
+And lastly, I want to know
+is there anything unexpected
+
+00:23:09.506 --> 00:23:10.326 A:middle
+in the view hierarchy?
+
+00:23:11.166 --> 00:23:13.596 A:middle
+You know if you have a situation
+where you're constantly adding
+
+00:23:13.596 --> 00:23:16.056 A:middle
+or removing views you know
+you could introduce a bug
+
+00:23:16.056 --> 00:23:19.156 A:middle
+accidentally that say you know
+inserts animation and forgets
+
+00:23:19.156 --> 00:23:21.606 A:middle
+to remove them or you
+know you're adding views
+
+00:23:21.606 --> 00:23:23.156 A:middle
+to your hierarchy and
+forgetting to remove them.
+
+00:23:23.486 --> 00:23:25.566 A:middle
+You know you want to make sure
+that you only have the views
+
+00:23:25.566 --> 00:23:29.076 A:middle
+that you really need you know in
+your hierarchy because you want
+
+00:23:29.076 --> 00:23:31.666 A:middle
+to avoid excessive CPU
+use of backboard D.
+
+00:23:33.016 --> 00:23:35.176 A:middle
+So, now let's get
+into some of the tools
+
+00:23:35.176 --> 00:23:36.946 A:middle
+that will give us the
+answers to these questions.
+
+00:23:37.266 --> 00:23:39.236 A:middle
+So first off I want to
+talk about instruments
+
+00:23:39.236 --> 00:23:40.436 A:middle
+and particularly we'll talk
+
+00:23:40.436 --> 00:23:42.296 A:middle
+about the Core Animation
+instrument
+
+00:23:42.296 --> 00:23:43.846 A:middle
+and the OpenGL ES
+Driver instrument.
+
+00:23:43.846 --> 00:23:47.056 A:middle
+Then I will say a few
+things about the simulator
+
+00:23:47.056 --> 00:23:48.616 A:middle
+that you can do with
+color debug options
+
+00:23:48.616 --> 00:23:52.316 A:middle
+and then I will briefly talk
+about a new feature in Xcode
+
+00:23:52.586 --> 00:23:55.006 A:middle
+for live view debugging
+on device.
+
+00:23:56.506 --> 00:23:59.936 A:middle
+So first up, if you
+launch instruments
+
+00:23:59.966 --> 00:24:01.696 A:middle
+and select the Core
+Animation template
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:59.966 --> 00:24:01.696 A:middle
+and select the Core
+Animation template
+
+00:24:03.496 --> 00:24:04.816 A:middle
+that will give you a document
+
+00:24:04.816 --> 00:24:06.956 A:middle
+that contains a Core
+Animation instrument
+
+00:24:07.026 --> 00:24:08.686 A:middle
+and a time profiler instrument.
+
+00:24:09.536 --> 00:24:13.656 A:middle
+If you select the Core Animation
+instrument you can then choose
+
+00:24:13.656 --> 00:24:15.016 A:middle
+which statistics
+you want to show.
+
+00:24:15.316 --> 00:24:17.876 A:middle
+In this case it's only fps.
+
+00:24:18.486 --> 00:24:20.476 A:middle
+So we'll choose that and then
+
+00:24:20.476 --> 00:24:22.926 A:middle
+when you take a trace it will
+show you your frame rate.
+
+00:24:23.136 --> 00:24:25.626 A:middle
+So you can see in the column
+here it shows you the fps
+
+00:24:26.226 --> 00:24:28.726 A:middle
+for each interval that
+this trace was running.
+
+00:24:28.726 --> 00:24:30.166 A:middle
+So you see this in
+sample intervals.
+
+00:24:31.576 --> 00:24:34.996 A:middle
+Likewise if you want to see what
+the CPU is doing you can select
+
+00:24:34.996 --> 00:24:36.636 A:middle
+the time profiler instrument.
+
+00:24:36.676 --> 00:24:40.966 A:middle
+And so you select it and then
+you can then see an aggregated
+
+00:24:40.966 --> 00:24:44.586 A:middle
+call stack of what the CPU is
+doing while you were taking
+
+00:24:44.586 --> 00:24:45.176 A:middle
+your trace.
+
+00:24:45.276 --> 00:24:46.596 A:middle
+So this is where you would look
+
+00:24:46.596 --> 00:24:48.996 A:middle
+for you know am I
+overriding drawRect?
+
+00:24:48.996 --> 00:24:50.126 A:middle
+Am I spending too much time
+
+00:24:50.206 --> 00:24:52.396 A:middle
+in main thread doing
+things that I shouldn't be?
+
+00:24:52.396 --> 00:24:56.796 A:middle
+Next up let's talk about some
+of the color debug options
+
+00:24:56.796 --> 00:24:58.476 A:middle
+that are part of the Core
+Animation Instrument.
+
+00:24:59.026 --> 00:25:02.376 A:middle
+So if you select the Core
+Animation Instrument you can see
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:59.026 --> 00:25:02.376 A:middle
+So if you select the Core
+Animation Instrument you can see
+
+00:25:02.376 --> 00:25:04.336 A:middle
+the color debug options
+over here on the right.
+
+00:25:05.226 --> 00:25:08.136 A:middle
+So let's go through
+what those are.
+
+00:25:08.136 --> 00:25:10.326 A:middle
+First up we have
+color blended layers
+
+00:25:10.636 --> 00:25:14.026 A:middle
+and so this will tint
+layers green that are opaque
+
+00:25:14.026 --> 00:25:16.176 A:middle
+and tint layers red
+that have to be blended.
+
+00:25:16.616 --> 00:25:19.126 A:middle
+As we said previously,
+you know layers that have
+
+00:25:19.156 --> 00:25:21.016 A:middle
+to be blended is more
+work for the GPU.
+
+00:25:21.386 --> 00:25:26.286 A:middle
+And so you ideally want to see
+less red you know and more green
+
+00:25:26.286 --> 00:25:28.286 A:middle
+but there are going to be
+cases where you can avoid it.
+
+00:25:28.446 --> 00:25:32.446 A:middle
+For example, in this particular
+case we have a white table view
+
+00:25:33.076 --> 00:25:35.436 A:middle
+with white table view
+cells and we notice
+
+00:25:35.436 --> 00:25:39.016 A:middle
+that our labels are you know
+having to be blended here.
+
+00:25:39.016 --> 00:25:42.856 A:middle
+So if we made our labels in this
+case opaque then we wouldn't
+
+00:25:42.856 --> 00:25:44.456 A:middle
+have to worry about
+doing the blending
+
+00:25:44.926 --> 00:25:46.906 A:middle
+so that would be one
+optimization we could make
+
+00:25:46.906 --> 00:25:47.886 A:middle
+in this particular case.
+
+00:25:47.886 --> 00:25:52.116 A:middle
+Next up color hit
+screens and misses red.
+
+00:25:52.366 --> 00:25:54.056 A:middle
+This shows you how you're using
+
+00:25:54.056 --> 00:25:58.466 A:middle
+or abusing the should
+rasterize property on CALayer.
+
+00:25:58.466 --> 00:26:02.596 A:middle
+So what this will do is it
+will tint cache hit screen
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:58.466 --> 00:26:02.596 A:middle
+So what this will do is it
+will tint cache hit screen
+
+00:26:02.596 --> 00:26:03.916 A:middle
+and cache misses red.
+
+00:26:04.566 --> 00:26:07.016 A:middle
+So as Axel pointed out
+previously keep in mind
+
+00:26:07.016 --> 00:26:10.096 A:middle
+that your cache size is only
+two and a half times the size
+
+00:26:10.096 --> 00:26:13.606 A:middle
+of the screen and items
+are evicted from the cache
+
+00:26:13.606 --> 00:26:15.306 A:middle
+if they're not used
+within 100ms.
+
+00:26:15.306 --> 00:26:16.396 A:middle
+So, you know it's good
+
+00:26:16.396 --> 00:26:18.976 A:middle
+to use this particular
+coloring debug option
+
+00:26:18.976 --> 00:26:22.126 A:middle
+to see how you're
+utilizing the cache
+
+00:26:22.456 --> 00:26:25.926 A:middle
+with you know what you have
+set should rasterized on.
+
+00:26:27.086 --> 00:26:29.336 A:middle
+When you first launch your
+app you're going to see a lot
+
+00:26:29.336 --> 00:26:30.926 A:middle
+of flashing red because
+you obviously have
+
+00:26:30.926 --> 00:26:32.566 A:middle
+to render it once
+before it can be cached.
+
+00:26:33.026 --> 00:26:35.206 A:middle
+But after that you don't want
+to see a whole lot of flashes
+
+00:26:35.206 --> 00:26:37.496 A:middle
+of red because you know
+as we said previously,
+
+00:26:37.496 --> 00:26:39.436 A:middle
+you know anything
+you're doing is going
+
+00:26:39.436 --> 00:26:41.796 A:middle
+to incur offscreen passes
+when you have to render it
+
+00:26:41.796 --> 00:26:44.326 A:middle
+and then stick it in the cache.
+
+00:26:44.526 --> 00:26:47.156 A:middle
+So, next item is
+color copied images.
+
+00:26:48.196 --> 00:26:50.636 A:middle
+As we said before if an
+image is in a format,
+
+00:26:50.636 --> 00:26:53.276 A:middle
+is in the color format that
+the GPU can't work directly
+
+00:26:53.276 --> 00:26:55.466 A:middle
+with it will have to be
+converted by the CPU.
+
+00:26:56.386 --> 00:26:59.576 A:middle
+So in this particular example
+you know this is just a simple
+
+00:26:59.576 --> 00:27:02.156 A:middle
+photo browsing app.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:59.576 --> 00:27:02.156 A:middle
+photo browsing app.
+
+00:27:02.256 --> 00:27:04.426 A:middle
+We're just getting images
+from an online source.
+
+00:27:04.426 --> 00:27:07.386 A:middle
+We're not really checking their
+size or their color format.
+
+00:27:07.386 --> 00:27:10.426 A:middle
+So in this particular
+case we're getting images
+
+00:27:10.426 --> 00:27:11.806 A:middle
+that are 16 bits per component.
+
+00:27:12.056 --> 00:27:14.126 A:middle
+And so you can see that
+they are tinted cyan here.
+
+00:27:14.696 --> 00:27:17.506 A:middle
+That is telling us that these
+images had to be converted
+
+00:27:17.506 --> 00:27:20.456 A:middle
+by the CPU in the commit phase
+before they could actually
+
+00:27:20.456 --> 00:27:20.846 A:middle
+be rendered.
+
+00:27:21.226 --> 00:27:24.116 A:middle
+So, you know for this particular
+case we don't want to do this
+
+00:27:24.116 --> 00:27:27.896 A:middle
+on the fly because it will
+affect scrolling performance.
+
+00:27:27.896 --> 00:27:32.866 A:middle
+So you can beforehand you know
+convert your images to the size
+
+00:27:32.866 --> 00:27:34.446 A:middle
+and the color format
+that you're expecting.
+
+00:27:34.816 --> 00:27:37.206 A:middle
+And it's best to do this in,
+you know in the background
+
+00:27:37.206 --> 00:27:38.426 A:middle
+so you're not eating up time
+
+00:27:38.426 --> 00:27:40.206 A:middle
+on the main thread while
+you're trying to scroll
+
+00:27:40.206 --> 00:27:42.396 A:middle
+or doing other things.
+
+00:27:42.586 --> 00:27:44.896 A:middle
+So the next option is
+color misaligned images.
+
+00:27:45.556 --> 00:27:48.946 A:middle
+This will tint images
+yellow that are being scaled
+
+00:27:48.946 --> 00:27:51.366 A:middle
+and tint images purple
+that are not pixel aligned.
+
+00:27:51.756 --> 00:27:54.166 A:middle
+You know as I said previously
+it's always good to make sure
+
+00:27:54.166 --> 00:27:55.916 A:middle
+that images are in the
+color format and the size
+
+00:27:55.916 --> 00:27:57.846 A:middle
+that you want because
+the last thing you want
+
+00:27:57.846 --> 00:28:00.386 A:middle
+to be doing is you know
+doing conversions in scaling
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:57.846 --> 00:28:00.386 A:middle
+to be doing is you know
+doing conversions in scaling
+
+00:28:00.746 --> 00:28:02.236 A:middle
+on the fly while
+you're scrolling.
+
+00:28:02.396 --> 00:28:03.926 A:middle
+So the same principles
+we applied
+
+00:28:04.206 --> 00:28:06.436 A:middle
+in the previous slide we would
+also apply here to get rid
+
+00:28:06.436 --> 00:28:09.176 A:middle
+of the scaling on-the-fly.
+
+00:28:09.776 --> 00:28:12.276 A:middle
+So, next up is color
+offscreen yellow.
+
+00:28:12.526 --> 00:28:15.556 A:middle
+So this will tint layers
+yellow based on the number
+
+00:28:15.556 --> 00:28:18.076 A:middle
+of offscreen passes
+that each layer occurs.
+
+00:28:18.606 --> 00:28:21.686 A:middle
+So, the more yellow you see the
+more offscreen passes we have.
+
+00:28:22.626 --> 00:28:26.306 A:middle
+If you notice the nav bar and
+the tool bar are tinted yellow,
+
+00:28:26.516 --> 00:28:28.886 A:middle
+that's because there are
+blurs with these layers
+
+00:28:28.956 --> 00:28:31.036 A:middle
+that are actually blurring
+the content behind it.
+
+00:28:31.036 --> 00:28:33.486 A:middle
+So we expect those, but
+I do find it curious
+
+00:28:33.486 --> 00:28:36.126 A:middle
+that the images are
+having offscreen passes.
+
+00:28:36.126 --> 00:28:38.746 A:middle
+So we'll take a look at that
+later on in the presentation
+
+00:28:38.746 --> 00:28:40.036 A:middle
+and see how to work
+around this issue.
+
+00:28:41.826 --> 00:28:44.866 A:middle
+So next is color
+OpenGL fast path blue.
+
+00:28:45.186 --> 00:28:47.836 A:middle
+And so what this will do is
+this will tint layers blue
+
+00:28:47.836 --> 00:28:49.746 A:middle
+that are being blended
+by the display hardware.
+
+00:28:50.306 --> 00:28:52.306 A:middle
+This is actually a good
+thing you want to see
+
+00:28:52.866 --> 00:28:55.566 A:middle
+because if we have content
+that's being blended
+
+00:28:55.566 --> 00:28:57.996 A:middle
+by the display hardware
+then that's less work
+
+00:28:57.996 --> 00:28:59.166 A:middle
+for the GPU to have to do.
+
+00:28:59.166 --> 00:29:00.756 A:middle
+So in this case if
+you see something show
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:59.166 --> 00:29:00.756 A:middle
+So in this case if
+you see something show
+
+00:29:00.756 --> 00:29:03.876 A:middle
+up in blue that's a good thing.
+
+00:29:04.786 --> 00:29:07.266 A:middle
+Last option is flash
+updated regions.
+
+00:29:07.556 --> 00:29:09.396 A:middle
+And so what this will do
+is it will flash parts
+
+00:29:09.396 --> 00:29:11.496 A:middle
+of the screen yellow
+that are being updated.
+
+00:29:11.496 --> 00:29:13.356 A:middle
+This particular example is
+
+00:29:13.356 --> 00:29:15.766 A:middle
+with the clocks app
+that shifts in iOS.
+
+00:29:16.506 --> 00:29:19.726 A:middle
+You notice that the
+yellow regions here are the
+
+00:29:19.906 --> 00:29:21.286 A:middle
+second hand.
+
+00:29:21.286 --> 00:29:25.316 A:middle
+Ideally you only want to see
+parts of the screen flash yellow
+
+00:29:25.316 --> 00:29:26.506 A:middle
+that you're actually updating.
+
+00:29:26.696 --> 00:29:28.916 A:middle
+Again because this means
+less work for this GPU
+
+00:29:28.916 --> 00:29:30.006 A:middle
+and less work for the CPU.
+
+00:29:30.756 --> 00:29:33.566 A:middle
+So, if you turn this on
+you don't want to see a lot
+
+00:29:33.566 --> 00:29:35.846 A:middle
+of flashing yellow unless
+you actually are updating
+
+00:29:36.376 --> 00:29:37.276 A:middle
+that much of the screen.
+
+00:29:39.026 --> 00:29:41.676 A:middle
+So, in summary some
+of the questions
+
+00:29:41.676 --> 00:29:44.536 A:middle
+that the Core Animation
+Instrument will help you get to,
+
+00:29:44.946 --> 00:29:46.946 A:middle
+it will help you figure
+out what the frame rate is,
+
+00:29:47.436 --> 00:29:49.326 A:middle
+is there any unnecessary
+CPU rendering
+
+00:29:49.326 --> 00:29:52.426 A:middle
+because it does include the
+time profiler instrument.
+
+00:29:53.116 --> 00:29:56.556 A:middle
+And also with the color debug
+options you can see things
+
+00:29:56.556 --> 00:29:58.106 A:middle
+like are there too
+many offscreen passes?
+
+00:29:58.106 --> 00:29:59.266 A:middle
+How much blending is going on?
+
+00:29:59.556 --> 00:30:02.246 A:middle
+And do you have any strange
+image formats or sizes
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:59.556 --> 00:30:02.246 A:middle
+And do you have any strange
+image formats or sizes
+
+00:30:02.246 --> 00:30:02.966 A:middle
+that you're not expecting?
+
+00:30:04.676 --> 00:30:08.236 A:middle
+And so one additional point
+on the coloring options some
+
+00:30:08.236 --> 00:30:10.766 A:middle
+of the coloring options are
+available in the iOS simulator
+
+00:30:10.866 --> 00:30:12.486 A:middle
+so you can see the example here.
+
+00:30:12.926 --> 00:30:14.686 A:middle
+A few things to point
+out with this,
+
+00:30:15.506 --> 00:30:19.086 A:middle
+the colors might be slightly
+different because the version
+
+00:30:19.086 --> 00:30:22.256 A:middle
+of CA that's running inside the
+simulator is actually a version
+
+00:30:22.256 --> 00:30:24.226 A:middle
+of CA that's on OS
+X, not on iOS.
+
+00:30:24.546 --> 00:30:26.966 A:middle
+So if you see any discrepancies
+always trust what you see
+
+00:30:26.966 --> 00:30:29.766 A:middle
+on device, because that's what
+your customer is actually going
+
+00:30:29.766 --> 00:30:30.186 A:middle
+to be using.
+
+00:30:31.326 --> 00:30:33.606 A:middle
+So, this is a good future
+because you can have
+
+00:30:33.606 --> 00:30:36.576 A:middle
+like say your testing team go
+off and hook around your app
+
+00:30:36.576 --> 00:30:39.036 A:middle
+and see if you have any
+unexpected offscreen passes
+
+00:30:39.036 --> 00:30:41.826 A:middle
+or any conversion or anything
+that looks suspicious.
+
+00:30:43.716 --> 00:30:45.676 A:middle
+So next topic, I want to talk
+
+00:30:45.676 --> 00:30:47.316 A:middle
+about the OpenGL ES
+driver instrument.
+
+00:30:47.746 --> 00:30:49.266 A:middle
+So if you launch instruments
+
+00:30:49.646 --> 00:30:51.916 A:middle
+and select the OpenGL
+ES driver template
+
+00:30:52.406 --> 00:30:53.486 A:middle
+that will give you a document
+
+00:30:53.486 --> 00:30:55.666 A:middle
+that contains the OpenGL
+ES driver instrument
+
+00:30:55.966 --> 00:30:57.846 A:middle
+and a time profiler instrument.
+
+00:30:58.576 --> 00:31:03.196 A:middle
+So if you select the OpenGL ES
+driver instrument you can choose
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:58.576 --> 00:31:03.196 A:middle
+So if you select the OpenGL ES
+driver instrument you can choose
+
+00:31:03.196 --> 00:31:06.606 A:middle
+from which statistics you
+want to actually collect.
+
+00:31:06.606 --> 00:31:08.946 A:middle
+When I'm investigating
+things I tend to go
+
+00:31:08.946 --> 00:31:10.746 A:middle
+for device utilization,
+
+00:31:10.746 --> 00:31:13.626 A:middle
+which will show you how much the
+GPU is in use during the trace.
+
+00:31:14.466 --> 00:31:17.696 A:middle
+Render and tiler utilization,
+those correspond to the renderer
+
+00:31:17.986 --> 00:31:20.716 A:middle
+and tiler phases that Axel
+was talking about previously.
+
+00:31:21.166 --> 00:31:23.676 A:middle
+And then, of course, the Core
+Animation fps because I want
+
+00:31:23.676 --> 00:31:27.276 A:middle
+to know what the actual frame
+rate is that we're seeing.
+
+00:31:27.496 --> 00:31:32.126 A:middle
+So, if you take a trace
+and then select the core,
+
+00:31:32.286 --> 00:31:36.146 A:middle
+the OpenGL ES driver
+instrument you can then look
+
+00:31:36.146 --> 00:31:39.846 A:middle
+at the statistics and see,
+for example in this case,
+
+00:31:39.846 --> 00:31:44.116 A:middle
+we are hitting 60 fps and
+our device utilization is
+
+00:31:44.116 --> 00:31:46.346 A:middle
+in like the mid lower 70s.
+
+00:31:46.846 --> 00:31:50.146 A:middle
+So, you know it depends
+on while you're rendering
+
+00:31:50.146 --> 00:31:52.386 A:middle
+so you know you may want
+to investigate this,
+
+00:31:52.576 --> 00:31:54.616 A:middle
+like if it all boils down to
+what you're actually rendering
+
+00:31:54.616 --> 00:31:55.236 A:middle
+for this case.
+
+00:31:56.536 --> 00:31:59.656 A:middle
+And likewise since we have the
+time profiler instrument here
+
+00:31:59.656 --> 00:32:01.036 A:middle
+you can see what
+the CPU is doing.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:59.656 --> 00:32:01.036 A:middle
+you can see what
+the CPU is doing.
+
+00:32:01.466 --> 00:32:04.386 A:middle
+So, if you select that
+you can then again look
+
+00:32:04.386 --> 00:32:06.296 A:middle
+at aggregated call
+stacks of what was going
+
+00:32:06.296 --> 00:32:08.296 A:middle
+on in the CPU during this time.
+
+00:32:08.296 --> 00:32:10.386 A:middle
+So this is always useful because
+you can highlight certain
+
+00:32:10.386 --> 00:32:12.846 A:middle
+regions you know if you notice
+that you're dropping frames
+
+00:32:12.846 --> 00:32:14.576 A:middle
+or you notice a lot of
+activity you can zoom in
+
+00:32:14.576 --> 00:32:17.206 A:middle
+and see what the CPU is doing
+during that particular time.
+
+00:32:19.846 --> 00:32:22.856 A:middle
+So in summary, with OpenGL ES
+driver instrument you know this
+
+00:32:22.856 --> 00:32:24.096 A:middle
+will give you answers
+to questions
+
+00:32:24.096 --> 00:32:25.066 A:middle
+like what is your frame rate?
+
+00:32:25.516 --> 00:32:27.776 A:middle
+You can see what the
+CPU and CPU are doing
+
+00:32:28.136 --> 00:32:30.506 A:middle
+and you can also use the
+time profiler instrument
+
+00:32:30.746 --> 00:32:34.756 A:middle
+to see are there any unnecessary
+CPU rendering going on?
+
+00:32:35.656 --> 00:32:39.346 A:middle
+So next up is a really cool
+feature that was added in Xcode
+
+00:32:39.486 --> 00:32:41.746 A:middle
+for live view debugging
+on device.
+
+00:32:42.126 --> 00:32:45.246 A:middle
+So if you open your object
+in Xcode and then run it
+
+00:32:45.986 --> 00:32:48.406 A:middle
+and then click this little
+button on the bottom here,
+
+00:32:48.956 --> 00:32:51.856 A:middle
+what it will actually do is it
+will grab the view hierarchy off
+
+00:32:51.856 --> 00:32:53.996 A:middle
+the device and you
+can then go poking
+
+00:32:53.996 --> 00:32:54.996 A:middle
+around in your view hierarchy
+
+00:32:54.996 --> 00:32:57.746 A:middle
+and see what exact
+views are in your UI.
+
+00:32:58.346 --> 00:33:00.796 A:middle
+So this is always good because
+you can inspect to see as I said
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:58.346 --> 00:33:00.796 A:middle
+So this is always good because
+you can inspect to see as I said
+
+00:33:00.796 --> 00:33:04.226 A:middle
+if there's anything unexpected
+there you know maybe something
+
+00:33:04.226 --> 00:33:06.356 A:middle
+is building up or you have
+a leak of say animations
+
+00:33:06.356 --> 00:33:07.696 A:middle
+or something or constraints.
+
+00:33:08.006 --> 00:33:10.646 A:middle
+So this is good to actually
+see what the view hierarchy is
+
+00:33:10.646 --> 00:33:13.646 A:middle
+on your device versus say what
+you conceptually think it is
+
+00:33:13.646 --> 00:33:14.556 A:middle
+when you're writing your code.
+
+00:33:14.556 --> 00:33:18.146 A:middle
+If you select an individual item
+
+00:33:18.236 --> 00:33:21.576 A:middle
+or an individual view you can
+look at the properties for it.
+
+00:33:21.576 --> 00:33:25.096 A:middle
+So in this case we selected a
+UI view and you can see details
+
+00:33:25.096 --> 00:33:27.596 A:middle
+about what property and what
+image is currently being
+
+00:33:27.646 --> 00:33:28.526 A:middle
+rendered by that view.
+
+00:33:30.696 --> 00:33:34.876 A:middle
+So summary for Xcode view
+debugging this will let you poke
+
+00:33:34.876 --> 00:33:36.046 A:middle
+around in your view hierarchy
+
+00:33:36.046 --> 00:33:37.786 A:middle
+to see what's actually
+being rendered on device,
+
+00:33:38.106 --> 00:33:39.626 A:middle
+you know which is helpful
+because you can see
+
+00:33:39.626 --> 00:33:41.116 A:middle
+if you have any expensive views.
+
+00:33:41.696 --> 00:33:43.626 A:middle
+You know looking at their
+properties you know seeing what
+
+00:33:43.626 --> 00:33:44.596 A:middle
+your bounds are and whatnot.
+
+00:33:45.246 --> 00:33:47.346 A:middle
+Also good to see if you
+have anything building
+
+00:33:47.346 --> 00:33:48.846 A:middle
+up unexpectedly in
+your view hierarchy.
+
+00:33:49.046 --> 00:33:53.626 A:middle
+So next up let's talk
+about some case studies.
+
+00:33:54.066 --> 00:33:56.316 A:middle
+So what I want to do with this
+is I want to talk about a couple
+
+00:33:56.316 --> 00:33:58.716 A:middle
+of different scenarios
+and measure performance
+
+00:33:58.716 --> 00:33:59.846 A:middle
+across different devices.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:00.236 --> 00:34:02.246 A:middle
+And then we'll figure
+out how we can work
+
+00:34:02.246 --> 00:34:03.556 A:middle
+around these performance
+problems
+
+00:34:04.026 --> 00:34:05.736 A:middle
+and keep the same
+visual appearance,
+
+00:34:05.736 --> 00:34:10.116 A:middle
+but you know get the
+performance gain that we want.
+
+00:34:10.116 --> 00:34:12.545 A:middle
+So first up, let's talk about
+a fictitious photo application.
+
+00:34:12.886 --> 00:34:15.326 A:middle
+So this is just a simple
+application with a table view
+
+00:34:15.606 --> 00:34:18.866 A:middle
+where each table view cell has
+an image and a couple of lines
+
+00:34:18.866 --> 00:34:22.426 A:middle
+of text and there's also a
+small shadow behind each image.
+
+00:34:22.966 --> 00:34:26.106 A:middle
+So, if we take this and
+we measure the performance
+
+00:34:26.146 --> 00:34:29.815 A:middle
+on an iPhone 5s using the
+OpenGL ES driver instrument.
+
+00:34:30.396 --> 00:34:32.346 A:middle
+You know we can see that
+we're hitting 60 fps.
+
+00:34:32.966 --> 00:34:35.255 A:middle
+So, that's good; 60
+fps is our target.
+
+00:34:35.295 --> 00:34:37.565 A:middle
+So, awesome, ship it.
+
+00:34:38.206 --> 00:34:39.676 A:middle
+Not just yet.
+
+00:34:39.906 --> 00:34:42.815 A:middle
+We you know actually love all
+of our customers and we want
+
+00:34:42.815 --> 00:34:45.176 A:middle
+to make sure everybody has a
+good user experience regardless
+
+00:34:45.176 --> 00:34:46.126 A:middle
+of what device they're on.
+
+00:34:46.436 --> 00:34:49.065 A:middle
+So, let's take a look at
+some of the other devices
+
+00:34:49.136 --> 00:34:52.206 A:middle
+that we support in iOS 8 to see
+how the performance stacks up.
+
+00:34:52.946 --> 00:34:55.366 A:middle
+So, first off let's
+look at the iPod touch.
+
+00:34:55.795 --> 00:34:59.026 A:middle
+So I'm curious what scrolling
+feels like on an iPod touch.
+
+00:34:59.116 --> 00:35:01.626 A:middle
+So, you know again we'll
+take our iPod touch
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:59.116 --> 00:35:01.626 A:middle
+So, you know again we'll
+take our iPod touch
+
+00:35:01.626 --> 00:35:03.706 A:middle
+and we'll use the OpenGL
+ES driver instrument
+
+00:35:04.296 --> 00:35:07.776 A:middle
+and you know sure enough
+we notice our frame rate is
+
+00:35:07.776 --> 00:35:10.846 A:middle
+in the mid 30s, which is
+nowhere near our target.
+
+00:35:10.846 --> 00:35:12.746 A:middle
+So that would be a lousy
+scrolling experience.
+
+00:35:13.816 --> 00:35:17.006 A:middle
+And if we look at the
+device utilization we see
+
+00:35:17.006 --> 00:35:20.266 A:middle
+that you know this is
+like mid to high 70s.
+
+00:35:21.256 --> 00:35:22.996 A:middle
+This strikes me as
+really kind of odd
+
+00:35:23.046 --> 00:35:24.946 A:middle
+because all we're doing is
+just scrolling around a couple
+
+00:35:24.946 --> 00:35:27.226 A:middle
+of image thumbnails
+and some text.
+
+00:35:27.226 --> 00:35:30.726 A:middle
+So I don't really expect
+this much GPU activity.
+
+00:35:31.356 --> 00:35:33.486 A:middle
+So let's see if we can figure
+out what's going on here.
+
+00:35:33.486 --> 00:35:36.956 A:middle
+So, first thing I want to
+know is you know what's
+
+00:35:36.956 --> 00:35:37.696 A:middle
+in my view hierarchy.
+
+00:35:37.696 --> 00:35:38.906 A:middle
+Is there anything
+unexpected here?
+
+00:35:39.266 --> 00:35:41.926 A:middle
+So we use the Xcode
+debugging feature.
+
+00:35:42.396 --> 00:35:43.496 A:middle
+We grab the view hierarchy.
+
+00:35:44.306 --> 00:35:45.946 A:middle
+I don't really see
+anything surprising here
+
+00:35:45.946 --> 00:35:48.876 A:middle
+so we've got you know table
+view cell with an image view
+
+00:35:49.176 --> 00:35:52.576 A:middle
+and two labels, nothing
+out of the ordinary here.
+
+00:35:52.576 --> 00:35:54.946 A:middle
+So, let's see if we can
+figure out something else.
+
+00:35:55.936 --> 00:35:59.046 A:middle
+So if we use the Core Animation
+instrument you know remembering
+
+00:35:59.046 --> 00:36:00.456 A:middle
+that offscreen passes
+are expensive,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:59.046 --> 00:36:00.456 A:middle
+that offscreen passes
+are expensive,
+
+00:36:00.456 --> 00:36:02.286 A:middle
+let's see if we have
+any offscreen passes
+
+00:36:02.286 --> 00:36:03.036 A:middle
+that are unexpected.
+
+00:36:03.466 --> 00:36:04.726 A:middle
+And sure enough this
+is the slide
+
+00:36:04.726 --> 00:36:05.916 A:middle
+that I referenced previously.
+
+00:36:06.616 --> 00:36:10.376 A:middle
+So you know we have offscreen
+passes for the images,
+
+00:36:10.376 --> 00:36:12.246 A:middle
+which again strikes
+me as curious.
+
+00:36:12.246 --> 00:36:14.566 A:middle
+Let's just take a look at the
+code and see what we're doing,
+
+00:36:14.566 --> 00:36:15.676 A:middle
+how are we setting this up.
+
+00:36:16.236 --> 00:36:20.976 A:middle
+So, as I said each image
+thumbnail has a shadow.
+
+00:36:21.356 --> 00:36:22.616 A:middle
+How are we generating
+that shadow?
+
+00:36:23.036 --> 00:36:25.196 A:middle
+So in this case we are
+asking Core Animation
+
+00:36:25.196 --> 00:36:26.436 A:middle
+to generate the shadow for us.
+
+00:36:26.796 --> 00:36:28.806 A:middle
+And we're doing that just
+by setting shadowRadius,
+
+00:36:28.806 --> 00:36:31.156 A:middle
+shadowOffset you know
+and other properties.
+
+00:36:32.176 --> 00:36:34.756 A:middle
+Basically when we're doing this
+Core Animation has to figure
+
+00:36:34.756 --> 00:36:36.956 A:middle
+out what the shape of
+the shadow looks like.
+
+00:36:37.466 --> 00:36:40.126 A:middle
+And when it does this it
+has to take offscreen passes
+
+00:36:40.126 --> 00:36:42.696 A:middle
+to render the content and
+then look at the alpha channel
+
+00:36:42.696 --> 00:36:43.936 A:middle
+of what it just rendered
+to figure
+
+00:36:43.936 --> 00:36:45.786 A:middle
+out where the shadow
+belongs and then go
+
+00:36:45.786 --> 00:36:49.076 A:middle
+through all the extra work
+of doing the shadow itself.
+
+00:36:49.736 --> 00:36:50.546 A:middle
+Is there a better way?
+
+00:36:50.546 --> 00:36:52.266 A:middle
+Is there something that
+we can do to avoid this
+
+00:36:52.496 --> 00:36:53.576 A:middle
+and it turns out there is.
+
+00:36:54.296 --> 00:36:55.906 A:middle
+If we add the following line,
+
+00:36:55.906 --> 00:36:59.206 A:middle
+so there is the shadowPath
+property you know we're only
+
+00:36:59.206 --> 00:37:00.346 A:middle
+scrolling image thumbnail,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:59.206 --> 00:37:00.346 A:middle
+scrolling image thumbnail,
+
+00:37:00.346 --> 00:37:02.496 A:middle
+so just basically
+Rects of various sizes.
+
+00:37:02.896 --> 00:37:05.486 A:middle
+We can easily figure out
+you know what the shape
+
+00:37:05.486 --> 00:37:07.306 A:middle
+of the shadow needs to
+look like because again,
+
+00:37:07.306 --> 00:37:09.516 A:middle
+they're all just
+various sized rectangles.
+
+00:37:10.226 --> 00:37:13.926 A:middle
+So if we take advantage of the
+shadow path property and add
+
+00:37:14.226 --> 00:37:17.806 A:middle
+that to our code then Core
+Animation doesn't have to eat
+
+00:37:17.806 --> 00:37:21.176 A:middle
+up any offscreen passes to
+actually generate these shadows.
+
+00:37:21.526 --> 00:37:23.156 A:middle
+So, let's-- you know
+let's make this change.
+
+00:37:23.156 --> 00:37:25.426 A:middle
+We'll add this line
+and let's take a look
+
+00:37:25.426 --> 00:37:27.376 A:middle
+with the Core Animation
+instrument to see
+
+00:37:27.706 --> 00:37:29.566 A:middle
+if this really did get rid
+of our offscreen passes
+
+00:37:29.566 --> 00:37:30.806 A:middle
+and sure enough it did.
+
+00:37:31.576 --> 00:37:32.856 A:middle
+So, this is great.
+
+00:37:32.856 --> 00:37:35.926 A:middle
+Less offscreen passes means you
+know less idle time on the GPU.
+
+00:37:36.356 --> 00:37:38.756 A:middle
+So, let's take a trace and see
+what our scrolling performance
+
+00:37:38.756 --> 00:37:39.096 A:middle
+looks like.
+
+00:37:39.736 --> 00:37:43.026 A:middle
+So, again looking at an iPod
+touch we'll use the OpenGL ES
+
+00:37:43.026 --> 00:37:45.636 A:middle
+driver instrument and we notice
+
+00:37:45.636 --> 00:37:47.376 A:middle
+that we are indeed
+hitting 60 fps.
+
+00:37:48.276 --> 00:37:48.966 A:middle
+That's great.
+
+00:37:50.106 --> 00:37:53.206 A:middle
+And check out the device
+utilization, you know we are now
+
+00:37:53.206 --> 00:37:57.986 A:middle
+in like the mid 30s as opposed
+to you know the mid 70s before.
+
+00:37:58.406 --> 00:38:03.006 A:middle
+So this is great, you know less
+GPU work means we are hitting
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:58.406 --> 00:38:03.006 A:middle
+So this is great, you know less
+GPU work means we are hitting
+
+00:38:03.006 --> 00:38:05.846 A:middle
+our performance targets and it
+also means better battery life.
+
+00:38:05.976 --> 00:38:07.416 A:middle
+So, that's a good thing.
+
+00:38:08.626 --> 00:38:10.666 A:middle
+So, awesome, can we ship it now?
+
+00:38:11.196 --> 00:38:14.906 A:middle
+Well not just yet; we still
+have one more device we should
+
+00:38:14.906 --> 00:38:15.256 A:middle
+look at.
+
+00:38:15.816 --> 00:38:18.226 A:middle
+So, let's take a
+look at an iPhone 4s
+
+00:38:18.596 --> 00:38:21.126 A:middle
+and see how scrolling is
+with our new changes now.
+
+00:38:22.216 --> 00:38:24.606 A:middle
+So, we are in fact
+hitting 60 fps.
+
+00:38:25.216 --> 00:38:28.936 A:middle
+That's good and again device
+utilization seems same.
+
+00:38:28.936 --> 00:38:31.176 A:middle
+You know 30 percent is a
+lot better than mid 70s.
+
+00:38:32.046 --> 00:38:37.466 A:middle
+So, to summarize when we
+had Core Animation doing
+
+00:38:38.296 --> 00:38:40.206 A:middle
+and figuring out
+rendering the shadow
+
+00:38:40.206 --> 00:38:43.246 A:middle
+for us you notice
+there's a drop off
+
+00:38:43.246 --> 00:38:44.746 A:middle
+when you look at older devices.
+
+00:38:45.066 --> 00:38:47.506 A:middle
+So the iPhone 5s can
+handle this no problem.
+
+00:38:47.946 --> 00:38:50.876 A:middle
+But as you look at the iPhone
+5, the iPhone 4s and the iPhone,
+
+00:38:50.876 --> 00:38:53.716 A:middle
+iPod touch you notice
+that performance drops off
+
+00:38:53.766 --> 00:38:56.396 A:middle
+because again, older devices
+can't handle the amount
+
+00:38:56.396 --> 00:38:59.216 A:middle
+of offscreen passes
+that newer devices can.
+
+00:38:59.216 --> 00:39:01.146 A:middle
+And when we make this
+change and take advantage
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:59.216 --> 00:39:01.146 A:middle
+And when we make this
+change and take advantage
+
+00:39:01.146 --> 00:39:03.906 A:middle
+of the shadowPath property you
+know notice we're hitting our
+
+00:39:03.906 --> 00:39:05.526 A:middle
+targets everywhere for 60 fps.
+
+00:39:06.056 --> 00:39:06.936 A:middle
+So, this is good.
+
+00:39:06.996 --> 00:39:09.076 A:middle
+We can ship this and
+have happy customers.
+
+00:39:09.076 --> 00:39:12.286 A:middle
+So, awesome we can
+finally ship it.
+
+00:39:12.536 --> 00:39:16.126 A:middle
+So, in summary, offscreen
+passes are expensive.
+
+00:39:16.506 --> 00:39:18.786 A:middle
+You know you always want to
+use Core Animation instruments
+
+00:39:18.786 --> 00:39:22.036 A:middle
+to find out if you have any
+unnecessary offscreen passes
+
+00:39:22.036 --> 00:39:24.436 A:middle
+and know the APIs and view
+hierarchy that you're using
+
+00:39:24.846 --> 00:39:26.966 A:middle
+to understand if there's
+things you can do to avoid it.
+
+00:39:26.966 --> 00:39:28.916 A:middle
+In this case it was
+using shadowPath.
+
+00:39:30.246 --> 00:39:31.926 A:middle
+And as always you know
+measure your performance
+
+00:39:31.926 --> 00:39:33.146 A:middle
+across multiple devices.
+
+00:39:33.566 --> 00:39:36.856 A:middle
+You know you can see what the
+GPU utilization is by looking
+
+00:39:36.856 --> 00:39:38.596 A:middle
+at the openGL ES
+driver instrument
+
+00:39:39.056 --> 00:39:40.726 A:middle
+and you can see what
+the CPU is up to
+
+00:39:40.726 --> 00:39:42.686 A:middle
+by using the time
+profiler instrument.
+
+00:39:43.526 --> 00:39:45.676 A:middle
+And as always you know,
+know your view hierarchy,
+
+00:39:45.676 --> 00:39:47.596 A:middle
+know if there's any hidden
+costs for what you're,
+
+00:39:47.596 --> 00:39:49.586 A:middle
+for what you're trying
+to render.
+
+00:39:49.796 --> 00:39:51.886 A:middle
+And this is especially true
+for things that we have inside
+
+00:39:51.886 --> 00:39:53.966 A:middle
+of table view cells
+because we want to ensure
+
+00:39:53.966 --> 00:39:55.076 A:middle
+that we have smooth scrolling.
+
+00:39:55.076 --> 00:39:57.896 A:middle
+So it's particularly important
+with a view hierarchy you build
+
+00:39:57.896 --> 00:39:58.796 A:middle
+up in a table view cell.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:00.226 --> 00:40:02.396 A:middle
+So, next case study
+I want to look
+
+00:40:02.596 --> 00:40:04.726 A:middle
+at is a fictitious
+contacts application.
+
+00:40:05.146 --> 00:40:07.156 A:middle
+So, again this is just
+a simple table view.
+
+00:40:07.766 --> 00:40:09.806 A:middle
+We have you know
+a round thumbnail
+
+00:40:10.166 --> 00:40:11.886 A:middle
+and we have a line of text.
+
+00:40:11.886 --> 00:40:13.696 A:middle
+So, not a whole lot
+going on here.
+
+00:40:14.786 --> 00:40:17.776 A:middle
+So, if we look at performance
+across different devices.
+
+00:40:18.176 --> 00:40:19.916 A:middle
+We notice that you
+know the iPhone 5s
+
+00:40:19.916 --> 00:40:22.586 A:middle
+and the iPhone 5 are
+hitting 60 fps that's good.
+
+00:40:23.056 --> 00:40:26.206 A:middle
+But the iPhone 4s and the
+iPod touch aren't quite there.
+
+00:40:26.206 --> 00:40:28.326 A:middle
+So you know again,
+we want everybody
+
+00:40:28.326 --> 00:40:29.986 A:middle
+to have good user
+experience regardless
+
+00:40:29.986 --> 00:40:31.136 A:middle
+of the hardware that
+they're using.
+
+00:40:31.136 --> 00:40:34.406 A:middle
+So let's take a look at this
+and see why we're not getting
+
+00:40:34.406 --> 00:40:36.316 A:middle
+with the target frame
+rate on these devices.
+
+00:40:37.496 --> 00:40:40.396 A:middle
+So, the first thing I want
+to do is take an OpenGL,
+
+00:40:40.396 --> 00:40:43.186 A:middle
+use the OpenGL ES driver
+instrument and take a trace.
+
+00:40:43.186 --> 00:40:44.856 A:middle
+You know it's always good to
+know where you're starting
+
+00:40:44.856 --> 00:40:46.876 A:middle
+so you understand how
+the changes you make are
+
+00:40:46.876 --> 00:40:47.706 A:middle
+affecting performance.
+
+00:40:48.216 --> 00:40:50.106 A:middle
+So take a trace.
+
+00:40:50.206 --> 00:40:52.236 A:middle
+Notice that our scrolling
+is you know only
+
+00:40:52.236 --> 00:40:54.396 A:middle
+in the mid 40s; it's not good.
+
+00:40:55.146 --> 00:40:56.676 A:middle
+And look at the device
+utilization.
+
+00:40:56.676 --> 00:40:58.526 A:middle
+The device utilization
+is really high here.
+
+00:40:59.776 --> 00:41:01.616 A:middle
+That's rather interesting again
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:59.776 --> 00:41:01.616 A:middle
+That's rather interesting again
+
+00:41:01.616 --> 00:41:02.986 A:middle
+because we're just
+rendering a couple
+
+00:41:02.986 --> 00:41:05.406 A:middle
+of those you know
+images and some text.
+
+00:41:05.506 --> 00:41:07.616 A:middle
+So that looks suspicious to me.
+
+00:41:08.246 --> 00:41:09.436 A:middle
+So let's take a closer look.
+
+00:41:09.436 --> 00:41:11.426 A:middle
+Again you know we'll use the
+Core Animation instrument
+
+00:41:11.926 --> 00:41:13.526 A:middle
+and see if there's
+any unnecessary
+
+00:41:13.526 --> 00:41:15.056 A:middle
+or unexpected offscreen passes.
+
+00:41:15.716 --> 00:41:19.276 A:middle
+So you know we notice the
+images here are incurring
+
+00:41:19.276 --> 00:41:20.046 A:middle
+offscreen passes.
+
+00:41:20.046 --> 00:41:21.826 A:middle
+So, just kind of curious.
+
+00:41:21.826 --> 00:41:24.746 A:middle
+Let's take a look at how we are
+rendering and how we are setting
+
+00:41:24.746 --> 00:41:25.946 A:middle
+up these round thumbnails.
+
+00:41:28.856 --> 00:41:31.386 A:middle
+So, basically what we're
+doing is we're starting off
+
+00:41:31.386 --> 00:41:32.266 A:middle
+with this particular case.
+
+00:41:32.516 --> 00:41:34.326 A:middle
+We're starting off
+with square thumbnails
+
+00:41:34.606 --> 00:41:36.846 A:middle
+and we are on-the-fly
+asking Core Animation
+
+00:41:36.846 --> 00:41:38.006 A:middle
+to round them off for us.
+
+00:41:38.276 --> 00:41:41.376 A:middle
+And we're doing this by using
+cornerRadius and masking.
+
+00:41:41.376 --> 00:41:43.506 A:middle
+So this is where the offscreen
+passes are coming from.
+
+00:41:43.506 --> 00:41:45.686 A:middle
+So, you know again
+anything that we can do
+
+00:41:45.686 --> 00:41:48.566 A:middle
+to avoid offscreen passes you
+know will improve performance
+
+00:41:48.566 --> 00:41:49.606 A:middle
+across all devices.
+
+00:41:50.676 --> 00:41:53.176 A:middle
+So, is there a better
+way to do this?
+
+00:41:53.546 --> 00:41:57.216 A:middle
+Ideally if you can pregenerate
+your thumbnails round then
+
+00:41:57.216 --> 00:41:58.916 A:middle
+that would be great, because
+then you'd just be rendering
+
+00:41:58.916 --> 00:42:01.916 A:middle
+images and you wouldn't be
+trying to do all of this masking
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:58.916 --> 00:42:01.916 A:middle
+images and you wouldn't be
+trying to do all of this masking
+
+00:42:02.146 --> 00:42:04.746 A:middle
+and having all these
+offscreen passes on-the-fly.
+
+00:42:05.126 --> 00:42:08.036 A:middle
+So, you know if you can
+pregenerate them that's great.
+
+00:42:08.866 --> 00:42:13.296 A:middle
+If you can't then another trick
+you could do is remember this UI
+
+00:42:13.296 --> 00:42:16.216 A:middle
+was just a white table view
+with white table view cells
+
+00:42:16.216 --> 00:42:17.506 A:middle
+and just you know
+white background.
+
+00:42:17.836 --> 00:42:19.286 A:middle
+So we could fake
+it in this case.
+
+00:42:19.596 --> 00:42:21.616 A:middle
+You know we could
+render the square content
+
+00:42:22.076 --> 00:42:25.256 A:middle
+or the square thumbnail and then
+render a white inverted circle
+
+00:42:25.256 --> 00:42:26.736 A:middle
+on top of it to kind of you know
+
+00:42:26.736 --> 00:42:28.876 A:middle
+in essence cut away
+the rest of the image.
+
+00:42:28.876 --> 00:42:31.416 A:middle
+This would be reducing
+our offscreen passes
+
+00:42:31.416 --> 00:42:32.966 A:middle
+but increasing the
+amount of blending.
+
+00:42:32.966 --> 00:42:36.126 A:middle
+You know but this still turns
+out to be a net performance win
+
+00:42:36.416 --> 00:42:38.786 A:middle
+because the GPU can
+blend a lot faster
+
+00:42:38.786 --> 00:42:40.366 A:middle
+than it can do offscreen passes.
+
+00:42:40.696 --> 00:42:44.466 A:middle
+So, let's make this change
+of just doing the, you know,
+
+00:42:44.466 --> 00:42:47.146 A:middle
+faking it and see how
+that affects performance.
+
+00:42:48.276 --> 00:42:50.206 A:middle
+So, we'll take an
+OpenGL ES driver.
+
+00:42:50.206 --> 00:42:52.346 A:middle
+We'll take a trace using the
+OpenGL ES driver instrument
+
+00:42:52.346 --> 00:42:53.446 A:middle
+and see what our frame rate is
+
+00:42:53.956 --> 00:42:55.826 A:middle
+and sure enough we're
+hitting 60 fps.
+
+00:42:56.806 --> 00:42:59.886 A:middle
+And notice how much less
+the device utilization is.
+
+00:42:59.886 --> 00:43:03.276 A:middle
+So again, we're 30 percent
+versus mid to upper 80s.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:42:59.886 --> 00:43:03.276 A:middle
+So again, we're 30 percent
+versus mid to upper 80s.
+
+00:43:03.756 --> 00:43:05.606 A:middle
+One quick word on this,
+
+00:43:06.246 --> 00:43:08.496 A:middle
+you notice before we
+were actually GPU bound
+
+00:43:08.496 --> 00:43:10.806 A:middle
+but we weren't actually at
+100 percent for GPU time.
+
+00:43:11.236 --> 00:43:13.526 A:middle
+That's because you know when you
+have offscreen passes there is
+
+00:43:13.526 --> 00:43:15.476 A:middle
+that idle time when the GPU has
+
+00:43:15.536 --> 00:43:18.046 A:middle
+to change contacts
+or switch contacts.
+
+00:43:18.386 --> 00:43:20.666 A:middle
+So, you know you still
+might be GPU bound,
+
+00:43:20.906 --> 00:43:23.416 A:middle
+but not quite hitting
+100 percent GPU usage
+
+00:43:23.446 --> 00:43:26.066 A:middle
+because of the situation
+with offscreen passes,
+
+00:43:26.066 --> 00:43:27.466 A:middle
+so that's something
+to keep in mind.
+
+00:43:28.946 --> 00:43:30.486 A:middle
+So, if we summarize performance
+
+00:43:30.486 --> 00:43:34.146 A:middle
+across all the devices you
+know before we were just using
+
+00:43:34.146 --> 00:43:36.626 A:middle
+masking we noticed that there
+was a performance drop off
+
+00:43:36.626 --> 00:43:37.466 A:middle
+on older devices.
+
+00:43:37.846 --> 00:43:41.996 A:middle
+After we made this change and
+we made the tradeoff of doing,
+
+00:43:41.996 --> 00:43:45.096 A:middle
+having more blending for less
+offscreen passes we are now
+
+00:43:45.096 --> 00:43:47.876 A:middle
+hitting 60 fps everywhere
+which is good.
+
+00:43:47.876 --> 00:43:50.086 A:middle
+This is what we want.
+
+00:43:50.256 --> 00:43:53.016 A:middle
+So, in summary, notice
+there's a theme here.
+
+00:43:53.466 --> 00:43:55.346 A:middle
+Offscreen passes are expensive,
+
+00:43:55.466 --> 00:43:58.616 A:middle
+so again you can use
+Core Animation to find
+
+00:43:58.656 --> 00:44:00.896 A:middle
+where you have any
+unexpected offscreen passes
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:43:58.656 --> 00:44:00.896 A:middle
+where you have any
+unexpected offscreen passes
+
+00:44:01.346 --> 00:44:03.176 A:middle
+and you know it's always
+good to know you're API
+
+00:44:03.396 --> 00:44:04.426 A:middle
+and what user you're using
+
+00:44:04.426 --> 00:44:05.716 A:middle
+if there's anything you
+can do to avoid them.
+
+00:44:05.716 --> 00:44:08.496 A:middle
+And, of course, always
+measure your performance
+
+00:44:08.496 --> 00:44:11.036 A:middle
+across different devices,
+you know OpenGL ES,
+
+00:44:11.156 --> 00:44:14.616 A:middle
+OpenGL ES driver instrument
+will give you GPU activity
+
+00:44:14.876 --> 00:44:17.656 A:middle
+and time profiler instrument
+will show you CPU activity.
+
+00:44:18.376 --> 00:44:21.416 A:middle
+And again always know what
+view hierarchy is you know
+
+00:44:21.416 --> 00:44:22.896 A:middle
+if you have any kind of strange
+
+00:44:23.246 --> 00:44:25.746 A:middle
+or bizarre looking
+performance issues.
+
+00:44:27.216 --> 00:44:30.276 A:middle
+So overall summary, you
+know what were the question,
+
+00:44:30.276 --> 00:44:32.466 A:middle
+our original questions and
+what tools have we used
+
+00:44:32.466 --> 00:44:35.046 A:middle
+to actually find these answers?
+
+00:44:35.396 --> 00:44:39.676 A:middle
+So here's a nice little table
+that shows what we actually used
+
+00:44:39.946 --> 00:44:41.136 A:middle
+to get down to the questions.
+
+00:44:41.136 --> 00:44:43.596 A:middle
+So, this is always a good
+starting point for figuring
+
+00:44:43.596 --> 00:44:45.146 A:middle
+out before you start
+digging in your code to try
+
+00:44:45.146 --> 00:44:46.096 A:middle
+to figure out what's going on.
+
+00:44:46.096 --> 00:44:48.286 A:middle
+It's good to see what's
+actually happening on device.
+
+00:44:50.516 --> 00:44:54.786 A:middle
+So overall summary, Axel talked
+
+00:44:54.786 --> 00:44:57.016 A:middle
+about the Core Animation
+pipeline and talked
+
+00:44:57.016 --> 00:44:59.086 A:middle
+about some rendering
+concepts and then talked
+
+00:44:59.086 --> 00:45:03.216 A:middle
+about some new UIKit features
+for Blur and Vibrancy effects.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:44:59.086 --> 00:45:03.216 A:middle
+about some new UIKit features
+for Blur and Vibrancy effects.
+
+00:45:03.826 --> 00:45:05.566 A:middle
+And then I went over
+profiling tools
+
+00:45:05.566 --> 00:45:08.026 A:middle
+and then did some
+example case studies.
+
+00:45:09.296 --> 00:45:11.256 A:middle
+So if you have any
+questions feel free
+
+00:45:11.256 --> 00:45:13.736 A:middle
+to contact either the
+Apps Frameworks Evangelist
+
+00:45:13.736 --> 00:45:15.016 A:middle
+or the Developer
+Tools Evangelist.
+
+00:45:15.366 --> 00:45:17.196 A:middle
+So feel free to contact
+Jake or Dave.
+
+00:45:17.196 --> 00:45:20.856 A:middle
+If you're curious about Core
+Animation documentation that's
+
+00:45:20.856 --> 00:45:22.616 A:middle
+available online as well
+
+00:45:22.616 --> 00:45:24.626 A:middle
+as the Developer Forums
+is a great resource.
+
+00:45:26.236 --> 00:45:28.406 A:middle
+And other related
+sessions that are happening
+
+00:45:28.406 --> 00:45:30.976 A:middle
+at WWDC you now you might
+find these interesting.
+
+00:45:30.976 --> 00:45:34.146 A:middle
+So these might be
+worth checking out.
+
+00:45:34.446 --> 00:45:36.726 A:middle
+So thanks and have
+a wonderful WWDC.
+
+00:45:36.726 --> 00:45:37.000 A:middle
+[ Applause ]
+

@@ -1,0 +1,4624 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:14.616 --> 00:00:16.976 A:middle
+&gt;&gt; Hi. Welcome to the
+Advanced CloudKit session.
+
+00:00:17.516 --> 00:00:20.546 A:middle
+[ Cheering &amp; Applause ]
+
+00:00:21.046 --> 00:00:21.416 A:middle
+Thank you.
+
+00:00:21.546 --> 00:00:23.526 A:middle
+My name is Jacob Farkas.
+
+00:00:23.526 --> 00:00:25.496 A:middle
+I'm a Software Engineer
+at Apple and one
+
+00:00:25.496 --> 00:00:26.896 A:middle
+of the designers of
+the CloudKit API.
+
+00:00:27.656 --> 00:00:29.766 A:middle
+And my colleagues and I
+have put a lot of hard work
+
+00:00:29.766 --> 00:00:30.706 A:middle
+into the CloudKit API.
+
+00:00:30.706 --> 00:00:33.356 A:middle
+I'm really excited to talk
+to you guys about it today.
+
+00:00:33.356 --> 00:00:35.306 A:middle
+So, let's jump right into it.
+
+00:00:36.276 --> 00:00:40.616 A:middle
+So, CloudKit is this thing
+that we've built on top
+
+00:00:40.616 --> 00:00:41.886 A:middle
+of our iCloud servers.
+
+00:00:41.886 --> 00:00:45.286 A:middle
+We've built a lot of iCloud
+services, and what we're doing
+
+00:00:45.286 --> 00:00:48.626 A:middle
+with CloudKit is exposing those
+database servers that we use
+
+00:00:48.626 --> 00:00:51.246 A:middle
+at Apple to all of
+you developers.
+
+00:00:52.186 --> 00:00:54.026 A:middle
+So, we're actually using this.
+
+00:00:54.026 --> 00:00:56.796 A:middle
+This is something that we
+use in the new iCloud Photos
+
+00:00:56.796 --> 00:00:58.956 A:middle
+and iCloud Drive feature
+that we're introducing,
+
+00:00:59.516 --> 00:01:02.366 A:middle
+and we're building all of
+that on top of CloudKit.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.516 --> 00:01:02.366 A:middle
+and we're building all of
+that on top of CloudKit.
+
+00:01:03.366 --> 00:01:06.056 A:middle
+If all of this is unfamiliar to
+you, you might want to go back
+
+00:01:06.056 --> 00:01:08.206 A:middle
+and check out the
+Introducing CloudKit session.
+
+00:01:08.206 --> 00:01:11.506 A:middle
+It was given on Tuesday and
+there should be videos online.
+
+00:01:12.876 --> 00:01:14.306 A:middle
+So, we're going to
+jump right into this.
+
+00:01:14.456 --> 00:01:15.886 A:middle
+What we're going to learn today,
+
+00:01:15.886 --> 00:01:18.736 A:middle
+we're going to over the CloudKit
+private database, which is a way
+
+00:01:18.736 --> 00:01:21.236 A:middle
+for you store private user
+information in iCloud.
+
+00:01:22.266 --> 00:01:24.386 A:middle
+We're going to talk about
+modeling your data in CloudKit.
+
+00:01:25.516 --> 00:01:27.956 A:middle
+We're going to talk about
+advanced record manipulation
+
+00:01:27.956 --> 00:01:30.066 A:middle
+and different ways of saving
+records to the server.
+
+00:01:31.466 --> 00:01:34.276 A:middle
+We're going to go over how to
+handle notifications reliably,
+
+00:01:34.526 --> 00:01:36.156 A:middle
+if you miss a push, what to do.
+
+00:01:37.666 --> 00:01:39.866 A:middle
+And finally, we're going to
+go over the iCloud Dashboard
+
+00:01:39.866 --> 00:01:41.456 A:middle
+which is a web-based interface
+
+00:01:41.456 --> 00:01:43.126 A:middle
+for managing your
+CloudKit application.
+
+00:01:45.496 --> 00:01:47.246 A:middle
+So, let's start off by looking
+
+00:01:47.246 --> 00:01:48.916 A:middle
+at the CloudKit API
+really quick.
+
+00:01:50.346 --> 00:01:53.606 A:middle
+We designed the CloudKit API
+to be highly asynchronous.
+
+00:01:53.606 --> 00:01:57.416 A:middle
+Everything has a callback,
+nothing is synchronous.
+
+00:01:57.486 --> 00:01:59.056 A:middle
+And we did this because all
+
+00:01:59.056 --> 00:02:00.836 A:middle
+of these requests are
+going out over the network.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:59.056 --> 00:02:00.836 A:middle
+of these requests are
+going out over the network.
+
+00:02:01.316 --> 00:02:03.686 A:middle
+When you get the network
+involved, anything can happen,
+
+00:02:03.686 --> 00:02:06.446 A:middle
+you know, the server might
+not be responding quickly,
+
+00:02:06.446 --> 00:02:08.036 A:middle
+there might be a bad
+network connection.
+
+00:02:08.395 --> 00:02:11.736 A:middle
+We don't want to block the UI
+and cause a bad user experience.
+
+00:02:12.816 --> 00:02:16.036 A:middle
+And to help do this, we've used
+NSOperation almost everywhere
+
+00:02:16.036 --> 00:02:16.516 A:middle
+in our API.
+
+00:02:17.576 --> 00:02:20.636 A:middle
+I say almost everywhere
+because if you went
+
+00:02:20.636 --> 00:02:21.986 A:middle
+to the introductory session,
+
+00:02:21.986 --> 00:02:24.406 A:middle
+you remember seeing what we
+called the Convenience API.
+
+00:02:25.276 --> 00:02:29.086 A:middle
+And the Convenience API is our
+way of helping you get started
+
+00:02:29.086 --> 00:02:30.916 A:middle
+with CloudKit really
+quickly and simply.
+
+00:02:31.406 --> 00:02:35.046 A:middle
+All of these APIs are, you
+know, single calls that work
+
+00:02:35.046 --> 00:02:36.986 A:middle
+on one record at a time.
+
+00:02:36.986 --> 00:02:39.116 A:middle
+So, in this case, we're
+fetching one record
+
+00:02:39.606 --> 00:02:41.076 A:middle
+and it's asynchronous.
+
+00:02:41.076 --> 00:02:43.286 A:middle
+We get that one record back
+in our completionHandler.
+
+00:02:44.156 --> 00:02:46.496 A:middle
+But, as you use CloudKit
+more, you might find
+
+00:02:46.496 --> 00:02:48.026 A:middle
+that you need some
+additional functionality.
+
+00:02:48.676 --> 00:02:51.376 A:middle
+And that's where the
+NSOperation-based API comes in.
+
+00:02:52.066 --> 00:02:55.506 A:middle
+So, what we've got here is
+the CKFetchRecordsOperation.
+
+00:02:55.556 --> 00:02:58.696 A:middle
+And this is an NSOperation
+that does the equivalent
+
+00:02:58.696 --> 00:03:00.436 A:middle
+of that convenience
+API we just saw.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:58.696 --> 00:03:00.436 A:middle
+of that convenience
+API we just saw.
+
+00:03:01.136 --> 00:03:02.656 A:middle
+We give you a lot
+more functionality
+
+00:03:02.656 --> 00:03:04.996 A:middle
+when you use the
+NSOperation-based API.
+
+00:03:05.596 --> 00:03:09.316 A:middle
+So, you can see here that our
+initializer takes an array
+
+00:03:09.316 --> 00:03:09.876 A:middle
+of record IDs.
+
+00:03:09.876 --> 00:03:13.046 A:middle
+You can fetch a whole batch
+of records all at once.
+
+00:03:14.286 --> 00:03:16.296 A:middle
+We also give you more
+feedback on what's happening.
+
+00:03:16.296 --> 00:03:18.886 A:middle
+We've got a completion
+block for each record,
+
+00:03:18.886 --> 00:03:20.326 A:middle
+and we also give you progress
+
+00:03:20.326 --> 00:03:22.056 A:middle
+as we download those
+records from the server.
+
+00:03:22.646 --> 00:03:28.306 A:middle
+And finally, these operations
+give you more knobs and levers
+
+00:03:28.306 --> 00:03:32.196 A:middle
+to tweak what is returned
+and what the operation does.
+
+00:03:32.196 --> 00:03:34.816 A:middle
+In this case, we've got
+a desiredKeys property
+
+00:03:34.816 --> 00:03:36.916 A:middle
+that lets you specify
+what key should come back
+
+00:03:36.916 --> 00:03:40.436 A:middle
+on the records that you fetch.
+
+00:03:40.656 --> 00:03:43.086 A:middle
+So, since all of this
+is built on NSOperation,
+
+00:03:43.086 --> 00:03:44.176 A:middle
+let's do a quick overview
+
+00:03:44.176 --> 00:03:46.366 A:middle
+of what the NSOperation
+class looks like.
+
+00:03:47.466 --> 00:03:50.446 A:middle
+What we've got in NSOperation
+is a completionBlock
+
+00:03:50.446 --> 00:03:53.176 A:middle
+and a cancel call so that
+you can manage the life cycle
+
+00:03:53.176 --> 00:03:53.946 A:middle
+of your operation.
+
+00:03:55.406 --> 00:03:56.586 A:middle
+We've got a couple of variables
+
+00:03:56.586 --> 00:03:58.606 A:middle
+that tell you some state
+about the operation.
+
+00:03:59.756 --> 00:04:01.916 A:middle
+And NSOperations
+have dependencies,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:59.756 --> 00:04:01.916 A:middle
+And NSOperations
+have dependencies,
+
+00:04:01.916 --> 00:04:04.376 A:middle
+so you can link two
+NSOperations together.
+
+00:04:06.956 --> 00:04:09.336 A:middle
+Once you have an NSOperation,
+you're going to want to start
+
+00:04:09.336 --> 00:04:11.566 A:middle
+that operation, and you
+do that by adding it
+
+00:04:11.566 --> 00:04:13.266 A:middle
+to an NSOperationQueue.
+
+00:04:13.806 --> 00:04:16.276 A:middle
+When you have an
+NSOperationQueue,
+
+00:04:16.276 --> 00:04:19.276 A:middle
+you can also manage the life
+cycle of that operation queue.
+
+00:04:19.276 --> 00:04:21.156 A:middle
+You can suspend it
+and resume it,
+
+00:04:21.456 --> 00:04:23.826 A:middle
+and you can cancel
+the operations in it.
+
+00:04:26.156 --> 00:04:28.836 A:middle
+So, if you go to look at
+our NSOperation-based API,
+
+00:04:28.836 --> 00:04:30.906 A:middle
+you might just see this
+big list of a bunch
+
+00:04:30.906 --> 00:04:32.026 A:middle
+of different operations.
+
+00:04:32.026 --> 00:04:33.896 A:middle
+It's kind of overwhelming
+and confusing.
+
+00:04:34.396 --> 00:04:36.796 A:middle
+The best way to think
+about this API is to think
+
+00:04:36.796 --> 00:04:38.736 A:middle
+about the objects that
+you want to deal with.
+
+00:04:39.236 --> 00:04:41.076 A:middle
+If you remember from
+the introductory talk,
+
+00:04:41.756 --> 00:04:44.936 A:middle
+CloudKits-based objects
+are records and zones
+
+00:04:44.936 --> 00:04:48.546 A:middle
+and subscriptions, and you'll
+see that up here we have a fetch
+
+00:04:48.546 --> 00:04:50.926 A:middle
+and a modify operation
+for all of those items.
+
+00:04:50.926 --> 00:04:57.476 A:middle
+One of the really cool
+things about NSOperation is
+
+00:04:57.476 --> 00:04:58.616 A:middle
+that is has dependencies.
+
+00:04:58.616 --> 00:05:01.656 A:middle
+So, you can set a dependency
+between two operations
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:58.616 --> 00:05:01.656 A:middle
+So, you can set a dependency
+between two operations
+
+00:05:02.226 --> 00:05:04.506 A:middle
+and the second operation
+won't fire
+
+00:05:04.506 --> 00:05:06.226 A:middle
+until the first operation
+is completed.
+
+00:05:06.786 --> 00:05:09.796 A:middle
+This is really handy
+with CloudKit if you want
+
+00:05:09.796 --> 00:05:13.146 A:middle
+to do something like fetch a
+record, add a property to it,
+
+00:05:13.146 --> 00:05:14.936 A:middle
+and save that record
+back to the server.
+
+00:05:15.576 --> 00:05:17.696 A:middle
+You can make the
+FetchRecordsOperation,
+
+00:05:17.856 --> 00:05:21.646 A:middle
+make the modify operation at the
+same time, set up a dependency,
+
+00:05:22.046 --> 00:05:24.046 A:middle
+and when the fetch completes,
+you can put that data
+
+00:05:24.046 --> 00:05:26.286 A:middle
+in the modify operation, and
+it'll start automatically.
+
+00:05:26.836 --> 00:05:30.786 A:middle
+These dependencies also
+work between queues.
+
+00:05:30.786 --> 00:05:34.566 A:middle
+So, even though CloudKit has
+its own internal operation queue
+
+00:05:34.566 --> 00:05:37.006 A:middle
+that you can use to run
+operations, you're welcome
+
+00:05:37.326 --> 00:05:39.486 A:middle
+to create your own
+NSOperation queue,
+
+00:05:39.856 --> 00:05:41.436 A:middle
+and you can then
+manage its life cycle.
+
+00:05:41.436 --> 00:05:47.716 A:middle
+You can stop operations or
+suspend them or cancel them.
+
+00:05:47.926 --> 00:05:51.326 A:middle
+One tip with using
+NSOperation though is
+
+00:05:51.326 --> 00:05:55.146 A:middle
+that the NSOperation-based class
+has a completionBlock on it.
+
+00:05:55.766 --> 00:05:56.926 A:middle
+This completionBlock ends
+
+00:05:56.926 --> 00:05:59.496 A:middle
+up firing asynchronously
+with dependencies.
+
+00:05:59.496 --> 00:06:01.056 A:middle
+So, if you've set
+up dependencies
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:59.496 --> 00:06:01.056 A:middle
+So, if you've set
+up dependencies
+
+00:06:01.096 --> 00:06:03.466 A:middle
+and you're using the
+NSOperation's completion block,
+
+00:06:03.916 --> 00:06:05.586 A:middle
+they might happen
+at the same time,
+
+00:06:05.996 --> 00:06:07.586 A:middle
+and that data you
+were trying to funnel
+
+00:06:07.586 --> 00:06:10.596 A:middle
+into the next operation won't
+get there in time, you know,
+
+00:06:10.596 --> 00:06:11.876 A:middle
+that operation has
+already started.
+
+00:06:12.576 --> 00:06:15.056 A:middle
+So, what we've done with
+the CloudKit API is we have
+
+00:06:15.106 --> 00:06:16.996 A:middle
+CloudKit-specific
+completion blocks.
+
+00:06:17.416 --> 00:06:21.316 A:middle
+And if we look at what we had
+for that fetchRecords operation,
+
+00:06:21.806 --> 00:06:23.766 A:middle
+we have a
+fetchRecordsCompletionBlock.
+
+00:06:24.456 --> 00:06:26.946 A:middle
+You'll see this pattern on
+all of our NSOperations.
+
+00:06:26.946 --> 00:06:29.366 A:middle
+And these completion
+blocks hand back all
+
+00:06:29.366 --> 00:06:30.906 A:middle
+of the information
+you needed to know
+
+00:06:30.906 --> 00:06:32.286 A:middle
+about the operation
+that just ran.
+
+00:06:32.806 --> 00:06:35.756 A:middle
+In this case, we've got the
+errors for that operation,
+
+00:06:35.756 --> 00:06:38.396 A:middle
+and we've also got the
+records that were fetched.
+
+00:06:40.466 --> 00:06:43.146 A:middle
+And finally, NSOperations can
+have their own priorities.
+
+00:06:43.146 --> 00:06:45.856 A:middle
+So, you can set background
+operations and have them run
+
+00:06:45.856 --> 00:06:48.656 A:middle
+at a really low priority
+and keep your UI responsive.
+
+00:06:49.066 --> 00:06:52.226 A:middle
+So, when we were
+designing CloudKit,
+
+00:06:52.306 --> 00:06:53.406 A:middle
+one of the things we noticed is
+
+00:06:53.406 --> 00:06:55.546 A:middle
+that there's two general
+classes of applications.
+
+00:06:56.366 --> 00:06:59.816 A:middle
+There's one class of application
+that stores a whole bunch
+
+00:06:59.816 --> 00:07:02.836 A:middle
+of data up on the server, and
+when you use the application,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:59.816 --> 00:07:02.836 A:middle
+of data up on the server, and
+when you use the application,
+
+00:07:02.836 --> 00:07:04.476 A:middle
+it's just presenting
+the view of that data.
+
+00:07:04.476 --> 00:07:07.556 A:middle
+It downloads it on demand,
+displays it to the user,
+
+00:07:07.556 --> 00:07:10.096 A:middle
+and then, you know,
+tosses it out because it's,
+
+00:07:10.096 --> 00:07:11.446 A:middle
+the real copy's on the server.
+
+00:07:12.266 --> 00:07:13.866 A:middle
+But there's another
+class of application
+
+00:07:13.866 --> 00:07:16.346 A:middle
+that has just a little
+bit of data, but you want
+
+00:07:16.346 --> 00:07:18.376 A:middle
+that same data on
+all of your clients.
+
+00:07:19.706 --> 00:07:21.536 A:middle
+So, if you remember from
+the introductory talk,
+
+00:07:21.536 --> 00:07:24.446 A:middle
+we talked about what we
+called Big Data, Little Phone.
+
+00:07:24.446 --> 00:07:26.826 A:middle
+That's that case where we have
+a lot of data on the server.
+
+00:07:27.306 --> 00:07:30.156 A:middle
+It's not all going to fit on
+one phone, and you download it
+
+00:07:30.156 --> 00:07:31.196 A:middle
+and view it on demand.
+
+00:07:31.456 --> 00:07:33.886 A:middle
+So, you can see these clients
+are downloading records,
+
+00:07:33.916 --> 00:07:37.156 A:middle
+viewing them, and the truth
+lives up on the server.
+
+00:07:38.716 --> 00:07:40.966 A:middle
+However, there's another
+class of application,
+
+00:07:41.626 --> 00:07:43.686 A:middle
+where it's a small
+amount of data.
+
+00:07:43.686 --> 00:07:46.816 A:middle
+It lives on one client, but you
+want it on all your clients.
+
+00:07:47.086 --> 00:07:48.986 A:middle
+An example of this
+is an application
+
+00:07:48.986 --> 00:07:50.076 A:middle
+that manages your receipts.
+
+00:07:50.146 --> 00:07:53.836 A:middle
+So, every time you buy
+something, you take a picture
+
+00:07:53.836 --> 00:07:57.846 A:middle
+of the receipt, and you want
+that information on your phone,
+
+00:07:57.846 --> 00:08:00.746 A:middle
+in your iPad, in your Mac,
+and you want them all to be
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:57.846 --> 00:08:00.746 A:middle
+in your iPad, in your Mac,
+and you want them all to be
+
+00:08:00.746 --> 00:08:02.306 A:middle
+up to date with the
+same receipts.
+
+00:08:05.716 --> 00:08:07.556 A:middle
+So, what we've done
+to help you solve
+
+00:08:07.556 --> 00:08:11.146 A:middle
+that is we've got something
+in CloudKit that does that.
+
+00:08:11.146 --> 00:08:13.946 A:middle
+If you remember, we have, every
+application gets a container.
+
+00:08:14.756 --> 00:08:17.146 A:middle
+In every container is a
+public and private database.
+
+00:08:18.016 --> 00:08:20.296 A:middle
+And just as a refresher,
+
+00:08:20.296 --> 00:08:22.676 A:middle
+that private database is
+actually one private database
+
+00:08:22.676 --> 00:08:23.476 A:middle
+for every user.
+
+00:08:26.156 --> 00:08:27.516 A:middle
+Inside of those databases,
+
+00:08:27.516 --> 00:08:29.196 A:middle
+we then subdivide
+them down into zones.
+
+00:08:29.316 --> 00:08:32.706 A:middle
+So, both the public and the
+private database have a default
+
+00:08:32.736 --> 00:08:33.265 A:middle
+zone in them.
+
+00:08:34.426 --> 00:08:37.275 A:middle
+But we've also given you
+what we call custom zones,
+
+00:08:37.275 --> 00:08:40.486 A:middle
+and these custom zones allow us
+to give you some extra features
+
+00:08:40.486 --> 00:08:42.816 A:middle
+that we can't provide
+in the default zones.
+
+00:08:44.536 --> 00:08:47.786 A:middle
+You can create these custom
+zones and use the new features.
+
+00:08:47.846 --> 00:08:50.556 A:middle
+Let's go over a couple of them.
+
+00:08:50.756 --> 00:08:53.246 A:middle
+The first feature
+is atomic commits.
+
+00:08:54.516 --> 00:08:57.286 A:middle
+So, CloudKit has
+relationships between records.
+
+00:08:57.286 --> 00:09:00.596 A:middle
+And if you start using CloudKit
+and using these relationships,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:57.286 --> 00:09:00.596 A:middle
+And if you start using CloudKit
+and using these relationships,
+
+00:09:00.596 --> 00:09:03.476 A:middle
+you're going to build up an
+object graph, and you're going
+
+00:09:03.476 --> 00:09:06.966 A:middle
+to realize you want
+consistency in your data.
+
+00:09:06.966 --> 00:09:09.466 A:middle
+If, you know, you might have
+an object graph that you want
+
+00:09:09.466 --> 00:09:10.556 A:middle
+to commit all at once.
+
+00:09:10.586 --> 00:09:13.186 A:middle
+And if some of those
+things don't get committed,
+
+00:09:13.186 --> 00:09:15.996 A:middle
+the data on the server
+doesn't make sense.
+
+00:09:16.296 --> 00:09:18.296 A:middle
+On the public database,
+we can't guarantee
+
+00:09:18.296 --> 00:09:20.616 A:middle
+that because there might
+be thousands or millions
+
+00:09:20.616 --> 00:09:22.246 A:middle
+of users hitting
+the same database.
+
+00:09:22.246 --> 00:09:25.496 A:middle
+So, there's no way to lock the
+database while we, you know,
+
+00:09:25.496 --> 00:09:27.106 A:middle
+commit your very
+special records.
+
+00:09:27.916 --> 00:09:31.416 A:middle
+But in the private database,
+you only have one user.
+
+00:09:31.416 --> 00:09:33.156 A:middle
+It's the current user's account.
+
+00:09:33.196 --> 00:09:40.506 A:middle
+And in that case, we can provide
+you things like atomic commits.
+
+00:09:40.586 --> 00:09:43.176 A:middle
+So, with atomic commits,
+these batch operations
+
+00:09:43.206 --> 00:09:46.726 A:middle
+in the NSOperation API will
+succeed or fail as a whole.
+
+00:09:47.106 --> 00:09:49.216 A:middle
+So, if any record had a problem,
+
+00:09:49.926 --> 00:09:52.886 A:middle
+you will get back a
+CKErrorPartialFailure.
+
+00:09:54.546 --> 00:09:56.846 A:middle
+Inside of that partial
+failure error, you're going
+
+00:09:56.846 --> 00:09:59.526 A:middle
+to see a user, the
+userInfo dictionary is going
+
+00:09:59.576 --> 00:10:02.246 A:middle
+to have this
+CKPartialErrorsByItemID key.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:59.576 --> 00:10:02.246 A:middle
+to have this
+CKPartialErrorsByItemID key.
+
+00:10:03.386 --> 00:10:05.796 A:middle
+And that's going to be a
+dictionary of record IDs
+
+00:10:06.306 --> 00:10:08.336 A:middle
+to errors for each
+of those records.
+
+00:10:09.116 --> 00:10:10.556 A:middle
+And some of those
+errors are going
+
+00:10:10.556 --> 00:10:12.416 A:middle
+to be the real failures
+that you care about.
+
+00:10:12.476 --> 00:10:14.636 A:middle
+These are the reasons that
+the atomic commit failed.
+
+00:10:15.376 --> 00:10:17.486 A:middle
+But, you know, the rest
+of the records failed
+
+00:10:17.486 --> 00:10:19.726 A:middle
+because it was atomic commit,
+and we need to let you know
+
+00:10:19.726 --> 00:10:21.476 A:middle
+that they failed,
+so you're also going
+
+00:10:21.556 --> 00:10:23.576 A:middle
+to see
+CKErrorBatchRequestFailed.
+
+00:10:24.306 --> 00:10:26.006 A:middle
+That's just a way of
+saying that something else
+
+00:10:26.006 --> 00:10:27.816 A:middle
+in this batch failed,
+and, you know,
+
+00:10:27.816 --> 00:10:32.726 A:middle
+this wasn't the real problem, it
+was that other record in here.
+
+00:10:32.946 --> 00:10:34.466 A:middle
+Another great feature
+that we give you
+
+00:10:34.466 --> 00:10:36.566 A:middle
+with custom zones
+are delta downloads.
+
+00:10:37.946 --> 00:10:40.656 A:middle
+So, delta downloads are a
+way for that second class
+
+00:10:40.656 --> 00:10:43.586 A:middle
+of application to be
+possible in CloudKit.
+
+00:10:43.966 --> 00:10:46.456 A:middle
+You can download only the
+changes that were made
+
+00:10:46.456 --> 00:10:48.996 A:middle
+in that zone, and you can
+cache them all locally.
+
+00:10:48.996 --> 00:10:51.926 A:middle
+So, what does that look like?
+
+00:10:52.236 --> 00:10:55.306 A:middle
+Well, we've got our Mac here,
+and we've got our iPhone,
+
+00:10:55.736 --> 00:10:57.126 A:middle
+and we've got a custom zone.
+
+00:10:57.936 --> 00:11:00.096 A:middle
+So, let's step through a
+delta download really quick.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:57.936 --> 00:11:00.096 A:middle
+So, let's step through a
+delta download really quick.
+
+00:11:00.896 --> 00:11:02.966 A:middle
+We've got an orange
+record and a green record
+
+00:11:02.966 --> 00:11:05.496 A:middle
+over on the Mac here, and we
+want them on the phone as well.
+
+00:11:05.856 --> 00:11:08.346 A:middle
+So, we're going to first
+upload those both into CloudKit
+
+00:11:08.346 --> 00:11:12.346 A:middle
+in our custom zone, and
+then our iPhone is going
+
+00:11:12.346 --> 00:11:15.946 A:middle
+to perform a delta
+download to get up to date.
+
+00:11:17.456 --> 00:11:19.396 A:middle
+So, these delta downloads
+are based
+
+00:11:19.396 --> 00:11:20.836 A:middle
+on what we call change tokens.
+
+00:11:20.836 --> 00:11:23.406 A:middle
+And a change token is a
+way of tracking the state
+
+00:11:23.406 --> 00:11:25.226 A:middle
+of the server the last
+time you talked to it.
+
+00:11:26.176 --> 00:11:28.256 A:middle
+So, this phone has never
+talked to the server,
+
+00:11:28.726 --> 00:11:31.536 A:middle
+and what it's going to do is
+send up a nil change token.
+
+00:11:31.536 --> 00:11:33.466 A:middle
+And that's a way of saying,
+"I've never talked to you,
+
+00:11:33.466 --> 00:11:35.216 A:middle
+just send me all the
+records in the zone."
+
+00:11:36.106 --> 00:11:38.176 A:middle
+So, the server is the going
+to take that nil change token,
+
+00:11:38.936 --> 00:11:41.376 A:middle
+send down an, the orange
+record and green record.
+
+00:11:41.876 --> 00:11:44.056 A:middle
+The phone is going to save
+them into its local database.
+
+00:11:44.646 --> 00:11:47.106 A:middle
+And then the server is going to
+send down a new change token.
+
+00:11:47.556 --> 00:11:50.466 A:middle
+In this case, it's change
+token A, and that means that,
+
+00:11:50.466 --> 00:11:53.566 A:middle
+you know, the records you
+have are all from state A.
+
+00:11:53.566 --> 00:11:56.766 A:middle
+If the phone came back
+again with change tag A,
+
+00:11:56.766 --> 00:11:58.296 A:middle
+the server will go, "Well,
+I don't have anything
+
+00:11:58.296 --> 00:11:59.856 A:middle
+for you, A is good enough.
+
+00:11:59.986 --> 00:12:00.916 A:middle
+There's nothing to download."
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:59.986 --> 00:12:00.916 A:middle
+There's nothing to download."
+
+00:12:01.446 --> 00:12:05.796 A:middle
+But let's say the Mac
+comes along and it creates
+
+00:12:05.796 --> 00:12:08.386 A:middle
+that purple record, and it
+deletes the green record.
+
+00:12:08.626 --> 00:12:10.736 A:middle
+And it uploads those
+changes to the server.
+
+00:12:11.716 --> 00:12:14.076 A:middle
+The server is going to track
+the changes, so it'll note
+
+00:12:14.076 --> 00:12:15.476 A:middle
+that that green record
+was deleted.
+
+00:12:15.556 --> 00:12:17.346 A:middle
+It'll note that there's
+a new purple record.
+
+00:12:18.106 --> 00:12:20.566 A:middle
+And now, when the iPhone
+comes back with change tag A,
+
+00:12:21.106 --> 00:12:23.786 A:middle
+the server goes, "All right,
+well, we're are at B now.
+
+00:12:24.186 --> 00:12:25.086 A:middle
+That's farther than A.
+
+00:12:25.916 --> 00:12:27.336 A:middle
+Here's a delete of
+the green record
+
+00:12:27.336 --> 00:12:30.136 A:middle
+and here's a new purple record
+that happened while, you know,
+
+00:12:30.136 --> 00:12:31.286 A:middle
+since the last time we talked."
+
+00:12:32.686 --> 00:12:34.696 A:middle
+Then it sends back
+that new change token
+
+00:12:34.986 --> 00:12:37.026 A:middle
+and everyone is up to date.
+
+00:12:38.356 --> 00:12:40.526 A:middle
+So, you can use this
+delta download
+
+00:12:40.526 --> 00:12:43.016 A:middle
+to implement an offline
+cache in your application.
+
+00:12:43.736 --> 00:12:46.146 A:middle
+If you want to do
+that, there's a couple
+
+00:12:46.146 --> 00:12:47.156 A:middle
+of steps your app
+should to take.
+
+00:12:47.156 --> 00:12:49.936 A:middle
+This is kind of an outline
+of a basic state machine
+
+00:12:49.936 --> 00:12:52.196 A:middle
+for every time you talk
+to the server and you want
+
+00:12:52.196 --> 00:12:53.146 A:middle
+to do a delta download.
+
+00:12:54.556 --> 00:12:56.776 A:middle
+The first thing you're going
+to want to do in your app is
+
+00:12:56.846 --> 00:12:58.456 A:middle
+to track the local changes.
+
+00:12:58.916 --> 00:13:00.716 A:middle
+You're going to want
+to make a change table,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:58.916 --> 00:13:00.716 A:middle
+You're going to want
+to make a change table,
+
+00:13:01.286 --> 00:13:03.966 A:middle
+and every time the user makes
+an edit in your application,
+
+00:13:03.966 --> 00:13:04.916 A:middle
+you want to write that down.
+
+00:13:04.916 --> 00:13:07.766 A:middle
+You're going to want to do this
+because you might be offline
+
+00:13:07.766 --> 00:13:10.266 A:middle
+when the user makes the changes,
+and you're going to need
+
+00:13:10.266 --> 00:13:12.496 A:middle
+to replay all those
+changes back to the server
+
+00:13:12.496 --> 00:13:14.106 A:middle
+when you can talk to it.
+
+00:13:16.116 --> 00:13:17.166 A:middle
+Then, you're going to need
+
+00:13:17.166 --> 00:13:19.046 A:middle
+to send all those
+changes up to the server.
+
+00:13:19.046 --> 00:13:21.006 A:middle
+You want to do that before
+you fetch the changes
+
+00:13:21.056 --> 00:13:23.666 A:middle
+because someone else might
+have changed the record
+
+00:13:23.666 --> 00:13:26.356 A:middle
+in the meantime, and you need
+to resolve these conflicts.
+
+00:13:27.606 --> 00:13:29.776 A:middle
+So, we'll go over conflict
+handling in just a little bit,
+
+00:13:29.866 --> 00:13:31.196 A:middle
+but just keep in mind
+
+00:13:31.196 --> 00:13:33.186 A:middle
+that that's an important
+step in this process here.
+
+00:13:34.666 --> 00:13:37.086 A:middle
+Finally, you're ready to
+do the delta download.
+
+00:13:37.086 --> 00:13:38.146 A:middle
+This is the point
+where you're going
+
+00:13:38.146 --> 00:13:40.526 A:middle
+to call
+CKFetchRecordChangesOperation.
+
+00:13:41.666 --> 00:13:45.576 A:middle
+The server is going to send
+you back updates and deletes
+
+00:13:45.576 --> 00:13:48.766 A:middle
+and modifies and adds of
+records, and you're going
+
+00:13:48.766 --> 00:13:50.496 A:middle
+to save those into
+your local database.
+
+00:13:51.696 --> 00:13:53.016 A:middle
+Finally, the server is going
+
+00:13:53.016 --> 00:13:54.646 A:middle
+to send you back a
+new change token.
+
+00:13:54.716 --> 00:13:56.396 A:middle
+And that's the change
+token you want to save
+
+00:13:56.396 --> 00:13:58.296 A:middle
+so that the next time
+you talk to the server,
+
+00:13:58.746 --> 00:13:59.916 A:middle
+you can get only the records
+
+00:13:59.916 --> 00:14:01.646 A:middle
+that have changed
+and not everything.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:59.916 --> 00:14:01.646 A:middle
+that have changed
+and not everything.
+
+00:14:04.476 --> 00:14:07.296 A:middle
+So, one of the other features
+we give you with custom zones
+
+00:14:07.296 --> 00:14:09.346 A:middle
+and delta downloads
+are zone subscriptions.
+
+00:14:09.346 --> 00:14:12.956 A:middle
+In the case of that state
+machine I just talked about,
+
+00:14:13.276 --> 00:14:16.376 A:middle
+you could pull every, you
+know, 10 minutes or 5 minutes
+
+00:14:16.376 --> 00:14:18.466 A:middle
+or whatever and hope that
+there are changes up there.
+
+00:14:19.136 --> 00:14:21.256 A:middle
+But wouldn't it be great if
+the server just told you,
+
+00:14:21.256 --> 00:14:22.226 A:middle
+"Hey, I've got changes.
+
+00:14:22.226 --> 00:14:23.356 A:middle
+It's time for delta download."
+
+00:14:23.946 --> 00:14:24.816 A:middle
+Well, we give you that.
+
+00:14:24.886 --> 00:14:27.296 A:middle
+We give you what we
+call zone subscriptions.
+
+00:14:27.766 --> 00:14:29.646 A:middle
+These look like query
+subscriptions,
+
+00:14:29.706 --> 00:14:30.826 A:middle
+but they're a little
+bit different.
+
+00:14:31.586 --> 00:14:34.746 A:middle
+What they do is every
+time something changes
+
+00:14:34.746 --> 00:14:37.336 A:middle
+in a custom zone, you'll
+get a push notification.
+
+00:14:38.076 --> 00:14:39.556 A:middle
+When you see that
+push notification,
+
+00:14:39.556 --> 00:14:42.056 A:middle
+you know you should go do a
+delta download with the server,
+
+00:14:42.366 --> 00:14:43.456 A:middle
+and you'll get new records.
+
+00:14:43.536 --> 00:14:50.696 A:middle
+So, a couple of notes on
+designing custom zones
+
+00:14:50.696 --> 00:14:51.716 A:middle
+and when you should use them.
+
+00:14:52.956 --> 00:14:56.206 A:middle
+These custom zones are meant
+to compartmentalize your data.
+
+00:14:56.656 --> 00:14:59.696 A:middle
+Because of that, there's a
+couple of restrictions on them.
+
+00:14:59.696 --> 00:15:02.416 A:middle
+The first is that you can't
+move records between zones.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:59.696 --> 00:15:02.416 A:middle
+The first is that you can't
+move records between zones.
+
+00:15:03.226 --> 00:15:05.096 A:middle
+You can pick these
+records up and copy them
+
+00:15:05.096 --> 00:15:09.806 A:middle
+and make a new copy in the new
+zone, but you can't move them.
+
+00:15:09.806 --> 00:15:12.676 A:middle
+You also can't make
+any cross-zone delete
+
+00:15:12.676 --> 00:15:13.916 A:middle
+self relationships.
+
+00:15:14.006 --> 00:15:17.656 A:middle
+So, you have to think of
+these zones as self-contained.
+
+00:15:17.656 --> 00:15:20.096 A:middle
+If you have records that need to
+go across zones, you might want
+
+00:15:20.096 --> 00:15:21.086 A:middle
+to rethink your model.
+
+00:15:23.696 --> 00:15:26.306 A:middle
+And finally, these zones
+determine the level of updates.
+
+00:15:26.306 --> 00:15:28.476 A:middle
+If you're using a zone
+subscription, you're going
+
+00:15:28.476 --> 00:15:30.976 A:middle
+to get a push every single
+time something has changed
+
+00:15:30.976 --> 00:15:31.526 A:middle
+in that zone.
+
+00:15:31.526 --> 00:15:36.006 A:middle
+If you have a lot of data on
+the server and you only care
+
+00:15:36.006 --> 00:15:38.196 A:middle
+about getting updates for
+one part of that data,
+
+00:15:38.196 --> 00:15:41.486 A:middle
+you might want to make that a
+zone so that you can ignore the,
+
+00:15:41.486 --> 00:15:43.956 A:middle
+you know, really busy
+stuff going on over here
+
+00:15:43.956 --> 00:15:51.236 A:middle
+and just download the
+things you care about.
+
+00:15:52.276 --> 00:15:54.776 A:middle
+So, let's talk about some
+advanced record operations.
+
+00:15:55.826 --> 00:15:59.266 A:middle
+When you're using CKRecord,
+any changes you make
+
+00:15:59.266 --> 00:16:03.676 A:middle
+to a CKRecord object locally get
+tracked, and then when we talk
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:59.266 --> 00:16:03.676 A:middle
+to a CKRecord object locally get
+tracked, and then when we talk
+
+00:16:03.676 --> 00:16:06.076 A:middle
+to the server, we're only
+going to send the changes
+
+00:16:06.076 --> 00:16:07.466 A:middle
+that you made to that CKRecord.
+
+00:16:08.636 --> 00:16:10.926 A:middle
+This is the default behavior,
+and it works great most
+
+00:16:10.926 --> 00:16:14.286 A:middle
+of the time, but you might
+want some additional control
+
+00:16:14.286 --> 00:16:15.906 A:middle
+over what we're sending
+to the server.
+
+00:16:16.666 --> 00:16:18.606 A:middle
+And we give you that
+with save policies.
+
+00:16:19.846 --> 00:16:23.156 A:middle
+So, these save policies,
+we have three of them.
+
+00:16:23.276 --> 00:16:25.226 A:middle
+They're
+CKRecordSaveIfServerUnchanged.
+
+00:16:26.266 --> 00:16:32.046 A:middle
+We have CKRecordSaveChangedKeys,
+and we have CKRecordSaveAllKeys.
+
+00:16:34.236 --> 00:16:37.186 A:middle
+So, let's look at the
+differences between those.
+
+00:16:38.236 --> 00:16:42.336 A:middle
+The biggest difference is
+what they determine for a,
+
+00:16:42.376 --> 00:16:43.866 A:middle
+what I'm going to
+call a locked save.
+
+00:16:44.636 --> 00:16:46.856 A:middle
+And a locked save is
+a way of making sure
+
+00:16:46.856 --> 00:16:48.646 A:middle
+that you don't overwrite
+data on the server
+
+00:16:48.646 --> 00:16:50.716 A:middle
+that someone else
+has already written.
+
+00:16:50.716 --> 00:16:52.156 A:middle
+When you perform a locked save,
+
+00:16:52.156 --> 00:16:56.576 A:middle
+it says that if the record has
+changed since-on the server
+
+00:16:56.576 --> 00:16:57.736 A:middle
+since the time you fetched it,
+
+00:16:58.206 --> 00:17:00.336 A:middle
+the server will give you an
+error saying your record is
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:58.206 --> 00:17:00.336 A:middle
+the server will give you an
+error saying your record is
+
+00:17:00.336 --> 00:17:03.466 A:middle
+out of date, you need to resolve
+this conflict and try again.
+
+00:17:04.596 --> 00:17:09.816 A:middle
+So, the only thing that performs
+a locked save here is CKRecord
+
+00:17:09.816 --> 00:17:12.086 A:middle
+save policy
+SaveIfServerUnchanged.
+
+00:17:12.786 --> 00:17:16.076 A:middle
+The other two actually force
+these changes to the server.
+
+00:17:16.076 --> 00:17:17.336 A:middle
+So, SaveChangedKeys
+
+00:17:17.336 --> 00:17:20.386 A:middle
+and SaveAllKeys always overwrite
+the values on the server.
+
+00:17:22.435 --> 00:17:25.626 A:middle
+These policies also determine
+how much data we're sending
+
+00:17:25.626 --> 00:17:26.106 A:middle
+to the server.
+
+00:17:27.546 --> 00:17:29.756 A:middle
+In the case of
+SaveIfServerUnchanged
+
+00:17:29.816 --> 00:17:34.286 A:middle
+and SaveChangedKeys, we're only
+going to send up the, sorry,
+
+00:17:34.286 --> 00:17:35.626 A:middle
+we're only going to
+send up the values
+
+00:17:35.626 --> 00:17:37.466 A:middle
+on the record that have changed.
+
+00:17:38.036 --> 00:17:39.386 A:middle
+In the case of SaveAllKeys,
+
+00:17:39.386 --> 00:17:41.686 A:middle
+we're going to send the
+entire record, all the values,
+
+00:17:41.746 --> 00:17:43.726 A:middle
+whether you've changed
+them or not.
+
+00:17:45.216 --> 00:17:48.486 A:middle
+So, back to locked updates.
+
+00:17:48.486 --> 00:17:50.676 A:middle
+We've got this thing
+called locking,
+
+00:17:50.676 --> 00:17:53.526 A:middle
+and if you don't use it,
+here's what could go wrong
+
+00:17:53.526 --> 00:17:54.526 A:middle
+with an unlocked update.
+
+00:17:54.676 --> 00:17:57.026 A:middle
+Right now, we've got
+this contact card.
+
+00:17:57.076 --> 00:17:59.456 A:middle
+We've got the same name,
+first name, last name,
+
+00:17:59.456 --> 00:18:02.496 A:middle
+picture on two clients,
+and in iCloud.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:59.456 --> 00:18:02.496 A:middle
+picture on two clients,
+and in iCloud.
+
+00:18:02.496 --> 00:18:03.626 A:middle
+Everything is good right now.
+
+00:18:04.526 --> 00:18:07.466 A:middle
+But let's say the iPhone
+changes that contact completely.
+
+00:18:07.466 --> 00:18:10.136 A:middle
+So it modifies the picture,
+it modifies the first name,
+
+00:18:10.136 --> 00:18:11.476 A:middle
+and it modifies the last name.
+
+00:18:12.436 --> 00:18:15.296 A:middle
+Well, it's going to perform a
+SaveChangedKeys to the server,
+
+00:18:15.616 --> 00:18:17.806 A:middle
+which is going to send up
+the things that have changed,
+
+00:18:18.156 --> 00:18:20.286 A:middle
+and that's going to overwrite
+whatever is on the server.
+
+00:18:20.286 --> 00:18:25.536 A:middle
+Next, before the Mac gets a
+chance to download that record,
+
+00:18:25.536 --> 00:18:26.896 A:middle
+the user edited the first name
+
+00:18:26.896 --> 00:18:28.466 A:middle
+of that record and
+just changed it.
+
+00:18:29.496 --> 00:18:33.456 A:middle
+And that Mac then sends- does a
+SaveChangedKeys with the server,
+
+00:18:34.156 --> 00:18:36.496 A:middle
+and it sent up just the
+property that was modified.
+
+00:18:37.176 --> 00:18:40.556 A:middle
+And now, we've got a problem
+here, oops, we've got a problem.
+
+00:18:40.556 --> 00:18:44.206 A:middle
+This contact record isn't
+what either the clients meant
+
+00:18:44.206 --> 00:18:45.036 A:middle
+to have.
+
+00:18:45.866 --> 00:18:49.096 A:middle
+So, to work around this,
+we have locked updates.
+
+00:18:49.736 --> 00:18:52.346 A:middle
+And locked updates are
+a way of making sure
+
+00:18:52.346 --> 00:18:55.376 A:middle
+that the server knows that
+you're updating the same values
+
+00:18:55.446 --> 00:18:56.536 A:middle
+that are already on the server.
+
+00:18:57.376 --> 00:18:58.836 A:middle
+And we do this with
+a change tag.
+
+00:18:59.266 --> 00:19:01.606 A:middle
+So, the change tag is a
+property on the record
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:59.266 --> 00:19:01.606 A:middle
+So, the change tag is a
+property on the record
+
+00:19:02.286 --> 00:19:05.976 A:middle
+that necessarily changes anytime
+a value in the record changes.
+
+00:19:06.626 --> 00:19:09.416 A:middle
+In this case, we've got change
+tag A both on the server
+
+00:19:09.416 --> 00:19:12.926 A:middle
+and locally, and so we know that
+they both have the same values.
+
+00:19:13.796 --> 00:19:17.396 A:middle
+If we go and we add a new
+property on the local record,
+
+00:19:18.296 --> 00:19:21.256 A:middle
+when we save that to the server
+using the default save policy,
+
+00:19:21.366 --> 00:19:23.356 A:middle
+it's going to send up
+both the change tag
+
+00:19:23.946 --> 00:19:25.476 A:middle
+and the property that changed.
+
+00:19:26.866 --> 00:19:29.096 A:middle
+The servers then,
+before it does anything,
+
+00:19:29.096 --> 00:19:30.756 A:middle
+it's going to check
+the two change tags,
+
+00:19:31.216 --> 00:19:34.296 A:middle
+and if they're equal, it'll
+apply the change that you made.
+
+00:19:34.996 --> 00:19:40.096 A:middle
+If on the other hand we have
+another client that, oh, sorry,
+
+00:19:40.096 --> 00:19:43.056 A:middle
+and then the server is going
+to send back a new change tag
+
+00:19:43.086 --> 00:19:44.586 A:middle
+because we did change
+a property.
+
+00:19:45.586 --> 00:19:49.386 A:middle
+We return this new record to
+you with the updated change tag
+
+00:19:49.386 --> 00:19:50.576 A:middle
+in the completion block.
+
+00:19:50.576 --> 00:19:53.716 A:middle
+So, if you take the record that
+we gave you at the end of a save
+
+00:19:54.286 --> 00:19:56.836 A:middle
+and you do all your subsequent
+modifications on that,
+
+00:19:57.316 --> 00:19:59.136 A:middle
+you'll be using the
+updated change token,
+
+00:19:59.166 --> 00:20:01.586 A:middle
+and you shouldn't have any
+conflicts with the server.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:59.166 --> 00:20:01.586 A:middle
+and you shouldn't have any
+conflicts with the server.
+
+00:20:03.716 --> 00:20:05.656 A:middle
+Now, let's say we had
+another client that, you know,
+
+00:20:05.656 --> 00:20:07.896 A:middle
+hadn't seen that change and
+he was still at version A.
+
+00:20:08.556 --> 00:20:10.506 A:middle
+And he decides to add
+a different property
+
+00:20:10.506 --> 00:20:11.036 A:middle
+on the record.
+
+00:20:11.766 --> 00:20:13.996 A:middle
+Well, he's going to save it to
+the server, he's going to send
+
+00:20:13.996 --> 00:20:16.716 A:middle
+up the change tag and
+the modified property,
+
+00:20:17.416 --> 00:20:19.476 A:middle
+and the server is going
+to realize that, hey,
+
+00:20:19.476 --> 00:20:20.836 A:middle
+those two values
+aren't the same.
+
+00:20:21.626 --> 00:20:24.266 A:middle
+And the client is going to
+get back an error saying,
+
+00:20:24.266 --> 00:20:25.286 A:middle
+you know, you have a conflict.
+
+00:20:26.496 --> 00:20:28.146 A:middle
+So, how do we handle
+these conflicts?
+
+00:20:29.876 --> 00:20:32.976 A:middle
+Well, if you run into this
+case of a locked save failing,
+
+00:20:33.456 --> 00:20:36.616 A:middle
+you're going to get an error
+that CKErrorServerRecordChanged.
+
+00:20:37.236 --> 00:20:39.726 A:middle
+And because you guys all
+went to the introductory talk
+
+00:20:39.726 --> 00:20:42.206 A:middle
+and you learned about how
+great error handling is
+
+00:20:42.206 --> 00:20:43.076 A:middle
+and how important it is,
+
+00:20:43.076 --> 00:20:46.226 A:middle
+you've got some fantastic error
+handling here, and it's going
+
+00:20:46.226 --> 00:20:48.676 A:middle
+to check for
+CKErrorServerRecordChanged.
+
+00:20:49.946 --> 00:20:52.656 A:middle
+When you see that, you know that
+you're out of date, you're going
+
+00:20:52.656 --> 00:20:54.236 A:middle
+to need to get the new
+record from the server.
+
+00:20:54.506 --> 00:20:56.296 A:middle
+You're going to need to
+take your local changes,
+
+00:20:56.296 --> 00:20:58.506 A:middle
+apply them to that record
+and try to save again.
+
+00:20:59.566 --> 00:21:01.066 A:middle
+And we've already
+anticipated that.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:59.566 --> 00:21:01.066 A:middle
+And we've already
+anticipated that.
+
+00:21:01.156 --> 00:21:03.596 A:middle
+So, what we're going to do
+is help you out a little bit,
+
+00:21:03.596 --> 00:21:06.366 A:middle
+and we're going to return
+those records to you already
+
+00:21:06.416 --> 00:21:09.386 A:middle
+because we know that's the
+next logical thing to do.
+
+00:21:10.096 --> 00:21:12.686 A:middle
+So, inside of the userInfo
+dictionary of this error,
+
+00:21:12.806 --> 00:21:14.526 A:middle
+you're going to find three
+copies of the record.
+
+00:21:15.826 --> 00:21:18.176 A:middle
+You're going to find the record
+that you attempted to save
+
+00:21:18.176 --> 00:21:20.866 A:middle
+to the server, the one
+that encountered the error.
+
+00:21:22.116 --> 00:21:23.536 A:middle
+You're going to find
+the original copy
+
+00:21:23.536 --> 00:21:26.736 A:middle
+of the local record, which
+is the copy we downloaded
+
+00:21:26.736 --> 00:21:28.696 A:middle
+from the server before
+you made any changes.
+
+00:21:29.816 --> 00:21:32.126 A:middle
+And finally, we're going to
+give you the server record back.
+
+00:21:32.276 --> 00:21:34.006 A:middle
+This is the copy of the
+record with the most
+
+00:21:34.006 --> 00:21:36.906 A:middle
+up to date change tag.
+
+00:21:37.086 --> 00:21:40.216 A:middle
+You're going to want to figure
+out what makes sense out of all
+
+00:21:40.216 --> 00:21:42.196 A:middle
+of those copies of
+values and keys.
+
+00:21:42.766 --> 00:21:44.746 A:middle
+You're going to apply them
+all to the server version
+
+00:21:44.746 --> 00:21:50.326 A:middle
+of the record, and then you're
+going to retry that save.
+
+00:21:50.526 --> 00:21:52.186 A:middle
+So, you might be wondering
+at this point, you know,
+
+00:21:52.186 --> 00:21:55.006 A:middle
+what type of save
+policy should you use?
+
+00:21:55.476 --> 00:21:57.286 A:middle
+And the simple answer to that is
+
+00:21:57.286 --> 00:22:00.846 A:middle
+that you should just always
+use CKRecordSaveIfUnchanged,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:57.286 --> 00:22:00.846 A:middle
+that you should just always
+use CKRecordSaveIfUnchanged,
+
+00:22:01.436 --> 00:22:02.686 A:middle
+and it's the default.
+
+00:22:02.686 --> 00:22:03.936 A:middle
+It's the default for a reason,
+
+00:22:04.006 --> 00:22:05.896 A:middle
+and that's because
+it's the safest.
+
+00:22:06.086 --> 00:22:08.816 A:middle
+If you remember that example
+of an unlocked update gone bad,
+
+00:22:09.486 --> 00:22:11.676 A:middle
+you could end up with really
+mixed-up, corrupt data
+
+00:22:11.676 --> 00:22:13.626 A:middle
+on the server if you're
+not using locking.
+
+00:22:15.196 --> 00:22:17.446 A:middle
+However, there is
+always a time and place
+
+00:22:17.446 --> 00:22:19.226 A:middle
+for using unlocked updates.
+
+00:22:19.816 --> 00:22:23.226 A:middle
+And the biggest case for these
+are highly contentious updates.
+
+00:22:23.746 --> 00:22:25.676 A:middle
+If you're doing anything
+in the public database,
+
+00:22:25.676 --> 00:22:27.886 A:middle
+you might have hundreds
+or thousands or millions
+
+00:22:27.886 --> 00:22:29.866 A:middle
+of clients accessing
+it at the same time.
+
+00:22:30.766 --> 00:22:33.706 A:middle
+And if every one of those
+clients is trying to save if,
+
+00:22:34.226 --> 00:22:36.706 A:middle
+save the same record and
+you're locking on that,
+
+00:22:37.616 --> 00:22:39.696 A:middle
+most of those clients are going
+to be hitting locking errors,
+
+00:22:39.736 --> 00:22:41.676 A:middle
+they're going to hit
+conflicts, and they're going
+
+00:22:41.676 --> 00:22:43.116 A:middle
+to be retrying really
+frequently.
+
+00:22:43.976 --> 00:22:46.456 A:middle
+So, if you know this is going to
+be a really contentious update,
+
+00:22:46.996 --> 00:22:50.096 A:middle
+you can structure your client
+to do unlocked updates as long
+
+00:22:50.096 --> 00:22:52.496 A:middle
+as you know you're always
+writing consistent properties.
+
+00:22:53.286 --> 00:22:55.636 A:middle
+On the case of that unlocked
+update that failed, you know,
+
+00:22:55.636 --> 00:22:57.786 A:middle
+you could make sure you
+always write both the first
+
+00:22:57.786 --> 00:23:00.196 A:middle
+and last name, and you
+know it'll be consistent.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:57.786 --> 00:23:00.196 A:middle
+and last name, and you
+know it'll be consistent.
+
+00:23:02.176 --> 00:23:05.956 A:middle
+The other reason to use an
+unlocked update in the case
+
+00:23:06.056 --> 00:23:07.666 A:middle
+of SaveAllKeys would
+be if you want
+
+00:23:07.696 --> 00:23:08.976 A:middle
+to force something
+to the server.
+
+00:23:09.086 --> 00:23:11.816 A:middle
+The client might say, you know,
+the copy on the server is bad,
+
+00:23:11.816 --> 00:23:13.716 A:middle
+but I know I have a good
+copy of the record here.
+
+00:23:14.296 --> 00:23:18.376 A:middle
+I want to just force that all
+on top of the server's copy.
+
+00:23:19.836 --> 00:23:23.566 A:middle
+There are some catches
+to using SaveAllKeys,
+
+00:23:23.606 --> 00:23:27.846 A:middle
+and one of the problems is
+that any property on the server
+
+00:23:28.406 --> 00:23:30.846 A:middle
+that doesn't exist in the
+local record that you're trying
+
+00:23:30.846 --> 00:23:32.276 A:middle
+to save isn't going
+
+00:23:32.276 --> 00:23:36.116 A:middle
+to get removed unless
+you explicitly remove
+
+00:23:36.116 --> 00:23:37.676 A:middle
+that property on the record.
+
+00:23:38.496 --> 00:23:41.536 A:middle
+All those words are
+really confusing,
+
+00:23:41.616 --> 00:23:43.006 A:middle
+and it's really hard to explain.
+
+00:23:43.006 --> 00:23:44.346 A:middle
+So instead, I'm going
+to try and explain
+
+00:23:44.346 --> 00:23:45.266 A:middle
+that with the picture here.
+
+00:23:46.376 --> 00:23:48.346 A:middle
+So, we've got our
+contact record again.
+
+00:23:48.436 --> 00:23:51.086 A:middle
+What we're going to do is
+add a couple of properties.
+
+00:23:51.086 --> 00:23:52.386 A:middle
+We're going to change
+the first name,
+
+00:23:52.386 --> 00:23:53.556 A:middle
+we're going to add
+a new property,
+
+00:23:54.006 --> 00:23:55.346 A:middle
+and we're going to
+delete the hobby.
+
+00:23:56.786 --> 00:23:59.756 A:middle
+We're now going to do a
+SaveAllKeys to the server.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:01.306 --> 00:24:04.316 A:middle
+What that's going to do is send
+up all of these properties,
+
+00:24:04.846 --> 00:24:07.986 A:middle
+even the ones we didn't change
+locally, and they're going
+
+00:24:07.986 --> 00:24:09.516 A:middle
+to update the values
+on the server.
+
+00:24:10.216 --> 00:24:12.026 A:middle
+But what you'll notice here is
+
+00:24:12.026 --> 00:24:14.016 A:middle
+that the server had
+an additional property
+
+00:24:14.016 --> 00:24:17.446 A:middle
+that we didn't have in our
+original copy of the record.
+
+00:24:17.446 --> 00:24:19.406 A:middle
+This hometown property
+wasn't removed.
+
+00:24:20.736 --> 00:24:23.756 A:middle
+We do this to help you with
+versioning of your app.
+
+00:24:24.046 --> 00:24:28.156 A:middle
+You might release a version 2
+of your app that adds hometowns
+
+00:24:28.216 --> 00:24:30.386 A:middle
+but version 1 didn't ever
+know about the hometown.
+
+00:24:30.926 --> 00:24:33.506 A:middle
+And if version 1 was
+using SaveAllKeys,
+
+00:24:33.926 --> 00:24:35.966 A:middle
+it's going to overwrite these
+properties on the server
+
+00:24:35.966 --> 00:24:38.766 A:middle
+that it never knew about, and
+that's kind of a bad thing.
+
+00:24:38.766 --> 00:24:42.086 A:middle
+You can't have backwards
+compatible code easily that way.
+
+00:24:43.386 --> 00:24:46.406 A:middle
+So, what we do instead is we
+still allow you to remove that,
+
+00:24:46.496 --> 00:24:48.936 A:middle
+but you need to explicitly
+tell us that you want
+
+00:24:48.936 --> 00:24:50.416 A:middle
+that property deleted
+on the server.
+
+00:24:51.216 --> 00:24:53.376 A:middle
+So, even though there's
+no hometown property
+
+00:24:53.376 --> 00:24:57.696 A:middle
+on this record, we can still
+call CKRecordSetValueForKey nil
+
+00:24:58.066 --> 00:25:00.246 A:middle
+or we can call
+removeObjectForKey.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:58.066 --> 00:25:00.246 A:middle
+or we can call
+removeObjectForKey.
+
+00:25:01.246 --> 00:25:02.466 A:middle
+We're going to remove
+the hometown,
+
+00:25:02.466 --> 00:25:04.246 A:middle
+and now when we save
+it up to the server,
+
+00:25:04.526 --> 00:25:08.996 A:middle
+that delete will also
+go up with the save.
+
+00:25:09.146 --> 00:25:12.646 A:middle
+Finally, one of the really
+neat things about CKRecord is
+
+00:25:12.646 --> 00:25:14.346 A:middle
+that we allow you to
+have partial records.
+
+00:25:15.126 --> 00:25:17.736 A:middle
+So, you might have a really
+big record on the server,
+
+00:25:17.736 --> 00:25:20.056 A:middle
+and you only care about one
+or two properties of that.
+
+00:25:20.736 --> 00:25:23.346 A:middle
+Well, with the desiredKeys
+property, we allow you
+
+00:25:23.346 --> 00:25:26.306 A:middle
+to fetch just a certain
+subset of the properties
+
+00:25:26.306 --> 00:25:27.216 A:middle
+that are on the server.
+
+00:25:28.546 --> 00:25:32.406 A:middle
+And we expose this desiredKeys
+property on any operation
+
+00:25:32.406 --> 00:25:34.116 A:middle
+that fetches a record,
+so you're going to see it
+
+00:25:34.116 --> 00:25:37.956 A:middle
+on CKFetchRecordsOperation,
+CKQueryOperation,
+
+00:25:37.956 --> 00:25:40.476 A:middle
+and
+CKFetchRecordChangesOperation.
+
+00:25:42.146 --> 00:25:43.346 A:middle
+And the really neat thing
+
+00:25:43.346 --> 00:25:46.006 A:middle
+about this is you can then
+take these partial records
+
+00:25:46.006 --> 00:25:47.636 A:middle
+and save them back
+up to the server.
+
+00:25:47.716 --> 00:25:50.316 A:middle
+You don't need to work
+with entirely full records.
+
+00:25:50.856 --> 00:25:53.096 A:middle
+You can, you know, if you
+want to update just one value
+
+00:25:53.096 --> 00:25:55.676 A:middle
+on a record, fetch that
+one value from the record,
+
+00:25:55.796 --> 00:25:58.206 A:middle
+update it, and do a
+save of just that record
+
+00:25:58.206 --> 00:25:59.186 A:middle
+that has that one value.
+
+00:25:59.836 --> 00:26:01.956 A:middle
+If you're doing this
+with locking enabled,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:59.836 --> 00:26:01.956 A:middle
+If you're doing this
+with locking enabled,
+
+00:26:02.306 --> 00:26:05.266 A:middle
+you know it's safe because
+if the record is changed
+
+00:26:05.266 --> 00:26:13.216 A:middle
+on the server since then,
+you're going to get a conflict.
+
+00:26:13.436 --> 00:26:14.736 A:middle
+So now, let's talk a little bit
+
+00:26:14.736 --> 00:26:16.626 A:middle
+about modeling your
+data for CloudKit.
+
+00:26:17.976 --> 00:26:20.446 A:middle
+If we go back to that
+example of a Receipts app,
+
+00:26:20.796 --> 00:26:23.926 A:middle
+let's say we have a shoebox
+that holds all our receipts
+
+00:26:24.456 --> 00:26:27.126 A:middle
+and that's going to be
+one object in the cloud,
+
+00:26:27.596 --> 00:26:28.766 A:middle
+and we're going to
+have an object
+
+00:26:28.766 --> 00:26:29.946 A:middle
+for each one of our receipts.
+
+00:26:31.036 --> 00:26:34.586 A:middle
+And the initial way you might
+design this is you create a
+
+00:26:34.586 --> 00:26:36.456 A:middle
+receipts array inside
+of your shoebox,
+
+00:26:37.156 --> 00:26:39.596 A:middle
+and every time you add a
+new receipt, you're going
+
+00:26:39.596 --> 00:26:42.576 A:middle
+to add new entry to that
+array and that entry is going
+
+00:26:42.576 --> 00:26:44.626 A:middle
+to be a reference to the
+record you just created.
+
+00:26:45.376 --> 00:26:47.136 A:middle
+We call these forward
+references.
+
+00:26:47.136 --> 00:26:49.636 A:middle
+These are references from
+a parent to its child.
+
+00:26:50.666 --> 00:26:52.086 A:middle
+And the problem with
+these is that you end
+
+00:26:52.086 --> 00:26:54.046 A:middle
+up getting bottlenecked
+on that receipts array.
+
+00:26:54.046 --> 00:26:57.746 A:middle
+If this was a public database,
+you might have hundreds
+
+00:26:57.746 --> 00:26:59.606 A:middle
+of clients trying to
+save this record at once.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:00.386 --> 00:27:03.166 A:middle
+And every time a client
+tries to add a new record,
+
+00:27:03.866 --> 00:27:06.616 A:middle
+they need to update that
+array on the shoebox,
+
+00:27:06.816 --> 00:27:08.976 A:middle
+and even though the clients
+might be adding different
+
+00:27:08.976 --> 00:27:13.216 A:middle
+records, different receipts,
+they're all going to run
+
+00:27:13.266 --> 00:27:16.376 A:middle
+into conflicts on the shoebox
+app, or on the shoebox record.
+
+00:27:17.146 --> 00:27:20.106 A:middle
+So, we recommend that you try
+and avoid forward references
+
+00:27:20.106 --> 00:27:24.496 A:middle
+in your design, and instead, use
+what we call back references.
+
+00:27:25.056 --> 00:27:26.886 A:middle
+So, instead of having
+the shoebox point
+
+00:27:26.886 --> 00:27:29.736 A:middle
+at the receipt that's in
+it, have the receipt point
+
+00:27:29.736 --> 00:27:30.906 A:middle
+at the shoebox that it's in.
+
+00:27:32.506 --> 00:27:35.566 A:middle
+The great thing about this
+is it's very scalable.
+
+00:27:35.566 --> 00:27:39.376 A:middle
+You can have millions of clients
+adding receipts all at once,
+
+00:27:39.476 --> 00:27:40.586 A:middle
+and there's no bottleneck.
+
+00:27:40.586 --> 00:27:42.956 A:middle
+They can create their receipt,
+point at who owns them,
+
+00:27:43.596 --> 00:27:47.296 A:middle
+and none of them are going
+to run into conflicts.
+
+00:27:47.296 --> 00:27:49.476 A:middle
+When you need to go get
+everything that's in a shoebox,
+
+00:27:49.476 --> 00:27:51.706 A:middle
+rather than fetching that
+shoebox, getting the array
+
+00:27:51.706 --> 00:27:54.186 A:middle
+of records in it, and
+fetching all those records,
+
+00:27:54.646 --> 00:27:56.186 A:middle
+you can instead just
+use a query.
+
+00:27:56.976 --> 00:27:59.636 A:middle
+That query is going to select
+all of the records that have
+
+00:27:59.636 --> 00:28:04.446 A:middle
+that shoebox as an owner.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:59.636 --> 00:28:04.446 A:middle
+that shoebox as an owner.
+
+00:28:04.446 --> 00:28:05.696 A:middle
+One other neat feature
+we give you
+
+00:28:05.696 --> 00:28:08.416 A:middle
+with the relationships
+are cascading deletes.
+
+00:28:09.116 --> 00:28:10.866 A:middle
+So, cascading deletes
+are a way for you
+
+00:28:10.866 --> 00:28:14.656 A:middle
+to make your object graph
+get cleaned up automatically,
+
+00:28:15.356 --> 00:28:17.556 A:middle
+and you do this by
+marking your references
+
+00:28:17.596 --> 00:28:20.356 A:middle
+with a
+CKReferenceActionDeleteSelf,
+
+00:28:21.036 --> 00:28:23.636 A:middle
+and that means that
+when the record
+
+00:28:23.636 --> 00:28:26.586 A:middle
+that you referenced is deleted,
+you will also be deleted.
+
+00:28:26.826 --> 00:28:28.616 A:middle
+In this case, the
+green record has
+
+00:28:28.676 --> 00:28:30.946 A:middle
+that reference action
+pointed in the orange record.
+
+00:28:31.646 --> 00:28:32.976 A:middle
+When the orange record
+gets deleted,
+
+00:28:33.476 --> 00:28:34.356 A:middle
+the green record is going
+
+00:28:34.356 --> 00:28:36.266 A:middle
+to get automatically
+deleted by the server.
+
+00:28:38.016 --> 00:28:39.836 A:middle
+These deletes also cascade.
+
+00:28:39.976 --> 00:28:42.556 A:middle
+So, if we had a whole
+tree of objects hang off
+
+00:28:42.556 --> 00:28:45.236 A:middle
+of that one orange record,
+those deletes are going
+
+00:28:45.236 --> 00:28:49.806 A:middle
+to cascade all the way down
+and clean up our graph for us.
+
+00:28:54.496 --> 00:28:56.076 A:middle
+But one thing to keep in mind
+
+00:28:56.076 --> 00:28:57.986 A:middle
+with these delete
+self references is
+
+00:28:57.986 --> 00:29:00.216 A:middle
+that they're not
+reference counted.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:57.986 --> 00:29:00.216 A:middle
+that they're not
+reference counted.
+
+00:29:00.216 --> 00:29:03.606 A:middle
+That means that if you have
+multiple references coming
+
+00:29:03.606 --> 00:29:05.666 A:middle
+out of one record, the first one
+
+00:29:05.666 --> 00:29:12.076 A:middle
+of those records that's deleted
+will cause you to get deleted.
+
+00:29:12.166 --> 00:29:16.436 A:middle
+And finally, these delete
+self references give you one
+
+00:29:16.436 --> 00:29:17.256 A:middle
+additional feature.
+
+00:29:17.526 --> 00:29:20.866 A:middle
+If you're doing a batch save and
+you've got a jumble of records
+
+00:29:20.866 --> 00:29:23.666 A:middle
+in this graph, and they
+have delete self references
+
+00:29:23.666 --> 00:29:25.316 A:middle
+between them, CloudKit is going
+
+00:29:25.316 --> 00:29:27.906 A:middle
+to do an automatic
+topological sort for you.
+
+00:29:27.906 --> 00:29:30.586 A:middle
+We're going to upload
+the records in order
+
+00:29:30.586 --> 00:29:33.146 A:middle
+so that all the records that
+are referenced will be up there
+
+00:29:33.146 --> 00:29:35.586 A:middle
+by the time the record
+reference in them is uploaded.
+
+00:29:36.076 --> 00:29:38.196 A:middle
+This is really great
+in the public database
+
+00:29:38.196 --> 00:29:41.606 A:middle
+where you don't have atomic
+commits but you still want
+
+00:29:41.606 --> 00:29:44.636 A:middle
+to be able to upload data that
+looks consistent at any point
+
+00:29:44.636 --> 00:29:46.326 A:middle
+when a client downloads it.
+
+00:29:48.846 --> 00:29:51.956 A:middle
+So, while developing CloudKit
+internally, we've had a couple
+
+00:29:51.956 --> 00:29:54.016 A:middle
+of our clients ask us,
+you know, why do I need
+
+00:29:54.016 --> 00:29:55.346 A:middle
+to use these reference objects?
+
+00:29:55.346 --> 00:29:58.306 A:middle
+I have to, you know, alloc and
+omit and it's so much work.
+
+00:29:58.306 --> 00:30:01.646 A:middle
+You know, I've got a record
+ID, why can't I just put it
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:58.306 --> 00:30:01.646 A:middle
+You know, I've got a record
+ID, why can't I just put it
+
+00:30:01.646 --> 00:30:02.976 A:middle
+in the string and put
+that in my record?
+
+00:30:03.696 --> 00:30:04.896 A:middle
+You can, so, you know, you come
+
+00:30:04.896 --> 00:30:06.806 A:middle
+up with this clever
+little RecordIDToString,
+
+00:30:07.366 --> 00:30:09.196 A:middle
+but then you look at
+the recordID class
+
+00:30:09.196 --> 00:30:11.696 A:middle
+and you realize it's
+actually two properties,
+
+00:30:11.696 --> 00:30:14.426 A:middle
+and you can't just store the
+description of the record
+
+00:30:14.426 --> 00:30:16.966 A:middle
+on the server so you
+get a little smarter
+
+00:30:16.966 --> 00:30:21.346 A:middle
+and you store the recordID
+and the name and the zoneID.
+
+00:30:21.986 --> 00:30:25.686 A:middle
+But then, you look at zoneID
+and that's also composite.
+
+00:30:26.426 --> 00:30:30.676 A:middle
+We need to know what, where
+zone is and whose account it is.
+
+00:30:31.256 --> 00:30:32.986 A:middle
+So, you get a little more clever
+
+00:30:32.986 --> 00:30:34.976 A:middle
+and you make this
+RecordIDToString
+
+00:30:34.976 --> 00:30:39.066 A:middle
+and ZoneIDToString, and now
+you call that everywhere.
+
+00:30:39.226 --> 00:30:41.936 A:middle
+The problem is now you're
+not forwards compatible.
+
+00:30:42.006 --> 00:30:45.346 A:middle
+If anything ever gets added to
+references, all of your records
+
+00:30:45.346 --> 00:30:47.856 A:middle
+on the server are already going
+to have this hard coded format,
+
+00:30:48.256 --> 00:30:49.996 A:middle
+and you're going to have
+to go through a lot of work
+
+00:30:49.996 --> 00:30:51.156 A:middle
+when you query records.
+
+00:30:52.316 --> 00:30:54.726 A:middle
+Instead, just use references.
+
+00:30:54.726 --> 00:30:56.166 A:middle
+It's going to make
+your code really clean.
+
+00:30:56.166 --> 00:30:58.356 A:middle
+I mean that shoebox
+could be a recordID,
+
+00:30:58.356 --> 00:31:01.106 A:middle
+that shoebox could be a record
+itself, it could be a reference.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:58.356 --> 00:31:01.106 A:middle
+that shoebox could be a record
+itself, it could be a reference.
+
+00:31:01.566 --> 00:31:04.046 A:middle
+All of those will just work as
+long as you use the CKReference.
+
+00:31:04.946 --> 00:31:10.556 A:middle
+A couple last notes on
+modeling your data in CloudKit.
+
+00:31:11.896 --> 00:31:14.866 A:middle
+One of them is that CloudKit
+is a transport mechanism.
+
+00:31:14.986 --> 00:31:17.776 A:middle
+What we've tried to do here
+is give you an easy way
+
+00:31:17.776 --> 00:31:21.446 A:middle
+to access the CloudKit
+servers, but we're not meant
+
+00:31:21.446 --> 00:31:23.296 A:middle
+to be a local persistence layer.
+
+00:31:23.296 --> 00:31:26.516 A:middle
+We want that to be up to
+you, and you need to figure
+
+00:31:26.516 --> 00:31:28.096 A:middle
+out the best way to
+store your objects.
+
+00:31:28.746 --> 00:31:33.336 A:middle
+And to that extent, we recommend
+that you don't subclass CKItems.
+
+00:31:33.526 --> 00:31:36.516 A:middle
+You should take those items when
+you receive them from the server
+
+00:31:37.216 --> 00:31:40.896 A:middle
+and translate them into your own
+model objects, and you can do
+
+00:31:40.896 --> 00:31:42.046 A:middle
+that on the way out as well.
+
+00:31:42.046 --> 00:31:44.606 A:middle
+When you need to save one of
+your model objects, translate it
+
+00:31:44.606 --> 00:31:55.036 A:middle
+into a CKRecord and upload
+all of that to the server.
+
+00:31:55.216 --> 00:31:57.136 A:middle
+So, if you remember from
+the introductory talk,
+
+00:31:57.136 --> 00:31:59.466 A:middle
+we have these things that
+we call subscriptions.
+
+00:31:59.596 --> 00:32:01.686 A:middle
+They're persistent queries
+that run on the server,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:59.596 --> 00:32:01.686 A:middle
+They're persistent queries
+that run on the server,
+
+00:32:02.536 --> 00:32:05.396 A:middle
+and every time something
+changes that matches that query,
+
+00:32:06.186 --> 00:32:07.616 A:middle
+you're going to get
+a push notification.
+
+00:32:08.546 --> 00:32:11.206 A:middle
+And these push notifications
+are sent via the Apple Push
+
+00:32:11.206 --> 00:32:14.026 A:middle
+Notification Service, just the
+same way that it would work
+
+00:32:14.026 --> 00:32:15.106 A:middle
+if you built your own server.
+
+00:32:16.766 --> 00:32:18.356 A:middle
+But there are some drawbacks
+
+00:32:18.356 --> 00:32:20.336 A:middle
+with Apple Push Notification
+Service.
+
+00:32:20.336 --> 00:32:22.966 A:middle
+One of them is that they
+can't make any guarantees
+
+00:32:22.966 --> 00:32:24.366 A:middle
+on delivery of these pushes.
+
+00:32:24.446 --> 00:32:26.536 A:middle
+They're kind of meant to
+be these ephemeral, little,
+
+00:32:26.536 --> 00:32:28.086 A:middle
+you know, here's a
+push, here's a push.
+
+00:32:28.586 --> 00:32:31.096 A:middle
+If one of them gets dropped
+because of a bad network
+
+00:32:31.096 --> 00:32:35.306 A:middle
+or anything else going
+on, there's no guarantee.
+
+00:32:35.636 --> 00:32:37.316 A:middle
+So, in practice,
+they're really good
+
+00:32:37.316 --> 00:32:38.536 A:middle
+about delivering these pushes.
+
+00:32:39.006 --> 00:32:40.606 A:middle
+And one of the reasons is
+
+00:32:40.656 --> 00:32:42.346 A:middle
+because the server
+will store pushes
+
+00:32:42.346 --> 00:32:43.596 A:middle
+for you if you're offline.
+
+00:32:44.246 --> 00:32:45.936 A:middle
+So, if you put your
+phone in Airplane Mode
+
+00:32:45.936 --> 00:32:48.216 A:middle
+and you get a push, as
+soon as you come back
+
+00:32:48.216 --> 00:32:50.366 A:middle
+out of Airplane Mode, the
+server will have that saved
+
+00:32:50.366 --> 00:32:51.806 A:middle
+and still deliver
+the push on to you.
+
+00:32:52.976 --> 00:32:56.226 A:middle
+But the problem with this is
+the server only stores one push
+
+00:32:56.296 --> 00:32:56.796 A:middle
+per client.
+
+00:32:57.776 --> 00:33:00.376 A:middle
+So, if you received a bunch of
+pushes while you're offline,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:57.776 --> 00:33:00.376 A:middle
+So, if you received a bunch of
+pushes while you're offline,
+
+00:33:00.376 --> 00:33:02.086 A:middle
+you're only going to
+get the most recent one.
+
+00:33:03.676 --> 00:33:04.416 A:middle
+What does that look like?
+
+00:33:04.456 --> 00:33:07.026 A:middle
+Well, we've got our
+CloudKit server,
+
+00:33:07.026 --> 00:33:09.866 A:middle
+we've got the APS server, and
+we've got the iPhone up here.
+
+00:33:10.366 --> 00:33:13.486 A:middle
+And we send a push, and we're
+online, everything goes through,
+
+00:33:13.486 --> 00:33:15.036 A:middle
+we get our badge,
+everyone's happy.
+
+00:33:16.536 --> 00:33:18.196 A:middle
+But then, we get on an airplane.
+
+00:33:18.196 --> 00:33:21.126 A:middle
+Our phone is in Airplane Mode;
+we have no network connection.
+
+00:33:22.136 --> 00:33:24.176 A:middle
+And when that push gets sent,
+
+00:33:24.176 --> 00:33:26.176 A:middle
+the APS server helpfully
+stores it for us.
+
+00:33:26.306 --> 00:33:28.126 A:middle
+If we were going to come
+back online right now,
+
+00:33:28.126 --> 00:33:30.636 A:middle
+we would get our subscription
+push and we'd be happy.
+
+00:33:31.626 --> 00:33:34.596 A:middle
+But this is a long plane flight
+and while we're on the plane,
+
+00:33:34.716 --> 00:33:37.696 A:middle
+we got a zone update push,
+that new zone subscription
+
+00:33:37.696 --> 00:33:38.546 A:middle
+that I was talking about.
+
+00:33:39.556 --> 00:33:42.916 A:middle
+When that gets to the APS
+server, it's going to drop
+
+00:33:42.916 --> 00:33:44.416 A:middle
+that previous subscription push,
+
+00:33:44.916 --> 00:33:48.296 A:middle
+and now when your phone comes
+back online, all you're going
+
+00:33:48.296 --> 00:33:49.566 A:middle
+to receive is the zone update.
+
+00:33:51.096 --> 00:33:52.736 A:middle
+The problem with this
+is that you never heard
+
+00:33:52.736 --> 00:33:54.096 A:middle
+about that subscription
+that fired.
+
+00:33:54.806 --> 00:33:56.016 A:middle
+So, how do we solve this?
+
+00:33:56.016 --> 00:33:59.356 A:middle
+Well, we've created a
+notification collection
+
+00:33:59.356 --> 00:34:00.006 A:middle
+in CloudKit.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:59.356 --> 00:34:00.006 A:middle
+in CloudKit.
+
+00:34:01.406 --> 00:34:04.376 A:middle
+Every time the server sends
+a push to the APS server,
+
+00:34:04.836 --> 00:34:06.616 A:middle
+it also makes a copy
+of that push
+
+00:34:06.616 --> 00:34:07.936 A:middle
+in the notification collection.
+
+00:34:08.896 --> 00:34:11.356 A:middle
+So, you can see we have that
+same problem where we're
+
+00:34:11.356 --> 00:34:13.686 A:middle
+in Airplane Mode, we dropped
+our subscription push,
+
+00:34:14.446 --> 00:34:16.346 A:middle
+our phone comes online,
+and it gets the push,
+
+00:34:17.416 --> 00:34:19.406 A:middle
+and because this is a
+well-behaved client,
+
+00:34:19.406 --> 00:34:21.485 A:middle
+it knows every time
+it receives a push,
+
+00:34:21.545 --> 00:34:23.726 A:middle
+it should go check the
+notification collection to find
+
+00:34:23.726 --> 00:34:25.846 A:middle
+out about anything
+it might have missed.
+
+00:34:26.896 --> 00:34:28.116 A:middle
+So, how does that work?
+
+00:34:28.116 --> 00:34:30.786 A:middle
+Well, this notification
+collection is a lot
+
+00:34:30.786 --> 00:34:32.686 A:middle
+like the delta downloads
+I talked about earlier.
+
+00:34:33.275 --> 00:34:34.676 A:middle
+It's all change token-based.
+
+00:34:35.126 --> 00:34:36.656 A:middle
+You hand a change
+token to the server,
+
+00:34:37.005 --> 00:34:39.116 A:middle
+and the server hands back
+all the notifications
+
+00:34:39.116 --> 00:34:41.016 A:middle
+that have changed
+since then along
+
+00:34:41.016 --> 00:34:42.255 A:middle
+with an updated change token.
+
+00:34:42.826 --> 00:34:45.716 A:middle
+So, since this is our
+first time talking
+
+00:34:45.716 --> 00:34:47.366 A:middle
+to the notification
+collection, we're going to send
+
+00:34:47.366 --> 00:34:48.456 A:middle
+up a nil change token.
+
+00:34:49.576 --> 00:34:51.676 A:middle
+We're going to get back
+both of those pushes,
+
+00:34:51.676 --> 00:34:53.045 A:middle
+one of them which we missed.
+
+00:34:53.525 --> 00:34:57.005 A:middle
+And then we're also going to
+get an updated change token
+
+00:34:57.005 --> 00:34:59.566 A:middle
+for the current state.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:00.376 --> 00:35:04.396 A:middle
+One thing with subscriptions is
+that you might want to use those
+
+00:35:04.396 --> 00:35:06.516 A:middle
+to change some UI
+in your application.
+
+00:35:07.056 --> 00:35:10.946 A:middle
+For example in our Receipts app,
+we might want a subscription
+
+00:35:11.006 --> 00:35:14.176 A:middle
+for any receipt that
+was over 100 dollars.
+
+00:35:14.176 --> 00:35:16.986 A:middle
+If that happens, we want to mark
+
+00:35:17.626 --> 00:35:19.256 A:middle
+that receipt in a
+different color.
+
+00:35:19.446 --> 00:35:21.736 A:middle
+So we're going to get this
+push for a subscription,
+
+00:35:22.656 --> 00:35:24.226 A:middle
+and now that receipt is blue
+
+00:35:24.226 --> 00:35:26.036 A:middle
+because it was a big
+expensive receipt.
+
+00:35:27.396 --> 00:35:30.046 A:middle
+But, you know, this is going
+to happen on all your clients,
+
+00:35:30.046 --> 00:35:32.336 A:middle
+so you're going to have you iPad
+showing that receipt in blue,
+
+00:35:32.336 --> 00:35:34.536 A:middle
+you're going to have your Mac
+showing that receipt in blue,
+
+00:35:35.016 --> 00:35:38.356 A:middle
+and once this acknowledges
+it, you want that UI state
+
+00:35:38.396 --> 00:35:40.776 A:middle
+to go away on all your clients.
+
+00:35:41.666 --> 00:35:44.476 A:middle
+Well, the way we do that is we
+let you mark a subscription,
+
+00:35:44.646 --> 00:35:46.806 A:middle
+sorry, we let you mark
+a notification as red.
+
+00:35:46.856 --> 00:35:49.366 A:middle
+And when you do that,
+you're going to get a push
+
+00:35:49.366 --> 00:35:51.576 A:middle
+for the updated subscription,
+
+00:35:51.856 --> 00:35:53.816 A:middle
+updated notification
+on every client.
+
+00:35:54.486 --> 00:35:56.136 A:middle
+So, in this case,
+we mark our receipt.
+
+00:35:56.136 --> 00:35:58.826 A:middle
+We're going to go mark
+that subscription as red
+
+00:35:58.826 --> 00:36:00.846 A:middle
+on the server, and now
+there's a new entry.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:58.826 --> 00:36:00.846 A:middle
+on the server, and now
+there's a new entry.
+
+00:36:02.406 --> 00:36:04.786 A:middle
+And if we switch over to our
+Mac which is still showing it
+
+00:36:04.786 --> 00:36:06.286 A:middle
+in blue, it's going
+to get a push,
+
+00:36:06.516 --> 00:36:08.356 A:middle
+it's going to check the
+notification collection,
+
+00:36:09.126 --> 00:36:11.856 A:middle
+it's going to get that
+subscription notification,
+
+00:36:12.006 --> 00:36:14.466 A:middle
+and it can tear down
+its UI and now all
+
+00:36:14.466 --> 00:36:16.926 A:middle
+of your clients are
+in the same state.
+
+00:36:19.426 --> 00:36:20.966 A:middle
+So, with the notification
+collection,
+
+00:36:20.966 --> 00:36:22.976 A:middle
+keep in mind every
+time you get a push,
+
+00:36:22.976 --> 00:36:24.826 A:middle
+you should check the
+notification collection.
+
+00:36:25.086 --> 00:36:27.306 A:middle
+You never know what
+you might have missed.
+
+00:36:28.236 --> 00:36:31.366 A:middle
+And this isn't just for
+Airplane Mode or bad networks.
+
+00:36:31.526 --> 00:36:34.946 A:middle
+This can happen if you get
+multiple pushes in a row.
+
+00:36:34.946 --> 00:36:36.836 A:middle
+If there's a lot of changes
+that happen all at once,
+
+00:36:37.376 --> 00:36:39.256 A:middle
+the CloudKit server
+might coalesce them,
+
+00:36:39.256 --> 00:36:43.646 A:middle
+or the push server might
+coalesce those pushes.
+
+00:36:43.646 --> 00:36:46.836 A:middle
+And of course, because a lot
+of these are mobile devices,
+
+00:36:46.836 --> 00:36:48.966 A:middle
+they're iPhones, they're
+going to be moving in
+
+00:36:48.966 --> 00:36:50.056 A:middle
+and out of network states.
+
+00:36:50.096 --> 00:36:53.786 A:middle
+They might be on Wi-Fi, or they
+might be on a bad cell network.
+
+00:36:53.786 --> 00:36:55.516 A:middle
+You never know what
+your network is like.
+
+00:36:56.356 --> 00:36:58.686 A:middle
+Just assume that there
+might have been more pushes
+
+00:36:58.726 --> 00:37:00.206 A:middle
+that you didn't hear about.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:58.726 --> 00:37:00.206 A:middle
+that you didn't hear about.
+
+00:37:04.176 --> 00:37:06.696 A:middle
+So, now we're going to go
+over the iCloud Dashboard.
+
+00:37:07.036 --> 00:37:09.996 A:middle
+And the iCloud Dashboard
+is our web-based interface
+
+00:37:10.076 --> 00:37:13.166 A:middle
+for managing your
+application in CloudKit.
+
+00:37:14.536 --> 00:37:17.346 A:middle
+The iCloud Dashboard
+lets you view your data.
+
+00:37:18.076 --> 00:37:20.636 A:middle
+It lets you manage the schema
+that we're creating for you.
+
+00:37:21.666 --> 00:37:25.926 A:middle
+It lets you control what's
+indexed, and it helps you moving
+
+00:37:25.926 --> 00:37:27.136 A:middle
+from development to production.
+
+00:37:27.136 --> 00:37:29.486 A:middle
+I'm going to explain all of
+those in detail in a bit.
+
+00:37:29.756 --> 00:37:31.526 A:middle
+Let's start with viewing data.
+
+00:37:33.596 --> 00:37:38.166 A:middle
+So, if you remember the view
+of our containers up here,
+
+00:37:38.166 --> 00:37:40.466 A:middle
+we've got a public database
+and a private database.
+
+00:37:41.556 --> 00:37:44.706 A:middle
+And when you're viewing your
+data in the iCloud Dashboard,
+
+00:37:45.426 --> 00:37:48.506 A:middle
+all of that data in the public
+database is of course public.
+
+00:37:48.936 --> 00:37:52.356 A:middle
+So, in the dashboard, you'll
+be able to see every record
+
+00:37:52.356 --> 00:37:53.536 A:middle
+in your public database.
+
+00:37:54.996 --> 00:37:58.266 A:middle
+But if you remember, the private
+database is again one database
+
+00:37:58.336 --> 00:37:59.706 A:middle
+for each individual user.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:00.646 --> 00:38:03.266 A:middle
+And in this case, we're
+only logged in as one user.
+
+00:38:03.266 --> 00:38:04.976 A:middle
+We're logged in as
+our developer account.
+
+00:38:05.826 --> 00:38:09.126 A:middle
+So, all we're going to see in
+the iCloud Dashboard is the data
+
+00:38:09.426 --> 00:38:13.036 A:middle
+in the private database
+for our developer account.
+
+00:38:13.036 --> 00:38:13.966 A:middle
+This is really important.
+
+00:38:13.966 --> 00:38:16.006 A:middle
+You know, you might use a
+different account for testing
+
+00:38:16.006 --> 00:38:17.586 A:middle
+and a different account
+for viewing data
+
+00:38:17.586 --> 00:38:18.696 A:middle
+in the iCloud Dashboard.
+
+00:38:19.196 --> 00:38:20.476 A:middle
+If you do that, you
+won't be able
+
+00:38:20.476 --> 00:38:22.696 A:middle
+to view your private
+data in the dashboard.
+
+00:38:22.696 --> 00:38:26.226 A:middle
+So, what does the
+dashboard look like?
+
+00:38:26.266 --> 00:38:29.736 A:middle
+Well, we log in, and the
+first thing we're going
+
+00:38:29.736 --> 00:38:31.856 A:middle
+to see here are our
+different record types.
+
+00:38:32.376 --> 00:38:34.856 A:middle
+So, you can see we're
+using the Party app.
+
+00:38:34.856 --> 00:38:37.226 A:middle
+We've got parties,
+and over here,
+
+00:38:37.226 --> 00:38:39.476 A:middle
+we see the different schema
+
+00:38:39.576 --> 00:38:41.676 A:middle
+for those values
+that's been created.
+
+00:38:43.426 --> 00:38:45.556 A:middle
+When you're developing
+a CloudKit application,
+
+00:38:45.996 --> 00:38:47.736 A:middle
+you're talking at the
+development environment,
+
+00:38:48.386 --> 00:38:49.286 A:middle
+and the server
+
+00:38:49.286 --> 00:38:52.166 A:middle
+in the development environment
+creates a just-in-time schema
+
+00:38:52.246 --> 00:38:52.566 A:middle
+for you.
+
+00:38:53.256 --> 00:38:55.946 A:middle
+So, we did this because we
+wanted you to be able to develop
+
+00:38:55.946 --> 00:38:57.256 A:middle
+as rapidly as possible.
+
+00:38:57.256 --> 00:39:01.706 A:middle
+We didn't want you have to go
+to a, this dashboard and plan
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:57.256 --> 00:39:01.706 A:middle
+We didn't want you have to go
+to a, this dashboard and plan
+
+00:39:01.706 --> 00:39:03.576 A:middle
+out what you were going
+to do in your application
+
+00:39:03.576 --> 00:39:05.066 A:middle
+and choose all the data types.
+
+00:39:05.066 --> 00:39:07.746 A:middle
+That's not as much fun as
+just writing some code.
+
+00:39:08.016 --> 00:39:10.856 A:middle
+So, we let you dive right
+in, you write some code,
+
+00:39:11.436 --> 00:39:14.726 A:middle
+and the things that you upload
+to CloudKit as you upload them,
+
+00:39:15.146 --> 00:39:17.376 A:middle
+those values get
+locked in into a schema.
+
+00:39:18.526 --> 00:39:20.496 A:middle
+So, you can see here
+that we've got a couple
+
+00:39:20.496 --> 00:39:23.426 A:middle
+of different values, and we've
+got their, couple different keys
+
+00:39:23.426 --> 00:39:26.146 A:middle
+and their values but we
+notice that we made a mistake
+
+00:39:26.146 --> 00:39:27.476 A:middle
+when we're developing this app.
+
+00:39:27.666 --> 00:39:30.666 A:middle
+We uploaded a date
+value or a date key,
+
+00:39:31.106 --> 00:39:32.276 A:middle
+but we use a string value.
+
+00:39:32.276 --> 00:39:34.136 A:middle
+And what we really want
+there is a date value.
+
+00:39:34.886 --> 00:39:37.306 A:middle
+The iCloud Dashboard is
+going to let us fix that up.
+
+00:39:37.826 --> 00:39:40.026 A:middle
+So we can go to this
+and we can delete it.
+
+00:39:41.016 --> 00:39:42.386 A:middle
+We can remove it
+from our schema,
+
+00:39:43.336 --> 00:39:46.296 A:middle
+and now we can recompile
+our app, use a date value,
+
+00:39:46.756 --> 00:39:49.696 A:middle
+upload that record again,
+and when the server sees
+
+00:39:49.696 --> 00:39:52.446 A:middle
+that record, it will
+create a new schema entry
+
+00:39:52.556 --> 00:39:59.866 A:middle
+for the date value using an
+actual date instead of a string.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:00.066 --> 00:40:02.306 A:middle
+So next up, you can
+view all the records
+
+00:40:02.306 --> 00:40:05.376 A:middle
+in your public database
+using the iCloud Dashboard.
+
+00:40:05.696 --> 00:40:07.486 A:middle
+So, you can see here,
+we already have a couple
+
+00:40:07.486 --> 00:40:09.496 A:middle
+of different parties
+in the public database.
+
+00:40:10.736 --> 00:40:14.306 A:middle
+What you can also do is create
+records in the public database.
+
+00:40:14.396 --> 00:40:18.356 A:middle
+So, you can tap on this Plus
+button and fill out a new entry.
+
+00:40:19.026 --> 00:40:22.226 A:middle
+We're going to make a new
+party for coffee on Friday,
+
+00:40:23.276 --> 00:40:26.966 A:middle
+and we can save that and you'll
+see that that actually got saved
+
+00:40:27.036 --> 00:40:28.276 A:middle
+into the public database.
+
+00:40:28.316 --> 00:40:31.256 A:middle
+Any clients that are fetching
+records are going to see
+
+00:40:31.256 --> 00:40:33.316 A:middle
+that change in the
+public database.
+
+00:40:33.876 --> 00:40:37.796 A:middle
+We can also search for records.
+
+00:40:37.796 --> 00:40:39.136 A:middle
+This is just like CKQuery.
+
+00:40:39.136 --> 00:40:41.866 A:middle
+So we can click on
+that magnifying glass,
+
+00:40:42.816 --> 00:40:46.326 A:middle
+and we can type any
+string, and we can filter
+
+00:40:46.326 --> 00:40:49.316 A:middle
+down to any party
+that mentions WWDC.
+
+00:40:50.566 --> 00:40:52.856 A:middle
+Additionally, this gives
+us all the functionality
+
+00:40:52.856 --> 00:40:54.246 A:middle
+that we have in CKQuery.
+
+00:40:54.246 --> 00:40:56.836 A:middle
+We can build compound queries
+right in the dashboard.
+
+00:40:57.326 --> 00:41:01.516 A:middle
+So, if you click on the Plus
+button, let's choose location,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:40:57.326 --> 00:41:01.516 A:middle
+So, if you click on the Plus
+button, let's choose location,
+
+00:41:01.516 --> 00:41:03.716 A:middle
+and let's filter down
+to everything that's
+
+00:41:03.716 --> 00:41:06.246 A:middle
+within 5 kilometers
+of Moscone Center.
+
+00:41:06.366 --> 00:41:08.016 A:middle
+I happen to have
+those memorized.
+
+00:41:08.636 --> 00:41:12.826 A:middle
+So, that filtered everything
+down just to the two parties
+
+00:41:12.826 --> 00:41:13.726 A:middle
+that are in this area.
+
+00:41:16.556 --> 00:41:18.766 A:middle
+Finally, in the public database,
+
+00:41:19.076 --> 00:41:22.336 A:middle
+by default every record
+can be read by every user,
+
+00:41:23.346 --> 00:41:25.426 A:middle
+and it can be created
+by any user.
+
+00:41:25.726 --> 00:41:29.016 A:middle
+Once you create a record, that
+record can only be updated
+
+00:41:29.016 --> 00:41:31.096 A:middle
+or deleted by the
+user that created it.
+
+00:41:32.106 --> 00:41:34.296 A:middle
+But we understand that that
+doesn't provide all the
+
+00:41:34.296 --> 00:41:36.746 A:middle
+functionality that you might
+need to make an application
+
+00:41:36.746 --> 00:41:37.766 A:middle
+in the public database.
+
+00:41:38.356 --> 00:41:41.186 A:middle
+So, what we've given you
+are what we call roles.
+
+00:41:41.186 --> 00:41:44.106 A:middle
+These roles let you
+choose sets of users
+
+00:41:44.106 --> 00:41:46.606 A:middle
+that have different
+permissions for record types
+
+00:41:46.606 --> 00:41:47.696 A:middle
+in the public database.
+
+00:41:48.566 --> 00:41:52.156 A:middle
+So, one example of that might
+be that I want to restrict it
+
+00:41:52.156 --> 00:41:55.056 A:middle
+so that only I can create
+parties in the public database.
+
+00:41:55.716 --> 00:41:57.106 A:middle
+So, what I'm going
+to do in order to do
+
+00:41:57.106 --> 00:41:58.556 A:middle
+that is create a new role.
+
+00:41:58.556 --> 00:42:04.336 A:middle
+I'm going to call this, you
+know, PartyAdmin, and in that,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:41:58.556 --> 00:42:04.336 A:middle
+I'm going to call this, you
+know, PartyAdmin, and in that,
+
+00:42:04.336 --> 00:42:07.206 A:middle
+I need to choose a record type
+and give it special permissions.
+
+00:42:07.286 --> 00:42:11.676 A:middle
+So I'm going to choose parties,
+and I'm going to give it Create,
+
+00:42:11.676 --> 00:42:13.586 A:middle
+Read, and Write permissions
+for those parties.
+
+00:42:16.466 --> 00:42:19.596 A:middle
+Now, what I need to do is go to
+the record type and restrict it
+
+00:42:19.596 --> 00:42:21.366 A:middle
+so that no one else
+can create a party.
+
+00:42:21.756 --> 00:42:25.586 A:middle
+So, I'm going to find my
+party, my party record type,
+
+00:42:26.106 --> 00:42:29.376 A:middle
+and you can see up there
+that parties can be created
+
+00:42:29.376 --> 00:42:30.666 A:middle
+by anyone who's authenticated.
+
+00:42:31.226 --> 00:42:33.496 A:middle
+We don't want that, we
+want only party admins
+
+00:42:33.536 --> 00:42:34.416 A:middle
+to create this record.
+
+00:42:34.506 --> 00:42:38.296 A:middle
+So, we're going to
+uncheck that value.
+
+00:42:38.386 --> 00:42:40.626 A:middle
+Now, we need to assign
+people to that role
+
+00:42:40.696 --> 00:42:42.976 A:middle
+so that there's actually users
+out there that can do this.
+
+00:42:43.796 --> 00:42:45.246 A:middle
+If we go to the user records,
+
+00:42:45.246 --> 00:42:47.776 A:middle
+we can see everyone who's
+used this app so far.
+
+00:42:48.626 --> 00:42:51.636 A:middle
+If they have marked themselves
+as discoverable, you're going
+
+00:42:51.636 --> 00:42:53.306 A:middle
+to be able to see their
+first and last name.
+
+00:42:53.756 --> 00:42:55.296 A:middle
+If they haven't,
+you're just going to see
+
+00:42:55.296 --> 00:42:57.826 A:middle
+that recordID up there.
+
+00:42:58.036 --> 00:43:01.396 A:middle
+So, I'm going to click on
+my user, and then I'm going
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:42:58.036 --> 00:43:01.396 A:middle
+So, I'm going to click on
+my user, and then I'm going
+
+00:43:01.396 --> 00:43:05.976 A:middle
+to add myself as a party admin.
+
+00:43:05.976 --> 00:43:08.326 A:middle
+And now, I'm the only user
+in the public database
+
+00:43:08.396 --> 00:43:11.676 A:middle
+that can create a party.
+
+00:43:13.516 --> 00:43:18.486 A:middle
+[ Applause ]
+
+00:43:18.986 --> 00:43:22.626 A:middle
+So, one of the last things the
+iCloud Dashboard helps you do is
+
+00:43:22.626 --> 00:43:25.066 A:middle
+move from development
+into production.
+
+00:43:25.376 --> 00:43:27.186 A:middle
+So, as I talked about earlier,
+
+00:43:27.286 --> 00:43:29.986 A:middle
+we wanted the development
+environment to be as quick
+
+00:43:29.986 --> 00:43:31.556 A:middle
+and easy to use as possible.
+
+00:43:32.056 --> 00:43:34.076 A:middle
+We wanted you to hit the
+ground running, we wanted you
+
+00:43:34.076 --> 00:43:37.046 A:middle
+to just open up Xcode,
+start typing some code,
+
+00:43:37.046 --> 00:43:39.806 A:middle
+save your record to the server,
+and see immediate results.
+
+00:43:40.496 --> 00:43:43.786 A:middle
+And that all works great because
+the server does just-in-time
+
+00:43:43.786 --> 00:43:47.256 A:middle
+schemas, but that's not very
+efficient if we're working
+
+00:43:47.256 --> 00:43:49.986 A:middle
+in a public database that
+might have millions of users.
+
+00:43:50.066 --> 00:43:52.916 A:middle
+We need to prepare some
+things before we go
+
+00:43:52.916 --> 00:43:55.946 A:middle
+into the environment that all of
+our customers are going to hit.
+
+00:43:56.656 --> 00:43:59.216 A:middle
+So, the way this works
+is we've got our records,
+
+00:43:59.326 --> 00:44:00.696 A:middle
+we're developing
+our app right now,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:43:59.326 --> 00:44:00.696 A:middle
+we're developing
+our app right now,
+
+00:44:01.586 --> 00:44:03.916 A:middle
+and we just created a record
+for the very first time,
+
+00:44:03.916 --> 00:44:05.896 A:middle
+and we uploaded it in the
+development environment.
+
+00:44:07.076 --> 00:44:08.206 A:middle
+The server is going to see that
+
+00:44:08.256 --> 00:44:10.656 A:middle
+and since this is the first
+time it's seen a party,
+
+00:44:10.656 --> 00:44:13.316 A:middle
+it's going to automatically
+create a new party record type.
+
+00:44:13.316 --> 00:44:16.556 A:middle
+And then for each of
+these keys and values,
+
+00:44:17.056 --> 00:44:19.986 A:middle
+it's going to create an entry
+in a schema, and it's going
+
+00:44:19.986 --> 00:44:22.206 A:middle
+to create an index on
+every one of those values.
+
+00:44:23.316 --> 00:44:26.606 A:middle
+This index is what lets you
+query for any value in a record.
+
+00:44:27.096 --> 00:44:29.656 A:middle
+So, while you're in development,
+you can just run a query
+
+00:44:29.656 --> 00:44:32.506 A:middle
+and search on any value
+for any key in a record.
+
+00:44:33.966 --> 00:44:36.196 A:middle
+And let's say we're going ahead
+and we're developing this app
+
+00:44:36.196 --> 00:44:38.686 A:middle
+and we decide we want to
+add an additional property,
+
+00:44:38.686 --> 00:44:42.116 A:middle
+so we decide we want to
+have a background property
+
+00:44:42.116 --> 00:44:43.356 A:middle
+for the color of the party.
+
+00:44:43.916 --> 00:44:45.556 A:middle
+So, this party's
+background is blue.
+
+00:44:46.046 --> 00:44:47.556 A:middle
+All we have to do is
+upload that record.
+
+00:44:48.116 --> 00:44:50.566 A:middle
+It's going to send all those
+other properties to the index,
+
+00:44:51.156 --> 00:44:52.936 A:middle
+and the server is
+going to notice, "Oh,
+
+00:44:52.936 --> 00:44:54.056 A:middle
+there's a new property in here."
+
+00:44:54.546 --> 00:44:57.146 A:middle
+It's going to create a new
+schema entry, build a new index,
+
+00:44:57.536 --> 00:44:58.606 A:middle
+and index that property.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:45:00.536 --> 00:45:03.006 A:middle
+When you're ready to release
+your app, you're going to want
+
+00:45:03.006 --> 00:45:05.406 A:middle
+to make sure you've run
+everything in development first
+
+00:45:05.506 --> 00:45:07.466 A:middle
+so that you've built up
+this just-in-time schema.
+
+00:45:08.726 --> 00:45:11.476 A:middle
+You're then going to use
+the iCloud Dashboard to move
+
+00:45:11.476 --> 00:45:13.896 A:middle
+that schema from
+development into production,
+
+00:45:13.896 --> 00:45:15.826 A:middle
+and you're going to want to
+check all of these fields
+
+00:45:15.826 --> 00:45:17.316 A:middle
+to make sure that
+they're the right values,
+
+00:45:17.836 --> 00:45:19.066 A:middle
+make sure that every key
+
+00:45:19.066 --> 00:45:21.706 A:middle
+that your app will ever
+use exists in the schema.
+
+00:45:22.646 --> 00:45:25.146 A:middle
+And when you do that, you're
+going to move it into production
+
+00:45:25.146 --> 00:45:26.476 A:middle
+and lock that schema in.
+
+00:45:28.066 --> 00:45:31.406 A:middle
+Additionally, all of these
+indexes take up a decent amount
+
+00:45:31.406 --> 00:45:33.306 A:middle
+of space because
+it has to make it
+
+00:45:33.306 --> 00:45:35.926 A:middle
+so that you can query
+those records.
+
+00:45:35.926 --> 00:45:38.216 A:middle
+If you know you're never
+going to query a value
+
+00:45:38.216 --> 00:45:40.266 A:middle
+like we know we're never
+going to query for records
+
+00:45:40.266 --> 00:45:43.636 A:middle
+with just a blue background,
+you can drop that index,
+
+00:45:43.686 --> 00:45:47.036 A:middle
+and this will help free up some
+space in your app's database
+
+00:45:47.036 --> 00:45:48.746 A:middle
+or in your user's database.
+
+00:45:51.716 --> 00:45:54.886 A:middle
+So, finally, a couple
+CloudKit tips and tricks.
+
+00:45:56.286 --> 00:45:57.866 A:middle
+So, we already went over this
+
+00:45:57.866 --> 00:46:00.286 A:middle
+in the intro talk
+about error handling.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:45:57.866 --> 00:46:00.286 A:middle
+in the intro talk
+about error handling.
+
+00:46:00.716 --> 00:46:02.346 A:middle
+Please handle your
+errors in CloudKit.
+
+00:46:02.416 --> 00:46:03.486 A:middle
+This is really important.
+
+00:46:03.536 --> 00:46:07.496 A:middle
+I know error handling is
+hard and it's not fun to do,
+
+00:46:07.946 --> 00:46:11.886 A:middle
+but CloudKit is all based
+on network communication.
+
+00:46:12.526 --> 00:46:15.716 A:middle
+And when you're talking over the
+network, anything can go wrong.
+
+00:46:16.526 --> 00:46:18.256 A:middle
+You know, the network
+can get dropped.
+
+00:46:18.256 --> 00:46:20.096 A:middle
+Because we have other
+people talking
+
+00:46:20.096 --> 00:46:21.706 A:middle
+to the server, we
+can get conflicts.
+
+00:46:21.706 --> 00:46:22.526 A:middle
+We can get errors.
+
+00:46:23.146 --> 00:46:26.646 A:middle
+All kinds of things can
+happen, and as Paul said
+
+00:46:26.646 --> 00:46:29.876 A:middle
+in the first talk, this is the
+difference between a working app
+
+00:46:29.876 --> 00:46:30.976 A:middle
+and a not working app.
+
+00:46:30.976 --> 00:46:34.606 A:middle
+It's not the difference between
+a good app and a great app.
+
+00:46:34.606 --> 00:46:36.096 A:middle
+If you don't handle errors,
+
+00:46:36.176 --> 00:46:39.446 A:middle
+your app just isn't
+going to work right.
+
+00:46:39.646 --> 00:46:42.786 A:middle
+In CloudKit also, we've tried
+to avoid any sort of magic.
+
+00:46:42.906 --> 00:46:46.376 A:middle
+We don't want to try and handle
+these errors for you and figure
+
+00:46:46.376 --> 00:46:47.406 A:middle
+out what might be best.
+
+00:46:47.896 --> 00:46:50.556 A:middle
+We want to just tell
+you what happened.
+
+00:46:50.556 --> 00:46:53.306 A:middle
+We want you to be able to figure
+out what you need to do next,
+
+00:46:53.306 --> 00:46:56.896 A:middle
+and we want to give you all
+the information to do that.
+
+00:46:57.136 --> 00:46:59.236 A:middle
+So, keep in mind when you're
+handling your errors here
+
+00:46:59.236 --> 00:47:01.566 A:middle
+that your operations
+can have partial errors.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:46:59.236 --> 00:47:01.566 A:middle
+that your operations
+can have partial errors.
+
+00:47:02.036 --> 00:47:05.316 A:middle
+These partial errors when you're
+using the NSOperation API,
+
+00:47:05.316 --> 00:47:07.746 A:middle
+you might be sending
+up a batch of records.
+
+00:47:08.406 --> 00:47:10.636 A:middle
+And if you're saving them
+to the public database,
+
+00:47:10.736 --> 00:47:12.806 A:middle
+it could be the case
+that just one
+
+00:47:12.806 --> 00:47:15.746 A:middle
+of those records had a conflict
+but the rest saved just fine.
+
+00:47:16.526 --> 00:47:18.626 A:middle
+If that happens, you're
+going to get a partial error,
+
+00:47:18.746 --> 00:47:20.876 A:middle
+and inside of that, you're
+going to find one error
+
+00:47:20.876 --> 00:47:21.966 A:middle
+for the record that failed.
+
+00:47:22.816 --> 00:47:25.386 A:middle
+If this was in a custom
+zone, you might see
+
+00:47:25.386 --> 00:47:27.276 A:middle
+that as an atomic update error.
+
+00:47:27.276 --> 00:47:30.006 A:middle
+So, you might see that one
+of those records failed,
+
+00:47:30.006 --> 00:47:33.366 A:middle
+and the rest got the
+batch error in there.
+
+00:47:34.356 --> 00:47:37.096 A:middle
+And finally, we want
+you to make sure
+
+00:47:37.096 --> 00:47:39.436 A:middle
+that you retry any
+server busy errors.
+
+00:47:40.176 --> 00:47:42.476 A:middle
+It could be the case
+that the, you know,
+
+00:47:42.546 --> 00:47:45.046 A:middle
+a bunch of people are going at
+the servers at the same time
+
+00:47:45.046 --> 00:47:46.236 A:middle
+and the servers can't handle it
+
+00:47:46.236 --> 00:47:47.906 A:middle
+and they need clients
+to back off.
+
+00:47:48.096 --> 00:47:50.686 A:middle
+It could also be that
+your client is misbehaving
+
+00:47:50.686 --> 00:47:52.286 A:middle
+and hitting the server
+too frequently,
+
+00:47:52.286 --> 00:47:55.686 A:middle
+and the server is saying,
+"Slow down, buddy."
+
+00:47:55.686 --> 00:47:57.556 A:middle
+This is our way of
+saying, "You know,
+
+00:47:57.556 --> 00:47:58.656 A:middle
+we need a little more time.
+
+00:47:58.656 --> 00:48:00.796 A:middle
+This request was OK, but
+please try it again".
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:47:58.656 --> 00:48:00.796 A:middle
+This request was OK, but
+please try it again".
+
+00:48:01.426 --> 00:48:03.556 A:middle
+And anytime we give you
+a server busy error,
+
+00:48:03.556 --> 00:48:06.496 A:middle
+we're going to hand back
+a CKErrorRetryAfterKey.
+
+00:48:07.026 --> 00:48:09.456 A:middle
+This is a number of seconds
+that we'd like you to wait
+
+00:48:09.456 --> 00:48:11.426 A:middle
+and retry your request.
+
+00:48:14.116 --> 00:48:17.046 A:middle
+So, limits, in the
+keynote, it was mentioned
+
+00:48:17.046 --> 00:48:18.936 A:middle
+that CloudKit is
+free with limits.
+
+00:48:19.556 --> 00:48:21.326 A:middle
+How do those limits work?
+
+00:48:21.326 --> 00:48:25.116 A:middle
+Well, anything stored in the
+public database is counted
+
+00:48:25.116 --> 00:48:26.336 A:middle
+against your app's quota.
+
+00:48:26.386 --> 00:48:29.766 A:middle
+We give every app a
+quota, and that's just
+
+00:48:29.766 --> 00:48:30.626 A:middle
+for the public database.
+
+00:48:31.726 --> 00:48:34.086 A:middle
+Anything you put in the
+private database is counted
+
+00:48:34.086 --> 00:48:35.516 A:middle
+against the user's account.
+
+00:48:35.706 --> 00:48:39.656 A:middle
+So, every iCloud account gets
+5 gigabytes of free storage,
+
+00:48:40.146 --> 00:48:43.446 A:middle
+but users might have bought
+more, or they might have filled
+
+00:48:43.446 --> 00:48:46.356 A:middle
+up all that space with
+emails or backups or photos.
+
+00:48:46.866 --> 00:48:48.796 A:middle
+So, every user is going
+to have a different amount
+
+00:48:48.796 --> 00:48:49.516 A:middle
+of storage in there.
+
+00:48:50.126 --> 00:48:52.216 A:middle
+And because this is
+kind of the user space
+
+00:48:52.216 --> 00:48:54.116 A:middle
+and it's shared space,
+we want you to, you know,
+
+00:48:54.346 --> 00:48:55.916 A:middle
+remember to be nice
+to your users.
+
+00:48:55.916 --> 00:49:01.086 A:middle
+It's technically free space for
+you because it's theirs but,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:48:55.916 --> 00:49:01.086 A:middle
+It's technically free space for
+you because it's theirs but,
+
+00:49:01.086 --> 00:49:03.326 A:middle
+you know, don't fill it
+up with unnecessary stuff.
+
+00:49:03.906 --> 00:49:08.226 A:middle
+So again, with the
+limits, how much do you get
+
+00:49:08.226 --> 00:49:09.096 A:middle
+for your app container?
+
+00:49:09.096 --> 00:49:10.766 A:middle
+Well, what we're concerned
+
+00:49:10.766 --> 00:49:13.666 A:middle
+with here is customers
+having a great experience,
+
+00:49:14.166 --> 00:49:17.536 A:middle
+and these limits that we've
+specified here are really
+
+00:49:17.576 --> 00:49:19.056 A:middle
+to try and prevent abuse.
+
+00:49:19.056 --> 00:49:20.936 A:middle
+We don't want to
+prevent legitimate use.
+
+00:49:20.936 --> 00:49:23.446 A:middle
+We just don't want
+anyone abusing CloudKit.
+
+00:49:24.496 --> 00:49:26.736 A:middle
+And the numbers that we
+give you here also scale
+
+00:49:26.736 --> 00:49:28.356 A:middle
+with the number of
+users you have.
+
+00:49:28.356 --> 00:49:29.946 A:middle
+If you go on
+developer.apple.com,
+
+00:49:29.946 --> 00:49:32.666 A:middle
+you can get the full breakdown
+of the different values,
+
+00:49:32.666 --> 00:49:36.916 A:middle
+but as an example, if you had
+10 million users of your app,
+
+00:49:36.916 --> 00:49:39.486 A:middle
+we're going to give you a
+petabyte of asset storage,
+
+00:49:39.486 --> 00:49:41.186 A:middle
+10 terabytes of database
+storage,
+
+00:49:41.186 --> 00:49:44.676 A:middle
+some pretty high transfer
+limits, and this is all
+
+00:49:44.766 --> 00:49:46.986 A:middle
+for your public database
+in your application.
+
+00:49:49.556 --> 00:49:51.666 A:middle
+So, finally, a note
+on efficiency.
+
+00:49:52.336 --> 00:49:54.916 A:middle
+One thing about CloudKit
+is, again,
+
+00:49:54.916 --> 00:49:56.876 A:middle
+it's a transport mechanism.
+
+00:49:56.876 --> 00:49:59.976 A:middle
+We are only there to talk to
+the iCloud servers for you.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:50:00.676 --> 00:50:02.636 A:middle
+We're not storing any records.
+
+00:50:02.636 --> 00:50:03.796 A:middle
+We're not caching records.
+
+00:50:04.316 --> 00:50:06.456 A:middle
+Anytime we give you back
+a record, it's something
+
+00:50:06.456 --> 00:50:07.536 A:middle
+that we got from the server.
+
+00:50:08.156 --> 00:50:10.206 A:middle
+We're trying to be as
+transparent about that
+
+00:50:10.206 --> 00:50:13.876 A:middle
+as possible and not do any
+caching shenanigans here.
+
+00:50:13.876 --> 00:50:16.326 A:middle
+We're always just giving
+you what the server gave us.
+
+00:50:17.666 --> 00:50:21.116 A:middle
+In terms of efficiency
+though, you might remember
+
+00:50:21.166 --> 00:50:23.226 A:middle
+from the save policies
+that we're only going
+
+00:50:23.226 --> 00:50:25.366 A:middle
+to save the values that
+have changed on the records.
+
+00:50:25.366 --> 00:50:27.856 A:middle
+So, we try and be smart about
+what we send over the wire.
+
+00:50:29.106 --> 00:50:30.846 A:middle
+When we're sending up assets,
+
+00:50:30.956 --> 00:50:33.586 A:middle
+those can be potentially
+really big blobs of data,
+
+00:50:34.246 --> 00:50:36.496 A:middle
+and that data is
+transferred efficiently.
+
+00:50:36.496 --> 00:50:38.896 A:middle
+So, if the server already
+has a copy of a file,
+
+00:50:39.306 --> 00:50:40.306 A:middle
+we won't re-upload it.
+
+00:50:40.486 --> 00:50:42.236 A:middle
+If we already have
+that file locally,
+
+00:50:42.236 --> 00:50:46.506 A:middle
+we don't need to re-download it.
+
+00:50:46.696 --> 00:50:50.076 A:middle
+So, in summary, we're really
+excited about CloudKit here.
+
+00:50:50.076 --> 00:50:52.446 A:middle
+We've built a lot of
+really great features
+
+00:50:52.926 --> 00:50:55.306 A:middle
+and it's something that
+we actually use at Apple.
+
+00:50:55.306 --> 00:50:58.466 A:middle
+We've built iCloud Drive, we've
+built iCloud Photos on top
+
+00:50:58.466 --> 00:51:02.326 A:middle
+of this, and we want you guys to
+start using the same technology
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:50:58.466 --> 00:51:02.326 A:middle
+of this, and we want you guys to
+start using the same technology
+
+00:51:02.326 --> 00:51:03.646 A:middle
+that we're using at Apple.
+
+00:51:04.536 --> 00:51:06.906 A:middle
+I'm really excited to see
+what's going to happen.
+
+00:51:06.906 --> 00:51:09.036 A:middle
+I can't wait to see some
+apps that use CloudKit,
+
+00:51:09.566 --> 00:51:12.376 A:middle
+and good luck with
+using CloudKit.
+
+00:51:14.516 --> 00:51:21.176 A:middle
+[ Applause ]
+
+00:51:21.676 --> 00:51:24.816 A:middle
+So, if you need any, if
+you need to contact anyone,
+
+00:51:24.816 --> 00:51:26.316 A:middle
+Dave DeLong is our Evangelist.
+
+00:51:26.316 --> 00:51:28.376 A:middle
+He's the guy with the bowtie.
+
+00:51:28.426 --> 00:51:31.976 A:middle
+If you need documentation,
+it's on developer.apple.com.
+
+00:51:31.976 --> 00:51:35.086 A:middle
+We had a Introducing CloudKit
+session earlier in the week.
+
+00:51:35.246 --> 00:51:37.836 A:middle
+There's a couple more
+related sessions.
+
+00:51:38.876 --> 00:51:39.216 A:middle
+Thank you.
+
+00:51:40.016 --> 00:51:41.000 A:middle
+[ Applause ]
+

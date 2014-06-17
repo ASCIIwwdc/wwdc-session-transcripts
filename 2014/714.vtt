@@ -1,0 +1,3327 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:13.396 --> 00:00:15.386 A:middle
+&gt;&gt; Good morning,
+how's everybody doing?
+
+00:00:16.486 --> 00:00:17.536 A:middle
+Enjoying the conference, I hope.
+
+00:00:19.866 --> 00:00:21.866 A:middle
+My name's Eric Clements
+and I'm here to talk to you
+
+00:00:21.866 --> 00:00:24.176 A:middle
+about a new technology
+we're introducing for iOS 8
+
+00:00:24.176 --> 00:00:26.536 A:middle
+and Mac OS X Yosemite
+called activity tracing.
+
+00:00:27.116 --> 00:00:30.476 A:middle
+The goal of this is to hopefully
+improve your ability to fix bugs
+
+00:00:30.916 --> 00:00:32.625 A:middle
+in a much quicker fashion.
+
+00:00:33.316 --> 00:00:37.216 A:middle
+So, I'm going to cover
+a few topics today.
+
+00:00:37.216 --> 00:00:40.026 A:middle
+First of all, we'll go over
+a little bit of a background
+
+00:00:40.026 --> 00:00:43.096 A:middle
+and why we developed this
+and what our goals were.
+
+00:00:43.096 --> 00:00:46.686 A:middle
+We'll talk about some new
+concepts, including things
+
+00:00:46.686 --> 00:00:52.996 A:middle
+like activities, breadcrumbs,
+new concept of trace messages,
+
+00:00:54.136 --> 00:00:57.746 A:middle
+as well as some tools and
+some considerations to take
+
+00:00:57.746 --> 00:00:59.726 A:middle
+into account while adopting
+this new technology.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:00.216 --> 00:01:04.885 A:middle
+So, let's go into
+some background.
+
+00:01:05.186 --> 00:01:08.386 A:middle
+As many of you know, here
+
+00:01:08.386 --> 00:01:11.026 A:middle
+at Apple we encourage
+asynchronous development very
+
+00:01:11.026 --> 00:01:12.636 A:middle
+much so because it's
+very important
+
+00:01:12.636 --> 00:01:15.266 A:middle
+to have a very responsive user
+interface and application.
+
+00:01:15.636 --> 00:01:17.846 A:middle
+And in doing so, we've
+introduced a lot of technology
+
+00:01:17.846 --> 00:01:21.756 A:middle
+over the years, including
+XPC, GCD, NSOperationsQueue,
+
+00:01:22.056 --> 00:01:25.586 A:middle
+to simplify those common tasks
+that were previously complex.
+
+00:01:27.336 --> 00:01:28.556 A:middle
+In doing so we realized
+
+00:01:28.556 --> 00:01:30.796 A:middle
+that this became very
+difficult to debug.
+
+00:01:30.796 --> 00:01:32.336 A:middle
+How many of you have
+had problems trying
+
+00:01:32.336 --> 00:01:34.836 A:middle
+to debug your XPC and-yeah.
+
+00:01:35.716 --> 00:01:37.526 A:middle
+So, we wanted to really
+find a way to improve
+
+00:01:37.526 --> 00:01:39.046 A:middle
+that with this release
+and we've done a lot.
+
+00:01:39.046 --> 00:01:41.956 A:middle
+Not only in XCode with
+the new Queue debugging,
+
+00:01:42.246 --> 00:01:44.316 A:middle
+but also with this new
+activity tracing technology.
+
+00:01:45.146 --> 00:01:46.756 A:middle
+And you'll hear more
+about this as we go along.
+
+00:01:47.376 --> 00:01:51.766 A:middle
+In addition to that, privilege
+separation has, in addition,
+
+00:01:51.846 --> 00:01:56.096 A:middle
+has made that much worse because
+we have another process involved
+
+00:01:56.506 --> 00:01:58.076 A:middle
+trying to separate privilege
+
+00:01:58.076 --> 00:02:02.266 A:middle
+and now you have two processes
+involved that may log separately
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:01:58.076 --> 00:02:02.266 A:middle
+and now you have two processes
+involved that may log separately
+
+00:02:02.266 --> 00:02:02.836 A:middle
+and you have no way
+
+00:02:02.836 --> 00:02:04.426 A:middle
+to understand who's
+causing the problem.
+
+00:02:04.936 --> 00:02:07.006 A:middle
+So, this is just another
+piece of the puzzle
+
+00:02:07.006 --> 00:02:08.746 A:middle
+that has complicated our lives.
+
+00:02:09.205 --> 00:02:12.056 A:middle
+The reality is debug
+tools have not kept pace.
+
+00:02:12.556 --> 00:02:13.386 A:middle
+We've done our best.
+
+00:02:13.676 --> 00:02:15.176 A:middle
+You'll see in this release,
+we've done a whole lot,
+
+00:02:15.336 --> 00:02:17.636 A:middle
+as I mentioned, Queue
+debugging in a session
+
+00:02:17.636 --> 00:02:18.846 A:middle
+that has happened as well.
+
+00:02:19.666 --> 00:02:24.576 A:middle
+The reality is, a lot of us
+log, and I'm sure and all of you
+
+00:02:24.576 --> 00:02:26.596 A:middle
+in the room have used
+this log or NSLog
+
+00:02:26.596 --> 00:02:29.006 A:middle
+or some logging mechanism to
+try to debug your situation.
+
+00:02:29.006 --> 00:02:32.146 A:middle
+What we really found that that's
+really not sufficient these days
+
+00:02:32.466 --> 00:02:34.266 A:middle
+because there's really not
+enough context to understand
+
+00:02:34.266 --> 00:02:36.616 A:middle
+where you were and how you
+got there and we really want
+
+00:02:36.616 --> 00:02:38.886 A:middle
+to find a way to
+resolve that and get you
+
+00:02:38.886 --> 00:02:41.036 A:middle
+that information you really
+need to diagnose the problem.
+
+00:02:41.036 --> 00:02:46.256 A:middle
+One of the diagnostic
+challenges we find is
+
+00:02:46.296 --> 00:02:50.106 A:middle
+as you see going forward, you
+know, when you sample a Daemon
+
+00:02:50.106 --> 00:02:52.066 A:middle
+or an XPCService, it
+may look very idle,
+
+00:02:52.756 --> 00:02:55.406 A:middle
+looks like nothing's really
+happening, but the reality is,
+
+00:02:55.936 --> 00:02:58.436 A:middle
+there may be two processes
+or multi-processes talking
+
+00:02:58.436 --> 00:02:59.916 A:middle
+to this service that
+are blocked,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:00.296 --> 00:03:02.266 A:middle
+but they also look
+idle, so how do you know
+
+00:03:02.266 --> 00:03:03.636 A:middle
+that that's actually
+the situation?
+
+00:03:04.686 --> 00:03:06.676 A:middle
+We really wanted to find
+a way to improve this.
+
+00:03:07.496 --> 00:03:10.856 A:middle
+In addition to that, I'm
+sure, if you're like me,
+
+00:03:10.966 --> 00:03:14.226 A:middle
+you probably have a desktop
+that has multiple windows open,
+
+00:03:14.226 --> 00:03:18.366 A:middle
+including console, terminal,
+XCode, your application
+
+00:03:18.366 --> 00:03:19.916 A:middle
+and any numerous
+number of applications,
+
+00:03:19.916 --> 00:03:21.136 A:middle
+trying to understand
+what's happening
+
+00:03:21.136 --> 00:03:24.026 A:middle
+at that moment in time.
+
+00:03:24.246 --> 00:03:26.216 A:middle
+We really wanted to find
+a better way to do this,
+
+00:03:26.776 --> 00:03:29.976 A:middle
+so we think we developed
+something.
+
+00:03:31.786 --> 00:03:33.426 A:middle
+In addition to that,
+the complexity
+
+00:03:33.426 --> 00:03:35.176 A:middle
+of the OS has really
+gone up over the years.
+
+00:03:35.506 --> 00:03:38.466 A:middle
+If you look at a simple
+query, in this case the touch
+
+00:03:38.466 --> 00:03:42.496 A:middle
+that opendirectoryd, that
+query may actually talk
+
+00:03:42.496 --> 00:03:44.856 A:middle
+to multiple daemons
+in a circular fashion.
+
+00:03:45.176 --> 00:03:47.786 A:middle
+And how do you really understand
+what's happening at that moment
+
+00:03:47.786 --> 00:03:50.286 A:middle
+in time because you never
+know which Daemon is actually
+
+00:03:50.286 --> 00:03:53.246 A:middle
+in flight, what they're
+doing and how you got there.
+
+00:03:54.066 --> 00:03:56.946 A:middle
+In addition to all this, we
+also have what I call a complex
+
+00:03:56.946 --> 00:04:00.356 A:middle
+crash, where over time as an
+application is being used,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:56.946 --> 00:04:00.356 A:middle
+crash, where over time as an
+application is being used,
+
+00:04:00.356 --> 00:04:04.386 A:middle
+it may invoke multiple Daemons
+or XPCServices and ultimately,
+
+00:04:04.386 --> 00:04:07.746 A:middle
+at the end, you have the final
+event, as you see at the top,
+
+00:04:07.746 --> 00:04:10.176 A:middle
+button click that talked
+to an XPCService, well,
+
+00:04:10.176 --> 00:04:11.876 A:middle
+that XPCService happened
+to crash.
+
+00:04:13.316 --> 00:04:15.826 A:middle
+You may not have noticed it
+in the background and all
+
+00:04:16.026 --> 00:04:17.226 A:middle
+that shows at the top
+
+00:04:17.226 --> 00:04:19.505 A:middle
+of the screen is your
+query cannot be completed
+
+00:04:19.505 --> 00:04:20.026 A:middle
+at this time.
+
+00:04:20.826 --> 00:04:21.586 A:middle
+Not very helpful.
+
+00:04:21.726 --> 00:04:23.646 A:middle
+So, how do we find a
+way to improve that?
+
+00:04:23.646 --> 00:04:28.926 A:middle
+So, we set out with several
+goals, we really wanted
+
+00:04:28.926 --> 00:04:32.626 A:middle
+to make the additional data that
+we're providing in this release,
+
+00:04:32.846 --> 00:04:35.526 A:middle
+available in a diagnostics
+report you see on a daily basis,
+
+00:04:35.526 --> 00:04:38.006 A:middle
+whether that would be a
+Crash Report, a spin report
+
+00:04:38.006 --> 00:04:41.356 A:middle
+or any other type of
+report that we provide.
+
+00:04:41.486 --> 00:04:42.706 A:middle
+In addition to that,
+we really wanted
+
+00:04:42.706 --> 00:04:45.446 A:middle
+to reduce the time you spend
+guessing what, where and when.
+
+00:04:45.776 --> 00:04:46.676 A:middle
+How did I get here?
+
+00:04:46.676 --> 00:04:49.066 A:middle
+What was happening at that
+moment in time and why?
+
+00:04:49.676 --> 00:04:51.526 A:middle
+You know, that's really
+the biggest challenge
+
+00:04:51.526 --> 00:04:54.316 A:middle
+in this complex environment and
+we really wanted to find a way
+
+00:04:54.316 --> 00:04:55.666 A:middle
+to provide you that insight.
+
+00:04:56.806 --> 00:05:01.276 A:middle
+In addition to that,
+sometimes we look at problems
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:56.806 --> 00:05:01.276 A:middle
+In addition to that,
+sometimes we look at problems
+
+00:05:01.276 --> 00:05:05.016 A:middle
+as a single click or a single
+button that caused the problem.
+
+00:05:05.836 --> 00:05:08.466 A:middle
+It's not necessarily a single
+action that caused the problem,
+
+00:05:08.506 --> 00:05:10.856 A:middle
+sometimes it's the interaction
+of actions over time.
+
+00:05:11.186 --> 00:05:13.396 A:middle
+Maybe there's a button click
+that created a new mail,
+
+00:05:13.396 --> 00:05:16.166 A:middle
+deleted the trash and then
+tried to create a new mail.
+
+00:05:17.146 --> 00:05:18.596 A:middle
+Take the pick of
+your application,
+
+00:05:18.706 --> 00:05:20.556 A:middle
+it's sometimes not
+just a single event,
+
+00:05:20.556 --> 00:05:23.906 A:middle
+it's actually the combination of
+events that caused the problem.
+
+00:05:23.906 --> 00:05:26.226 A:middle
+So, how do we understand those
+types of events over time?
+
+00:05:27.916 --> 00:05:29.656 A:middle
+Whatever we did, we knew
+it had to be lightweight
+
+00:05:29.656 --> 00:05:30.766 A:middle
+and really easy to use.
+
+00:05:31.326 --> 00:05:33.486 A:middle
+So, let's look at
+a Crash Report.
+
+00:05:33.486 --> 00:05:36.596 A:middle
+You can see a little
+hint here, we're looking
+
+00:05:36.596 --> 00:05:38.436 A:middle
+to add some new additional
+information, we're obviously
+
+00:05:38.436 --> 00:05:39.916 A:middle
+in a Crash Report, maybe
+
+00:05:39.916 --> 00:05:41.736 A:middle
+at the top we'll actually
+have the events leading
+
+00:05:41.736 --> 00:05:42.616 A:middle
+up to the crash.
+
+00:05:44.336 --> 00:05:47.466 A:middle
+Down below the crashing
+thread, some detailed messages
+
+00:05:47.466 --> 00:05:49.496 A:middle
+about what was happening
+at that moment in time
+
+00:05:49.796 --> 00:05:50.726 A:middle
+when the crash happened.
+
+00:05:52.086 --> 00:05:53.226 A:middle
+What's really exciting
+is to point
+
+00:05:53.226 --> 00:05:54.306 A:middle
+out some performance gains here
+
+00:05:54.626 --> 00:05:56.996 A:middle
+by adopting this new
+activity trace mechanism,
+
+00:05:57.326 --> 00:06:01.436 A:middle
+you get some power back and
+CPU back to your application
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:57.326 --> 00:06:01.436 A:middle
+you get some power back and
+CPU back to your application
+
+00:06:01.436 --> 00:06:03.676 A:middle
+and focus on the actual
+work, versus trying
+
+00:06:03.676 --> 00:06:07.276 A:middle
+to understand what
+was happening.
+
+00:06:07.276 --> 00:06:08.976 A:middle
+You see measured across
+various platforms,
+
+00:06:08.976 --> 00:06:10.266 A:middle
+we've got really nice numbers.
+
+00:06:11.956 --> 00:06:17.826 A:middle
+Similarly on iOS, dramatic
+difference, gives you that CPU
+
+00:06:17.826 --> 00:06:20.176 A:middle
+and power back to your
+application focused on that
+
+00:06:20.176 --> 00:06:22.386 A:middle
+versus trying to understand
+what was happening.
+
+00:06:23.186 --> 00:06:25.056 A:middle
+So, to cover some
+terminology again
+
+00:06:25.436 --> 00:06:27.846 A:middle
+and we put these
+boxes into place.
+
+00:06:29.796 --> 00:06:33.056 A:middle
+Those events I mentioned
+over time, those menu clicks
+
+00:06:33.606 --> 00:06:35.226 A:middle
+and such, are what
+we call activities.
+
+00:06:35.226 --> 00:06:39.076 A:middle
+An activity flows from
+one process to another
+
+00:06:39.636 --> 00:06:42.856 A:middle
+and this is kind of our
+scoping mechanism, so to speak.
+
+00:06:43.036 --> 00:06:45.576 A:middle
+On top of that we have a
+concept of breadcrumbs,
+
+00:06:46.436 --> 00:06:50.586 A:middle
+and these are those high-level
+interesting or meaningful events
+
+00:06:50.586 --> 00:06:53.516 A:middle
+that you as a developer
+understand
+
+00:06:54.036 --> 00:06:56.946 A:middle
+because not every click or
+every menu option is interesting
+
+00:06:57.046 --> 00:06:59.386 A:middle
+or meaningful, you get the
+opportunity to actually point
+
+00:06:59.386 --> 00:07:01.416 A:middle
+out the ones that are meaningful
+to you as a developer.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:59.386 --> 00:07:01.416 A:middle
+out the ones that are meaningful
+to you as a developer.
+
+00:07:02.226 --> 00:07:03.776 A:middle
+In addition to that,
+you have trace messages
+
+00:07:03.776 --> 00:07:05.226 A:middle
+that are actually
+part of this activity,
+
+00:07:05.836 --> 00:07:10.026 A:middle
+so that you actually have a
+scoped view of that action
+
+00:07:10.026 --> 00:07:14.676 A:middle
+and things over time versus
+a huge log to try and sift
+
+00:07:14.676 --> 00:07:16.016 A:middle
+through to understand
+what was happening
+
+00:07:16.016 --> 00:07:16.856 A:middle
+at that moment in time.
+
+00:07:16.856 --> 00:07:19.056 A:middle
+And we'll show you
+some great examples
+
+00:07:19.056 --> 00:07:20.156 A:middle
+of what this does for you.
+
+00:07:21.086 --> 00:07:25.216 A:middle
+We do have a new Daemon,
+nothing you typically have
+
+00:07:25.216 --> 00:07:27.286 A:middle
+to worry about, but it does
+come up in the background
+
+00:07:27.286 --> 00:07:28.786 A:middle
+and it will-it's the one
+
+00:07:28.786 --> 00:07:30.956 A:middle
+that handles all this
+behind the scenes
+
+00:07:31.006 --> 00:07:33.076 A:middle
+and provides a diagnostic
+report mechanism.
+
+00:07:33.486 --> 00:07:35.696 A:middle
+So, let's talk a little
+bit about activities.
+
+00:07:36.056 --> 00:07:37.956 A:middle
+I alluded to an activity
+of what it was,
+
+00:07:37.956 --> 00:07:39.326 A:middle
+but what really is an activity?
+
+00:07:39.826 --> 00:07:42.916 A:middle
+You think of an activity
+as a set of work
+
+00:07:42.916 --> 00:07:44.486 A:middle
+that was triggered by an action.
+
+00:07:44.656 --> 00:07:46.576 A:middle
+As the diagram I showed before,
+
+00:07:46.576 --> 00:07:48.426 A:middle
+an application could
+have done a simple query.
+
+00:07:48.996 --> 00:07:51.306 A:middle
+That query talked to
+another Daemon, which talked
+
+00:07:51.306 --> 00:07:52.376 A:middle
+to other Daemons along the way.
+
+00:07:53.016 --> 00:07:55.576 A:middle
+That is a set of work that
+is triggered by an action.
+
+00:07:56.496 --> 00:07:58.266 A:middle
+But I totally understand
+that there are cases
+
+00:07:58.266 --> 00:07:59.396 A:middle
+where you have explicit work,
+
+00:07:59.396 --> 00:08:01.116 A:middle
+maybe you have an
+initialization phase,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:59.396 --> 00:08:01.116 A:middle
+maybe you have an
+initialization phase,
+
+00:08:01.436 --> 00:08:02.916 A:middle
+you're reindexing databases,
+
+00:08:03.196 --> 00:08:06.476 A:middle
+you're building a new asset
+database, various reasons
+
+00:08:06.476 --> 00:08:09.166 A:middle
+that you want to xScope that,
+where you can actually create
+
+00:08:09.166 --> 00:08:11.516 A:middle
+that explicitly defined sort
+of work with an activity.
+
+00:08:12.406 --> 00:08:14.786 A:middle
+But what does that activity
+really mean to the system?
+
+00:08:15.486 --> 00:08:18.526 A:middle
+What I mean is, it's essentially
+a 64-bit identifier that's
+
+00:08:18.526 --> 00:08:19.676 A:middle
+created by the operating system.
+
+00:08:20.466 --> 00:08:21.996 A:middle
+Something you don't
+have any control over,
+
+00:08:22.096 --> 00:08:24.986 A:middle
+it's automatic as
+part of the API.
+
+00:08:26.156 --> 00:08:28.616 A:middle
+What's great about it is,
+it's also autopropagated,
+
+00:08:28.766 --> 00:08:32.506 A:middle
+meaning it flows throughout
+the system across GCD queues,
+
+00:08:32.506 --> 00:08:34.916 A:middle
+NSOperationQueues,
+as well as processes.
+
+00:08:35.546 --> 00:08:40.135 A:middle
+For example, take process A
+and process B, may have queues
+
+00:08:40.135 --> 00:08:43.525 A:middle
+in flight and you can see here
+those-activity ID number 1
+
+00:08:43.525 --> 00:08:46.816 A:middle
+and activity ID number
+2-you can see them flowing
+
+00:08:46.816 --> 00:08:49.696 A:middle
+across the process and that
+happens to be XPC and GCD,
+
+00:08:50.816 --> 00:08:52.346 A:middle
+all behind the scenes,
+nothing for you
+
+00:08:52.346 --> 00:08:53.976 A:middle
+to do, it's all transparent.
+
+00:08:54.546 --> 00:08:57.396 A:middle
+So, you look at activities over
+time as I've showed previously
+
+00:08:57.396 --> 00:09:00.586 A:middle
+in a previous chart,
+now you have a concept
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:57.396 --> 00:09:00.586 A:middle
+in a previous chart,
+now you have a concept
+
+00:09:00.586 --> 00:09:03.696 A:middle
+of a menu selection,
+has a single activity ID
+
+00:09:03.696 --> 00:09:05.786 A:middle
+and then the next menu
+select has a new activity ID.
+
+00:09:05.786 --> 00:09:07.956 A:middle
+And this is happening every
+time a button is pressed
+
+00:09:07.956 --> 00:09:10.116 A:middle
+on the screen or
+a click is done.
+
+00:09:10.766 --> 00:09:13.916 A:middle
+So, now you have a new
+scoping mechanism that tracks
+
+00:09:13.916 --> 00:09:19.146 A:middle
+that activity across the system,
+very simple concept, automatic,
+
+00:09:19.466 --> 00:09:21.666 A:middle
+nothing for you to
+track directly.
+
+00:09:22.666 --> 00:09:24.536 A:middle
+Well, we obviously wanted
+to make a way for you
+
+00:09:24.536 --> 00:09:27.216 A:middle
+to create these activities
+and we wanted
+
+00:09:27.216 --> 00:09:29.316 A:middle
+to make sure it was easy
+for you so you had nothing
+
+00:09:29.316 --> 00:09:31.186 A:middle
+to do directly unless
+you wanted to.
+
+00:09:31.506 --> 00:09:33.186 A:middle
+So, we made it as
+simple as possible,
+
+00:09:33.186 --> 00:09:36.156 A:middle
+we provided this automatically
+through the UIKit on iOS
+
+00:09:36.396 --> 00:09:37.996 A:middle
+and the AppKit on OS X.
+
+00:09:38.416 --> 00:09:40.486 A:middle
+So, as part of every
+action on the screen,
+
+00:09:40.826 --> 00:09:43.816 A:middle
+an activity is already created
+on your behalf, nothing for you
+
+00:09:43.816 --> 00:09:46.776 A:middle
+to do, you just do your normal
+coding as you do every day.
+
+00:09:47.846 --> 00:09:50.136 A:middle
+And we obviously have
+an API to allow you
+
+00:09:50.136 --> 00:09:52.776 A:middle
+to create activities
+explicitly for those cases
+
+00:09:52.776 --> 00:09:55.446 A:middle
+where you may be startup phase,
+that database that I was talking
+
+00:09:55.446 --> 00:09:58.526 A:middle
+about earlier, to really scope
+that information to the action
+
+00:09:58.526 --> 00:09:59.976 A:middle
+that you are trying to track.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:00.066 --> 00:10:03.276 A:middle
+We have a concept of detached
+activities because now
+
+00:10:03.276 --> 00:10:05.766 A:middle
+that we have this
+automatically created activity,
+
+00:10:06.036 --> 00:10:08.566 A:middle
+how do you disassociate things?
+
+00:10:08.676 --> 00:10:12.906 A:middle
+Take, for example, an API
+callback comes in to your query
+
+00:10:13.486 --> 00:10:15.376 A:middle
+and you realize the
+database is out of sync.
+
+00:10:15.576 --> 00:10:17.696 A:middle
+How do you disassociate
+that resync
+
+00:10:18.066 --> 00:10:20.166 A:middle
+or rebuild the database
+from the action?
+
+00:10:20.516 --> 00:10:22.656 A:middle
+Because those are two separate
+activities that you want
+
+00:10:22.656 --> 00:10:23.666 A:middle
+to track individually.
+
+00:10:24.606 --> 00:10:27.086 A:middle
+It wasn't the fact that
+the person did the query
+
+00:10:27.176 --> 00:10:31.506 A:middle
+that caused the rebuild, so you
+want to track those separately
+
+00:10:31.506 --> 00:10:33.066 A:middle
+and understand why
+the rebuild failed
+
+00:10:33.396 --> 00:10:35.166 A:middle
+versus why the action failed.
+
+00:10:35.766 --> 00:10:38.216 A:middle
+So, here's a quick diagram
+
+00:10:38.216 --> 00:10:39.356 A:middle
+of what detached
+activity looks like.
+
+00:10:39.356 --> 00:10:41.286 A:middle
+You can see activity
+ID number 1,
+
+00:10:41.896 --> 00:10:43.446 A:middle
+went over across another queue
+
+00:10:43.866 --> 00:10:46.866 A:middle
+and then you had an access
+you wanted to create,
+
+00:10:47.156 --> 00:10:49.436 A:middle
+it will actually create
+a separate activity ID
+
+00:10:49.706 --> 00:10:52.106 A:middle
+on that next thread on whatever
+work you're trying to initiate.
+
+00:10:52.656 --> 00:10:54.936 A:middle
+So, now you have two
+completely individual activities
+
+00:10:55.266 --> 00:10:58.656 A:middle
+to scope this information
+into your diagnostic reports.
+
+00:10:59.956 --> 00:11:01.476 A:middle
+So, how do you initiate
+an activity?
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:10:59.956 --> 00:11:01.476 A:middle
+So, how do you initiate
+an activity?
+
+00:11:01.556 --> 00:11:05.786 A:middle
+So, I'm going to try to make
+this a very easy API to use.
+
+00:11:06.746 --> 00:11:11.486 A:middle
+OS activity, activity name,
+put some flags and a block.
+
+00:11:12.856 --> 00:11:15.056 A:middle
+One very important fact you'll
+see throughout this entire
+
+00:11:15.056 --> 00:11:17.916 A:middle
+presentation, all these
+strings must be constant.
+
+00:11:18.916 --> 00:11:21.036 A:middle
+We do not allow you to
+pass arbitrary strings
+
+00:11:21.036 --> 00:11:22.016 A:middle
+as part of these names.
+
+00:11:22.616 --> 00:11:25.526 A:middle
+This is for various
+reasons, including security,
+
+00:11:25.666 --> 00:11:27.466 A:middle
+performance and privacy.
+
+00:11:27.466 --> 00:11:29.986 A:middle
+And obviously you saw the
+performance difference.
+
+00:11:30.536 --> 00:11:33.246 A:middle
+This is part of the reasons why
+we get this performance gain.
+
+00:11:34.576 --> 00:11:37.156 A:middle
+We provide a flag option so
+you can control the behavior.
+
+00:11:37.156 --> 00:11:39.506 A:middle
+This is when you would say I
+want to detach and activity
+
+00:11:40.016 --> 00:11:41.856 A:middle
+or some other options
+provided in the future.
+
+00:11:43.806 --> 00:11:45.666 A:middle
+We do provide a non-block
+variant of course.
+
+00:11:45.666 --> 00:11:48.376 A:middle
+I didn't lay them all out today,
+but you can look at the headers
+
+00:11:48.786 --> 00:11:54.006 A:middle
+and you can find the header,
+#include os/activity.h. So,
+
+00:11:54.006 --> 00:11:56.876 A:middle
+let's talk about those
+automatic generated activities.
+
+00:11:57.826 --> 00:12:01.566 A:middle
+Take a process that has the
+search query about to initiate,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:57.826 --> 00:12:01.566 A:middle
+Take a process that has the
+search query about to initiate,
+
+00:12:02.526 --> 00:12:05.256 A:middle
+type some characters, hit
+return, AppKit's going
+
+00:12:05.256 --> 00:12:08.936 A:middle
+to actually do an OS
+activity start for you
+
+00:12:09.276 --> 00:12:10.736 A:middle
+on your behalf behind
+the scenes.
+
+00:12:10.736 --> 00:12:11.846 A:middle
+It'll come up with a name,
+
+00:12:12.176 --> 00:12:14.916 A:middle
+button pressed, control,
+send action.
+
+00:12:14.916 --> 00:12:19.296 A:middle
+And then your actual
+callback will be called just
+
+00:12:19.296 --> 00:12:20.016 A:middle
+as it is today.
+
+00:12:20.016 --> 00:12:25.756 A:middle
+And then upon return, it's going
+to actually stop that scope
+
+00:12:25.756 --> 00:12:28.216 A:middle
+because it realizes that you've
+returned from the function,
+
+00:12:28.466 --> 00:12:30.676 A:middle
+so the scope of this
+activity is kind of returned,
+
+00:12:32.246 --> 00:12:34.436 A:middle
+but that doesn't mean the
+activity itself has stopped
+
+00:12:35.166 --> 00:12:37.026 A:middle
+because, as I mentioned earlier,
+these activities are flowing
+
+00:12:37.026 --> 00:12:38.246 A:middle
+across the work that
+is occurring.
+
+00:12:38.246 --> 00:12:39.726 A:middle
+So, the work may
+still be in flight,
+
+00:12:40.246 --> 00:12:41.836 A:middle
+but we've returned
+control back to the UI
+
+00:12:41.836 --> 00:12:43.406 A:middle
+and this is just kind
+of ending that scope.
+
+00:12:44.836 --> 00:12:47.056 A:middle
+As you saw previously, to create
+an activity is pretty simple.
+
+00:12:48.166 --> 00:12:53.186 A:middle
+In the case here, I got a
+callback doing a checkCache OS
+
+00:12:53.186 --> 00:12:58.246 A:middle
+activity initiate, flag default
+and the block, very simple.
+
+00:12:59.536 --> 00:13:02.986 A:middle
+Similarly, the detached
+activity-you have a searchField
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:59.536 --> 00:13:02.986 A:middle
+Similarly, the detached
+activity-you have a searchField
+
+00:13:03.536 --> 00:13:06.266 A:middle
+and you realize, as I mentioned
+earlier, maybe the database is
+
+00:13:06.266 --> 00:13:08.546 A:middle
+out of sync, so therefore,
+
+00:13:08.786 --> 00:13:12.026 A:middle
+you want to reinitiate a
+synchronize, or rebuild.
+
+00:13:12.656 --> 00:13:14.306 A:middle
+You create a new
+activity and say detach it
+
+00:13:14.306 --> 00:13:15.016 A:middle
+from the current activity
+
+00:13:15.016 --> 00:13:16.636 A:middle
+because it's really
+not the same operation.
+
+00:13:17.196 --> 00:13:19.336 A:middle
+I'm searching for
+data and I'm going
+
+00:13:19.336 --> 00:13:20.976 A:middle
+to rebuild the database
+asynchronously,
+
+00:13:20.976 --> 00:13:22.216 A:middle
+so you really want
+to separate them.
+
+00:13:22.646 --> 00:13:25.156 A:middle
+So, that's activities
+in a nutshell.
+
+00:13:25.606 --> 00:13:27.876 A:middle
+Most of the time you don't have
+to worry about it, they're there
+
+00:13:27.876 --> 00:13:29.676 A:middle
+and if you need to
+create some explicitly,
+
+00:13:29.946 --> 00:13:31.066 A:middle
+you have the option to do so.
+
+00:13:31.136 --> 00:13:34.336 A:middle
+So, let's talk about
+briefly about breadcrumbs.
+
+00:13:35.586 --> 00:13:36.976 A:middle
+Breadcrumbs are essentially
+a way
+
+00:13:36.976 --> 00:13:39.386 A:middle
+to label those meaningful
+activities
+
+00:13:39.386 --> 00:13:40.886 A:middle
+to you, as the developer.
+
+00:13:41.376 --> 00:13:43.516 A:middle
+As I mentioned, you
+understand your code,
+
+00:13:43.516 --> 00:13:46.016 A:middle
+you understand those things
+that your application does
+
+00:13:46.196 --> 00:13:48.346 A:middle
+because now that we have the
+automatic activities being
+
+00:13:48.346 --> 00:13:52.656 A:middle
+created from the UI, they
+all look the same, you know,
+
+00:13:52.736 --> 00:13:54.536 A:middle
+you have the Send action,
+you have a keypress.
+
+00:13:55.006 --> 00:13:56.746 A:middle
+Those aren't very interesting
+or meaningful to you.
+
+00:13:57.186 --> 00:14:00.256 A:middle
+You actually want to hone in on
+those things that are occurring
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:57.186 --> 00:14:00.256 A:middle
+You actually want to hone in on
+those things that are occurring
+
+00:14:00.806 --> 00:14:03.436 A:middle
+like that composed
+mail, empty trash,
+
+00:14:03.616 --> 00:14:05.986 A:middle
+whatever application
+you may have.
+
+00:14:06.566 --> 00:14:08.236 A:middle
+This gives us the opportunity
+
+00:14:08.236 --> 00:14:10.386 A:middle
+to see those interactions
+at a microlevel.
+
+00:14:10.846 --> 00:14:13.346 A:middle
+So, as I mentioned
+before, you know,
+
+00:14:13.346 --> 00:14:15.076 A:middle
+advanced essentially
+isn't a particular event
+
+00:14:15.076 --> 00:14:17.396 A:middle
+that causes a problem,
+it's a combination
+
+00:14:17.396 --> 00:14:18.516 A:middle
+of events that cause a problem.
+
+00:14:19.246 --> 00:14:21.506 A:middle
+So, this gives you
+the opportunity
+
+00:14:22.276 --> 00:14:25.996 A:middle
+to see those over time.
+
+00:14:26.076 --> 00:14:28.466 A:middle
+You'll see this throughout,
+when you see the button clicks,
+
+00:14:30.486 --> 00:14:32.246 A:middle
+now you can put an
+actual name to it.
+
+00:14:32.706 --> 00:14:34.956 A:middle
+So, instead of this just
+being a menu selection,
+
+00:14:34.956 --> 00:14:36.256 A:middle
+it's actually, compose
+an e-mail.
+
+00:14:37.396 --> 00:14:39.366 A:middle
+Instead of being a button
+click, it's a send e-mail.
+
+00:14:40.246 --> 00:14:42.626 A:middle
+Go back to our original
+diagram with the activities
+
+00:14:42.626 --> 00:14:45.366 A:middle
+with activities ID's
+in flight, same thing.
+
+00:14:45.366 --> 00:14:50.486 A:middle
+Now you have an activity ID with
+a name as well as a breadcrumb
+
+00:14:50.776 --> 00:14:54.126 A:middle
+of those interesting
+meaningful activities over time.
+
+00:14:54.676 --> 00:14:57.776 A:middle
+One thing to note
+about breadcrumbs,
+
+00:14:57.776 --> 00:15:00.956 A:middle
+they're a separate kind of
+ring buffer of their own.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:14:57.776 --> 00:15:00.956 A:middle
+they're a separate kind of
+ring buffer of their own.
+
+00:15:01.366 --> 00:15:04.806 A:middle
+We track the last
+50 events over time.
+
+00:15:04.986 --> 00:15:08.646 A:middle
+So, you can look back in history
+and see the last 50 actions
+
+00:15:08.646 --> 00:15:10.816 A:middle
+that occurred to see
+what was happening
+
+00:15:10.816 --> 00:15:12.686 A:middle
+when an application
+crashed or had an issue.
+
+00:15:13.286 --> 00:15:15.436 A:middle
+So, how to do you
+add a breadcrumb?
+
+00:15:16.676 --> 00:15:19.026 A:middle
+Just like the previous
+API, very simple,
+
+00:15:19.446 --> 00:15:22.706 A:middle
+OSactivitysetbreadcrumb
+and give it a string.
+
+00:15:23.886 --> 00:15:25.596 A:middle
+This is something you
+define and you control.
+
+00:15:27.576 --> 00:15:31.036 A:middle
+One key note is, this is only
+supported in the main process
+
+00:15:31.646 --> 00:15:34.156 A:middle
+because it's an application
+concept at a high level,
+
+00:15:34.766 --> 00:15:37.436 A:middle
+you really can't do this
+from plugins or libraries.
+
+00:15:38.276 --> 00:15:39.366 A:middle
+As with the previous API,
+
+00:15:39.576 --> 00:15:44.056 A:middle
+these must be constant
+strings-for both security,
+
+00:15:44.056 --> 00:15:45.156 A:middle
+privacy and performance.
+
+00:15:45.316 --> 00:15:46.666 A:middle
+Excuse me.
+
+00:15:46.726 --> 00:15:48.506 A:middle
+And as you saw previously,
+same include,
+
+00:15:48.926 --> 00:15:54.366 A:middle
+#include os/activity.h. This
+here is in string example
+
+00:15:54.766 --> 00:15:58.576 A:middle
+because many of its combined
+callbacks for the same routine,
+
+00:15:58.896 --> 00:16:00.406 A:middle
+but in this case,
+I have a search
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:58.896 --> 00:16:00.406 A:middle
+but in this case,
+I have a search
+
+00:16:00.406 --> 00:16:02.286 A:middle
+which actually has
+an offline database.
+
+00:16:02.756 --> 00:16:04.716 A:middle
+I can actually have two
+different code paths
+
+00:16:04.986 --> 00:16:06.696 A:middle
+that have two different
+profiles.
+
+00:16:06.696 --> 00:16:09.086 A:middle
+I can now highlight them
+separately and say, okay,
+
+00:16:09.606 --> 00:16:11.816 A:middle
+while search was initiated,
+it was a button click
+
+00:16:11.816 --> 00:16:14.576 A:middle
+or as a menu selection
+and this path actually,
+
+00:16:14.726 --> 00:16:16.136 A:middle
+was searching the offline cache,
+
+00:16:16.136 --> 00:16:17.916 A:middle
+which was has a different
+characteristic
+
+00:16:17.916 --> 00:16:18.806 A:middle
+and different problems.
+
+00:16:19.466 --> 00:16:22.216 A:middle
+Whereas, if I'm online actually
+talking to a live database,
+
+00:16:22.446 --> 00:16:24.776 A:middle
+I'll set a different
+breadcrumb, because then you see
+
+00:16:24.776 --> 00:16:26.076 A:middle
+that microinteraction over time.
+
+00:16:26.176 --> 00:16:27.706 A:middle
+You understand what
+the person was doing
+
+00:16:28.146 --> 00:16:29.056 A:middle
+at that moment in time.
+
+00:16:29.566 --> 00:16:34.896 A:middle
+And that's breadcrumbs in
+a nutshell, simple concept,
+
+00:16:35.326 --> 00:16:37.756 A:middle
+microlevel interactions
+over time.
+
+00:16:39.566 --> 00:16:42.156 A:middle
+Now, this is the most important
+part and I think you're going
+
+00:16:42.156 --> 00:16:43.236 A:middle
+to find this the most exciting.
+
+00:16:44.016 --> 00:16:48.086 A:middle
+Trace messages: We provide
+a new API to allow you
+
+00:16:48.086 --> 00:16:50.746 A:middle
+to add trace messages to that
+activity that was created.
+
+00:16:51.526 --> 00:16:54.036 A:middle
+Uses a standard printf
+file, printf format
+
+00:16:54.036 --> 00:16:55.666 A:middle
+that you're used to
+on a daily basis.
+
+00:16:56.706 --> 00:16:57.986 A:middle
+It's very lightweight,
+
+00:16:57.986 --> 00:16:59.946 A:middle
+as you saw from the
+performance numbers.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:00.796 --> 00:17:03.106 A:middle
+What's very interesting
+about this is we understand
+
+00:17:03.106 --> 00:17:04.546 A:middle
+that there's two
+modes of operation.
+
+00:17:05.056 --> 00:17:07.286 A:middle
+There's a development mode,
+where you're debugging
+
+00:17:07.286 --> 00:17:10.465 A:middle
+and working on an application
+and there's the release mode,
+
+00:17:10.465 --> 00:17:13.616 A:middle
+the part that's shipping
+on our shipping platform,
+
+00:17:13.826 --> 00:17:16.136 A:middle
+whether that be an iOS
+device or a desktop.
+
+00:17:16.846 --> 00:17:18.506 A:middle
+So, we really wanted to
+take that into account
+
+00:17:18.506 --> 00:17:20.695 A:middle
+when we developed this
+because it's a very different
+
+00:17:20.695 --> 00:17:21.816 A:middle
+development cycle.
+
+00:17:22.316 --> 00:17:24.826 A:middle
+When there's a problem
+on a production system,
+
+00:17:25.076 --> 00:17:26.576 A:middle
+you have less information
+available,
+
+00:17:26.935 --> 00:17:28.996 A:middle
+but when you're actually
+trying to live debug a system,
+
+00:17:28.996 --> 00:17:30.966 A:middle
+you may want to have
+more information;
+
+00:17:31.296 --> 00:17:33.716 A:middle
+those debug messages,
+additional detail
+
+00:17:33.716 --> 00:17:34.786 A:middle
+to understand what
+was happening.
+
+00:17:35.956 --> 00:17:38.176 A:middle
+All of this is stored in
+an in-memory ring buffer.
+
+00:17:39.126 --> 00:17:41.366 A:middle
+So, this is where we get
+our huge performance gains.
+
+00:17:41.536 --> 00:17:46.926 A:middle
+What's very unique about this
+is, unlike traditional logging,
+
+00:17:46.926 --> 00:17:48.896 A:middle
+we actually craft through
+the PC of the caller.
+
+00:17:49.606 --> 00:17:52.606 A:middle
+We have the timestamp, we have
+the data that was provided
+
+00:17:52.606 --> 00:17:54.956 A:middle
+as well as the sting offset
+and some additional data,
+
+00:17:55.286 --> 00:17:57.776 A:middle
+including even the thread ID
+that was running at the moment
+
+00:17:58.336 --> 00:17:59.836 A:middle
+that this was created.
+
+00:17:59.836 --> 00:18:03.996 A:middle
+As you can see offside here, we
+actually have, the entire entry
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:59.836 --> 00:18:03.996 A:middle
+As you can see offside here, we
+actually have, the entire entry
+
+00:18:03.996 --> 00:18:06.276 A:middle
+for trace buffer is 64 bytes.
+
+00:18:06.406 --> 00:18:08.056 A:middle
+No matter how long
+your string is,
+
+00:18:08.056 --> 00:18:11.706 A:middle
+how long your printf format
+string is, it's always 64 bytes.
+
+00:18:12.806 --> 00:18:14.326 A:middle
+So, what does a trace
+message look like?
+
+00:18:14.856 --> 00:18:17.826 A:middle
+As I said, looks
+just like printf.
+
+00:18:18.246 --> 00:18:19.336 A:middle
+In fact, if you use printf,
+
+00:18:19.336 --> 00:18:24.636 A:middle
+you almost just do a
+search and replace.
+
+00:18:24.756 --> 00:18:27.726 A:middle
+One key difference and
+this is where privacy,
+
+00:18:27.726 --> 00:18:29.036 A:middle
+security come into play.
+
+00:18:29.646 --> 00:18:32.886 A:middle
+This API will only
+take scalar formats.
+
+00:18:33.516 --> 00:18:36.916 A:middle
+So, you can only provide
+ints, longs, doubles and such.
+
+00:18:38.026 --> 00:18:40.216 A:middle
+And you'll see the benefits
+and we have some other things
+
+00:18:40.216 --> 00:18:41.806 A:middle
+that are available,
+too, as well.
+
+00:18:41.806 --> 00:18:43.986 A:middle
+Part of this, of course, strings
+
+00:18:43.986 --> 00:18:45.636 A:middle
+and characters are
+a privacy problem,
+
+00:18:46.646 --> 00:18:48.036 A:middle
+they're a security problem.
+
+00:18:48.306 --> 00:18:52.146 A:middle
+You know, accidentally logging
+a password or a username.
+
+00:18:52.926 --> 00:18:56.196 A:middle
+Those are inappropriate to
+do and this is a safeguard,
+
+00:18:56.596 --> 00:18:58.756 A:middle
+but most importantly, it
+gives us the performance
+
+00:18:58.756 --> 00:19:00.936 A:middle
+that we cannot gain
+with arbitrary strings.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:58.756 --> 00:19:00.936 A:middle
+that we cannot gain
+with arbitrary strings.
+
+00:19:01.216 --> 00:19:04.066 A:middle
+There's no way to copy an
+arbitrary string efficiently
+
+00:19:04.066 --> 00:19:06.166 A:middle
+and not impact the
+performance of an application.
+
+00:19:06.996 --> 00:19:08.516 A:middle
+There's another header
+to include,
+
+00:19:08.776 --> 00:19:13.276 A:middle
+#include os/trace.h. Now, this
+is the release trace message
+
+00:19:13.276 --> 00:19:14.916 A:middle
+that we were talking
+about two loads earlier.
+
+00:19:15.276 --> 00:19:16.436 A:middle
+This is your release message.
+
+00:19:16.976 --> 00:19:18.456 A:middle
+We also have a debug
+trace message.
+
+00:19:18.456 --> 00:19:21.146 A:middle
+This is when you actually
+live debugging application.
+
+00:19:21.886 --> 00:19:24.986 A:middle
+Just like the release one, under
+debug is the only difference,
+
+00:19:25.306 --> 00:19:26.946 A:middle
+very simple, very
+straightforward.
+
+00:19:27.636 --> 00:19:30.496 A:middle
+What's great about it is the
+debug messages are only saved
+
+00:19:30.496 --> 00:19:32.686 A:middle
+in the ring buffer if
+you're in a debug mode.
+
+00:19:33.356 --> 00:19:34.746 A:middle
+So, a typical running
+application
+
+00:19:34.746 --> 00:19:36.676 A:middle
+on a shipping device
+will not record these
+
+00:19:36.676 --> 00:19:38.466 A:middle
+into the ring buffer,
+saving space
+
+00:19:38.466 --> 00:19:40.726 A:middle
+for those more interesting
+messages that you care
+
+00:19:40.726 --> 00:19:42.466 A:middle
+about for the application.
+
+00:19:43.396 --> 00:19:46.886 A:middle
+Additionally, in debug mode
+dash, it takes more resources.
+
+00:19:46.886 --> 00:19:48.216 A:middle
+Obviously, in this case,
+
+00:19:48.216 --> 00:19:50.446 A:middle
+we actually increase
+the buffer size.
+
+00:19:50.826 --> 00:19:53.286 A:middle
+Well, we're also recording
+additional messages,
+
+00:19:53.286 --> 00:19:56.326 A:middle
+so we want to, we may take
+more resources in this mode
+
+00:19:56.326 --> 00:19:58.526 A:middle
+so we really don't want
+that on a production system.
+
+00:19:59.046 --> 00:20:01.506 A:middle
+But we obviously want you to
+have that while you're trying
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:59.046 --> 00:20:01.506 A:middle
+But we obviously want you to
+have that while you're trying
+
+00:20:01.506 --> 00:20:02.976 A:middle
+to debug your application.
+
+00:20:03.596 --> 00:20:04.836 A:middle
+One thing to note,
+there is a way
+
+00:20:04.836 --> 00:20:07.316 A:middle
+to enable what we call
+the debug mode at launch.
+
+00:20:08.516 --> 00:20:12.076 A:middle
+All you do is set an
+environment variable
+
+00:20:12.076 --> 00:20:14.346 A:middle
+called OSActivityModeDebug.
+
+00:20:14.346 --> 00:20:18.236 A:middle
+And then from there on, every
+tool application you run
+
+00:20:18.516 --> 00:20:20.846 A:middle
+from that environment variable
+will run in debug mode.
+
+00:20:20.846 --> 00:20:22.946 A:middle
+We have an additional type
+
+00:20:22.946 --> 00:20:24.386 A:middle
+of trace message
+called the payload.
+
+00:20:24.426 --> 00:20:28.236 A:middle
+Now, this one's really unique
+because as I mentioned earlier,
+
+00:20:28.236 --> 00:20:29.746 A:middle
+we don't support strings.
+
+00:20:30.816 --> 00:20:34.806 A:middle
+So, we want you to be able to
+debug your application and such
+
+00:20:35.156 --> 00:20:37.176 A:middle
+and have additional data
+that we can't provide you
+
+00:20:37.176 --> 00:20:38.066 A:middle
+in the Crash Reports.
+
+00:20:38.766 --> 00:20:40.616 A:middle
+As you can see, there's one
+slight difference with this API,
+
+00:20:41.176 --> 00:20:43.346 A:middle
+it actually takes a block
+as the last parameter.
+
+00:20:44.376 --> 00:20:47.946 A:middle
+It passes an XPC dictionary and
+you can populate the dictionary
+
+00:20:47.946 --> 00:20:48.916 A:middle
+with any data you'd like,
+
+00:20:50.226 --> 00:20:52.466 A:middle
+anything arbitrary
+can be output to this.
+
+00:20:52.926 --> 00:20:55.646 A:middle
+In this case, I'm setting a
+string of the interface string
+
+00:20:55.646 --> 00:20:56.746 A:middle
+that I'm talking through.
+
+00:20:57.626 --> 00:20:59.716 A:middle
+What's great about this is
+the block is only called
+
+00:20:59.716 --> 00:21:00.656 A:middle
+when it's requested.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:59.716 --> 00:21:00.656 A:middle
+when it's requested.
+
+00:21:01.466 --> 00:21:02.846 A:middle
+So, in a typical
+running application,
+
+00:21:02.846 --> 00:21:06.196 A:middle
+this block is skipped, but if
+I'm using one of the tools,
+
+00:21:06.196 --> 00:21:08.356 A:middle
+and I say I want to see
+the block because I want
+
+00:21:08.356 --> 00:21:10.996 A:middle
+to understand what's going
+on, you'll get these messages,
+
+00:21:11.346 --> 00:21:12.786 A:middle
+just like you would
+have otherwise
+
+00:21:12.786 --> 00:21:14.186 A:middle
+with all the other messages.
+
+00:21:14.466 --> 00:21:16.766 A:middle
+The great part is, now you
+get that additional data.
+
+00:21:16.766 --> 00:21:19.996 A:middle
+I'll give you a great
+example of this.
+
+00:21:20.226 --> 00:21:22.756 A:middle
+One thing to note, this does
+use XPC to transmit this,
+
+00:21:22.756 --> 00:21:25.006 A:middle
+so this is extra overhead,
+when this mode is enabled
+
+00:21:25.006 --> 00:21:28.156 A:middle
+because there's no simple
+way to process this data,
+
+00:21:28.156 --> 00:21:29.536 A:middle
+that's why it's in
+XPC dictionary,
+
+00:21:29.536 --> 00:21:34.436 A:middle
+but we do send any XPC message
+across your diagnosticd.
+
+00:21:35.296 --> 00:21:37.246 A:middle
+Just like I showed
+with the debug mode,
+
+00:21:37.276 --> 00:21:39.086 A:middle
+there's also an environment
+variable, which you can set
+
+00:21:39.086 --> 00:21:41.606 A:middle
+to enable stream mode at launch
+because sometimes you want
+
+00:21:41.606 --> 00:21:43.906 A:middle
+to understand what was happening
+while the application launched,
+
+00:21:44.266 --> 00:21:47.246 A:middle
+you're going to set the similar,
+OS ACTIVITY MODE=stream.
+
+00:21:47.616 --> 00:21:51.126 A:middle
+Now, this will stream all the
+events from that application
+
+00:21:51.176 --> 00:21:53.246 A:middle
+to diagnosticd and
+to any listeners.
+
+00:21:53.896 --> 00:21:55.436 A:middle
+So, how does this
+fit into the picture?
+
+00:21:55.436 --> 00:21:58.376 A:middle
+You saw [inaudible] obviously
+the trace messages fit
+
+00:21:58.376 --> 00:21:59.236 A:middle
+into that activity.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:00.206 --> 00:22:01.876 A:middle
+As I mentioned earlier,
+there's a ring buffer.
+
+00:22:02.386 --> 00:22:04.846 A:middle
+There's an individual
+ring buffer per process,
+
+00:22:04.946 --> 00:22:05.756 A:middle
+per activity.
+
+00:22:06.676 --> 00:22:09.206 A:middle
+So, unlike the typical sys
+log and the other cases
+
+00:22:09.206 --> 00:22:10.716 A:middle
+where everything goes
+into one big bucket,
+
+00:22:10.716 --> 00:22:13.986 A:middle
+you have an individual ring
+buffer for that activity,
+
+00:22:14.016 --> 00:22:15.546 A:middle
+in each application binary
+
+00:22:16.086 --> 00:22:17.806 A:middle
+so that one cannot
+step on the other.
+
+00:22:18.326 --> 00:22:20.136 A:middle
+So, now you can get
+a very different view
+
+00:22:20.256 --> 00:22:22.596 A:middle
+of your application, whether
+it's your own application
+
+00:22:22.596 --> 00:22:23.646 A:middle
+or other Daemons involved.
+
+00:22:24.056 --> 00:22:27.876 A:middle
+So, let's show you what we
+did for you in Crash Reports.
+
+00:22:28.316 --> 00:22:30.746 A:middle
+First of all, up top we
+have our breadcrumb trail.
+
+00:22:31.406 --> 00:22:33.486 A:middle
+So, these are the events
+that were occurring
+
+00:22:33.486 --> 00:22:35.606 A:middle
+up until the point that
+the application crashed.
+
+00:22:36.376 --> 00:22:39.326 A:middle
+And notice the last event listed
+up top or the first event listed
+
+00:22:39.326 --> 00:22:41.886 A:middle
+at the top, has an activity
+ID associated with it.
+
+00:22:42.216 --> 00:22:46.666 A:middle
+This is the activity that was
+in flight while it crashed.
+
+00:22:48.116 --> 00:22:49.246 A:middle
+Then down below the thread,
+
+00:22:49.246 --> 00:22:51.556 A:middle
+you actually have the
+activity information.
+
+00:22:51.876 --> 00:22:52.666 A:middle
+In this case you have an ID.
+
+00:22:52.666 --> 00:22:55.746 A:middle
+You have the name that it was
+created, in this case by UIkit
+
+00:22:55.746 --> 00:22:57.096 A:middle
+or AppKit called sendAction.
+
+00:22:57.636 --> 00:22:58.806 A:middle
+You have the breadcrumb.
+
+00:22:59.066 --> 00:23:02.236 A:middle
+You have how long it's been
+running and any failure
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:59.066 --> 00:23:02.236 A:middle
+You have how long it's been
+running and any failure
+
+00:23:02.236 --> 00:23:03.546 A:middle
+that we may have detected.
+
+00:23:04.316 --> 00:23:06.316 A:middle
+Our long-term goal is to be
+able to detect some situations
+
+00:23:06.316 --> 00:23:08.086 A:middle
+and inform you of that
+because we can tell
+
+00:23:08.086 --> 00:23:08.936 A:middle
+that from the information.
+
+00:23:09.466 --> 00:23:12.036 A:middle
+But, most importantly,
+down below,
+
+00:23:12.036 --> 00:23:15.026 A:middle
+you have all the trace messages
+leading up to the crash.
+
+00:23:15.096 --> 00:23:15.976 A:middle
+And I'd like to point
+out here...
+
+00:23:16.516 --> 00:23:21.116 A:middle
+[ Applause ]
+
+00:23:21.616 --> 00:23:24.186 A:middle
+As you can see, it's not just
+the application that I wrote,
+
+00:23:24.516 --> 00:23:27.056 A:middle
+Query Directory, it's also
+the Daemon behind the scenes.
+
+00:23:27.506 --> 00:23:29.676 A:middle
+There was nothing you had to do.
+
+00:23:29.876 --> 00:23:31.556 A:middle
+It was automatically
+provided and it's
+
+00:23:31.556 --> 00:23:33.436 A:middle
+in the Crash Report
+for you to look at.
+
+00:23:33.656 --> 00:23:35.406 A:middle
+This could be any number
+of Daemon's involved,
+
+00:23:35.406 --> 00:23:38.536 A:middle
+any number of processes,
+but you get that entire view
+
+00:23:38.996 --> 00:23:40.506 A:middle
+of why your application crashed
+
+00:23:40.736 --> 00:23:43.056 A:middle
+for the first time
+directly in a Crash Report.
+
+00:23:43.906 --> 00:23:46.536 A:middle
+So, how does this exactly work?
+
+00:23:47.106 --> 00:23:50.756 A:middle
+In a crashing process, as
+I showed earlier, you know,
+
+00:23:51.276 --> 00:23:55.716 A:middle
+the XPCService may have failed
+while diagnosticd actually comes
+
+00:23:55.716 --> 00:23:57.446 A:middle
+up when the process fails,
+
+00:23:57.726 --> 00:24:00.796 A:middle
+the buffers from the individual
+processes that are running,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:57.726 --> 00:24:00.796 A:middle
+the buffers from the individual
+processes that are running,
+
+00:24:00.796 --> 00:24:03.396 A:middle
+are sent to diagnosticd along
+with the activities that were
+
+00:24:03.396 --> 00:24:05.216 A:middle
+in flight and the breadcrumbs.
+
+00:24:06.046 --> 00:24:08.056 A:middle
+And this is how we get
+all this information
+
+00:24:08.056 --> 00:24:11.646 A:middle
+into the diagnostic
+report, all automatic,
+
+00:24:12.156 --> 00:24:14.816 A:middle
+nothing for you to do.
+
+00:24:15.496 --> 00:24:17.316 A:middle
+So, that's great for
+all the general cases,
+
+00:24:17.316 --> 00:24:18.966 A:middle
+you got trace messages,
+you got lots of detail,
+
+00:24:19.336 --> 00:24:21.556 A:middle
+but how do you report
+those unexpected errors?
+
+00:24:22.296 --> 00:24:26.646 A:middle
+You know, you're trying to
+debug a problem or you want
+
+00:24:26.646 --> 00:24:29.286 A:middle
+to highlight the fact that an
+error occurred, you can also do
+
+00:24:29.286 --> 00:24:31.756 A:middle
+that with another API
+called OS trace error.
+
+00:24:32.476 --> 00:24:35.766 A:middle
+It allows you to pass any
+amount of data, like you saw
+
+00:24:35.766 --> 00:24:36.816 A:middle
+in the previous APIs...
+
+00:24:36.816 --> 00:24:37.776 A:middle
+[ Applause ]
+
+00:24:37.776 --> 00:24:39.096 A:middle
+All right, okay.
+
+00:24:39.616 --> 00:24:41.336 A:middle
+So, as mentioned, we
+have OS trace error.
+
+00:24:41.696 --> 00:24:45.446 A:middle
+We have OS trace
+error, it allows you
+
+00:24:45.876 --> 00:24:47.496 A:middle
+to provide similar format string
+
+00:24:47.496 --> 00:24:48.876 A:middle
+and whatever data
+you want to output.
+
+00:24:49.226 --> 00:24:50.706 A:middle
+The only difference
+about this is the fact
+
+00:24:50.706 --> 00:24:52.456 A:middle
+that it actually signals
+that an error occurred.
+
+00:24:53.176 --> 00:24:53.986 A:middle
+And what does that do?
+
+00:24:53.986 --> 00:24:57.686 A:middle
+It sends those trace messages
+at that time to diagnosticd
+
+00:24:57.686 --> 00:25:01.876 A:middle
+to evaluate and store, so you
+can retrieve this via tools
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:57.686 --> 00:25:01.876 A:middle
+to evaluate and store, so you
+can retrieve this via tools
+
+00:25:01.876 --> 00:25:03.596 A:middle
+or via any other
+mechanism we provide.
+
+00:25:04.236 --> 00:25:06.276 A:middle
+That's what you consider
+a soft error,
+
+00:25:06.276 --> 00:25:07.866 A:middle
+but what about those
+fatal errors, you know,
+
+00:25:07.866 --> 00:25:09.406 A:middle
+I'm about to crash, I got
+
+00:25:09.406 --> 00:25:11.196 A:middle
+into a state I don't
+know how I got here.
+
+00:25:11.776 --> 00:25:15.526 A:middle
+We will provide an API for that
+as well, cut, OS trace fault.
+
+00:25:16.366 --> 00:25:18.046 A:middle
+This may be something you
+can call just before you're
+
+00:25:18.046 --> 00:25:18.826 A:middle
+about to crash.
+
+00:25:19.326 --> 00:25:22.596 A:middle
+It could be something that
+you'd call to avoid a crash.
+
+00:25:23.066 --> 00:25:25.266 A:middle
+As I mentioned, it can be an
+impending catastrophic failure.
+
+00:25:25.336 --> 00:25:27.996 A:middle
+This is a really bad situation,
+I shouldn't be in this state,
+
+00:25:27.996 --> 00:25:29.356 A:middle
+I want to gather
+this information.
+
+00:25:29.906 --> 00:25:35.896 A:middle
+The difference between this and
+the error is all the buffers
+
+00:25:35.896 --> 00:25:38.636 A:middle
+from all the processes involved
+are sent, just like you saw
+
+00:25:38.636 --> 00:25:41.426 A:middle
+in the crash, without
+it actually crashing.
+
+00:25:41.996 --> 00:25:45.726 A:middle
+To give you a view of this, just
+like you saw in the crash mode,
+
+00:25:45.726 --> 00:25:48.636 A:middle
+the difference is the
+application stays up
+
+00:25:48.636 --> 00:25:49.656 A:middle
+or the Daemon stays up.
+
+00:25:49.826 --> 00:25:52.576 A:middle
+The buffers are sent and
+accumulated by diagnosticd.
+
+00:25:53.966 --> 00:25:56.436 A:middle
+Simple API, you see
+in this example,
+
+00:25:56.636 --> 00:25:58.806 A:middle
+we have an application main.
+
+00:25:58.836 --> 00:26:00.786 A:middle
+It's starting up some
+initialization phase,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:58.836 --> 00:26:00.786 A:middle
+It's starting up some
+initialization phase,
+
+00:26:01.276 --> 00:26:05.826 A:middle
+we create activity, the
+initialization fails.
+
+00:26:06.296 --> 00:26:10.206 A:middle
+And this is bad, so we
+initiate a fault and then exit.
+
+00:26:10.206 --> 00:26:12.746 A:middle
+In a typical situation,
+which is really bad,
+
+00:26:12.746 --> 00:26:14.356 A:middle
+you crash because
+that's your only way
+
+00:26:14.356 --> 00:26:16.516 A:middle
+to get information
+about what failed.
+
+00:26:17.196 --> 00:26:19.666 A:middle
+Now you have a new mechanism
+without actually crashing.
+
+00:26:19.866 --> 00:26:20.966 A:middle
+And I'll show you
+what this gets you.
+
+00:26:21.876 --> 00:26:24.116 A:middle
+With all this said, we should
+talk about what's supported
+
+00:26:24.786 --> 00:26:25.996 A:middle
+as far as trace messages.
+
+00:26:27.696 --> 00:26:32.636 A:middle
+For example, this is a perfectly
+valid good trace message.
+
+00:26:33.636 --> 00:26:36.526 A:middle
+Similarly, I can pass other
+types whether they be longs
+
+00:26:36.526 --> 00:26:37.726 A:middle
+or shorts and such.
+
+00:26:37.976 --> 00:26:39.796 A:middle
+You can see various forms.
+
+00:26:39.796 --> 00:26:41.756 A:middle
+You can even pass a pointer
+because sometimes a pointer
+
+00:26:41.756 --> 00:26:43.916 A:middle
+to us is a correlation
+point and, you know,
+
+00:26:43.916 --> 00:26:45.446 A:middle
+maybe it's a connection
+you're trying to follow
+
+00:26:45.446 --> 00:26:47.796 A:middle
+and understand that's
+being shared
+
+00:26:47.796 --> 00:26:49.276 A:middle
+across multiple activities.
+
+00:26:49.746 --> 00:26:53.236 A:middle
+You can even output floats.
+
+00:26:53.236 --> 00:26:55.426 A:middle
+In this case, I can output
+how many clients I had
+
+00:26:55.426 --> 00:26:59.006 A:middle
+and the average time they
+were connected to that.
+
+00:26:59.006 --> 00:27:02.466 A:middle
+And that's additional data you
+didn't have in your application
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:59.006 --> 00:27:02.466 A:middle
+And that's additional data you
+didn't have in your application
+
+00:27:02.586 --> 00:27:03.606 A:middle
+at the time it crashed.
+
+00:27:04.046 --> 00:27:07.686 A:middle
+So, let's talk about
+unsupported trace messages.
+
+00:27:07.686 --> 00:27:09.656 A:middle
+As I mentioned earlier,
+strings are not supported.
+
+00:27:10.726 --> 00:27:12.366 A:middle
+So, well, how do
+we protect that?
+
+00:27:12.816 --> 00:27:17.056 A:middle
+Well, you can try to trace
+one, but you're going
+
+00:27:17.056 --> 00:27:18.426 A:middle
+to get unsupported
+string in the output,
+
+00:27:18.656 --> 00:27:21.006 A:middle
+so it doesn't break anything,
+so if you actually do it,
+
+00:27:21.006 --> 00:27:21.716 A:middle
+it's not going to hurt you,
+
+00:27:22.676 --> 00:27:24.696 A:middle
+but you won't ever see
+the data out of it.
+
+00:27:24.786 --> 00:27:28.086 A:middle
+Now, it's partially because of
+the way the mechanism is built.
+
+00:27:28.576 --> 00:27:32.106 A:middle
+There's basically no
+way to provide a string
+
+00:27:32.316 --> 00:27:34.176 A:middle
+because we don't copy
+data out of the binary.
+
+00:27:34.746 --> 00:27:39.406 A:middle
+But, providing a string doesn't
+break valid data-in this case,
+
+00:27:39.406 --> 00:27:44.136 A:middle
+I can still pass the UID and you
+can see the password will not be
+
+00:27:44.136 --> 00:27:45.976 A:middle
+admitted, you get
+unsupported string.
+
+00:27:46.886 --> 00:27:48.386 A:middle
+So, you can mix and
+match, it doesn't hurt you.
+
+00:27:49.106 --> 00:27:53.436 A:middle
+Just be aware that
+it's not supported.
+
+00:27:53.436 --> 00:27:55.416 A:middle
+Along the same lines,
+characters are not supported
+
+00:27:55.416 --> 00:27:56.116 A:middle
+because we don't want
+
+00:27:56.116 --> 00:28:00.556 A:middle
+to be accidentally outputting
+passwords with characters.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:56.116 --> 00:28:00.556 A:middle
+to be accidentally outputting
+passwords with characters.
+
+00:28:01.526 --> 00:28:03.376 A:middle
+So, obviously we have limits.
+
+00:28:03.726 --> 00:28:09.226 A:middle
+Format string cannot
+exceed 100 characters.
+
+00:28:09.436 --> 00:28:10.906 A:middle
+That's a pretty long
+format string,
+
+00:28:10.906 --> 00:28:12.876 A:middle
+so hopefully that's more
+than enough for you.
+
+00:28:13.446 --> 00:28:17.856 A:middle
+One thing to note, the trace
+message content will truncate,
+
+00:28:18.376 --> 00:28:20.696 A:middle
+so if you put too much
+data or too long a string,
+
+00:28:20.696 --> 00:28:21.906 A:middle
+it's going to truncate
+it in the output.
+
+00:28:22.496 --> 00:28:24.026 A:middle
+This is expected behavior.
+
+00:28:25.446 --> 00:28:28.146 A:middle
+Initially we're only
+providing you seven parameters,
+
+00:28:28.146 --> 00:28:30.496 A:middle
+so you can output
+up to seven scalars.
+
+00:28:31.106 --> 00:28:34.556 A:middle
+One very important note,
+these trace messages
+
+00:28:34.886 --> 00:28:38.106 A:middle
+and the buffers may vary
+by platform and mode.
+
+00:28:38.256 --> 00:28:39.796 A:middle
+As I mentioned earlier
+in your debug mode,
+
+00:28:39.796 --> 00:28:42.156 A:middle
+we may provide a much
+larger ring buffer.
+
+00:28:43.206 --> 00:28:46.476 A:middle
+Whereas, when you're not in a
+debug mode, it's much smaller,
+
+00:28:46.476 --> 00:28:48.826 A:middle
+or maybe on a particular
+iOS device, where we're low
+
+00:28:48.826 --> 00:28:50.516 A:middle
+on memory, so we don't
+enable it at all.
+
+00:28:51.336 --> 00:28:52.526 A:middle
+Just be aware there are limits.
+
+00:28:52.526 --> 00:28:53.626 A:middle
+We can't enable it everywhere
+
+00:28:53.626 --> 00:28:55.666 A:middle
+and it may vary by
+that by platform.
+
+00:28:56.266 --> 00:28:57.706 A:middle
+So, let's do a quick demo.
+
+00:28:58.286 --> 00:29:05.816 A:middle
+So, I have an application
+running here, Query Directory.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:58.286 --> 00:29:05.816 A:middle
+So, I have an application
+running here, Query Directory.
+
+00:29:05.966 --> 00:29:08.186 A:middle
+I'm just going to
+search for something
+
+00:29:08.186 --> 00:29:09.336 A:middle
+that I know is in admin.
+
+00:29:09.766 --> 00:29:12.246 A:middle
+Okay, you'll see down
+here, there's the result.
+
+00:29:13.206 --> 00:29:14.216 A:middle
+Nothing bad happened.
+
+00:29:15.176 --> 00:29:19.016 A:middle
+Try it again and I'll do a
+NSOperatationQueue mode instead,
+
+00:29:20.426 --> 00:29:21.196 A:middle
+still no failure.
+
+00:29:21.746 --> 00:29:24.566 A:middle
+Now I'm going to type something
+I know that will cause a crash.
+
+00:29:25.046 --> 00:29:28.136 A:middle
+Now, you see in the
+Crash Report,
+
+00:29:28.246 --> 00:29:33.496 A:middle
+you have that breadcrumb trail
+that I was talking about.
+
+00:29:34.936 --> 00:29:38.346 A:middle
+You see the last operation
+queue that was in flight,
+
+00:29:38.766 --> 00:29:43.916 A:middle
+the activity ID and if I scroll
+down to the crashing thread,
+
+00:29:44.826 --> 00:29:47.866 A:middle
+you can see this was the
+NSOperationQueue that was
+
+00:29:47.866 --> 00:29:50.976 A:middle
+in flight, but now you've
+got all this new info
+
+00:29:50.976 --> 00:29:54.656 A:middle
+that you didn't have
+before, the activity
+
+00:29:55.856 --> 00:29:57.976 A:middle
+and all the trace messages
+leading up to the event.
+
+00:29:58.836 --> 00:30:02.056 A:middle
+In this case, you can
+see query directory
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:58.836 --> 00:30:02.056 A:middle
+In this case, you can
+see query directory
+
+00:30:02.056 --> 00:30:03.766 A:middle
+and opendirectoryd involved.
+
+00:30:06.756 --> 00:30:07.446 A:middle
+Exciting?
+
+00:30:09.516 --> 00:30:13.096 A:middle
+[ Applause ]
+
+00:30:13.596 --> 00:30:15.826 A:middle
+I know I'm excited because
+this has always been a problem
+
+00:30:15.826 --> 00:30:16.876 A:middle
+for me.
+
+00:30:17.366 --> 00:30:20.296 A:middle
+That's just a quick demo,
+so you can see it for real.
+
+00:30:21.246 --> 00:30:24.476 A:middle
+So, it's great, but what
+about debugger support?
+
+00:30:25.666 --> 00:30:27.846 A:middle
+Well, it's great for
+having the Crash Reports
+
+00:30:27.846 --> 00:30:29.646 A:middle
+and the string reports, but
+when you're really working
+
+00:30:29.646 --> 00:30:31.626 A:middle
+on a problem, how do
+you see this live?
+
+00:30:32.546 --> 00:30:34.356 A:middle
+Well, we made it
+built-in to the debugger.
+
+00:30:34.356 --> 00:30:37.626 A:middle
+So you can actually see the
+activity that's on a thread,
+
+00:30:38.476 --> 00:30:41.306 A:middle
+as well as any trace
+messages for that activity.
+
+00:30:42.206 --> 00:30:43.736 A:middle
+This is a very powerful
+mechanism.
+
+00:30:44.306 --> 00:30:49.076 A:middle
+In the case of lldb you can
+see here, I have a thread
+
+00:30:49.076 --> 00:30:51.626 A:middle
+that was crashing, I
+can type thread info.
+
+00:30:51.736 --> 00:30:55.066 A:middle
+As part of that thread info, I
+have the activity name that was
+
+00:30:55.066 --> 00:30:57.406 A:middle
+in flight, how many
+messages it accumulated
+
+00:30:58.036 --> 00:31:01.176 A:middle
+and down below it you have all
+that detail in the debugger.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:58.036 --> 00:31:01.176 A:middle
+and down below it you have all
+that detail in the debugger.
+
+00:31:01.276 --> 00:31:04.336 A:middle
+So, instead of switching
+between console and terminal,
+
+00:31:04.336 --> 00:31:07.266 A:middle
+you can just stay in your
+debugger, output those messages
+
+00:31:07.266 --> 00:31:09.556 A:middle
+and say, oh, this is how I got
+here and why did this happen?
+
+00:31:10.056 --> 00:31:12.826 A:middle
+Click it here so you
+can see that activity,
+
+00:31:13.426 --> 00:31:15.676 A:middle
+the current breadcrumb
+and those trace messages.
+
+00:31:16.226 --> 00:31:20.686 A:middle
+So, let's demo that
+because that's the fun part.
+
+00:31:21.926 --> 00:31:29.786 A:middle
+And if the demo gods are good
+to me or I'm good to them,
+
+00:31:29.786 --> 00:31:32.066 A:middle
+we'll have a demo that works.
+
+00:31:32.216 --> 00:31:33.866 A:middle
+So, let's do the
+same as I did before.
+
+00:31:34.646 --> 00:31:36.526 A:middle
+I'll search and you
+can see the result.
+
+00:31:37.426 --> 00:31:43.066 A:middle
+I'll do an OperationQueue,
+and let's crash.
+
+00:31:43.386 --> 00:31:47.966 A:middle
+Now, in the same window I
+can say thread info and,
+
+00:31:47.966 --> 00:31:48.826 A:middle
+of course, it didn't work.
+
+00:31:49.516 --> 00:32:05.616 A:middle
+[ Background Sounds ]
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:49.516 --> 00:32:05.616 A:middle
+[ Background Sounds ]
+
+00:32:06.116 --> 00:32:07.636 A:middle
+So, there's that same info.
+
+00:32:08.516 --> 00:32:14.516 A:middle
+[ Applause ]
+
+00:32:15.016 --> 00:32:19.000 A:middle
+[ Background Sounds ]
+
+00:32:19.236 --> 00:32:21.386 A:middle
+So, you can try this with
+various combinations,
+
+00:32:21.386 --> 00:32:24.216 A:middle
+obviously this works with
+all of our infrastructure,
+
+00:32:24.856 --> 00:32:27.476 A:middle
+which is really exciting
+because it works with XPC,
+
+00:32:27.476 --> 00:32:31.956 A:middle
+GCD and NSOperationQueue
+and obviously the tools.
+
+00:32:32.756 --> 00:32:34.166 A:middle
+So, we talked about
+what we have,
+
+00:32:34.166 --> 00:32:38.076 A:middle
+let's talk about a new tool
+we provided, ostraceutil.
+
+00:32:38.726 --> 00:32:41.926 A:middle
+This will allow you to watch
+
+00:32:41.926 --> 00:32:44.486 A:middle
+that live streaming I was
+talking about earlier, right?
+
+00:32:44.486 --> 00:32:46.776 A:middle
+All that XPC dictionary
+and additional data
+
+00:32:46.776 --> 00:32:48.486 A:middle
+that you didn't have
+in the Crash Report.
+
+00:32:48.966 --> 00:32:53.576 A:middle
+You'll be able to watch
+for faults and errors
+
+00:32:53.576 --> 00:32:55.656 A:middle
+across the system or by process.
+
+00:32:56.086 --> 00:32:57.556 A:middle
+So, while you're
+debugging the application,
+
+00:32:57.556 --> 00:33:01.786 A:middle
+you can actually say ostraceutil
+watch fault application.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:57.556 --> 00:33:01.786 A:middle
+you can actually say ostraceutil
+watch fault application.
+
+00:33:02.226 --> 00:33:04.466 A:middle
+And you'll see the faults that
+your application are generating
+
+00:33:04.786 --> 00:33:07.386 A:middle
+without having to enable
+any logs and having
+
+00:33:07.386 --> 00:33:08.446 A:middle
+to do any extra effort.
+
+00:33:08.986 --> 00:33:13.656 A:middle
+In addition to that, you
+can actually look what kind
+
+00:33:13.726 --> 00:33:16.726 A:middle
+of activities and trace
+messages the binary has,
+
+00:33:17.006 --> 00:33:19.656 A:middle
+whether it be your binary
+to check it before it goes
+
+00:33:19.656 --> 00:33:21.536 A:middle
+out into production, or to look
+
+00:33:21.536 --> 00:33:24.036 A:middle
+at what other processes are
+providing in this mechanism.
+
+00:33:24.996 --> 00:33:28.526 A:middle
+So, you see a complete view
+of your development cycle.
+
+00:33:29.046 --> 00:33:30.856 A:middle
+This is a look at
+the live stream.
+
+00:33:31.276 --> 00:33:36.836 A:middle
+In this case, ostraceutilwatch
+Query Directory, very simple.
+
+00:33:37.406 --> 00:33:41.366 A:middle
+You'll notice down here in
+the middle, you actually have
+
+00:33:41.366 --> 00:33:42.676 A:middle
+that payload I was
+talking about.
+
+00:33:43.126 --> 00:33:46.476 A:middle
+So, even though we don't
+support strings and characters,
+
+00:33:46.476 --> 00:33:47.666 A:middle
+you can put whatever
+you like here.
+
+00:33:47.666 --> 00:33:51.676 A:middle
+It could be a binary block,
+it could be strings, data.
+
+00:33:52.616 --> 00:33:54.516 A:middle
+You still get it so you
+can still do your job
+
+00:33:54.516 --> 00:33:55.876 A:middle
+and debug your application.
+
+00:33:56.386 --> 00:33:59.956 A:middle
+And in this case, you can
+see the case I've typed
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:00.036 --> 00:34:01.456 A:middle
+to crash the app
+every time is Z.
+
+00:34:02.256 --> 00:34:03.826 A:middle
+I got the Z as part
+of the query string.
+
+00:34:04.796 --> 00:34:05.956 A:middle
+Similarly, with faults.
+
+00:34:06.356 --> 00:34:08.666 A:middle
+This is kind of fun because
+I can actually watch faults
+
+00:34:08.666 --> 00:34:09.906 A:middle
+across the entire system.
+
+00:34:10.366 --> 00:34:15.996 A:middle
+Inthis case,
+ostraceutilwatchfaults.
+
+00:34:16.505 --> 00:34:20.536 A:middle
+And you can see the Query
+Directory triggered a fault
+
+00:34:20.996 --> 00:34:22.025 A:middle
+because something bad happened.
+
+00:34:22.275 --> 00:34:27.585 A:middle
+You get the Image uuid,
+the PID and the path.
+
+00:34:27.686 --> 00:34:30.085 A:middle
+You'll see the breadcrumbs
+and the timestamps
+
+00:34:30.085 --> 00:34:30.916 A:middle
+with those breadcrumbs.
+
+00:34:31.406 --> 00:34:37.636 A:middle
+You'll see that same
+activity information as well
+
+00:34:37.806 --> 00:34:39.246 A:middle
+as the trace messages.
+
+00:34:39.856 --> 00:34:42.596 A:middle
+So, for the first time without
+enabling any additional logging,
+
+00:34:42.815 --> 00:34:45.085 A:middle
+you can see this data
+while you're working
+
+00:34:45.085 --> 00:34:45.786 A:middle
+on your application.
+
+00:34:46.606 --> 00:34:48.985 A:middle
+So, what are some things
+to take into consideration?
+
+00:34:50.966 --> 00:34:55.985 A:middle
+Privacy-we're very
+concerned about privacy.
+
+00:34:57.486 --> 00:34:59.276 A:middle
+So, be very conscious
+about what you're tracing
+
+00:34:59.576 --> 00:35:01.426 A:middle
+when you're adding
+trace messages.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:59.576 --> 00:35:01.426 A:middle
+when you're adding
+trace messages.
+
+00:35:01.896 --> 00:35:05.726 A:middle
+Never trace information
+about a user device.
+
+00:35:06.926 --> 00:35:08.076 A:middle
+There's a session at 2:00.
+
+00:35:08.076 --> 00:35:11.106 A:middle
+If you don't get a chance to see
+it, please take a look at it,
+
+00:35:11.106 --> 00:35:13.746 A:middle
+there's a privacy session
+on both OS X and iOS.
+
+00:35:14.096 --> 00:35:15.066 A:middle
+I think we have one every year
+
+00:35:15.066 --> 00:35:16.626 A:middle
+and there's one again
+today at 2:00.
+
+00:35:17.076 --> 00:35:21.306 A:middle
+One thing I'd like to note
+is we've done our best to try
+
+00:35:21.306 --> 00:35:23.486 A:middle
+to do what we call with
+propagation failures.
+
+00:35:24.096 --> 00:35:27.106 A:middle
+Because this mechanism is
+automatic, there are cases
+
+00:35:27.106 --> 00:35:30.106 A:middle
+where a custom queuing mechanism
+is built into an application.
+
+00:35:30.626 --> 00:35:32.866 A:middle
+And that little connection
+is missing.
+
+00:35:33.116 --> 00:35:35.746 A:middle
+So, even though the work
+happened, we don't have the idea
+
+00:35:35.746 --> 00:35:37.496 A:middle
+of the trace message
+or the activity.
+
+00:35:38.306 --> 00:35:40.516 A:middle
+And what ends up happening
+is you get two-thirds
+
+00:35:40.516 --> 00:35:42.456 A:middle
+of the picture.
+
+00:35:42.546 --> 00:35:44.566 A:middle
+We've done our best
+to cover the bases
+
+00:35:44.566 --> 00:35:45.806 A:middle
+and get these where we can.
+
+00:35:46.926 --> 00:35:50.036 A:middle
+Just be aware that, you know,
+we can't catch them all.
+
+00:35:51.676 --> 00:35:53.446 A:middle
+As you see from the
+chart, this is supported
+
+00:35:53.446 --> 00:35:56.696 A:middle
+in our diagnostic tools,
+OS X Yosemite supports
+
+00:35:56.696 --> 00:36:00.156 A:middle
+in Crash Reports, Spin
+Reports, Stackshots and lldb.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:35:56.696 --> 00:36:00.156 A:middle
+in Crash Reports, Spin
+Reports, Stackshots and lldb.
+
+00:36:00.826 --> 00:36:03.016 A:middle
+Please note that
+the lldb support
+
+00:36:03.016 --> 00:36:05.836 A:middle
+that I showed you onstage
+is not active in your seat,
+
+00:36:06.526 --> 00:36:09.076 A:middle
+but look forward to it in
+a future seat for Yosemite,
+
+00:36:09.446 --> 00:36:10.946 A:middle
+but it is active for iOS 8.
+
+00:36:10.946 --> 00:36:13.946 A:middle
+So, you can actually look at
+your Crash Reports and lldb
+
+00:36:13.946 --> 00:36:14.926 A:middle
+to get this information.
+
+00:36:15.486 --> 00:36:21.426 A:middle
+So, in summary, why
+use activity tracing?
+
+00:36:22.576 --> 00:36:24.786 A:middle
+Well, I think there is a lot of
+good reasons, as you may tell
+
+00:36:24.786 --> 00:36:25.866 A:middle
+from the presentation.
+
+00:36:26.476 --> 00:36:28.666 A:middle
+It's already included in
+your diagnostic reports.
+
+00:36:29.686 --> 00:36:30.636 A:middle
+No additional work.
+
+00:36:30.756 --> 00:36:31.826 A:middle
+No more enable logging.
+
+00:36:31.826 --> 00:36:34.306 A:middle
+No more turn on this
+log or this messaging.
+
+00:36:35.136 --> 00:36:41.196 A:middle
+It's all part of your diagnostic
+report right out of the gate.
+
+00:36:41.196 --> 00:36:43.656 A:middle
+We have built-in debugger
+support, so you don't have
+
+00:36:43.656 --> 00:36:45.406 A:middle
+to leave your debugger and
+figure out what was happening.
+
+00:36:45.976 --> 00:36:55.126 A:middle
+It works on both iOS and OS X,
+extremely fast and efficient,
+
+00:36:55.126 --> 00:36:59.296 A:middle
+integrated with GCD, XPC,
+NSOperationQueue and Foundation.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:00.676 --> 00:37:02.996 A:middle
+And as I alluded to, it
+captures additional data
+
+00:37:02.996 --> 00:37:06.526 A:middle
+that traditional logging
+doesn't-the caller of the API,
+
+00:37:07.366 --> 00:37:11.286 A:middle
+the thread it was running on and
+other additional information.
+
+00:37:11.736 --> 00:37:13.666 A:middle
+But most exciting to me,
+
+00:37:13.906 --> 00:37:16.766 A:middle
+is these trace messages are
+actually scoped to the action
+
+00:37:16.766 --> 00:37:17.806 A:middle
+that caused the problem.
+
+00:37:17.956 --> 00:37:20.376 A:middle
+So, instead of sifting
+through tons and tons of logs,
+
+00:37:20.566 --> 00:37:22.636 A:middle
+through different processes to
+understand what was happening,
+
+00:37:22.966 --> 00:37:25.336 A:middle
+you finally have the information
+right in front of you
+
+00:37:25.516 --> 00:37:28.036 A:middle
+at the time it happened.
+
+00:37:28.036 --> 00:37:29.016 A:middle
+For more information,
+
+00:37:29.146 --> 00:37:31.336 A:middle
+please contact Paul
+Danbold our Evangelist.
+
+00:37:32.096 --> 00:37:34.346 A:middle
+We don't have official
+documentation,
+
+00:37:34.346 --> 00:37:35.946 A:middle
+as you can see this
+is a very simple API,
+
+00:37:35.946 --> 00:37:40.026 A:middle
+but there are headers and manned
+pages for them, please feel free
+
+00:37:40.026 --> 00:37:42.066 A:middle
+to take a look at them
+
+00:37:42.066 --> 00:37:43.976 A:middle
+and please contact
+the developer forums.
+
+00:37:45.076 --> 00:37:47.006 A:middle
+Some related sessions-some of
+these have already occurred,
+
+00:37:47.456 --> 00:37:50.686 A:middle
+but I do encourage you to go to
+the privacy session if you can
+
+00:37:50.686 --> 00:37:52.666 A:middle
+at 2:00, which of
+course conflicts
+
+00:37:52.666 --> 00:37:55.876 A:middle
+with the diagnostics
+performance in GCD and XPC,
+
+00:37:57.006 --> 00:37:58.526 A:middle
+but both of those
+are very important.
+
+00:37:58.526 --> 00:38:00.146 A:middle
+I would suggest taking
+a look at them.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:58.526 --> 00:38:00.146 A:middle
+I would suggest taking
+a look at them.
+
+00:38:01.086 --> 00:38:01.536 A:middle
+Thank you.
+
+00:38:02.516 --> 00:38:10.860 A:middle
+[ Applause ]
+
