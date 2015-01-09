@@ -1,0 +1,2416 @@
+WEBVTT
+
+00:00:10.434 --> 00:00:12.242
+Title: Gatekeeper and Developer ID
+Session 702
+Perry the Cynic
+OS Security Architect
+
+00:00:12.242 --> 00:00:20.258
+Good morning, I guess still. I am Perry the Cynic. I invented Gatekeeper so I am here to tell you about it.
+
+00:00:20.258 --> 00:00:25.642
+We have a lot of ground to cover. So let's get started.
+
+00:00:25.642 --> 00:00:27.913
+What you will learn
+- What Gatekeeper is and how it works
+
+00:00:27.913 --> 00:00:29.922
+- How to control what can install and run on your Mac
+- How to sign your app so Macs will accept it by default
+- How to debug problems with Gatekeeper and Developer ID
+- Code Signing refresher
+
+00:00:29.922 --> 00:00:32.066
+I'm going to tell you what Gatekeeper is and how it works.
+
+00:00:32.066 --> 00:00:35.313
+I am going to tell you how to use it to control what can be installed and run on your Macintosh.
+
+00:00:35.313 --> 00:00:42.601
+I will tell you how to use Developer ID to sign programs so that other people let them install and run on their Macintosh.
+
+00:00:42.601 --> 00:00:48.010
+I will tell you a bit about what problems you may have.
+
+00:00:48.010 --> 00:00:54.186
+And because a lot of what I'm going to tell you won't make a lot of sense without it. I'm going to start with a code signing refresher.
+
+00:00:54.186 --> 00:00:58.801
+We haven't a session on code signing for a while because it hasn't changed.
+
+00:00:58.801 --> 00:01:04.537
+It's a fairly mature technology at this point. So, chances are, you haven't actually heard about it.
+
+00:01:04.537 --> 00:01:05.282
+Title: Code Signing
+Refresher
+
+00:01:05.282 --> 00:01:06.370
+Code Signing in General
+- A code identification technology
+
+00:01:06.370 --> 00:01:07.378
+- Seal code to detect modifications after signing
+- includes bundle resources
+- Vouch for code with a digital signature
+- Tolerate intended code changes
+- Define and resolve code identity
+
+00:01:07.378 --> 00:01:17.690
+So this is a general code signing primer. This is not specific to Gatekeeper and it's just enough to get you going. There's a lot more, there is a lot more documentation on this. Don't be afraid read that.
+
+00:01:17.690 --> 00:01:21.818
+Code signing is an identification technology.
+
+00:01:21.818 --> 00:01:33.130
+It's about looking at a piece of code: an app, a tool, a library, and say "what is that? How can I identify it? How can I recognize it?"
+
+00:01:33.130 --> 00:01:40.794
+Code signing itself is not necessarily about defeating or prohibiting anything. That's not its job. It job is to recognize.
+
+00:01:40.794 --> 00:01:46.721
+Now, it's job is to reliably recognize. So if somebody changes the code after you sign it. We notice.
+
+00:01:46.721 --> 00:01:50.345
+We put a cryptographic seal around this code thing.
+
+00:01:50.345 --> 00:01:53.337
+You don't need to know how that's done. Unless you want to.
+
+00:01:53.337 --> 00:01:57.530
+But, yes, we can tell if it's got changed after signing.
+
+00:01:57.530 --> 00:02:07.113
+If this is an app or a framework with bundle resources we are sealing the bundle resources. So we can tell if the bundle resources got changed.
+
+00:02:07.113 --> 00:02:11.265
+This is important because there are things in there like nibs that are basically free to write code.
+
+00:02:11.265 --> 00:02:23.625
+And since anybody can sign code. It's a public API and a perfectly useful command line tool. We need a little bit more than just checking that it changed.
+
+00:02:23.625 --> 00:02:36.953
+We also need to have something that tells us who signed this. So we are applying a digital signature that relies on a secret that only the particular developer has.
+
+00:02:36.953 --> 00:02:38.748
+Whether it's Apple or you, doesn't matter.
+
+00:02:38.748 --> 00:02:56.738
+Now one thing that code signing does, very well, is it can tell that code got changed. It can also tell you changed it that the developer changed the code and even though the bytes are all different it's meant to be the same program.
+
+00:02:56.738 --> 00:02:59.058
+So that's baked into that logic of code signing.
+
+00:02:59.058 --> 00:03:01.706
+I'll tell you a little bit about how that works.
+
+00:03:01.706 --> 00:03:07.610
+This is all about identity. About what a piece of code is supposed to be.
+
+00:03:07.610 --> 00:03:10.746
+Is it supposed to be Apple's Mail program is it supposed to be your utility.
+
+00:03:10.746 --> 00:03:13.898
+Is it supposed to be a library or plugin you built.
+
+00:03:13.898 --> 00:03:17.386
+That's identification. This is the one take away from this.
+
+00:03:17.386 --> 00:03:24.722
+And then last but not least, this is supposed to work at runtime and fast enough that you generally don't notice.
+
+00:03:24.722 --> 00:03:28.194
+That's actually a really good trick.
+
+00:03:28.194 --> 00:03:31.114
+And there is a lot of code just to do that.
+
+00:03:31.114 --> 00:03:33.842
+Er, yay, picture, thousand words, let's try that.
+
+00:03:33.842 --> 99:59:59.999
+So, your code, your final code.
+
+99:59:59.999 --> 99:59:59.999
+You've done everything to it that you can possible do.
+
+99:59:59.999 --> 99:59:59.999
+You've stuck in all the localizations, you've polished all the resources.
+
+99:59:59.999 --> 99:59:59.999
+You did all the NM editing and symbol removing and localization fixed and you added all the helpers.
+
+99:59:59.999 --> 99:59:59.999
+It's done. You aren't going to change it again.
+
+99:59:59.999 --> 99:59:59.999
+This is what you feed to the code signing machinery.
+
+99:59:59.999 --> 99:59:59.999
+Now typically Xcode does this for you, but you can run the command line tool if you want to.
+
+99:59:59.999 --> 99:59:59.999
+And we've said we need a secret. So here is a cryptographic identity.
+
+99:59:59.999 --> 99:59:59.999
+It sits in your keychain.
+
+99:59:59.999 --> 99:59:59.999
+You may have gotten from Apple through a developer program, but you could also have gotten it from a third party vendor.
+
+99:59:59.999 --> 99:59:59.999
+That sold it to you for good money.
+
+99:59:59.999 --> 99:59:59.999
+Or you can make it yourself. The machinery doesn't care.
+
+99:59:59.999 --> 99:59:59.999
+A signing identity is a signing identity.
+
+99:59:59.999 --> 99:59:59.999
+And it will work.
+
+99:59:59.999 --> 99:59:59.999
+So, it will sputter a little bit and then it will put out a modified version of your program and it's signed.
+
+99:59:59.999 --> 99:59:59.999
+This is thing you don't change anymore, because now we can tell.
+
+99:59:59.999 --> 99:59:59.999
+This is how you ship to the end user, through the Mac App Store,
+
+99:59:59.999 --> 99:59:59.999
+or you mail to them, or though a website, or your hand them a USB dongle, we don't care.
+
+99:59:59.999 --> 99:59:59.999
+The important point is that it doesn't change.
+
+99:59:59.999 --> 99:59:59.999
+For all we care you can use can binary patch update mechanisms with really smart internals.
+
+99:59:59.999 --> 99:59:59.999
+It doesn't matter as long as what you end up with on the end user system is the same bytes.
+
+99:59:59.999 --> 99:59:59.999
+And at some point that program gets interesting.
+
+99:59:59.999 --> 99:59:59.999
+It tries to run in the Gatekeeper environment. It asks for access to a keychain.
+
+99:59:59.999 --> 99:59:59.999
+When it's already running, it wants to be a debugger.
+
+99:59:59.999 --> 99:59:59.999
+There's more and more scenarios every year.
+
+99:59:59.999 --> 99:59:59.999
+In any case, whoever controls that resource is feeding your program to the code signing verifier.
+
+99:59:59.999 --> 99:59:59.999
+machine
+
+99:59:59.999 --> 99:59:59.999
+And that checks that cryptographic seal hasn't changed.
+
+99:59:59.999 --> 99:59:59.999
+That no messed with it since it got signed.
+
+99:59:59.999 --> 99:59:59.999
+But remember, you know, just checking for integrity isn't enough, because a bad guy can take your program, strip off your signature, change it, put on their signature.
+
+99:59:59.999 --> 99:59:59.999
+Now it's their signature, but it's still intact, so we need something else that actually checks that this is the program as you signed it.
+
+99:59:59.999 --> 99:59:59.999
+Not as somebody else signed it.
+
+99:59:59.999 --> 99:59:59.999
+So we have this thing called a code requirement, which is essentially a simple rule. Things to check for.
+
+99:59:59.999 --> 99:59:59.999
+Typically it checks for what's signed with your cryptographic identity.
+
+99:59:59.999 --> 99:59:59.999
+Now where do we get these code requirements from?
+
+99:59:59.999 --> 99:59:59.999
+Often, surprisingly enough, you get them from the program you are looking at because most of the time you actually don't care who made this program.
+
+99:59:59.999 --> 99:59:59.999
+During verification.
+
+99:59:59.999 --> 99:59:59.999
+You care that it's the same program you saw before.
+
+99:59:59.999 --> 99:59:59.999
+Think about the keychain for example.
+
+99:59:59.999 --> 99:59:59.999
+When the program creates a keychain the system creates an access control list that says who has access to that item
+
+99:59:59.999 --> 99:59:59.999
+And the default value is the application that made it.
+
+99:59:59.999 --> 99:59:59.999
+The keychain doesn't care who you are. The keychain care what program that is. All that it cares is that the program that comes along tomorrow and says,
+
+99:59:59.999 --> 99:59:59.999
+"I want that keychain item" is the same on that made it.
+
+99:59:59.999 --> 99:59:59.999
+And remember I said we tolerate intentional changes.
+
+99:59:59.999 --> 99:59:59.999
+So if the program comes along in two weeks is your new updated, improved version of the same program, it will still work, that's the magic.
+
+99:59:59.999 --> 99:59:59.999
+Now, that code requirement gets stored somewhere.
+
+99:59:59.999 --> 99:59:59.999
+So that it can be remembered later.
+
+99:59:59.999 --> 99:59:59.999
+In the case of the keychain, it's in the keychain itself, the access control list.
+
+99:59:59.999 --> 99:59:59.999
+Other subsystems have a database in the system. Gatekeeper does.
+
+99:59:59.999 --> 99:59:59.999
+Sometimes, it's just a hardcoded role, you know: must be made by Apple.
+
+99:59:59.999 --> 99:59:59.999
+This particular mechanism of pulling a code requirement from a program and remembering it is so frequent and so fundamental that we've given it a name.
+
+99:59:59.999 --> 99:59:59.999
+We call it the designated requirement of your program.
+
+99:59:59.999 --> 99:59:59.999
+It's essentially a code requirement that says, "How shall recognize you again."
+
+99:59:59.999 --> 99:59:59.999
+You know. What should I check an imposter to see if it's you?
+
+99:59:59.999 --> 99:59:59.999
+Now normally the designated requirement gets magically produced by just looking at your code signature, the code signature of your program and deciding what a good match means.
+
+99:59:59.999 --> 99:59:59.999
+But sometimes that's not good enough, sometimes, you actually need to cook one yourself.
+
+99:59:59.999 --> 99:59:59.999
+So when you sign a program, optionally, you can explicitly say, this is the designated requirement I want my program to have.
+
+99:59:59.999 --> 99:59:59.999
+And this is important for some of you because this is what you do when you transition from one signing identity to another.
+
+99:59:59.999 --> 99:59:59.999
+So keep that in mind. Designated requirements.
+
+99:59:59.999 --> 99:59:59.999
+So, we have the cryptographic identity, the secret that you have, that proves that you are you, because you are not stupid enough to give it to someone else.
+
+99:59:59.999 --> 99:59:59.999
+And we have code requirements that are used to essentially match this identity. They go together.
+
+99:59:59.999 --> 99:59:59.999
+Lie key and lock
+
+99:59:59.999 --> 99:59:59.999
+Sometimes it's hard to tell which one's which.
+
+99:59:59.999 --> 99:59:59.999
+So code requirements, these are actually the most important, non-obvious, part of this entire machinery.
+
+99:59:59.999 --> 99:59:59.999
+So let me just give a couple of examples of what that looks like.
+
+99:59:59.999 --> 99:59:59.999
+There is a text representation for these and a binary.
+
+99:59:59.999 --> 99:59:59.999
+Mail.app the mail program that you all use on your mac.
+
+99:59:59.999 --> 99:59:59.999
+- Mail.app
+anchor apple and identifier com.apple.mail
+
+99:59:59.999 --> 99:59:59.999
+this is it's designated requirement. Basically it says it was signed by Apple and it's name is com.apple.mail. That's all there is to it.
+
+99:59:59.999 --> 99:59:59.999
+Apple says this is mail. You can't fake it because you can't sign like Apple.
+
+99:59:59.999 --> 99:59:59.999
+There's a cage somewhere that they don't let you in. And Apple says this is the name so it's distinguished from Apple's Safari.
+
+99:59:59.999 --> 99:59:59.999
+That's all there is to it.
+
+99:59:59.999 --> 99:59:59.999
+Now if you made your own signing identity, like, you know, which keychain access, you can, it's free. Then you would end up with a code requirement something like this.
+
+99:59:59.999 --> 99:59:59.999
+- Self-Made certificate
+anchor H"3b8ca..3e0fe7" and identifier "com.your.program"
+
+99:59:59.999 --> 99:59:59.999
+There's no anchor Apple because you're not Apple, instead it's anchor some hash which is basically the hash of the certificate you made yourself.
+
+99:59:59.999 --> 99:59:59.999
+But otherwise structurally it's the same, it's, you know, this is the identifier you gave it, it's typically your bundle identifier.
+
+99:59:59.999 --> 99:59:59.999
+And it was signed by this identity.
+
+99:59:59.999 --> 99:59:59.999
+We don't really know who you are. We don't really need to know who you are, but we can recognize that particular cryptographic certificate.
+
+99:59:59.999 --> 99:59:59.999
+And we know that you are holding the key to it and nobody else does. That's good enough.
+
+99:59:59.999 --> 99:59:59.999
+May use the iCloud password
+anchor apple and info["Application-Group"] = "dot-mac"
+
+99:59:59.999 --> 99:59:59.999
+Here's another code requirement, just to give you an idea that we can do things here that aren't just identifying particular programs.
+
+99:59:59.999 --> 99:59:59.999
+This one says that it's signed by Apple.
+
+99:59:59.999 --> 99:59:59.999
+And it has an info.plist with a particular key called Application-Group and the value is dot-mac.
+
+99:59:59.999 --> 99:59:59.999
+That's weird, you know. How did we come up with this?
+
+99:59:59.999 --> 99:59:59.999
+Long time ago, there was this thing called dot.mac, before me.com, long time ago.
+
+99:59:59.999 --> 99:59:59.999
+And that's around the time that code signing was invented.
+
+99:59:59.999 --> 99:59:59.999
+One of the early requests was can't we just have something in keychain items that says anything that Apple says in the future has access to your me.com password, your dot.mac password,
+
+99:59:59.999 --> 99:59:59.999
+it will just work, we don't have to keep adding it to a list, so that's how it works.
+
+99:59:59.999 --> 99:59:59.999
+Whenever Apple ships another app that it wants to have access to this password, it just gives an info.plist entry like this, you know, key["Application-Group'] = "dot-mac" and poof, access!
+
+99:59:59.999 --> 99:59:59.999
+great
+
+99:59:59.999 --> 99:59:59.999
+Anything coming out of the Mac App Store looks something like this:
+
+99:59:59.999 --> 99:59:59.999
+- Mac App Store
+anchor apple.generic and identifier com.your.program and certificate leaf[field 1.2.840.113635.100.6.1.9]
+
+99:59:59.999 --> 99:59:59.999
+anchor apple generic mean it draws to the Apple anchor
+
+99:59:59.999 --> 99:59:59.999
+and there is this identifier and it is what you'd expect, the bundle id.
+
+99:59:59.999 --> 99:59:59.999
+And then there is this totally opaque weird certificate thing that basically says this how Apple, the Mac App Store, signs stuff.
+
+99:59:59.999 --> 99:59:59.999
+You don't really need to understand, it's just, you know, some binary pattern inside a particular certificate.
+
+99:59:59.999 --> 99:59:59.999
+But this is basically how this machinery works.
+
+99:59:59.999 --> 99:59:59.999
+You just match things in the certificates that sign the program and you tack the name on.
+
+99:59:59.999 --> 99:59:59.999
+You are pretty much done.
+
+99:59:59.999 --> 99:59:59.999
+Just to jump a little bit ahead, Developer ID looks like this, and you can tell it's even more complicated, but the machinery is the same.
+
+99:59:59.999 --> 99:59:59.999
+- Developer ID
+anchor apple generic and identifier com.your.program and (certificate leaf[field.1.2.840.113635.100.6.1.9] or certificate 1[field.1.2...6.2.6] and certificate leaf[field.1.2...6.1.13] and certificate leaf[subject.OU] XYR4B7AAFB)
+
+99:59:59.999 --> 99:59:59.999
+You just take these little tests, you and and or them together with parentheses and negations and there you are.
+
+99:59:59.999 --> 99:59:59.999
+If you pass this test, you pass the code requirement and if you don't you don't.
+
+99:59:59.999 --> 99:59:59.999
+And that's all, you can settle down.
+
+99:59:59.999 --> 99:59:59.999
+Title: Developer ID
+
+99:59:59.999 --> 99:59:59.999
+You all know about the Mac Developer Program.
+
+99:59:59.999 --> 99:59:59.999
+You develop for the Macintosh.
+
+99:59:59.999 --> 99:59:59.999
+You are signed up as a Mac Developer.
+
+99:59:59.999 --> 99:59:59.999
+You pay your dues.
+
+99:59:59.999 --> 99:59:59.999
+And you get your development certificates and your distribution certificates.
+
+99:59:59.999 --> 99:59:59.999
+You use the distribution certificates to send stuff to the app store.
+
+99:59:59.999 --> 99:59:59.999
+You develop with your development certificates.
+
+99:59:59.999 --> 99:59:59.999
+And you've all signed little electronic pieces of paper that say you won't actually use those certificates for shipment outside of the mac app store.
+
+99:59:59.999 --> 99:59:59.999
+I know some of you do, but you shouldn't.
+
+99:59:59.999 --> 99:59:59.999
+So, what's Developer ID, what's new?
+
+99:59:59.999 --> 99:59:59.999
+It's not actually a new developer program.
+
+99:59:59.999 --> 99:59:59.999
+It's part of your Mac Developer Program.
+
+99:59:59.999 --> 99:59:59.999
+If you signed up for the Mac Developer Program, you already can get Mac Developer ID certificates.
+
+99:59:59.999 --> 99:59:59.999
+It's part of the deal.
+
+99:59:59.999 --> 99:59:59.999
+You already signed the paperwork. There is nothing new to sign, you just have it.
+
+99:59:59.999 --> 99:59:59.999
+You get new certificates through Developer ID.
+
+99:59:59.999 --> 99:59:59.999
+Separate from the ones that you used to get for working with the Mac App Store.
+
+99:59:59.999 --> 99:59:59.999
+We call them Developer ID certificates. It's not very creative, but well thems the breaks.
+
+99:59:59.999 --> 99:59:59.999
+And those are there, explicitly, for distributing your stuff outside of the Mac App Store.
+
+99:59:59.999 --> 99:59:59.999
+So it's complementary. We're not doing away with the Mac App certificates or the Mac App Store developer program
+
+99:59:59.999 --> 99:59:59.999
+but now for the first time, you got a way to take your program, and sell it through the Mac App Store, using the old method.
+
+99:59:59.999 --> 99:59:59.999
+Or selling it anywhere else through Developer ID and it's all done with Apple certificates.
+
+99:59:59.999 --> 99:59:59.999
+No more buying stuff from third parties, making your own stuff, wondering whether you did it right
+
+99:59:59.999 --> 99:59:59.999
+because we make it easy, that's our job.
+
+99:59:59.999 --> 99:59:59.999
+We're trying to make it easy to make cool stuff.
+
+99:59:59.999 --> 99:59:59.999
+Let's compare them.
+
+99:59:59.999 --> 99:59:59.999
+If you go the App Store route, you distribute through the App Store, it's not your problem.
+
+99:59:59.999 --> 99:59:59.999
+Apple puts them on a server and deals with the users.
+
+99:59:59.999 --> 99:59:59.999
+If you distribute through developer ID it is your problem, because Apple won't do it for you.
+
+99:59:59.999 --> 99:59:59.999
+You put it on your website and people download it. It's your website or your lease it from someone.
+
+99:59:59.999 --> 99:59:59.999
+You can sell through a third party.
+
+99:59:59.999 --> 99:59:59.999
+For all we care, you can put it on USB dongles and mail them through snail mail.
+
+99:59:59.999 --> 99:59:59.999
+It's distribution is totally up to you.
+
+99:59:59.999 --> 99:59:59.999
+Apple won't help you.
+
+99:59:59.999 --> 99:59:59.999
+We won't advertise.
+
+99:59:59.999 --> 99:59:59.999
+We won't bill for you.
+
+99:59:59.999 --> 99:59:59.999
+Your deal.
+
+99:59:59.999 --> 99:59:59.999
+Rules-wise. You all know. You all should know what the rules are for the Mac App Store program.
+
+99:59:59.999 --> 99:59:59.999
+You've got the program licensing agreements
+
+99:59:59.999 --> 99:59:59.999
+You've got various appendices and attachments.
+
+99:59:59.999 --> 99:59:59.999
+And you've got store review.
+
+99:59:59.999 --> 99:59:59.999
+Everybody here has some scars from store review.
+
+99:59:59.999 --> 99:59:59.999
+Developer ID doesn't have any store review because it doesn't have a store.
+
+99:59:59.999 --> 99:59:59.999
+It's direct.
+
+99:59:59.999 --> 99:59:59.999
+You sign your stuff. You give it to the user. The user is happy or he isn't.
+
+99:59:59.999 --> 99:59:59.999
+There is nobody at Apple who looks at your program and says, "You shouldn't do that."
+
+99:59:59.999 --> 99:59:59.999
+If you do something you absolutely, positively, shouldn't do, we'll let you know.
+
+99:59:59.999 --> 99:59:59.999
+But it's an after the fact thing.
+
+99:59:59.999 --> 99:59:59.999
+We'll find out. People will complain about you.
+
+99:59:59.999 --> 99:59:59.999
+But there is no pre-filtering
+
+99:59:59.999 --> 99:59:59.999
+This is a big big difference.
+
+99:59:59.999 --> 99:59:59.999
+I mean, that's good and bad.
+
+99:59:59.999 --> 99:59:59.999
+Good it means that if you've got stuff that the App Store rules don't allow.
+
+99:59:59.999 --> 99:59:59.999
+Developer ID will let you sell it.
+
+99:59:59.999 --> 99:59:59.999
+It also means that the responsibility is totally up to you.
+
+99:59:59.999 --> 99:59:59.999
+If you screw up and you ship something that erases somebody's hard drive.
+
+99:59:59.999 --> 99:59:59.999
+There's nobody testing it for you.
+
+99:59:59.999 --> 99:59:59.999
+Don't do that.
+
+99:59:59.999 --> 99:59:59.999
+Different certificates. I've already talked about that.
+
+99:59:59.999 --> 99:59:59.999
+And App Sandbox, for those of you who were in the previous session, and the rest of you, why weren't you?
+
+99:59:59.999 --> 99:59:59.999
+The App Store now requires that you use the App Sandbox.
+
+99:59:59.999 --> 99:59:59.999
+And that's good for the users. In many cases it's good for you, but it means that some of the programs that you can usefully sell can't go into the Mac App Store.
+
+99:59:59.999 --> 99:59:59.999
+If you have a disc formatter, well, it's not going to go in the sandbox.
+
+99:59:59.999 --> 99:59:59.999
+Developer ID can be used without App Sandboxing.
+
+99:59:59.999 --> 99:59:59.999
+Now please don't misunderstand this.
+
+99:59:59.999 --> 99:59:59.999
+You should App Sandbox your programs, even if you sell them through Developer Id.
+
+99:59:59.999 --> 99:59:59.999
+Because the App Sandbox is useful.
+
+99:59:59.999 --> 99:59:59.999
+It's useful for you, it's useful for your users, think of it as a parachute, an emergency brake.
+
+99:59:59.999 --> 99:59:59.999
+A way to land more softly when the excrement hits rotating conveyance.
+
+99:59:59.999 --> 99:59:59.999
+And if you sell the same program in and out of the App Store then it is really a good idea to use App Sandboxing on the Developer ID leg.
+
+99:59:59.999 --> 99:59:59.999
+Because your program will behave differently if you don't App Sandbox.
+
+99:59:59.999 --> 99:59:59.999
+And you will end up with users complaining that your program doesn't behave right.
+
+99:59:59.999 --> 99:59:59.999
+Because the guy over there uses it from the store and the guy over here uses Developer ID. Don't get yourself in that situation if you can possibly avoid it.
+
+99:59:59.999 --> 99:59:59.999
+Okay.
+
+99:59:59.999 --> 99:59:59.999
+And there's a little bene that we threw in because we can.
+
+99:59:59.999 --> 99:59:59.999
+If you do sell your program both through the Mac App Store and outside through Developer ID.
+
+99:59:59.999 --> 99:59:59.999
+And you follow the rules and you do what we tell you.
+
+99:59:59.999 --> 99:59:59.999
+These two programs, through the magic of designated requirements and code signing, will looks the same to the system.
+
+99:59:59.999 --> 99:59:59.999
+They will be the same program.
+
+99:59:59.999 --> 99:59:59.999
+They will be signed differently,
+
+99:59:59.999 --> 99:59:59.999
+one will be Developer ID signed, one will be store signed.
+
+99:59:59.999 --> 99:59:59.999
+but we did enough magic to make these programs looks the same to the system.
+
+99:59:59.999 --> 99:59:59.999
+They can get the same keychain items, they'll be sitting in the same sandbox container.
+
+99:59:59.999 --> 99:59:59.999
+They'll just be. They will have the same code identity.
+
+99:59:59.999 --> 99:59:59.999
+Alright, graphics.
+
+99:59:59.999 --> 99:59:59.999
+So I talked about different certificates.
+
+99:59:59.999 --> 99:59:59.999
+This is the old way, this is the store way.
+
+99:59:59.999 --> 99:59:59.999
+You take your app and you sign it with your distribution certificate and you send it off to app store review.
+
+99:59:59.999 --> 99:59:59.999
+And the app store reviews it and when they like it, they resign it.
+
+99:59:59.999 --> 99:59:59.999
+With a special certificate that only Apple has.
+
+99:59:59.999 --> 99:59:59.999
+That you don't have.
+
+99:59:59.999 --> 99:59:59.999
+And that basically says, this came from the App Store.
+
+99:59:59.999 --> 99:59:59.999
+It wasn't just sent to the App Store by some developer.
+
+99:59:59.999 --> 99:59:59.999
+It actually came through, and out of the App Store and into the users system.
+
+99:59:59.999 --> 99:59:59.999
+So it's a two-step. There's Apple in the middle.
+
+99:59:59.999 --> 99:59:59.999
+Developer ID, same thing, but you sign with your Developer ID certificate, you put it on your website.
+
+99:59:59.999 --> 99:59:59.999
+There's no Apple in here.
+
+99:59:59.999 --> 99:59:59.999
+Again, direct, good and bad.
+
+99:59:59.999 --> 99:59:59.999
+You directly go to your users and you are totally responsible for how that works.
+
+99:59:59.999 --> 99:59:59.999
+Title: Using Developer ID
+
+99:59:59.999 --> 99:59:59.999
+Rule number 1: use Xcode 4.3 or later.
+
+99:59:59.999 --> 99:59:59.999
+We mean this.
+
+99:59:59.999 --> 99:59:59.999
+This isn't just, "Use our greatest tools because they have different windows and we are really proud how they blink."
+
+99:59:59.999 --> 99:59:59.999
+There is special stuff in Xcode 4.3 and later that makes Developer ID work right in a number of circumstances.
+
+99:59:59.999 --> 99:59:59.999
+If you use an older Xcode, this will not come out right.
+
+99:59:59.999 --> 99:59:59.999
+And it will look like it almost works
+
+99:59:59.999 --> 99:59:59.999
+but not quite.
+
+99:59:59.999 --> 99:59:59.999
+And that will be unhappy for you
+
+99:59:59.999 --> 99:59:59.999
+it will be unhappy for your users.
+
+99:59:59.999 --> 99:59:59.999
+So Xcode 4.3
+
+99:59:59.999 --> 99:59:59.999
+In Xcode there's a new section in the Archive panel that lets you archive to Developer ID
+
+99:59:59.999 --> 99:59:59.999
+And it just does the whole job for you.
+
+99:59:59.999 --> 99:59:59.999
+It takes care of getting your developer ID certificate
+
+99:59:59.999 --> 99:59:59.999
+through the portal, it refreshes them, as they expire
+
+99:59:59.999 --> 99:59:59.999
+It signs the right way, it puts the right designated requirement in that gets that magic identity
+
+99:59:59.999 --> 99:59:59.999
+between the store and out of the store
+
+99:59:59.999 --> 99:59:59.999
+You can use an old Xcode or you can use your favorite makefile or shell script
+
+99:59:59.999 --> 99:59:59.999
+invoking code sign directly but you look all of that Xcode magic and you have to reproduce it somehow
+
+99:59:59.999 --> 99:59:59.999
+or it won't come out right.
+
+99:59:59.999 --> 99:59:59.999
+I'm not going to tell you how to do that.
+
+99:59:59.999 --> 99:59:59.999
+Go check the developer forum
+
+99:59:59.999 --> 99:59:59.999
+where there's a lot of discussion of "I hurt my big toe trying this."
+
+99:59:59.999 --> 99:59:59.999
+It can be done, but it's significant extra work to get this right.
+
+99:59:59.999 --> 99:59:59.999
+so try to avoid it if you possibly can.
+
+99:59:59.999 --> 99:59:59.999
+Title: Demo
+
+99:59:59.999 --> 99:59:59.999
+Alright, really really short demo
+
+99:59:59.999 --> 99:59:59.999
+Just to show you how this looks.
+
+99:59:59.999 --> 99:59:59.999
+This is a Cocoa app template straight out of Xcode with no changes except that I put some text in the dialog.
+
+99:59:59.999 --> 99:59:59.999
+And you should all be familiar with the archive section which basically builds your program
+
+99:59:59.999 --> 99:59:59.999
+In a really short time
+
+99:59:59.999 --> 99:59:59.999
+And then you get the option to distribute it
+
+99:59:59.999 --> 99:59:59.999
+And normally you would be doing something like, I want to export it as an application.
+
+99:59:59.999 --> 99:59:59.999
+Let's just leave the development signature in there that I have.
+
+99:59:59.999 --> 99:59:59.999
+Now let's put it out there.
+
+99:59:59.999 --> 99:59:59.999
+So good old Xcode.
+
+99:59:59.999 --> 99:59:59.999
+And the same workflow except exporting to a Developer ID signed Application.
+
+99:59:59.999 --> 99:59:59.999
+You get your choices of what Developer ID certificates you have.
+
+99:59:59.999 --> 99:59:59.999
+If you have multiple ones, you get to pick it here and this one will take you on an exploratory trip on the developer portal
+
+99:59:59.999 --> 99:59:59.999
+to see what you can do there.
+
+99:59:59.999 --> 99:59:59.999
+Other than that, totally same experience.
+
+99:59:59.999 --> 99:59:59.999
+Let's give it a different name.
+
+99:59:59.999 --> 99:59:59.999
+I've just Developer ID signed. That's all to it.
+
+99:59:59.999 --> 99:59:59.999
+So if you use the Xcode workflow. There's very little change.
+
+99:59:59.999 --> 99:59:59.999
+I used the same project. I used the same targets.
+
+99:59:59.999 --> 99:59:59.999
+I didn't change a single setting on this Xcode project.
+
+99:59:59.999 --> 99:59:59.999
+All you do is you archive to Developer ID
+
+99:59:59.999 --> 99:59:59.999
+You get the right signatures, you get the right everything.
+
+99:59:59.999 --> 99:59:59.999
+It will just work.
+
+99:59:59.999 --> 99:59:59.999
+Good for you.
+
+99:59:59.999 --> 99:59:59.999
+Title: Managing Your Keys
+
+99:59:59.999 --> 99:59:59.999
+This isn't technically all specific to Developer ID
+
+99:59:59.999 --> 99:59:59.999
+But let me tell you anyway.
+
+99:59:59.999 --> 99:59:59.999
+The first time you sign up for give me my developer ID certificate.
+
+99:59:59.999 --> 99:59:59.999
+The system will make a set of cryptographic keys on your computer.
+
+99:59:59.999 --> 99:59:59.999
+Because that's part of how this crypto machinery works.
+
+99:59:59.999 --> 99:59:59.999
+It's made right there on your computer.
+
+99:59:59.999 --> 99:59:59.999
+whichever one it is that you're asking for Developer ID.
+
+99:59:59.999 --> 99:59:59.999
+And that's the only place where it is.
+
+99:59:59.999 --> 99:59:59.999
+These keys are your secret.
+
+99:59:59.999 --> 99:59:59.999
+They're supposed to be your secret.
+
+99:59:59.999 --> 99:59:59.999
+Apple doesn't have them.
+
+99:59:59.999 --> 99:59:59.999
+Nobody else has them.
+
+99:59:59.999 --> 99:59:59.999
+That's the point.
+
+99:59:59.999 --> 99:59:59.999
+But this means that you'd better back them up.
+
+99:59:59.999 --> 99:59:59.999
+Because if you lose them, nobody can get them back to you.
+
+99:59:59.999 --> 99:59:59.999
+There is no way to get them back.
+
+99:59:59.999 --> 99:59:59.999
+They were your secret.
+
+99:59:59.999 --> 99:59:59.999
+If you lose all of your copies, they're gone.
+
+99:59:59.999 --> 99:59:59.999
+That's not good because, well, you can't prove that you're you anymore.
+
+99:59:59.999 --> 99:59:59.999
+As far as code signing is concerned.
+
+99:59:59.999 --> 99:59:59.999
+You can't make updates for this program anymore.
+
+99:59:59.999 --> 99:59:59.999
+At least not easily.
+
+99:59:59.999 --> 99:59:59.999
+So, don't lose them.
+
+99:59:59.999 --> 99:59:59.999
+Xcode will actually pop up a panel that says, now would be a good time to make a backup and archive this.
+
+99:59:59.999 --> 99:59:59.999
+So please do it.
+
+99:59:59.999 --> 99:59:59.999
+And make sure you actually have an offsite backup of this
+
+99:59:59.999 --> 99:59:59.999
+There's a password in it, it's perfectly safe.
+
+99:59:59.999 --> 99:59:59.999
+This may not be totally obvious:
+
+99:59:59.999 --> 99:59:59.999
+Developer ID certificates belong to your team.
+
+99:59:59.999 --> 99:59:59.999
+Your account, you whatever it is that you think of yourself as you're signing up for the developer program.
+
+99:59:59.999 --> 99:59:59.999
+You do not get one developer ID certificate per developer.
+
+99:59:59.999 --> 99:59:59.999
+Or per group.
+
+99:59:59.999 --> 99:59:59.999
+or per division
+
+99:59:59.999 --> 99:59:59.999
+or per project
+
+99:59:59.999 --> 99:59:59.999
+You get one.
+
+99:59:59.999 --> 99:59:59.999
+Actually, a pair, but they act as one.
+
+99:59:59.999 --> 99:59:59.999
+So Apple will give you a few, to help you with certain app situations,
+
+99:59:59.999 --> 99:59:59.999
+but you are explicitly not supposed to use those for using different signing identities
+
+99:59:59.999 --> 99:59:59.999
+for your different applicatons
+
+99:59:59.999 --> 99:59:59.999
+This won't work because after a couple, two, three, four, we'll cut you off and then you'll be sad.
+
+99:59:59.999 --> 99:59:59.999
+So single.
+
+99:59:59.999 --> 99:59:59.999
+If you're a large company where these kinds of responsibilities are important
+
+99:59:59.999 --> 99:59:59.999
+Access to your developer ID key will probably be controlled by some department and you'll send them
+
+99:59:59.999 --> 99:59:59.999
+the code and they'll sign it for you
+
+99:59:59.999 --> 99:59:59.999
+and for those of you who work open-source
+
+99:59:59.999 --> 99:59:59.999
+or just don't think about this
+
+99:59:59.999 --> 99:59:59.999
+secret means secret.
+
+99:59:59.999 --> 99:59:59.999
+It means don't check those into some open source repository
+
+99:59:59.999 --> 99:59:59.999
+It's against the rules and it'll get your keys revokes
+
+99:59:59.999 --> 99:59:59.999
+And then, where would you be?
+
+99:59:59.999 --> 99:59:59.999
+And if you lose control of your key
+
+99:59:59.999 --> 99:59:59.999
+oh my god, I had it on this laptop and I lost it in a coffee shop
+
+99:59:59.999 --> 99:59:59.999
+or I had it on this USB dongle and I don't know where I put it and maybe it isn't in my house
+
+99:59:59.999 --> 99:59:59.999
+If you think you lost control of your key talk to Apple
+
+99:59:59.999 --> 99:59:59.999
+because if somebody else gets a hold of your key
+
+99:59:59.999 --> 99:59:59.999
+They can be you.
+
+99:59:59.999 --> 99:59:59.999
+So if they ship an application that erases everybody's hard drive it'll be your fault
+
+99:59:59.999 --> 99:59:59.999
+It'll be your good name that gets dragged through the mud
+
+99:59:59.999 --> 99:59:59.999
+You don't want this to happen so there's an email address: product-security@apple.com
+
+99:59:59.999 --> 99:59:59.999
+You send them an email
+
+99:59:59.999 --> 99:59:59.999
+You send them an email if you even think it's possible you could have lost your key.
+
+99:59:59.999 --> 99:59:59.999
+Because the consequences of not talking to Apple,
+
+99:59:59.999 --> 99:59:59.999
+and it just happening to you means that you're in an even worse situation when it comes out.
+
+99:59:59.999 --> 99:59:59.999
+Title: Transition to Developer ID
+
+99:59:59.999 --> 99:59:59.999
+Well if you've got a new program, it's obvious:
+
+99:59:59.999 --> 99:59:59.999
+sign with developer ID, you're done, happy.
+
+99:59:59.999 --> 99:59:59.999
+If you're currently shipping unsigned code, what the hell is wrong with you?
+
+99:59:59.999 --> 99:59:59.999
+But it's easy to get out of that, sign with developer ID. It'll be a different program of course before you it didn't have any identity,
+
+99:59:59.999 --> 99:59:59.999
+But now it has an identity. It's a good one.
+
+99:59:59.999 --> 99:59:59.999
+It's one that Apple gave you.
+
+99:59:59.999 --> 99:59:59.999
+so you're good.
+
+99:59:59.999 --> 99:59:59.999
+If you're currently shipping through the Mac App Store
+
+99:59:59.999 --> 99:59:59.999
+Use Developer ID to ship the same thing outside.
+
+99:59:59.999 --> 99:59:59.999
+It'll just work.
+
+99:59:59.999 --> 99:59:59.999
+You don't need a new project. You don't need a new target.
+
+99:59:59.999 --> 99:59:59.999
+It's better not to have separate target.
+
+99:59:59.999 --> 99:59:59.999
+Keep them together.
+
+99:59:59.999 --> 99:59:59.999
+Use archive to Developer Id.
+
+99:59:59.999 --> 99:59:59.999
+You're done.
+
+99:59:59.999 --> 99:59:59.999
+If you currently use a code signature that didn't come from Apple.
+
+99:59:59.999 --> 99:59:59.999
+Whether you bought it from some certificate authority or whether you made it yourself.
+
+99:59:59.999 --> 99:59:59.999
+You probably want to transition to developer ID
+
+99:59:59.999 --> 99:59:59.999
+I'm not saying youy must.
+
+99:59:59.999 --> 99:59:59.999
+You can keep on shipping your program with the signature you got.
+
+99:59:59.999 --> 99:59:59.999
+But, well, we'll get to Gatekeeper and what he will do to you.
+
+99:59:59.999 --> 99:59:59.999
+That program.
+
+99:59:59.999 --> 99:59:59.999
+If you want to transition to Developer ID,
+
+99:59:59.999 --> 99:59:59.999
+there is a couple of approaches.
+
+99:59:59.999 --> 99:59:59.999
+There's cold turkey.
+
+99:59:59.999 --> 99:59:59.999
+Let's just switch.
+
+99:59:59.999 --> 99:59:59.999
+Tell the users and off we go.
+
+99:59:59.999 --> 99:59:59.999
+That's easy for you.
+
+99:59:59.999 --> 99:59:59.999
+It maybe'll not be so easy for your users.
+
+99:59:59.999 --> 99:59:59.999
+Or there is an actual transition process
+
+99:59:59.999 --> 99:59:59.999
+that I'm not going to explain to you because it's kinda lengthy
+
+99:59:59.999 --> 99:59:59.999
+Check the developer forums where there's a FAQ for it.
+
+99:59:59.999 --> 99:59:59.999
+Check the documentation on designated requirements
+
+99:59:59.999 --> 99:59:59.999
+because that's what you use to do that.
+
+99:59:59.999 --> 99:59:59.999
+And if you're still confused come to the labs, talk to me
+
+99:59:59.999 --> 99:59:59.999
+I'll give you some hints.
+
+99:59:59.999 --> 99:59:59.999
+Title: Gatekeeper
+
+99:59:59.999 --> 99:59:59.999
+Subtitle: What's on your Mac?
+
+99:59:59.999 --> 99:59:59.999
+That's developer ID
+
+99:59:59.999 --> 99:59:59.999
+Everything with Apple certificates. Isn't that great?
+
+99:59:59.999 --> 99:59:59.999
+It's not even extra money.
+
+99:59:59.999 --> 99:59:59.999
+Now why did we bother?
+
+99:59:59.999 --> 99:59:59.999
+Well, okay. It's nice to have a way for you to get all of your certificates for your code signing needs from Apple.
+
+99:59:59.999 --> 99:59:59.999
+That's neat.
+
+99:59:59.999 --> 99:59:59.999
+Single source shopping.
+
+99:59:59.999 --> 99:59:59.999
+But of course, there's more to it.
+
+99:59:59.999 --> 99:59:59.999
+Title: Download Quarantine
+
+99:59:59.999 --> 99:59:59.999
+We've always worried about programs that get downloaded from the Internet.
+
+99:59:59.999 --> 99:59:59.999
+Because it's so easy to download stuff from the Internet
+
+99:59:59.999 --> 99:59:59.999
+and god know what they'll do to you once you install them and run them
+
+99:59:59.999 --> 99:59:59.999
+And over the years we've come up with ways to mitigate the risk a little bit
+
+99:59:59.999 --> 99:59:59.999
+One of them is called download quarantine
+
+99:59:59.999 --> 99:59:59.999
+Let me tell you about it in case you don't know what it is.
+
+99:59:59.999 --> 99:59:59.999
+It's essentially a tag that gets attached to file
+
+99:59:59.999 --> 99:59:59.999
+We call it a quarantine flag
+
+99:59:59.999 --> 99:59:59.999
+That tag gets applied by the downloaders.
+
+99:59:59.999 --> 99:59:59.999
+When you download something with Safari,
+
+99:59:59.999 --> 99:59:59.999
+unbeknownst to you, maybe,
+
+99:59:59.999 --> 99:59:59.999
+it puts a tag on the file saying, "This came from this URL, it was downloaded at this date."
+
+99:59:59.999 --> 99:59:59.999
+But the most important thing is that the tag's on there.
+
+99:59:59.999 --> 99:59:59.999
+It says this came from the Internet
+
+99:59:59.999 --> 99:59:59.999
+Let's pay special attention to it because
+
+99:59:59.999 --> 99:59:59.999
+Don't know what it will do to your computer.
+
+99:59:59.999 --> 99:59:59.999
+When you take a quarantine file, a file that has a quarantine flag,
+
+99:59:59.999 --> 99:59:59.999
+on it and you copy it with the finder, or your favorite copy tool
+
+99:59:59.999 --> 99:59:59.999
+the quarantine gets copied along
+
+99:59:59.999 --> 99:59:59.999
+because everything's been modified along time ago to do that
+
+99:59:59.999 --> 99:59:59.999
+If you expand an archive that has quarantine on it, everything that comes out of the archive is quarantined
+
+99:59:59.999 --> 99:59:59.999
+You cannot shake that flag just with a normal set of operations.
+
+99:59:59.999 --> 99:59:59.999
+If you have a quarantined disc image and you mount it
+
+99:59:59.999 --> 99:59:59.999
+everything in there looks quarantined.
+
+99:59:59.999 --> 99:59:59.999
+So the point is that this tag sorta follows the data along
+
+99:59:59.999 --> 99:59:59.999
+Once it's attached.
+
+99:59:59.999 --> 99:59:59.999
+So that at the point where you are trying to do something serious with it
+
+99:59:59.999 --> 99:59:59.999
+Like run an app inside of this disc image
+
+99:59:59.999 --> 99:59:59.999
+We still know that it came from the Internet
+
+99:59:59.999 --> 99:59:59.999
+And then we do things to the program because it came from the Internet
+
+99:59:59.999 --> 99:59:59.999
+And the classic thing is: "Hey, You meant to do that?"
+
+99:59:59.999 --> 99:59:59.999
+It's just, click OK, it's fine, it's just a little speed bump
+
+99:59:59.999 --> 99:59:59.999
+In case that some website downloaded that for you and it's now asking you to open to do bad things to you
+
+99:59:59.999 --> 99:59:59.999
+Now, quarantine get's attached when stuff gets downloaded from the Internet
+
+99:59:59.999 --> 99:59:59.999
+If you make something locally it doesn't get quarantined
+
+99:59:59.999 --> 99:59:59.999
+If you have a file on there that you downloaded two years ago and you've worked with it
+
+99:59:59.999 --> 99:59:59.999
+It doesn't have quarantine on it
+
+99:59:59.999 --> 99:59:59.999
+That got stripped off when you answered that dialog
+
+99:59:59.999 --> 99:59:59.999
+And, quarantine does not usually apply to remote file systems either
+
+99:59:59.999 --> 99:59:59.999
+So if you AFP or SMB mount something from your file server there's no quarantine involved here.
+
+99:59:59.999 --> 99:59:59.999
+Quarantine is from downloading from that big bad Internet in the sky
+
+99:59:59.999 --> 99:59:59.999
+Okay, that's quarantine, it's basically, "this came from the Internet. Let's pay attention to it."
+
+99:59:59.999 --> 99:59:59.999
+Of course once we know it came from the Internet, there's a couple of things to do.
+
+99:59:59.999 --> 99:59:59.999
+One of them is the classic Malware check that we all know about
+
+99:59:59.999 --> 99:59:59.999
+We know there are some things that are bad for you.
+
+99:59:59.999 --> 99:59:59.999
+They are signatures patterns that we can look for, so we do.
+
+99:59:59.999 --> 99:59:59.999
+And those get applied when launch services is asked to open something that has quarantine on it.
+
+99:59:59.999 --> 99:59:59.999
+so that's how these two fit together.
+
+99:59:59.999 --> 99:59:59.999
+And the pattern lists actually get updated potentially once a day.
+
+99:59:59.999 --> 99:59:59.999
+There's a little preference checkbox that's on by default
+
+99:59:59.999 --> 99:59:59.999
+that basically says let's get an update every day.
+
+99:59:59.999 --> 99:59:59.999
+To make sure that if bad viruses are trying to take over the Internet we know what they are.
+
+99:59:59.999 --> 99:59:59.999
+And because a match on these quarantine flags is clearly a bad sign we have a rather nastier dialog that says, "This is bad for you. Please throw it away."
+
+99:59:59.999 --> 99:59:59.999
+You may notice there is no open anyway button here, because, no really you don't know better.
+
+99:59:59.999 --> 99:59:59.999
+If it actually fits our malware list it's bad for you.
+
+99:59:59.999 --> 99:59:59.999
+and you should throw it away.
+
+99:59:59.999 --> 99:59:59.999
+So,, that together forms what I might call the traditional way of dealing with possibly bad things coming from the Internet.
+
+99:59:59.999 --> 99:59:59.999
+We have these lists of known bad applications and if something that you're trying to open or install matches those we yell at you.
+
+99:59:59.999 --> 99:59:59.999
+Otherwise it's probably okay.
+
+99:59:59.999 --> 99:59:59.999
+The problem of course is evasion.
+
+99:59:59.999 --> 99:59:59.999
+If you
+
+99:59:59.999 --> 99:59:59.999
+If you're the guy who makes the bad app who tries to erase your hard drive, all you need to do
+
+99:59:59.999 --> 99:59:59.999
+it escape the pattern matcher.
+
+99:59:59.999 --> 99:59:59.999
+You look at the pattern, you change your program so it still erases your hard drive but it looks different.
+
+99:59:59.999 --> 99:59:59.999
+And then a couple hundred or a thousand more people get their hard drives erased
+
+99:59:59.999 --> 99:59:59.999
+Then the daily update comes out, matching that pattern
+
+99:59:59.999 --> 99:59:59.999
+and we keep playing until they run out of energy
+
+99:59:59.999 --> 99:59:59.999
+Which is not really a great way to do it.
+
+99:59:59.999 --> 99:59:59.999
+So we are proposing to turn this upside down,
+
+99:59:59.999 --> 99:59:59.999
+Instead of working with lists of things we think are bad
+
+99:59:59.999 --> 99:59:59.999
+We're working with lists of things we think are good
+
+99:59:59.999 --> 99:59:59.999
+This of course means that if you aren't on the good list
+
+99:59:59.999 --> 99:59:59.999
+You aren't supposed to be bad, you're just, we don't know about you.
+
+99:59:59.999 --> 99:59:59.999
+You're not signed in the way that gives us the warm fuzzies
+
+99:59:59.999 --> 99:59:59.999
+So you're not on the good list.
+
+99:59:59.999 --> 99:59:59.999
+The problem here of course is that we all hope there's a heck of a lot more good programs in the universe than bad programs.
+
+99:59:59.999 --> 99:59:59.999
+And for this machinery to make any sense it has to catch substantially all the good ones.
+
+99:59:59.999 --> 99:59:59.999
+That's the hard part. That's why Gatekeeper isn't 10 lines of code.
+
+99:59:59.999 --> 99:59:59.999
+Gatekeeper is built into the operation system.
+
+99:59:59.999 --> 99:59:59.999
+It's a system facility it's always running.
+
+99:59:59.999 --> 99:59:59.999
+You can't excise it, it's not an option.
+
+99:59:59.999 --> 99:59:59.999
+It's behavior is driven by a set of rules, configurable rules.
+
+99:59:59.999 --> 99:59:59.999
+So this is not a bunch of code that knows what it means to be a good program
+
+99:59:59.999 --> 99:59:59.999
+It's configurable
+
+99:59:59.999 --> 99:59:59.999
+And it probably won't surprise you very much to hear that the matching is done through code signatures.
+
+99:59:59.999 --> 99:59:59.999
+And code requirements.
+
+99:59:59.999 --> 99:59:59.999
+That's why I told you about this stuff earlier.
+
+99:59:59.999 --> 99:59:59.999
+Essentially each rules says that if it is code signed
+
+99:59:59.999 --> 99:59:59.999
+And the code signature looks like this, then it's okay.
+
+99:59:59.999 --> 99:59:59.999
+And of course if no rule matches then we don't know.
+
+99:59:59.999 --> 99:59:59.999
+Because it's rule driven it's highly configurable
+
+99:59:59.999 --> 99:59:59.999
+That's important, but we all know that 90% of all systems never change their configuration.
+
+99:59:59.999 --> 99:59:59.999
+And just like the malware checks it's driven by quarantine
+
+99:59:59.999 --> 99:59:59.999
+So right now, Gatekeeper only looks at a file if it has been downloaded from the Internet and it has been quarantined.
+
+99:59:59.999 --> 99:59:59.999
+This should make you relax a little bit, it means that the programs on your hard drive that you've been using for years
+
+99:59:59.999 --> 99:59:59.999
+are not suddenly going to be viciously attacked by Gatekeeper
+
+99:59:59.999 --> 99:59:59.999
+And stuff that you build with Xcode
+
+99:59:59.999 --> 99:59:59.999
+Gatekeeper isn't going to look at it and say, "this is a foreign body on my system, I'm going to... yeah, no"
+
+99:59:59.999 --> 99:59:59.999
+Remember we built this thing, just 15 minutes ago.
+
+99:59:59.999 --> 99:59:59.999
+And I put it into this directory mysteriously called sites.
+
+99:59:59.999 --> 99:59:59.999
+Let me just compress this.
+
+99:59:59.999 --> 99:59:59.999
+So this is testy, which was signed with a normal, non-developer ID certificate.
+
+99:59:59.999 --> 99:59:59.999
+And here is test-device which we signed
+
+99:59:59.999 --> 99:59:59.999
+Well, why is called sites?
+
+99:59:59.999 --> 99:59:59.999
+I'm going to use safari to download these archives I just made
+
+99:59:59.999 --> 99:59:59.999
+Because downloading is the easiest way to actually attach quarantine to it.
+
+99:59:59.999 --> 99:59:59.999
+I just turned on the web server on that system
+
+99:59:59.999 --> 99:59:59.999
+So let's download that, and let's download that
+
+99:59:59.999 --> 99:59:59.999
+And here it goes into Downloads
+
+99:59:59.999 --> 99:59:59.999
+Okay, so we have downloaded this
+
+99:59:59.999 --> 99:59:59.999
+You can't tell from looking at it in the finder that it has quarantine on it.
+
+99:59:59.999 --> 99:59:59.999
+Because quarantine is supposed to be this internal thing that you don't need to worry about
+
+99:59:59.999 --> 99:59:59.999
+And well let's see what happens.
+
+99:59:59.999 --> 99:59:59.999
+Oh, oh no, it can't be opened because it's from an unidentified developer
+
+99:59:59.999 --> 99:59:59.999
+Notice it doesn't say it's from an evil developer.
+
+99:59:59.999 --> 99:59:59.999
+It doesn't say it's from a developer we don't trust.
+
+99:59:59.999 --> 99:59:59.999
+It doesn't say it's from a developer who didn't pay
+
+99:59:59.999 --> 99:59:59.999
+We just don't know who that it.
+
+99:59:59.999 --> 99:59:59.999
+So we're not being judgmental here.
+
+99:59:59.999 --> 99:59:59.999
+but remember that the idea of Gatekeeper is that if it's not on a good list
+
+99:59:59.999 --> 99:59:59.999
+then no.
+
+99:59:59.999 --> 99:59:59.999
+That's the price we pay here.
+
+99:59:59.999 --> 99:59:59.999
+Everybody who wants to be on that system needs to be on the good list.
+
+99:59:59.999 --> 99:59:59.999
+Let me show you the UI really quickly so you know what gets switched around here.
+
+99:59:59.999 --> 99:59:59.999
+In the security and privacy section of course,
+
+99:59:59.999 --> 99:59:59.999
+In the general section, here is a new part.
+
+99:59:59.999 --> 99:59:59.999
+That says, allow applications downloaded from:
+
+99:59:59.999 --> 99:59:59.999
+If you've played with the developer releases you've already seen this.
+
+99:59:59.999 --> 99:59:59.999
+And you get at the macro level outside you get these three settings.
+
+99:59:59.999 --> 99:59:59.999
+The normal one is Mac App Store and identified developers
+
+99:59:59.999 --> 99:59:59.999
+And anytime the system talks about identified developers or identified programs I want you to
+
+99:59:59.999 --> 99:59:59.999
+understand this means there's a rule in Gatekeeper that stays this is okay.
+
+99:59:59.999 --> 99:59:59.999
+That's what identified means.
+
+99:59:59.999 --> 99:59:59.999
+It doesn't really mean just Developer ID because the rules can be changes.
+
+99:59:59.999 --> 99:59:59.999
+By default it means.
+
+99:59:59.999 --> 99:59:59.999
+And of course we'll accept anything from the Mac App Store because if you can't trust the Mac App Store, who can you trust.
+
+99:59:59.999 --> 99:59:59.999
+If you are, if you the user, this is not for you the developer to switch around.
+
+99:59:59.999 --> 99:59:59.999
+This is for the administrator of that system
+
+99:59:59.999 --> 99:59:59.999
+If you don't trust those developer ID things because god know what they'll do
+
+99:59:59.999 --> 99:59:59.999
+After all they could erase your hard drive if they happen to be a disc formatting tool
+
+99:59:59.999 --> 99:59:59.999
+You can switch to Mac App Store Only and that disallows Developer ID. Make Developer ID useless on that system. In a sense.
+
+99:59:59.999 --> 99:59:59.999
+We don't expect that to happen a lot.
+
+99:59:59.999 --> 99:59:59.999
+And then of course there is anywhere.
+
+99:59:59.999 --> 99:59:59.999
+Which essentially turns Gatekeeper off.
+
+99:59:59.999 --> 99:59:59.999
+With very few exceptions, if the system is in the anywhere state it behaves just as if Gatekeeper wasn't there.
+
+99:59:59.999 --> 99:59:59.999
+That's not a good thing.
+
+99:59:59.999 --> 99:59:59.999
+Because we think Gatekeeper is useful and helpful to the user.
+
+99:59:59.999 --> 99:59:59.999
+So we would appreciate it if you didn't tell your customers to immediately switch off Gatekeeper
+
+99:59:59.999 --> 99:59:59.999
+because your program can't be bothered to be developer ID signed.
+
+99:59:59.999 --> 99:59:59.999
+And, yes, you get this little lecture here if you try to turn off Gatekeeper that says you shouldn't do that.
+
+99:59:59.999 --> 99:59:59.999
+Alright, well.
+
+99:59:59.999 --> 99:59:59.999
+That was unidentified developer.
+
+99:59:59.999 --> 99:59:59.999
+so the developer ID signed version
+
+99:59:59.999 --> 99:59:59.999
+You still get a dialog and if ever you've used a Macintosh before
+
+99:59:59.999 --> 99:59:59.999
+with anything downloaded, you know that dialog, that's the this came from the Internet, you haven't opened it before, are you sure you want to do this.
+
+99:59:59.999 --> 99:59:59.999
+this dialog doesn't go away.
+
+99:59:59.999 --> 99:59:59.999
+Gatekeeper is sitting in there are an additional security layer.
+
+99:59:59.999 --> 99:59:59.999
+This dialog is fairly harmless.
+
+99:59:59.999 --> 99:59:59.999
+Assuming you actually meant to download this program and run it.
+
+99:59:59.999 --> 99:59:59.999
+Let me show you one more dialog you can run into.
+
+99:59:59.999 --> 99:59:59.999
+You'd think that this is bad.
+
+99:59:59.999 --> 99:59:59.999
+It tells the user, we don't want to run this here, we don't know where it came from.
+
+99:59:59.999 --> 99:59:59.999
+But this is not the bad dialog. It's a relatively harmless dialog.
+
+99:59:59.999 --> 99:59:59.999
+Let's go into that bundle and make a change to the program
+
+99:59:59.999 --> 99:59:59.999
+doesn't really matter what we change because the entire info.plist is of course sealed down by the code signature.
+
+99:59:59.999 --> 99:59:59.999
+Let's save that.
+
+99:59:59.999 --> 99:59:59.999
+So, basically, I hacked your program.
+
+99:59:59.999 --> 99:59:59.999
+Oh look now it's damaged and can't be opened and you are in the bad case.
+
+99:59:59.999 --> 99:59:59.999
+Oooh. Don't touch this program, throw it away.
+
+99:59:59.999 --> 99:59:59.999
+So this is that bad dialog if your users see that dialog about one of your programs it means you screwed up the code signing
+
+99:59:59.999 --> 99:59:59.999
+or somebody hacked it after you shipped it.
+
+99:59:59.999 --> 99:59:59.999
+Maybe your distributor.
+
+99:59:59.999 --> 99:59:59.999
+Maybe a hacker, who knows.
+
+99:59:59.999 --> 99:59:59.999
+This is dialog you don't ever want your users to see.
+
+99:59:59.999 --> 99:59:59.999
+Alright.
+
+99:59:59.999 --> 99:59:59.999
+So what does Gatekeeper apply to.
+
+99:59:59.999 --> 99:59:59.999
+obviously code, Applications, not just Applications, tools, in addition, Gatekeeper applies to installer packaging
+
+99:59:59.999 --> 99:59:59.999
+Because installer packages have their own security things, I mean yes, they install applications that you can process as applications later,
+
+99:59:59.999 --> 99:59:59.999
+but they also have things like pre-install scripts and post-install scripts that can do unspeakable things to your system.
+
+99:59:59.999 --> 99:59:59.999
+particularly if you enter your admin password because then they can do it to the entire system
+
+99:59:59.999 --> 99:59:59.999
+So installer are dangerous too, so we apply Gatekeeper and we apply signatures to installer packages too.
+
+99:59:59.999 --> 99:59:59.999
+There's two kinds of installer packages, flat ones which is a single file and bundled ones.
+
+99:59:59.999 --> 99:59:59.999
+You can't actually sign bundled installers which means you'll have to use flat installers to developer id sign your installers
+
+99:59:59.999 --> 99:59:59.999
+If you have, if that confuses you, talk to the installer people or the Xcode people, I'll tell you later where to find them.
+
+99:59:59.999 --> 99:59:59.999
+Gatekeeper also applies to certain classes of documents that the system thinks are dangerous.
+
+99:59:59.999 --> 99:59:59.999
+Shell scripts. Certain things that you may not think are dangerous but we know better about.
+
+99:59:59.999 --> 99:59:59.999
+Like safari archives
+
+99:59:59.999 --> 99:59:59.999
+because they have code in them
+
+99:59:59.999 --> 99:59:59.999
+Sl Gatekeeper can also sappily to documents and you get the same dialog that says not from a recognized developer and the same ways of processing that
+
+99:59:59.999 --> 99:59:59.999
+But sometimes you want to ship a bunch of documents, you can't really code sign those.
+
+99:59:59.999 --> 99:59:59.999
+That's a problem with them, because they're documents, not code.
+
+99:59:59.999 --> 99:59:59.999
+So if you want to ship a bunch of dangerous documents to a user from some reason and they understand this and they want those dangerous documents.
+
+99:59:59.999 --> 99:59:59.999
+we invented a new archive format
+
+99:59:59.999 --> 99:59:59.999
+It's a very straight-forward simple one, we call them "chip" files. XIP is the extension. Just like flat installer archives those can be signed.
+
+99:59:59.999 --> 99:59:59.999
+And if you put a developer id signature on a XIP archive then all of the stuff inside is marked okay.
+
+99:59:59.999 --> 99:59:59.999
+So this is the way you take dangerous files, if you absolutely have to ship them to your users.
+
+99:59:59.999 --> 99:59:59.999
+And get them through Gatekeeper.
+
+99:59:59.999 --> 99:59:59.999
+What i just said.
+
+99:59:59.999 --> 99:59:59.999
+So, Gatekeeper is driven by rules.
+
+99:59:59.999 --> 99:59:59.999
+And what gatekeeper accepts and what it doesn't accept is entirely a function of what rules it has.
+
+99:59:59.999 --> 99:59:59.999
+And what Gatekeeper accepts and what it doesn't accept is entirely a function of what rules it has.
+
+99:59:59.999 --> 99:59:59.999
+Read the man pages, I'll tell you what they are, for details.
+
+99:59:59.999 --> 99:59:59.999
+It can be fairly complicated.
+
+99:59:59.999 --> 99:59:59.999
+These rules are fairly flexible.
+
+99:59:59.999 --> 99:59:59.999
+They're meant to do a lot of things.
+
+99:59:59.999 --> 99:59:59.999
+One thing to understand is that there are different rules for execution and installation.
+
+99:59:59.999 --> 99:59:59.999
+so if you a look a particular Gatekeeper role and you stare and you go from everything he's told me this should apply to my program
+
+99:59:59.999 --> 99:59:59.999
+But it doesn't.
+
+99:59:59.999 --> 99:59:59.999
+It totally ignores it.
+
+99:59:59.999 --> 99:59:59.999
+it probably is an installation rule and you are trying to whitelist a program and you are trying to whitelist an installer.
+
+99:59:59.999 --> 99:59:59.999
+Different types, totally separate.
+
+99:59:59.999 --> 99:59:59.999
+The outcome of Gatekeeper evaluations is cached,
+
+99:59:59.999 --> 99:59:59.999
+because these evaluations - you go through all these rules, you test them one by one
+
+99:59:59.999 --> 99:59:59.999
+if you've got a lot of rules this can get kind of slow.
+
+99:59:59.999 --> 99:59:59.999
+So we cache the outcome, which is a good thing and you don't need to worry about it usually.
+
+99:59:59.999 --> 99:59:59.999
+Because we flush the cache at the right times.
+
+99:59:59.999 --> 99:59:59.999
+If you start playing around with this by copying files around and "gee, I wonder what happens if I do this?"
+
+99:59:59.999 --> 99:59:59.999
+then sometimes you need to remember that there's a cache and if you go behind the back of the mechanism by messing with files directly
+
+99:59:59.999 --> 99:59:59.999
+the cache may still hold old data.
+
+99:59:59.999 --> 99:59:59.999
+So, keep that in mind.
+
+99:59:59.999 --> 99:59:59.999
+Let's go back to that picture for code signing.
+
+99:59:59.999 --> 99:59:59.999
+But this time let's talk about how this specifically works with developer ID and with code signing.
+
+99:59:59.999 --> 99:59:59.999
+So here's your final code. It's the same final code.
+
+99:59:59.999 --> 99:59:59.999
+The same project. The same targets. Everything.
+
+99:59:59.999 --> 99:59:59.999
+You haven't changed a thing.
+
+99:59:59.999 --> 99:59:59.999
+You feed it to Xcode
+
+99:59:59.999 --> 99:59:59.999
+Did I mention Xcode 4.3 or later? Very good for you.
+
+99:59:59.999 --> 99:59:59.999
+And when you do the archive to developer ID part,
+
+99:59:59.999 --> 99:59:59.999
+behind your back Xcode is starting to code sign
+
+99:59:59.999 --> 99:59:59.999
+it actually takes the build output from the archive step and it resigns it with your developer ID signature.
+
+99:59:59.999 --> 99:59:59.999
+Which of course it gets from your keychain
+
+99:59:59.999 --> 99:59:59.999
+from where it has fetched it from the developer portal from Apple
+
+99:59:59.999 --> 99:59:59.999
+All done by Xcode, you don't do a thing.
+
+99:59:59.999 --> 99:59:59.999
+This just works.
+
+99:59:59.999 --> 99:59:59.999
+This just works.
+
+99:59:59.999 --> 99:59:59.999
+You get the output of the archive step
+
+99:59:59.999 --> 99:59:59.999
+and that's where you come into play. You put it on your website.
+
+99:59:59.999 --> 99:59:59.999
+You send it over to your distributor.
+
+99:59:59.999 --> 99:59:59.999
+You burn it on a DVD if you really want to be stone age.
+
+99:59:59.999 --> 99:59:59.999
+And it ends up on the end user's system
+
+99:59:59.999 --> 99:59:59.999
+and cause we assume for the sake of argument that this was downloaded through a website
+
+99:59:59.999 --> 99:59:59.999
+server
+
+99:59:59.999 --> 99:59:59.999
+it is now quarantined
+
+99:59:59.999 --> 99:59:59.999
+See how the pieces start fitting together?
+
+99:59:59.999 --> 99:59:59.999
+So you
+
+99:59:59.999 --> 99:59:59.999
+I've got a quarantined installer archive or application.
+
+99:59:59.999 --> 99:59:59.999
+Depending on how you ship it.
+
+99:59:59.999 --> 99:59:59.999
+And if you are trying to install that installer archive
+
+99:59:59.999 --> 99:59:59.999
+or first launch this applications
+
+99:59:59.999 --> 99:59:59.999
+because it is quarantined Gatekeeper gets involved
+
+99:59:59.999 --> 99:59:59.999
+Launch Services does that.
+
+99:59:59.999 --> 99:59:59.999
+So now Gatekeeper is looking at this program and feeds it to the code signing verification machinery.
+
+99:59:59.999 --> 99:59:59.999
+And it has a database.
+
+99:59:59.999 --> 99:59:59.999
+/var/db/SystemPolicy
+
+99:59:59.999 --> 99:59:59.999
+In case you care.
+
+99:59:59.999 --> 99:59:59.999
+That's where all the rules sit.
+
+99:59:59.999 --> 99:59:59.999
+It basically just runs through the rules and each of the rules has a code requirement
+
+99:59:59.999 --> 99:59:59.999
+And it just matches them up one by one.
+
+99:59:59.999 --> 99:59:59.999
+In a particular priority order.
+
+99:59:59.999 --> 99:59:59.999
+So that's where the code requirements come from.
+
+99:59:59.999 --> 99:59:59.999
+in the Gatekeeper case.
+
+99:59:59.999 --> 99:59:59.999
+They come out of the rules.
+
+99:59:59.999 --> 99:59:59.999
+We run through and the first rule that matches has an outcome.
+
+99:59:59.999 --> 99:59:59.999
+Usually it's this one's okay.
+
+99:59:59.999 --> 99:59:59.999
+You can actually make a rule that is: "this one is so not okay, I never want to see it again."
+
+99:59:59.999 --> 99:59:59.999
+That's how code signing works in the case of Developer ID working with Gatekeeper.
+
+99:59:59.999 --> 99:59:59.999
+Okay.
+
+99:59:59.999 --> 99:59:59.999
+So we talked about these rules.
+
+99:59:59.999 --> 99:59:59.999
+And if you are happy with default, you don't do anything about them
+
+99:59:59.999 --> 99:59:59.999
+They're just there and they work. Good.
+
+99:59:59.999 --> 99:59:59.999
+Sometimes you want to change them because it's your Macintosh and you want it to accept something that isn't developer ID signed but you want it anyway.
+
+99:59:59.999 --> 99:59:59.999
+The default. Anything coming with the system of course is okay.
+
+99:59:59.999 --> 99:59:59.999
+Anything coming from the Mac App Store is okay.
+
+99:59:59.999 --> 99:59:59.999
+Anything coming with Developer ID is okay.
+
+99:59:59.999 --> 99:59:59.999
+You can make individual exceptions.
+
+99:59:59.999 --> 99:59:59.999
+There's UI for that.
+
+99:59:59.999 --> 99:59:59.999
+You may have noticed, those of you with the eagle eyes,
+
+99:59:59.999 --> 99:59:59.999
+when you try to turn off Gatekeeper in the system preferences it actually tells you, "Don't turn me off. Do that instead."
+
+99:59:59.999 --> 99:59:59.999
+That's your first hint.
+
+99:59:59.999 --> 99:59:59.999
+Now if you happen to be using OS X server or you are really good with a binary editor, you can make a configuration profiles that actually push Gatekeeper rules.
+
+99:59:59.999 --> 99:59:59.999
+This is new in Mountain Lion.
+
+99:59:59.999 --> 99:59:59.999
+So if you have a bunch of systems whose people trust you so they will actually double click on configuration profiles that you send them,
+
+99:59:59.999 --> 99:59:59.999
+you can just package up a rule that says "my programs are fine" or "this program is fine."
+
+99:59:59.999 --> 99:59:59.999
+send it to them and say "please double click that." And if they do it adds a rule and they're fine.
+
+99:59:59.999 --> 99:59:59.999
+Also if you want to be more formal about this and you're using workgroup manager, it has learned in Mountain Lion, to push Gatekeeper rules out to all of the managed clients.
+
+99:59:59.999 --> 99:59:59.999
+That's a really nice formal way of controlling which programs are allowed to be installed on systems that are part of your workgroup.
+
+99:59:59.999 --> 99:59:59.999
+And if everything else fails and you know exactly what you want and you don't mind using terminal.
+
+99:59:59.999 --> 99:59:59.999
+There's a new command called spctl. System Policy Control Program.
+
+99:59:59.999 --> 99:59:59.999
+It lets you edit those rules directly
+
+99:59:59.999 --> 99:59:59.999
+and explicitly and with a lot of detail.
+
+99:59:59.999 --> 99:59:59.999
+So, if you're the tinkering kind, this is your new buddy.
+
+99:59:59.999 --> 99:59:59.999
+So, it's built in to Mountain Lion.
+
+99:59:59.999 --> 99:59:59.999
+It's part of Mountain Lion.
+
+99:59:59.999 --> 99:59:59.999
+It's on in Mountain Lion.
+
+99:59:59.999 --> 99:59:59.999
+The default value when you install a new system is Mac App Store or Developer ID.
+
+99:59:59.999 --> 99:59:59.999
+This is going to hit you and your programs as mountain lion deploys.
+
+99:59:59.999 --> 99:59:59.999
+It's also been back ported to a large extent into Lion.
+
+99:59:59.999 --> 99:59:59.999
+In Lion it's currently dormant.
+
+99:59:59.999 --> 99:59:59.999
+It's there but the UI, the major, master UI that lets you turn it on or off is hidden.
+
+99:59:59.999 --> 99:59:59.999
+And it's off by default.
+
+99:59:59.999 --> 99:59:59.999
+So, you don't notice it.
+
+99:59:59.999 --> 99:59:59.999
+The users don't notice it.
+
+99:59:59.999 --> 99:59:59.999
+But, it's there, in case you want to test with it.
+
+99:59:59.999 --> 99:59:59.999
+And you don't have a mountain Lion system handy.
+
+99:59:59.999 --> 99:59:59.999
+You can actually get instructions from the developer website.
+
+99:59:59.999 --> 99:59:59.999
+There's a defaults write that makes the UI appear and then you can turn the feature on and play around with it.
+
+99:59:59.999 --> 99:59:59.999
+No Mountain Lion required.
+
+99:59:59.999 --> 99:59:59.999
+This also means that users who know what they're doing and they care, may turn this on on you.
+
+99:59:59.999 --> 99:59:59.999
+So it's possible you will get complaints from users on Lion saying your program doesn't install here because you didn't get with the Developer ID program.
+
+99:59:59.999 --> 99:59:59.999
+Don't let that happen to you.
+
+99:59:59.999 --> 99:59:59.999
+How do you test it?
+
+99:59:59.999 --> 99:59:59.999
+Well it's pretty obvious by now.
+
+99:59:59.999 --> 99:59:59.999
+You sign your program with Developer ID
+
+99:59:59.999 --> 99:59:59.999
+You put it on a web server
+
+99:59:59.999 --> 99:59:59.999
+You download it.
+
+99:59:59.999 --> 99:59:59.999
+You can mail it to yourself to if your mail server actually accepts attachments big enough.
+
+99:59:59.999 --> 99:59:59.999
+You just need to get quarantine attached to it somehow.
+
+99:59:59.999 --> 99:59:59.999
+And you double click on it in the Finder and you watch what happens. I showed you.
+
+99:59:59.999 --> 99:59:59.999
+Either it'll launch, you're successful, everything's cool.
+
+99:59:59.999 --> 99:59:59.999
+Or you get this unidentified developer dialog that's not so cool, it means that you thought you were developer ID signing but you really didn't and something's wrong.
+
+99:59:59.999 --> 99:59:59.999
+Or you get this dialog that says "Your program is broken and please throw it away" which means you totally messed up the signing.
+
+99:59:59.999 --> 99:59:59.999
+If you run into trouble
+
+99:59:59.999 --> 99:59:59.999
+Well it's time to break out good old Terminal.
+
+99:59:59.999 --> 99:59:59.999
+There is the new spctl command that is the Swiss army knife of Gatekeeper rules, it also lets you enable and disable Gatekeeper from the command line.
+
+99:59:59.999 --> 99:59:59.999
+In particular there is a --access option that lets you directly ask Gatekeeper, "what do you think of that file?"
+
+99:59:59.999 --> 99:59:59.999
+That doesn't require quarantine. It's a direct call.
+
+99:59:59.999 --> 99:59:59.999
+Basically, "Hey, Gatekeeper, what do you think?"
+
+99:59:59.999 --> 99:59:59.999
+It just looks at it and goes, "Okay" or "I'm not going to allow this."
+
+99:59:59.999 --> 99:59:59.999
+Calls the same API that Launch Services does when you are going through the double click path so you're directly asking the same oracle.
+
+99:59:59.999 --> 99:59:59.999
+And there's spctl --add, which actually lets you add a rule.
+
+99:59:59.999 --> 99:59:59.999
+So this is what you tinker with if you want to tell Gatekeeper that, stuff like that is okay on my system.
+
+99:59:59.999 --> 99:59:59.999
+But of course, there's a remove and lots of other things.
+
+99:59:59.999 --> 99:59:59.999
+Alright, there's the good old codesign command
+
+99:59:59.999 --> 99:59:59.999
+With you since about 2005.
+
+99:59:59.999 --> 99:59:59.999
+It's there so you can sign code, but Xcode does that for you.
+
+99:59:59.999 --> 99:59:59.999
+You will just use Xcode 4.3 or late and you will be happy.
+
+99:59:59.999 --> 99:59:59.999
+It's good for you.
+
+99:59:59.999 --> 99:59:59.999
+But you can also ask codesign to verify for you and that's very happy.
+
+99:59:59.999 --> 99:59:59.999
+Because if you give it enough levels of verbosity it will actually tell you in many cases, what's wrong with the code signature.
+
+99:59:59.999 --> 99:59:59.999
+In particular, it will tell you if you stealthily tried to add or removes files, resources, after you signed.
+
+99:59:59.999 --> 99:59:59.999
+Which is something that sometimes happens and it should
+
+99:59:59.999 --> 99:59:59.999
+so it'll say "this file there, you shouldn't have added that."
+
+99:59:59.999 --> 99:59:59.999
+There's also codesign display, which basically tells you everything that's in the code signature.
+
+99:59:59.999 --> 99:59:59.999
+It's kinda handy sometimes.
+
+99:59:59.999 --> 99:59:59.999
+In particular it tells you what certificates a piece of code was signed with.
+
+99:59:59.999 --> 99:59:59.999
+A really easy way of seeing if you're actually looking at a Developer ID signed program because the word developer ID is right in there.
+
+99:59:59.999 --> 99:59:59.999
+And if it isn't then you didn't and you just signed with the wrong thing.
+
+99:59:59.999 --> 99:59:59.999
+There is a very obscure program called csreq that I'm just mentioning here for the first time ever.
+
+99:59:59.999 --> 99:59:59.999
+This is a little editor for code requirements.
+
+99:59:59.999 --> 99:59:59.999
+If you play around, or mess around, with code requirements, take a look.
+
+99:59:59.999 --> 99:59:59.999
+To sign installer archives. We are telling you to use the productsign command.
+
+99:59:59.999 --> 99:59:59.999
+The productsign command is know to do okay with Developer ID signatures.
+
+99:59:59.999 --> 99:59:59.999
+There is a surprising number of different programs that can sign installer packages.
+
+99:59:59.999 --> 99:59:59.999
+And some of them do better than others, so we're telling you to use the productsign command.
+
+99:59:59.999 --> 99:59:59.999
+And of course, there's the shiny new xip command which exists solely for the purpose of creating xip archives
+
+99:59:59.999 --> 99:59:59.999
+which you can sign in the process of making them.
+
+99:59:59.999 --> 99:59:59.999
+And then you can send them out to get those dangerous commands through Gatekeeper.
+
+99:59:59.999 --> 99:59:59.999
+And, that's it.
+
+99:59:59.999 --> 99:59:59.999
+Paul Danbold is the Evangelist who is always so sad that none of you give him a call.
+
+99:59:59.999 --> 99:59:59.999
+So he is your first point of official contact.
+
+99:59:59.999 --> 99:59:59.999
+If you have any questions complaints or other contact requests.
+
+99:59:59.999 --> 99:59:59.999
+There is an entirely new section in the developer documentation on Developer ID.
+
+99:59:59.999 --> 99:59:59.999
+Which really should be read as Developer ID and Gatekeeper. It contains a tutorial.
+
+99:59:59.999 --> 99:59:59.999
+It contains some background information.
+
+99:59:59.999 --> 99:59:59.999
+Some technical information.
+
+99:59:59.999 --> 99:59:59.999
+Think of it as your jumping off point on this entire thing.
+
+99:59:59.999 --> 99:59:59.999
+It's there. If you haven't read that, don't complain first.
+
+99:59:59.999 --> 99:59:59.999
+There's also a dedicated forum in the Apple Developer Forums on Developer ID and Gatekeeper
+
+99:59:59.999 --> 99:59:59.999
+where you know how the developer forums work.
+
+99:59:59.999 --> 99:59:59.999
+You are talking to each other and an Apple says, "No, that's wrong."
+
+99:59:59.999 --> 99:59:59.999
+But there's already some really useful information there, so before you start making up theories on how this stuff should work for you.
+
+99:59:59.999 --> 99:59:59.999
+Read the Developer forums on Developer ID because it's useful stuff.
+
+99:59:59.999 --> 99:59:59.999
+And contribute. You too can say, this did not work for me.
+
+99:59:59.999 --> 99:59:59.999
+Related Session
+
+99:59:59.999 --> 99:59:59.999
+I keep telling you to use Xcode, so there's a session on Building, Archiving and Submitting your App.
+
+99:59:59.999 --> 99:59:59.999
+This is the session that talks about Xcode and how you use it to bundle up your stuff and get it ready for sending it off.
+
+99:59:59.999 --> 99:59:59.999
+Both to the App Store and through Developer ID.
+
+99:59:59.999 --> 99:59:59.999
+They will actually show you the Developer ID path and talk about it in a little detail.
+
+99:59:59.999 --> 99:59:59.999
+So if you're having questions about the Xcode side of this, this is the session you want to go to.
+
+99:59:59.999 --> 99:59:59.999
+You missed the Sandbox session just before this one.
+
+99:59:59.999 --> 99:59:59.999
+But we made you a repeat on Friday. So if you missed Sandbox you've got another chance.
+
+99:59:59.999 --> 99:59:59.999
+Summary
+
+99:59:59.999 --> 99:59:59.999
+What have I told you.
+
+99:59:59.999 --> 99:59:59.999
+Gatekeeper is about helping the owner of a Mac control what goes there.
+
+99:59:59.999 --> 99:59:59.999
+This isn't about some people telling other people what they can do with their Mac.
+
+99:59:59.999 --> 99:59:59.999
+This is about controlling your own Mac's destiny.
+
+99:59:59.999 --> 99:59:59.999
+Gatekeeper is a tool for that.
+
+99:59:59.999 --> 99:59:59.999
+It happens to have a preset when it comes out of the box that says, "By default, it's okay to install stuff from the Mac app Store, and stuff that's signed with this Developer ID thing.
+
+99:59:59.999 --> 99:59:59.999
+So that's what Developer ID is, primarily.
+
+99:59:59.999 --> 99:59:59.999
+It's your way of getting your stuff through Gatekeeper on default configurations
+
+99:59:59.999 --> 99:59:59.999
+Gatekeeper is real and when Mountain Lion ships, it'll be right there in your face.
+
+99:59:59.999 --> 99:59:59.999
+If won't yell at you if you don't install anything that isn't Developer ID signed.
+
+99:59:59.999 --> 99:59:59.999
+And, yes, you are going to run into Lion systems that have it on two, so be prepared for that.
+
+99:59:59.999 --> 99:59:59.999
+That's all.
