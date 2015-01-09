@@ -1,0 +1,1299 @@
+WEBVTT
+
+00:00:10.540 --> 00:00:11.497
+Welcome.
+
+00:00:11.497 --> 00:00:14.612
+This is Cocoa Interprocess Communication with XPC.
+
+00:00:14.612 --> 00:00:17.699
+My name is Tony Parker and I am a software engineer on the Cocoa Frameworks team.
+
+00:00:17.699 --> 00:00:21.544
+So, first we're going to start with a brief history lesson.
+
+00:00:21.925 --> 00:00:28.537
+So, back when dinosaurs roamed the Earth, programming computers,
+they worked on machines that looked a lot like this one.
+
+00:00:28.537 --> 00:00:31.651
+They had a single core and a single CPU.
+
+00:00:31.651 --> 00:00:35.649
+So we made our software have architecture to match, with a single thread.
+
+00:00:36.266 --> 00:00:41.271
+Now, this architecture worked well for a long time, until something started happening.
+
+00:00:41.271 --> 00:00:45.027
+CPUs started multiplying instead of just getting faster.
+
+00:00:45.027 --> 00:00:51.565
+And at that point, our architecture of a single thread for a single CPU started to break down,
+and we needed to make a change.
+
+00:00:52.148 --> 00:00:57.482
+And that change of course was a move from single-threaded applications to multi-threaded applications.
+
+00:00:58.185 --> 00:01:02.124
+And this was a challenge, but technologies like GCD were there to help.
+
+00:01:02.129 --> 00:01:08.295
+And it wasn't something that our users could immediately see just by looking at the application, that it had made this transition.
+
+00:01:08.295 --> 00:01:14.826
+But it was still something that they appreciated.
+Their applications were more responsive, and they took better advantage of the hardware that they bought.
+
+00:01:16.925 --> 00:01:25.740
+So today we're facing a similar challenging transition. And that is from a status quo like this, where we have a multi-user system.
+
+00:01:26.019 --> 00:01:30.586
+Now, you see that we have had for a long time barriers between these users.
+
+00:01:30.586 --> 00:01:35.362
+So Somebody Else can't get to my data, and I can't get to root's data.
+
+00:01:35.362 --> 00:01:40.871
+But we're finding that today's systems are really used by one person.
+
+00:01:40.871 --> 00:01:51.668
+And although they are protected from Somebody Else, all their critical files—their contacts, their photos, their personal data—is all accessible by any application that runs as their user.
+
+00:01:54.100 --> 00:02:00.588
+To understand why this is a problem, let's imagine an OS where every task shares just one chunk of memory.
+
+00:02:00.588 --> 00:02:03.150
+In fact, some OSes have behaved this way in the past.
+
+00:02:03.810 --> 00:02:05.958
+So what we'll do is we'll just split it up.
+
+00:02:06.470 --> 00:02:17.163
+So this part here is for writing my diary, and this part here is for displaying my vacation photos, and then the part in the middle we'll just leave for executing some JavaScript that we downloaded from the Internet just now.
+
+00:02:17.163 --> 00:02:24.476
+And we'll have each task just pinky-swear they're not going to touch each other's memory, or any data that the other task is using.
+
+00:02:24.476 --> 00:02:27.303
+Because they're all executing in the same memory space, of course, that's completely possible.
+
+00:02:27.303 --> 00:02:29.613
+We'll just take them at their word.
+
+00:02:29.834 --> 00:02:31.630
+Well, clearly that's a bad idea.
+
+00:02:31.630 --> 00:02:34.290
+What we really want is those barriers back.
+
+00:02:34.290 --> 00:02:39.872
+And have each of these tasks to have just the level of permission that it needs to do its job.
+
+00:02:39.872 --> 00:02:43.719
+So we have barriers like this, and they are process boundaries.
+
+00:02:44.900 --> 00:02:48.727
+So another example, the Preview application.
+
+00:02:48.727 --> 00:02:54.309
+It's split into multiple processes. And these processes have different levels of permission.
+
+00:02:54.309 --> 00:03:01.479
+So the one on the left here has access to the hard drive, and access to the network,
+and the one on the right has access only to the contacts.
+
+00:03:01.479 --> 00:03:03.799
+So this provides two really key benefits.
+
+00:03:04.030 --> 00:03:06.769
+The first is one of security, which I just mentioned.
+
+00:03:06.769 --> 00:03:13.062
+So the process on the right, if it's compromised in some way, either the application or any frameworks or libraries that that application uses,
+
+00:03:13.062 --> 00:03:18.283
+maybe it can access Contacts but it can't access the hard drive and it can't access the network,
+
+00:03:18.475 --> 00:03:23.524
+so the amount of damage it can do, in terms of shipping that information off to somebody else, is really limited.
+
+00:03:23.873 --> 00:03:26.310
+The second benefit is crash protection.
+
+00:03:26.310 --> 00:03:32.360
+So if this helper process crashes in the course of accessing the contact information or processing it in some way,
+
+00:03:32.360 --> 00:03:40.347
+then the main GUI application can continue to run, and the user doesn't have to be interrupted with some minor task running into a snafu.
+
+00:03:43.005 --> 00:03:49.753
+Once we split up these applications into multi-process applications, we need some way to communicate between them.
+
+00:03:49.753 --> 00:03:53.336
+And this is called Inter-Process Communication, or IPC.
+
+00:03:53.336 --> 00:03:56.506
+Those dinosaurs we talked about earlier were using things called Mach messages.
+
+00:03:56.761 --> 00:04:00.131
+Actually, they're still around, they're the fundamental form of IPC on our system,
+
+00:04:00.131 --> 00:04:06.924
+but you may have also heard of other IPC mechanisms like sockets or Distributed Objects or, new in Lion, XPC.
+
+00:04:09.097 --> 00:04:13.847
+Its job was to simplify the low-level details of this IPC.
+
+00:04:13.847 --> 00:04:24.837
+It's a C API with custom objects, containers (like xpc<u>dictionaries and xpc</u>arrays), and data types like xpc<u>string, xpc</u>date, xpc_data, and so forth.
+
+00:04:27.112 --> 00:04:34.497
+When we introduced XPC, we put it at a low level in the OS X technology stack, at the Core OS level.
+
+00:04:34.497 --> 00:04:40.527
+And if you had an application that uses Cocoa level APIs, like Foundation or AppKit,
+
+00:04:40.527 --> 00:04:45.109
+then you may find yourself in a situation that we sometimes call impedance mismatch.
+
+00:04:45.496 --> 00:04:49.159
+So you have an NSArray and you want to send it over XPC.
+
+00:04:49.159 --> 00:04:55.114
+So you pack it up into an xpc<u>array</u>t, and any objects it contains,
+send it over your connection,
+
+00:04:55.114 --> 00:04:58.506
+and on the other side you have to unpack it and recreate your objects.
+
+00:04:58.506 --> 00:05:05.514
+So to solve this problem, and to introduce some new features, in Mountain Lion we have a new technology called NSXPCConnection.
+
+00:05:05.514 --> 00:05:10.659
+It allows you to use your own objects and interfaces with XPC and Inter-Process Communication.
+
+00:05:13.893 --> 00:05:16.401
+Let's go over a few of the design goals of NSXPCConnection.
+
+00:05:16.855 --> 00:05:23.028
+So, again, it's Cocoa. In fact, the NSXPCConnection header doesn't import even the XPC header itself.
+
+00:05:23.028 --> 00:05:25.056
+So XPC is abstracted away.
+
+00:05:25.282 --> 00:05:29.196
+It's designed to be simple—I think this talk will be enough to get you started.
+
+00:05:29.196 --> 00:05:35.255
+Because we're crossing privilege and process boundaries, it needed to be secure,
+and we designed it that way from the start.
+
+00:05:35.255 --> 00:05:44.808
+It's very opinionated about being asynchronous: just because we've moved from single-process to multi-process doesn't mean we need to revert to a single-threaded kind of behavior.
+
+00:05:45.510 --> 00:05:49.640
+And all of the above, plus some other features like: not being tied to CFRunLoop,
+
+00:05:49.640 --> 00:05:54.450
+being exception-free (except in case of programmer error, as is the normal Cocoa pattern),
+
+00:05:54.450 --> 00:05:59.017
+and also ARC-friendly (in fact, all of the examples and demos you see today will be using ARC)
+
+00:05:59.017 --> 00:06:02.653
+combine to make NSXPCConnection a very modern, friendly API.
+
+00:06:04.704 --> 00:06:11.923
+So let's look at a quick demo. I want to show you what one of these multi-process applications looks like,
+and then we're going to use it as a basis for the rest of the talk.
+
+00:06:12.919 --> 00:06:16.252
+Okay. So here I have an application called Flight Finder.
+
+00:06:16.252 --> 00:06:24.875
+Its job is to allow you to put in a destination, pick a date and an approximate price, and search for available flights on that date.
+
+00:06:24.875 --> 00:06:35.726
+So this application is split up into multiple pieces. And one reason might be that, let's imagine that this flight finder has access to my calendar data to find the next available date on my calendar.
+
+00:06:36.466 --> 00:06:43.816
+That doesn't sound like something that we necessarily want mixed with access to the general internet. So that would be a good thing to put off in its own little process.
+
+00:06:44.328 --> 00:06:50.299
+Here is the structure of the application on disk, in my build products folder, the Flight Finder.
+
+00:06:50.522 --> 00:07:02.205
+Now if I show its contents, you see some of the familiar things here, including your MacOS directory and Resources, but there's this new directory called XPCServices.
+
+00:07:02.205 --> 00:07:06.459
+So an XPC service is one of these helper processes that we'll be talking about today.
+
+00:07:06.861 --> 00:07:16.123
+If look at the contents of that, there is another bundle called TicketAgentService.xpc,
+which is a bundle itself, so I can find its executable if I drill down a little bit further.
+
+00:07:19.277 --> 00:07:26.167
+So now I'm going to pick a date, a price, and search.
+
+00:07:27.964 --> 00:07:32.301
+And what we'll see is, in the background, our TicketAgentService has started up.
+
+00:07:32.301 --> 00:07:38.957
+We see it's here, it's also sandboxed like the main application is,
+and we found our ticket for a price of $181.
+
+00:07:39.293 --> 00:07:45.036
+That's a basic operation of the example. So let's go back to our slides and see how we might build this.
+
+00:07:46.386 --> 00:07:48.204
+So here's a preview of where we're going to end up.
+
+00:07:48.204 --> 00:07:56.962
+You see we have two processes again, a Flight Finder, the GUI part, and the Ticket Agent, which is the part that actually did the searching for us and returned a result.
+
+00:07:56.962 --> 00:08:06.395
+We're going to need four major pieces. The first is an Interface, the second is a Connection, the third is a Listener, and the fourth is a way to communicate, and that's Messages.
+
+00:08:07.842 --> 00:08:10.115
+First up is Interfaces.
+
+00:08:10.115 --> 00:08:14.156
+The job of an interface is to abstract away implementation details.
+
+00:08:14.156 --> 00:08:22.939
+And that's not just the details of how that TicketAgentService or the Flight Finder are implemented themselves,
+but also how the IPC is actually happening between them.
+
+00:08:22.939 --> 00:08:30.955
+Interfaces provide a clear division of responsibilities,
+and in Objective-C we have a really handy way of describing interfaces called protocols.
+
+00:08:30.955 --> 00:08:36.278
+You'll find that protocols form a fundamental piece of how NSXPCConnection works.
+
+00:08:37.068 --> 00:08:41.820
+So here's the division of responsibilities of our two processes in our multi-process application.
+
+00:08:42.465 --> 00:08:52.104
+On the Flight Finder, it can get search input from the user, it can talk to the agent, it can show found tickets, and as we mentioned earlier it has access to my calendar data.
+
+00:08:52.104 --> 00:09:00.082
+The Ticket Agent on the other hand, its job is simply to find flights and perhaps to buy tickets, and return the result back to the Flight Finder application.
+
+00:09:03.227 --> 00:09:08.064
+So we're going to describe the ticket agent interface with this protocol called Agent.
+
+00:09:08.064 --> 00:09:14.676
+In this protocol you'll have a set of methods like this one, checkIn.
+It takes no arguments and has no return value.
+
+00:09:15.230 --> 00:09:20.424
+But of course, often you're going to want to send data to your helper processes, so there'll be arguments.
+
+00:09:20.424 --> 00:09:26.781
+This method, buyTicket:onDate:maxCost:, has two object arguments (a string and a date) and also an integer argument.
+
+00:09:28.091 --> 00:09:33.353
+Now once we've bought a ticket, we're going to need to receive it back in the Flight Finder application in some way.
+
+00:09:33.353 --> 00:09:38.999
+One way you might do that is by creating another protocol to describe the Flight Finder interface.
+
+00:09:38.999 --> 00:09:43.005
+Here you see I've got a method called setTicket:, and it takes a ticket as an argument.
+
+00:09:43.005 --> 00:09:54.711
+But this request-response pattern is so common with these XPC services that instead we're going to let you build it right into the Agent protocol via a reply block.
+
+00:09:54.885 --> 00:10:01.858
+So you see I've just added an argument that has a Ticket argument as its single return value.
+
+00:10:01.858 --> 00:10:05.364
+And this reply block will be invoked asynchronously when the reply comes back.
+
+00:10:08.391 --> 00:10:13.199
+Now we're going to wrap up this protocol in an object called an NSXPCInterface.
+
+00:10:13.199 --> 00:10:20.201
+And to create one, you use this simple constructor method, interfaceWithProtocol:, and pass in your protocol.
+
+00:10:21.363 --> 00:10:23.505
+A few more details about these protocol methods:
+
+00:10:23.505 --> 00:10:28.917
+the methods must return void. Again, that's because we're very opinionated about being asynchronous.
+
+00:10:28.917 --> 00:10:34.424
+Methods that return a value directly are very hard to make work in a pure asynchronous kind of fashion.
+
+00:10:34.424 --> 00:10:39.349
+So instead if you have return values or reply values, you just put them as one of the arguments to your reply block.
+
+00:10:39.349 --> 00:10:44.994
+The arguments of the method and the reply block can be one or more or none of the following types:
+
+00:10:44.994 --> 00:10:48.044
+arithmetic types, like int, float, char, long long, and NSInteger;
+
+00:10:48.044 --> 00:10:49.936
+the Objective-C boolean type;
+
+00:10:49.936 --> 00:10:51.550
+NULL-terminated C strings;
+
+00:10:51.550 --> 00:10:53.498
+C arrays that contain those types;
+
+00:10:53.498 --> 00:10:57.017
+and C structures that contain those types, including C arrays;
+
+00:10:57.017 --> 00:10:59.459
+and finally and most importantly, objects.
+
+00:10:59.459 --> 00:11:04.315
+And those objects must implement the NSSecureCoding protocol, which we'll talk about a little bit later.
+
+00:11:07.199 --> 00:11:15.024
+So here is our preview again. What we're going to do is create one of these NSXPCInterface objects in the ticket agent.
+
+00:11:15.024 --> 00:11:19.957
+You see it describes the Agent protocol, and we're going to call it our "Exported Interface".
+
+00:11:19.957 --> 00:11:24.647
+That is, this is the interface we expect this ticket agent to implement for us.
+
+00:11:24.647 --> 00:11:32.161
+The flight finder also gets an NSXPCInterface that describes the Agent protocol,
+but there it's called the "Remote Object Interface".
+
+00:11:32.161 --> 00:11:38.173
+So this is saying that the flight finder expects its remote side, the ticket agent, to implement the Agent protocol.
+
+00:11:38.173 --> 00:11:41.381
+So both sides have a clear of what the other side is supposed to do.
+
+00:11:43.466 --> 00:11:46.930
+Okay, that's Interfaces. Let's move on to Connections.
+
+00:11:48.854 --> 00:11:52.265
+So I promised you earlier there was an arrow there. There it is.
+
+00:11:52.265 --> 00:11:58.525
+And there are two objects again, one on each side, called NSXPCConnections.
+
+00:11:58.525 --> 00:12:03.492
+This connection represents an endpoint in a bidirectional communication channel.
+
+00:12:05.000 --> 00:12:11.390
+On the ticket agent, there is one key property. This is an object that you implement, and it's called the "Exported Object".
+
+00:12:11.390 --> 00:12:15.941
+And as you might imagine from the name, its job is to implement the exported interface.
+
+00:12:15.941 --> 00:12:19.086
+You see here I've declared an object that implements the Agent protocol.
+
+00:12:20.044 --> 00:12:21.745
+So let's look at how you would do that.
+
+00:12:23.988 --> 00:12:29.227
+Here again is our Agent protocol that we just saw, and I'm going to create an object called a TicketAgent.
+
+00:12:29.227 --> 00:12:32.596
+It's a subclass of NSObject and it implements the Agent protocol.
+
+00:12:32.596 --> 00:12:36.885
+In its implementation, we just implement those methods.
+
+00:12:36.894 --> 00:12:41.562
+So here's my checkIn method, it took no arguments, so I can just get away with putting a comment there.
+
+00:12:41.562 --> 00:12:47.543
+But this method, as you remember, took two object arguments and an integer argument and has this reply block.
+
+00:12:47.543 --> 00:12:50.394
+And this one's actually pretty easy to implement as well.
+
+00:12:50.394 --> 00:12:56.280
+We take those values as we've received them, and do whatever we need to do to create a ticket object,
+
+00:12:56.280 --> 00:12:59.195
+and then we invoke the reply block with our reply value.
+
+00:12:59.195 --> 00:13:03.737
+And the way you invoke a reply block is just like any other block, which is like a function.
+
+00:13:03.737 --> 00:13:05.893
+So this one has one argument, our ticket.
+
+00:13:05.951 --> 00:13:07.385
+And we're done.
+
+00:13:11.552 --> 00:13:16.815
+So the NSXPCConnection instance in the flight finder you can create in three simple steps.
+
+00:13:17.398 --> 00:13:25.647
+The first is you call alloc and initWithServiceName:. The argument there is going to be the bundle identifier of the XPC service bundle that we saw.
+
+00:13:25.647 --> 00:13:31.388
+The second step is to set up its remote interface. Here again is the same method, interfaceWithProtocol:.
+
+00:13:31.388 --> 00:13:34.120
+And the third step is to resume the connection.
+
+00:13:34.120 --> 00:13:39.741
+Connections start suspended so that you have an opportunity to configure them, but you must resume them before they can be used.
+
+00:13:41.762 --> 00:13:50.067
+The XPC connection in the ticket agent is handed to us, and we'll see how in a second,
+but it also just has three simple steps to configure:
+
+00:13:50.067 --> 00:14:00.750
+We're going to set its exportedInterface, again using the interfaceWithProtocol: method, and set its exportedObject to be the ticket agent that we just created,
+and resume it as well.
+
+00:14:03.274 --> 00:14:17.343
+A few more details about connections. Here in our example we have one side has an exported object, and the other side has a remote object, but connections are bidirectional, so you can actually have both on both sides if you choose.
+
+00:14:17.565 --> 00:14:24.757
+The lifetime of your XPC service is managed for you by XPC and by launchd, so they're launched automatically when you need them
+
+00:14:24.757 --> 00:14:30.173
+and they will go away automatically when the system needs resources, assuming they're not in the middle of doing some work.
+
+00:14:30.173 --> 00:14:41.268
+And finally, in this architecture of having an application and a service, you should invalidate the connection in the application when you're done to clean up any appropriate resources.
+
+00:14:41.268 --> 00:14:43.321
+And we'll see exactly how to do that in a demo later.
+
+00:14:45.143 --> 00:14:52.476
+So in the world of IPC, it's not always the case that everything goes perfectly, so we have some error-handling opportunities for you.
+
+00:14:52.476 --> 00:14:56.237
+There's two blocks that are properties of the connection that you can set.
+
+00:14:56.237 --> 00:15:03.591
+The first is called an interruption handler. The interruption handler is called when the remote side crashes, or closes the connection.
+
+00:15:03.591 --> 00:15:13.150
+In this case the NSXPCConnection instance is still valid. But because the other side crashed, you may need to restore some state to get back to what you were doing.
+
+00:15:13.150 --> 00:15:21.015
+So the reason that it's an interruption handler in this case is because this connection was created with a name, or some other way to look up the connection again,
+
+00:15:21.015 --> 00:15:26.132
+so we can just recreate it for you on demand. So you don't need to recreate the NSXPCConnection instance.
+
+00:15:26.132 --> 00:15:35.076
+On the other hand, you may get an invalidation error, and in that case the remote side crashed or invalidate was called,
+but we have no way to recreate the connection.
+
+00:15:35.076 --> 00:15:38.826
+And, in that case, the NSXPCConnection instance is no longer valid.
+
+00:15:38.826 --> 00:15:44.960
+So generally you're going to see interruption handlers in your application,
+because your application looked up the service and we know how to reconnect to it,
+
+00:15:44.960 --> 00:15:50.743
+but you're going to get invalidation handlers in your service, because the service received the connection.
+
+00:15:51.572 --> 00:15:56.746
+So let's talk about listeners, which is how those connections are created in the service.
+
+00:15:59.373 --> 00:16:09.043
+That's the last object in the ticket agent, and the listener's job is to await new incoming connections and allow a delegate to configure them.
+
+00:16:11.031 --> 00:16:14.571
+So here's how you do it. This will be in the main function of your service.
+
+00:16:14.571 --> 00:16:22.331
+We're going to get the singleton service listener, set up its delegate, which is an object which implements the NSXPCListenerDelegate protocol,
+
+00:16:22.331 --> 00:16:26.562
+and like connections, listeners start suspended, so you must resume them.
+
+00:16:27.010 --> 00:16:31.816
+Now for service listeners, when you call resume, we take over execution of the application.
+
+00:16:31.816 --> 00:16:42.325
+And from that point on, as I mentioned, we're going to manage the lifecycle. This is equivalent to calling NSApplicationMain, or dispatch<u>main, or CFRunLoopRun, or xpc</u>main or any of those kinds of functions.
+
+00:16:45.375 --> 00:16:50.254
+The delegate just has one method, it's called listener:shouldAcceptNewConnection:.
+
+00:16:50.254 --> 00:16:55.380
+You see that it has a connection argument, that's where the connection is handed to us in the service, as I promised,
+
+00:16:55.380 --> 00:17:03.407
+and here's the exact same code we just saw, where we configure the connection by setting up its exported interface, exported object, and resuming it.
+
+00:17:03.407 --> 00:17:08.883
+And then we decide to return YES to accept the connection. If you choose to reject the connection, you can return NO.
+
+00:17:08.883 --> 00:17:16.428
+The connection has a few properties you can check, like effectiveUserIdentifier and effectiveGroupIdentifier, to see if you want to accept the connection.
+
+00:17:19.416 --> 00:17:26.164
+So today we're talking about XPC services, which are part of your application bundle and are for the exclusive use of your application,
+
+00:17:26.164 --> 00:17:35.360
+but the same NSXPCConnection APIs can be used to talk to launch agents and launch daemons as well; you just need to use the Mach variant of the init methods.
+
+00:17:37.360 --> 00:17:44.399
+And one more detail, Mach service listeners do not take control of your application when you call resume, unlike the service listener,
+
+00:17:44.399 --> 00:17:50.533
+that's because in a more advanced use case we expect that you may have additional requirements for how you need to run your launch agent or daemon.
+
+00:17:53.583 --> 00:17:59.853
+Alright now we just need a way to communicate between these two pieces, and that's Messages.
+
+00:17:59.853 --> 00:18:09.115
+We saw earlier an exported object in the ticket agent that implements the exported interface, and is responsible for receiving messages that are sent to the ticket agent.
+
+00:18:09.115 --> 00:18:15.598
+To send messages to the ticket agent from the flight finder, we have an object there called the Remote Object Proxy.
+
+00:18:15.598 --> 00:18:22.590
+And you see it implements or appears to implement the Agent protocol, as described by the Remote Object Interface.
+
+00:18:25.961 --> 00:18:35.886
+To get one, you just ask the connection for it like this, remoteObjectProxy, an unsurprising name, and then send it your messages like checkIn. That's it.
+
+00:18:35.886 --> 00:18:45.987
+Or this one, buyTicket:onDate:maxCost:reply:, you see I've passed in my object arguments and also that integer, and the reply block goes right there inline with the message send.
+
+00:18:45.987 --> 00:18:52.884
+So that means that it's really easy to correlate any requests with any response action that you need to take, like updating your user interface.
+
+00:18:56.659 --> 00:19:02.956
+Earlier we saw that you could do error handling at the connection level. You can also set up error handling on a per-message basis.
+
+00:19:02.956 --> 00:19:11.768
+And the way you do that is by creating a remote object proxy that has an error handler block, using the method called remoteObjectProxyWithErrorHandler:.
+
+00:19:11.768 --> 00:19:22.264
+And in that block you can take whatever action is appropriate for handling that error. I hope you don't do something like logging Oops! to the console. Users don't look at the console.
+
+00:19:23.904 --> 00:19:29.775
+A better idea might be to display a placeholder, or perhaps retry the operation if you have an algorithm to do that.
+
+00:19:29.775 --> 00:19:38.856
+Now you see I've just nested the call to get this remote object proxy with the exact same buyTicket:onDate:maxCost:reply: method we just saw.
+
+00:19:39.958 --> 00:19:49.426
+So it's important to note that what we guarantee for you is that exactly one of those two blocks will be called per message send.
+
+00:19:49.774 --> 00:20:02.181
+If you need to for example take a lock before you send this message, you can release the lock in both blocks and know that you're not going to over-release your lock. So that's a pretty handy thing to take advantage of.
+
+00:20:04.944 --> 00:20:08.122
+Let's look at a little more detail about how this message sending works.
+
+00:20:08.122 --> 00:20:16.811
+So on the flight finder I send a message to the proxy called buyTicket:onDate:maxCost:reply:, and you see I specified a reply block as one of the arguments.
+
+00:20:16.811 --> 00:20:26.761
+What we're going to do is, under the covers NSXPCConnection will gather up all of the appropriate information it needs, and we're going to hang onto the reply block until the reply comes back.
+
+00:20:26.761 --> 00:20:39.083
+The appropriate stuff is sent over the connection to the ticket agent, where we will unpack it and create a stand-in reply block proxy per message, and pass it all off to your exported object.
+
+00:20:39.083 --> 00:20:52.638
+And there we saw the implementation where we implemented it by calling the reply block with a reply value, like Ticket, and we just do the exact same operation but in reverse, and send it back to the flight finder and invoke your reply block.
+
+00:20:58.533 --> 00:21:01.382
+These proxies are lightweight object, they're basically just an integer and a reference to the connection that you're using.
+
+00:21:01.382 --> 00:21:13.400
+They're immutable in the sense that you can't change their error handling blocks after you've created them, so if you need a different error handling behavior, just create another proxy using these two methods.
+
+00:21:13.400 --> 00:21:24.060
+You can send these to the NSXPCConnection itself, or any proxies that you get from the NSXPCConnection, depending on whatever's most convenient for you.
+
+00:21:26.408 --> 00:21:35.419
+And an important detail: all the messages we're talking about, that is the ones delivered to your exported object, and the invocations of your reply blocks in the application,
+
+00:21:35.419 --> 00:21:38.883
+are delivered on a per-connection, private, serial queue.
+
+00:21:38.883 --> 00:21:46.925
+It's not the main thread and it's not the thread that you sent the message on. The reason is because, again, we are trying to promote asynchronous behavior.
+
+00:21:46.925 --> 00:21:56.958
+So if you need work done on the main thread, then you should figure out what the minimum amount that you need to do is, and then just move it there using NSOperationQueue or dispatch, whatever is appropriate.
+
+00:22:00.127 --> 00:22:04.023
+So now we have all four pieces we needed to build NSXPCConnection.
+
+00:22:04.023 --> 00:22:08.124
+Let's go back to our demo and look at it in a little bit more detail. Okay.
+
+00:22:08.789 --> 00:22:13.927
+So here I have the Flight Finder project.
+
+00:22:13.927 --> 00:22:26.249
+And you can see it has two targets, a Flight Finder and a TicketAgentService, and in the build phases I've configured it so that the main application is depending on the TicketAgentService,
+
+00:22:26.249 --> 00:22:34.986
+and I have an additional Copy Files phase to move that XPC service into the directory that we saw earlier, Contents/XPCServices.
+
+00:22:36.218 --> 00:22:48.991
+In the project itself I have three groups of sources. The first is a set of shared sources. You'll find that model objects and interfaces described in headers are very common to share between both your application and a service.
+
+00:22:48.991 --> 00:22:54.728
+We also have the Flight Finder sources themselves and the TicketAgentService.
+
+00:22:55.021 --> 00:23:02.625
+We started with interfaces, let's look at that. Here is the protocol for the Agent with buyTicket:onDate:maxCost:reply:.
+
+00:23:04.993 --> 00:23:12.094
+In the application delegate, for this demonstration I've chosen to create the connection in the applicationDidFinishLaunching: method.
+
+00:23:12.094 --> 00:23:20.591
+Here I create the connection; you see I'm using the bundle identifier for my TicketAgentService. I set its remoteObjectInterface to use the Agent protocol.
+
+00:23:20.591 --> 00:23:22.863
+And I resume the connection.
+
+00:23:24.624 --> 00:23:38.329
+I'm storing my remote object proxy as an ivar in this object, and I create it and here is the error handler, where again on the main queue I'm going to update the UI to show that something went wrong.
+
+00:23:38.329 --> 00:23:50.708
+For the listener, in the main function of the TicketAgentService, this is where I create my service listener, set up its delegate, and resume the connection.
+
+00:23:52.427 --> 00:24:04.063
+The TicketAgent object implements the listener:shouldAcceptNewConnection: delegate method. Here I set up the exportedInterface, the exportedObject, and resume the connection.
+
+00:24:04.063 --> 00:24:19.559
+Now when the application chooses to ask the ticket agent for something, we just send our buyTicket:onDate:maxCost:reply: message to the agent, and when the reply comes back we're going to execute this on the main queue, which updated the UI as we saw earlier.
+
+00:24:19.559 --> 00:24:30.063
+And in the TicketAgent, that implementation is just right here, where we create our ticket, make sure that nobody is trying to get us a really cheap ticket, so we make sure it's over $100,
+
+00:24:30.063 --> 00:24:35.296
+pretend that we're actually doing some real work by sleeping, and then reply with the ticket value.
+
+00:24:36.664 --> 00:24:50.062
+So I want to show you how easy it is to add new functionality to this as your requirements change. So as you saw, we have this Today's Special button which is doing nothing, so I'm going to go ahead and implement that.
+
+00:24:50.062 --> 00:25:07.767
+We're going to start again with interfaces. I'm going to add a new method to our protocol, it's called getSpecialFlight:. You see it takes no arguments besides the reply block,
+
+00:25:07.767 --> 00:25:10.593
+and when the reply comes back we'll have a Ticket.
+
+00:25:17.926 --> 00:25:23.724
+Then in the TicketAgent, we're going to implement that new method, because we added it to our protocol.
+
+00:25:28.734 --> 00:25:37.222
+I'm just going to, like we saw on the slides, create our new ticket, set its destination and price to New York City and $499, and then reply with the return value,
+
+00:25:37.222 --> 00:25:54.221
+and in the application we need to just hook up our button, and here it is, it was just empty before, and I'm sending a message to my remote object proxy, getSpecialFlight:, and on the main queue when the reply comes back we set up some string values in the UI.
+
+00:25:54.557 --> 00:26:05.063
+So let's go ahead and re-run this, and make sure that it works. I'll bring up Activity Monitor again so we can see if our process starts.
+
+00:26:05.063 --> 00:26:13.699
+I click Today's Special, and you see there our TicketAgent service was started on demand when we asked for a value, and we got back our reply of $499.
+
+00:26:14.358 --> 00:26:26.666
+Alright. Now we're going to talk about how those objects are actually moving between processes. That's the heart of the matter, the most important feature of NSXPCConnection, and that's using coding.
+
+00:26:27.423 --> 00:26:34.193
+So if you've used KeyedArchiver, then you're familiar with NSCoding already. If not, pay attention, because I'm going to do a quick review.
+
+00:26:34.193 --> 00:26:43.993
+NSCoding is made up of two parts: there's the NSCoder subclass like NSKeyedArchiver or NSKeyedUnarchiver, and the NSCoding-conforming class.
+
+00:26:43.993 --> 00:27:01.859
+This is made up of two activities as well, there's encoding in which the coder takes an in-memory graph of NSCoding objects and turns them into an archive that is suitable for storage on disk or for sending between processes maybe,
+
+00:27:01.859 --> 00:27:07.869
+and then there's decoding, where we take that archive and convert it back into an in-memory representation of those objects.
+
+00:27:09.628 --> 00:27:16.629
+So here's encoding. You see I've got a graph of objects, an itinerary that holds a ticket that has a string.
+
+00:27:16.629 --> 00:27:27.385
+So the most important method in encoding is called encodeWithCoder:, and in there the job of this method is to tell the coder what data is needed to be stored so that we can effectively restore ourselves later,
+
+00:27:27.385 --> 00:27:31.690
+using methods like encodeBool:forKey: and encodeObject:forKey:.
+
+00:27:31.690 --> 00:27:38.875
+So when I call encodeObject:forKey: of course the coder will then call encodeWithCoder: on the ticket. And there we're going to encode the string object.
+
+00:27:38.875 --> 00:27:47.371
+Now you don't need to worry about how NSString encodes itself, because as long as NSString conforms with NSCoding, we know it can be included in the archive.
+
+00:27:49.341 --> 00:28:05.307
+On the flip side is decoding. So here the most important method is initWithCoder:. Here the job of this method is to get back that data from the coder, and initialize the object, using methods like decodeBoolForKey: and decodeObjectForKey:.
+
+00:28:05.307 --> 00:28:09.605
+And of course when we called decodeObjectForKey: we're going to alloc and initWithCoder: on the Ticket object, which will decode the string object,
+
+00:28:09.605 --> 00:28:16.539
+and you don't need to worry about a string inits itself, as long as it conforms with NSCoding, we know it can be included in the archive.
+
+00:28:18.309 --> 00:28:29.677
+So NSXPCConnection uses the exact same NSCoding design pattern. On message send, all the argument values are encoded, and then on the message receive, all the arguments are decoded.
+
+00:28:29.677 --> 00:28:38.646
+And NSXPCConnection uses a new NSCoder subclass, it's not NSKeyedArchiver, but it does implement keyed coding.
+
+00:28:38.646 --> 00:28:46.279
+So here's the method that you might be sick of by now, buyTicket:onDate:maxCost:reply:, so let's use it as an example.
+
+00:28:46.279 --> 00:28:58.444
+When this message is sent, the coder will do something like encodeObject:forKey: argument 1 and argument 2, because those are objects, and encodeInteger:forKey: argument 3, because it's an integer.
+
+00:28:58.444 --> 00:29:09.739
+As I mentioned earlier, the reply block is held onto, until the reply comes back, so if you capture a lot of memory in your reply block, just be aware that we have to keep that alive until the reply comes back.
+
+00:29:09.739 --> 00:29:17.848
+And then on receive we decode those objects using decodeObjectForKey: and decodeIntegerForKey:.
+
+00:29:17.848 --> 00:29:26.509
+Then we create that reply block proxy and stuff 'em all into the arguments to that message that you've implemented on your exported object.
+
+00:29:29.202 --> 00:29:38.643
+Now you may be wondering how the coder knows what kind of object to alloc here, because it's not specified in the method, and the return type is just id.
+
+00:29:38.643 --> 00:29:42.172
+The answer is that the class came from the archive.
+
+00:29:42.172 --> 00:29:53.975
+However, the archive came from the remote process, and because we're talking about privilege and process boundaries, we shouldn't just trust the remote process's opinion about what kind of class should be allocated.
+
+00:29:55.405 --> 00:30:08.341
+So we need some way to specify the expected class. The reason is because that class could have been any kind of class in your application, or any frameworks or libraries that is uses, and that's a huge surface area to find a security vulnerability in.
+
+00:30:08.341 --> 00:30:12.743
+It would be much better to just specify up front a very limited set of classes that this object can be.
+
+00:30:13.509 --> 00:30:20.740
+So here's one way we can do it. In the protocol that we saw earlier, we specified some class information.
+
+00:30:20.740 --> 00:30:26.140
+We said that the first argument is a string, the second one is a date, the first argument of the reply block is a Ticket.
+
+00:30:26.140 --> 00:30:33.038
+This information we can actually get now, using some new metadata provided by the clang compiler in Mountain Lion. So—
+
+00:30:33.038 --> 00:30:33.834
+(applause)
+
+00:30:33.834 --> 00:30:35.536
+Oh, good.
+
+00:30:36.406 --> 00:30:42.326
+So the use of the clang compiler is required for this feature, so that's important to note.
+
+00:30:42.326 --> 00:30:45.940
+But as we saw earlier, objects don't travel by themselves, they come in graphs.
+
+00:30:45.940 --> 00:30:51.435
+So we need some more information about this object beyond just the top level that was specified in the protocol.
+
+00:30:51.435 --> 00:30:57.402
+And to do that we have a new protocol called NSSecureCoding, and three new NSCoder methods.
+
+00:30:59.645 --> 00:31:10.644
+In the past, in your initWithCoder: you may have done something like this: decodeObjectForKey:, and then check the result to see if it's a kind of Ticket class or a subclass of Ticket.
+
+00:31:10.644 --> 00:31:21.539
+Now this is useful from some points of view, if we accidentally send that ticket object a message that it doesn't implement, we would prevent an exception in this case,
+
+00:31:21.539 --> 00:31:25.081
+but in terms of security it's already too late.
+
+00:31:25.081 --> 00:31:31.043
+As I mentioned that's because we already called alloc, and we already called initWithCoder:. So it's not good enough.
+
+00:31:31.043 --> 00:31:36.605
+Instead, what we need to do is specify it up front, using these new NSCoder methods.
+
+00:31:36.605 --> 00:31:46.772
+The first is called decodeObjectOfClass:forKey:, and so if the expected object is of one kind of class or a subclass, then you can use this method.
+
+00:31:46.772 --> 00:31:53.708
+Now what'll happen when using NSXPCConnection is if the class doesn't match, then we're just going to drop the message on the floor.
+
+00:31:53.708 --> 00:31:59.574
+Your application or service doesn't need to worry about it, doesn't even have to know that something came in that was unexpected.
+
+00:31:59.574 --> 00:32:05.143
+Under the hood what's happening is that the coder throws an exception, and NSXPCConnection catches it.
+
+00:32:05.143 --> 00:32:10.341
+So if you want to, you can catch the exception yourself and take some kind of alternate behavior.
+
+00:32:10.341 --> 00:32:19.245
+Now if the class is not just one kind of class, but a property list type, one of our property list types, then you can use this method, decodePropertyListForKey:.
+
+00:32:19.245 --> 00:32:28.941
+And if it's one of several kinds of classes that aren't property list types, or it's a collection, then you can use this method, decodeObjectOfClasses:forKey:.
+
+00:32:28.941 --> 00:32:35.570
+The reason that we use this for collections is because a collection by design doesn't know a lot of details about the content that it holds.
+
+00:32:35.570 --> 00:32:40.378
+So we need just a little bit of extra help from you to tell us what kind of objects are expected to be in it.
+
+00:32:40.378 --> 00:32:49.374
+Here's how you do it. Create a set that contains the expected classes, like that method looked like it contained an array of Tickets, so I have [Ticket class] and [Array class],
+
+00:32:49.374 --> 00:32:53.370
+and then I use decodeObjectOfClasses:forKey:.
+
+00:32:55.645 --> 00:33:03.676
+So in order to send your objects over NSXPCConnection, they are required to adopt NSSecureCoding. Oh by the way, NSSecureCoding is a subprotocol of NSCoding.
+
+00:33:03.676 --> 00:33:11.444
+So here I've got my ticket object and you see it's got one property, a string called destination.
+
+00:33:11.444 --> 00:33:20.340
+In its implementation, the encodeWithCoder: looks exactly the same as it has been in the past, where I use encodeObject:forKey:.
+
+00:33:20.340 --> 00:33:23.752
+Where things look a little bit different is in the initWithCoder:.
+
+00:33:23.752 --> 00:33:29.243
+There you're going to use those new methods I just talked about, decodeObjectOfClass:forKey:.
+
+00:33:29.849 --> 00:33:35.120
+Now there's one more method to implement, this is the method in NSSecureCoding, called supportsSecureCoding.
+
+00:33:35.120 --> 00:33:39.845
+It's a class method, and what you need to do is override it and return YES.
+
+00:33:39.845 --> 00:33:50.642
+There's one main reason for this. NSSecureCoding protects a very specific security issue, that arbitrary code execution exploit that I mentioned.
+
+00:33:50.642 --> 00:33:56.740
+What it doesn't do is protect you against things like buffer overruns or a false trust in the remote process.
+
+00:33:56.740 --> 00:34:04.507
+By that I mean, imagine that we take a string argument, and then we just take its contents and run it as a Perl script as root.
+
+00:34:04.507 --> 00:34:10.310
+Well, clearly that's going to be an insecure kind of—the whole nature of it is insecure. We can't protect against that.
+
+00:34:10.310 --> 00:34:23.834
+What we want you to do is, when you adopt NSSecureCoding in your class, review the code in your initWithCoder:, put on your security hat, and look for these kinds of security vulnerabilities.
+
+00:34:23.834 --> 00:34:28.171
+Or, you know, maybe the class isn't suitable for crossing a privilege boundary at all.
+
+00:34:28.171 --> 00:34:34.646
+So put on your hat, review the code, and then implement that method right next to your initWithCoder: and return YES.
+
+00:34:34.972 --> 00:34:44.676
+And to help you with this, we implemented a rule: that is that if you override initWithCoder: in your class, you must also override supportsSecureCoding and return YES.
+
+00:34:44.676 --> 00:34:53.710
+So if your superclass implements NSSecureCoding and you override initWithCoder:, your superclass's implementation of supportsSecureCoding isn't enough.
+
+00:34:53.710 --> 00:35:01.507
+We want you to look at your initWithCoder:, and make sure that it's secure, and to indicate that you just implement that one method and return YES.
+
+00:35:03.979 --> 00:35:10.671
+So we talked a little bit about collections earlier. Here we have a top-level collection, that's one in the protocol.
+
+00:35:10.671 --> 00:35:18.903
+Again, the collection doesn't know any details about the content, and because the protocol just says array, we can't know from the protocol.
+
+00:35:18.903 --> 00:35:23.609
+So again we're gonna need a little help to understand what kind of objects we expect to be in here.
+
+00:35:23.609 --> 00:35:30.591
+If it's a property list type, one of these, we're going to automatically whitelist it for you and you have no additional work to do.
+
+00:35:30.591 --> 00:35:40.704
+If, on the other hand, it's one of your objects, like this one appears to be an array of Ticket objects, then we need to set that information up in the NSXPCInterface.
+
+00:35:40.704 --> 00:35:59.206
+Here's how you do it. There at the top is our protocol again, so we're going to create our interface, create a set of expected classes—in this case, I already know the top-level is an array, so you just need to specify the stuff that's in it, Tickets—and then use this method on the interface object.
+
+00:35:59.206 --> 00:36:04.578
+setClasses:forSelector:argumentIndex:ofReply:. I'm going to go through it argument by argument.
+
+00:36:04.578 --> 00:36:07.239
+The first one is the set of expected classes.
+
+00:36:07.239 --> 00:36:10.379
+The second is the selector in the protocol that we're modifying.
+
+00:36:10.379 --> 00:36:15.840
+The third argument is the index of the argument that we're modifying, here it's argument index 0.
+
+00:36:15.840 --> 00:36:23.610
+And the last argument in this case will be NO, because this method doesn't have a reply block, we're modifying the argument to the method itself.
+
+00:36:23.610 --> 00:36:37.639
+If instead it has a reply block like this one, getLotsOfTickets:, it's a getter, the selector's going to be that method, the last argument is YES, because we're talking about the reply block, not the method itself,
+
+00:36:37.639 --> 00:36:42.378
+and then the argument index refers to the argument of the reply block.
+
+00:36:42.872 --> 00:36:49.776
+So again, use this method to tell the interface what the contents of your top-level collections are.
+
+00:36:50.902 --> 00:36:57.744
+Next let's talk about a few design patterns that you'll see as you start to adopt NSXPCConnection.
+
+00:36:57.744 --> 00:37:05.920
+In your service there are two key patterns. The first is one of having little state, mostly functional and short-lived kind of state.
+
+00:37:05.920 --> 00:37:15.610
+In that case it's very common to have one singleton thread-safe object that implements both the NSXPCListenerDelegate protocol and your exported object protocol.
+
+00:37:15.610 --> 00:37:21.608
+The other kind of pattern is one where you have lots of state, and you have long-lived kind of behavior.
+
+00:37:21.608 --> 00:37:32.376
+In that case you'll typically have one NSXPCListenerDelegate, and it in its delegate method will create one new exported object per connection.
+
+00:37:33.045 --> 00:37:43.273
+In the application you'll see a pattern of, as we saw a little bit earlier, asynchronous UI updates, and further separation of interface and implementation.
+
+00:37:44.144 --> 00:37:48.945
+So I'm going to do one more demo. I want to show you how to add an XPC service to a project.
+
+00:37:48.945 --> 00:37:52.144
+We're going to move some code from the main application to that service,
+
+00:37:52.144 --> 00:37:55.810
+and I'm going to show you briefly how you might debug it.
+
+00:37:55.810 --> 00:37:58.238
+So let's go ahead and quit the Flight Finder, we don't need that.
+
+00:37:59.975 --> 00:38:04.504
+Here I want to use a slightly more complicated example, it's called SandboxedFetch.
+
+00:38:04.807 --> 00:38:10.175
+Now this is a public sample code that I've actually taken and modified to use NSXPCConnection.
+
+00:38:10.175 --> 00:38:20.776
+What it does is, you just give it a URL, and it will download that from the internet and then if this box is checked it will compress that file before saving it to a user-specified location.
+
+00:38:20.776 --> 00:38:33.505
+So here I've picked a URL that has a fairly large image so that we can see some progress, and you see we've been presented with our save panel, so I'm just going to go ahead and save it on the desktop, and there's our file.
+
+00:38:34.307 --> 00:38:36.038
+So let's look at the implementation of this project.
+
+00:38:39.304 --> 00:38:53.577
+As you can see here, we just have one target, so this is a single-process application. It's code signed, and it has the entitlements to allow it to have an outgoing network connection, and also read-write access to my user-selected file.
+
+00:38:53.577 --> 00:39:07.944
+If your application deals with file formats, especially compression formats, image formats, movie formats, audio formats, those kinds of things, those are notorious for having security issues and problems that cause crashes.
+
+00:39:07.944 --> 00:39:15.274
+So those are prime candidates for moving into a separate helper process that has a limited set of permissions, so that's what we're going to do.
+
+00:39:15.274 --> 00:39:17.643
+We're going to move the compression stuff into an XPC service.
+
+00:39:18.881 --> 00:39:21.206
+To do that I'm going to add a new target.
+
+00:39:22.843 --> 00:39:33.406
+Here in the Framework & Library section you see there's our XPC Service template. You should give your XPC service a name that reflects what it's going to do, like zip-service,
+
+00:39:33.406 --> 00:39:44.408
+and I also suggest that you make the company identifier have your application name so that the full bundle identifier is a qualified bundle identifier, so it's easy to identify.
+
+00:39:44.408 --> 00:39:47.907
+Again, this bundle identifier is what we're going to use to connect to it.
+
+00:39:47.907 --> 00:39:49.640
+Go ahead and click Finish.
+
+00:39:50.905 --> 00:40:07.746
+We're going to add a file to this zip service, a property list type called zip-service.entitlements, and the purpose of this file is to enable sandboxing in our XPC service like our main application has.
+
+00:40:07.746 --> 00:40:11.874
+The easiest way to do this is we're just going to crib something from the main application here.
+
+00:40:11.874 --> 00:40:18.441
+Here's the same set of entitlements we saw in that GUI earlier, but this is the real source of them.
+
+00:40:18.441 --> 00:40:22.839
+So I copy the app-sandbox entitlement and I'm just going to paste it here.
+
+00:40:22.839 --> 00:40:27.528
+So we're going to have no permissions for this helper process besides just enabling the sandbox.
+
+00:40:28.833 --> 00:40:40.360
+Go back to our configuration; in the Build Phases I'm going to add a dependency on the library called libz, that's what's actually doing the compression.
+
+00:40:42.400 --> 00:40:47.911
+And in the Build Settings I'm going to turn on sandboxing by code signing my application.
+
+00:40:55.948 --> 00:40:59.265
+Gonna drag it over from here so I don't make any typos on stage. There we go.
+
+00:41:01.506 --> 00:41:06.518
+And we're done configuring our zip service. Now we just need to configure our application.
+
+00:41:06.518 --> 00:41:19.921
+This is in the same way that we saw earlier, we're going to add a dependency from the SandboxedFetch application on the new service that we just created. That ensure it's built correctly and up to date when we need it to be.
+
+00:41:19.921 --> 00:41:34.580
+And add a new Copy Files build phase, and into the wrapper we're going to put it in Contents/XPCServices, the same path that we saw earlier,
+
+00:41:34.580 --> 00:41:42.559
+and the file we're going to put there is our XPC build product.
+
+00:41:43.272 --> 00:41:49.762
+Let's just go ahead and build this application right now to see if everything worked correctly, so no build errors.
+
+00:41:49.762 --> 00:42:05.100
+And I'm going to show this build product in Finder. And there's our XPC service in our XPCServices directory, so it's been put in the right place.
+
+00:42:05.100 --> 00:42:11.259
+Okay, so that was step 1. Now we're going to move some code from the main application into this helper service.
+
+00:42:11.259 --> 00:42:26.886
+Here is the header file that describes the zip interface. It's a singleton object where you get the sharedZipper and you send it this message compressFile:toFile:withReply:. It uses NSFileHandle.
+
+00:42:26.886 --> 00:42:35.592
+This is a good time to mention that NSFileHandle has been enhanced in Mountain Lion to allow it to be sent between processes using this NSXPCConnection.
+
+00:42:35.592 --> 00:42:41.655
+So that means that, as you notice, we didn't give the helper service any permission to open files on its own; the main application has it.
+
+00:42:41.655 --> 00:42:48.458
+And when we send this file to it over NSXPCConnection, the other process will have permission to access it automatically.
+
+00:42:49.625 --> 00:43:05.824
+If you remember, one of my patterns was a further separation of interface and implementation, so what we're going to do is split out this compressFile logic into a new interface called Zip.
+
+00:43:05.824 --> 00:43:14.530
+And this Zipper object will conform to that, and it will also be a singleton object because it's got very little state to hold, and it's short-lived,
+
+00:43:14.530 --> 00:43:20.290
+so we're going to implement both the exported object protocol and the NSXPCListenerDelegate protocol.
+
+00:43:22.060 --> 00:43:23.907
+Let's go ahead and do that now.
+
+00:43:23.907 --> 00:43:30.759
+Here is the implementation of that Zipper functionality; this is the compressFile method.
+
+00:43:31.528 --> 00:43:38.890
+What I want to do here is put in the implementation of the NSXPCListenerDelegate protocol.
+
+00:43:40.025 --> 00:43:50.331
+listener:shouldAcceptNewConnection:, and again we're going to set our exported interface to be the Zip protocol, set our exported object to be self, because it's a singleton, and resume the connection.
+
+00:43:50.331 --> 00:43:53.129
+Now pay attention because this is the hardest part.
+
+00:43:53.129 --> 00:43:59.707
+I'm going to move this file from SandboxedFetch to the zip-service. There we go.
+
+00:43:59.707 --> 00:44:00.648
+(whistle)
+
+00:44:04.188 --> 00:44:06.868
+Okay. So that was the interface.
+
+00:44:06.886 --> 00:44:10.133
+Next let's look at the listener.
+
+00:44:10.133 --> 00:44:20.160
+So we can add an #import of our header there, the Zipper functionality that we just moved into this service.
+
+00:44:20.160 --> 00:44:31.193
+We can go ahead and delete all of that boilerplate, and put in our implementation of the NSXPCListener.
+
+00:44:31.193 --> 00:44:40.454
+Again we're going to get the serviceListener, set its delegate to be one of these Zipper objects, and resume the connection.
+
+00:44:41.887 --> 00:44:51.567
+So finally we just need to, in the main application, instead of creating the zipper itself, we're just going to instead send that request to our XPC service.
+
+00:44:51.567 --> 00:45:08.193
+So this method is called saveFile:. And its job is to present that UI where we displayed the panel, and then also, once the user has decided to compress it, create a file handle, and then zip the file.
+
+00:45:08.193 --> 00:45:11.265
+What we'll do here is:
+
+00:45:14.793 --> 00:45:30.424
+create the connection—these are the exact same lines of code we saw earlier, initWithServiceName:, there is our com.demo.SandboxedFetch.zip-service bundle identifier—set the remoteObjectInterface to be the Zip protocol, and resume the connection.
+
+00:45:31.031 --> 00:45:39.032
+Now as I mentioned earlier, we need to invalidate the connection when we're done with it. This reply block will be called after the compression is done.
+
+00:45:39.032 --> 00:45:45.196
+So that seems like a good time to invalidate the connection, because we're no longer going to need it after that point.
+
+00:45:45.196 --> 00:45:56.132
+And finally, instead of using the singleton SharedZipper that was in-process, we're going to use the remote object proxy that comes from the connection, that implements the Zip protocol.
+
+00:45:57.792 --> 00:46:03.333
+So let's run it again and see if everything behaves correctly.
+
+00:46:03.857 --> 00:46:11.057
+I'll bring up Activity Monitor again, and we're going to filter it for zip-service.
+
+00:46:11.057 --> 00:46:18.060
+So I'll click Fetch, the file is downloaded, I click Save, replace the one that we already downloaded,
+
+00:46:18.060 --> 00:46:27.259
+and you see that as the compression started to happen, our zip-service started and it's correctly sandboxed.
+
+00:46:27.259 --> 00:46:32.792
+I mentioned earlier that NSXPCConnection has a feature of providing crash protection.
+
+00:46:32.792 --> 00:46:38.393
+To demonstrate that I'm just going to go ahead and kill this background process.
+
+00:46:38.393 --> 00:46:44.423
+And you see that the main application just continued to run, in fact the user didn't even need to know that that process went away.
+
+00:46:44.423 --> 00:46:51.760
+So I'll take this opportunity to show you some debugging tips about how to actually go ahead and debug these XPC services.
+
+00:46:51.760 --> 00:46:52.995
+There's a couple of ways.
+
+00:46:52.995 --> 00:47:04.827
+One way is you notice that we have a new zip-service here, and we can edit this scheme and choose our new executable,
+
+00:47:04.827 --> 00:47:08.163
+in the same place that we saw earlier,
+
+00:47:10.596 --> 00:47:15.570
+and make sure that you choose Wait, because we don't want to start it ourselves, it's started on demand for us.
+
+00:47:15.570 --> 00:47:22.760
+I'm going to click OK, and then I'm just going to run, and you see that Xcode is waiting for that service to start.
+
+00:47:22.760 --> 00:47:27.294
+Now if I go back to my SandboxedFetch and we go ahead and download this file again,
+
+00:47:30.197 --> 00:47:34.790
+you notice that—oh, maybe a good idea to actually set a breakpoint
+
+00:47:37.330 --> 00:47:38.993
+in the compressFile:.
+
+00:47:44.766 --> 00:47:50.269
+Okay. Kill it....
+
+00:48:00.288 --> 00:48:05.165
+Through all that our main application is still running, so that's the crash protection for you.
+
+00:48:07.365 --> 00:48:12.891
+I'm going to go ahead and re-run our zip service, and it's waiting with a breakpoint this time.
+
+00:48:12.891 --> 00:48:17.180
+Download and save,
+
+00:48:17.180 --> 00:48:20.964
+and the main application is just waiting for the reply here, you notice.
+
+00:48:20.964 --> 00:48:25.044
+Asynchronously, because I can still, you know, although it's displaying a sheet, I can still—
+
+00:48:25.044 --> 00:48:25.889
+wow, that's interesting.
+
+00:48:25.889 --> 00:48:28.929
+(laughter)
+
+00:48:28.929 --> 00:48:30.562
+Interesting bug. Okay.
+
+00:48:30.562 --> 00:48:32.132
+Somebody report that one.
+
+00:48:32.132 --> 00:48:34.626
+Anyway, so in Xcode,
+
+00:48:37.156 --> 00:48:41.860
+we've stopped on our breakpoint in the SandboxedFetch helper process.
+
+00:48:41.860 --> 00:48:47.929
+And you see we're allowed to both debug the service and the application at the same time.
+
+00:48:47.929 --> 00:48:58.823
+So here I can view the values of various values or step through my process, and then when I continue it,
+
+00:48:58.823 --> 00:49:04.728
+our main application has received its response, and hidden the panel and everything is finished.
+
+00:49:04.728 --> 00:49:10.857
+So it's actually pretty easy to split up your process and debug it at the same time in Xcode.
+
+00:49:11.329 --> 00:49:12.689
+Okay, let's go back to our slides.
+
+00:49:12.690 --> 00:49:20.822
+So, just like we moved from single-threaded to multi-threaded applications, today we're moving from single-process to multi-process applications.
+
+00:49:20.822 --> 00:49:22.561
+It provides two key benefits.
+
+00:49:22.561 --> 00:49:30.824
+The first is security, by allowing these helper processes to have only the permissions that they need to do their job.
+
+00:49:30.824 --> 00:49:36.964
+The second is crash protection, so if something goes wrong, the user doesn't have to be interrupted and lose all of their work.
+
+00:49:36.964 --> 00:49:42.130
+NSXPCConnection is designed to help you connect them. Again, it works with your own objects and interfaces.
+
+00:49:42.130 --> 00:49:44.728
+And it's designed to be both secure and modern.
+
+00:49:44.728 --> 00:49:46.132
+There are three main pieces:
+
+00:49:46.132 --> 00:49:52.364
+the interfaces, which provide a clear division of responsibility and abstract away implementation details;
+
+00:49:52.364 --> 00:49:56.425
+connections, which provide the bidirectional communication channel between them;
+
+00:49:56.425 --> 00:50:02.692
+and finally listeners, whose job it is to await new incoming connections, and allow a delegate to configure them.
+
+00:50:03.932 --> 00:50:07.092
+For more information, here are some links for you.
+
+00:50:07.092 --> 00:50:12.059
+The SandboxedFetch2 example that I showed is available as part of this session.
+
+00:50:12.059 --> 00:50:17.291
+In the sample that you see online, I've split it up into three processes, because three is better than two,
+
+00:50:17.291 --> 00:50:23.292
+and the third process actually does the downloading, so we've even separated out the permissions further.
+
+00:50:23.292 --> 00:50:28.457
+And for those of you watching on video, we hope to get this promoted to a public sample code as well, soon.
+
+00:50:28.457 --> 00:50:39.332
+NSXPCConnection is based on top of XPC of course, so you'll find a lot of helpful information, especially about the error handling stuff, in the XPC man pages.
+
+00:50:40.363 --> 00:50:47.562
+We have one more related session, that's tomorrow morning, and that's Asynchronous Design Patterns with Blocks, GCD, and XPC.
+
+00:50:47.562 --> 00:50:57.330
+This session is about the underlying parts of NSXPCConnection, but the design patterns they're going to go through are really helpful to help understand how you might segregate your application.
+
+00:50:57.330 --> 00:51:00.963
+I gave you some simple examples, and they'll show you some more advanced ones.
+
+00:51:00.963 --> 00:51:04.680
+So that's it, I hope you go out and make some great applications.
