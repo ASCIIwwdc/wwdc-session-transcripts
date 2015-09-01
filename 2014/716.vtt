@@ -1,0 +1,3398 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:00:13.176 --> 00:00:15.276 A:middle
+&gt;&gt; Welcome to Power,
+Performance and Diagnostics:
+
+00:00:15.776 --> 00:00:17.076 A:middle
+What's new in GCD and XPC.
+
+00:00:17.886 --> 00:00:20.626 A:middle
+I'm Daniel Steffen, I'm one
+of the Engineers responsible
+
+00:00:20.626 --> 00:00:22.806 A:middle
+for GCD and XPC in Core OS,
+
+00:00:23.736 --> 00:00:26.476 A:middle
+and today we'll go
+over some background.
+
+00:00:27.306 --> 00:00:30.756 A:middle
+Some -- a new concept called
+Quality of Service Classes
+
+00:00:30.756 --> 00:00:33.766 A:middle
+that we're introducing this
+year, the new APIs associated
+
+00:00:33.766 --> 00:00:38.366 A:middle
+to that, and the concept of
+propagation of this quality
+
+00:00:38.366 --> 00:00:42.856 A:middle
+of service and execution context
+across threads and processes,
+
+00:00:43.276 --> 00:00:46.496 A:middle
+and finally, some pointers
+to great new features
+
+00:00:46.596 --> 00:00:49.266 A:middle
+around diagnostics and
+queue debugging this year.
+
+00:00:49.826 --> 00:00:53.606 A:middle
+So GCD, for those
+who might be new
+
+00:00:53.846 --> 00:00:56.366 A:middle
+to the topic even though
+given the number of people,
+
+00:00:56.366 --> 00:01:00.026 A:middle
+maybe everybody knows
+about it [laughter],
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:00:56.366 --> 00:01:00.026 A:middle
+maybe everybody knows
+about it [laughter],
+
+00:01:00.026 --> 00:01:03.196 A:middle
+GCD is a low-level frame maker
+on asynchronous execution,
+
+00:01:03.536 --> 00:01:05.776 A:middle
+concurrent execution,
+and synchronization.
+
+00:01:06.956 --> 00:01:08.996 A:middle
+Today, we are mostly
+going to be focusing
+
+00:01:08.996 --> 00:01:13.996 A:middle
+on the asynchronous execution
+aspect of it, and you can think
+
+00:01:14.866 --> 00:01:19.066 A:middle
+of asynchronous execution
+with GCD as a way to run code
+
+00:01:19.066 --> 00:01:21.866 A:middle
+in a separate environment
+in your process.
+
+00:01:22.256 --> 00:01:24.356 A:middle
+The reasons you might
+want to do that are things
+
+00:01:24.356 --> 00:01:26.626 A:middle
+like avoid interfering
+with the current thread,
+
+00:01:26.756 --> 00:01:29.186 A:middle
+a typical example would be the
+main thread of your application,
+
+00:01:29.776 --> 00:01:31.666 A:middle
+or execute at a different
+priority level,
+
+00:01:31.846 --> 00:01:34.986 A:middle
+which is something we'll talk a
+lot more about in this session,
+
+00:01:35.196 --> 00:01:38.526 A:middle
+or coordination between
+multiple clients in the process.
+
+00:01:39.096 --> 00:01:43.296 A:middle
+This leads us to XPC, which
+is our low level IPC framework
+
+00:01:43.486 --> 00:01:46.396 A:middle
+on the system, and that
+can be thought of as a way
+
+00:01:46.396 --> 00:01:49.156 A:middle
+to asynchronously execute
+code in a separate process,
+
+00:01:49.256 --> 00:01:51.876 A:middle
+for which you might do
+for very similar reasons:
+
+00:01:51.876 --> 00:01:54.946 A:middle
+avoid interfering with the
+current process as a whole,
+
+00:01:55.266 --> 00:01:57.016 A:middle
+say if you're running
+on un-trusted data
+
+00:01:57.366 --> 00:02:00.466 A:middle
+that you might not want to
+crash the main application
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:01:57.366 --> 00:02:00.466 A:middle
+that you might not want to
+crash the main application
+
+00:02:00.466 --> 00:02:03.706 A:middle
+for if it goes wrong,
+or you might need to run
+
+00:02:03.706 --> 00:02:06.176 A:middle
+at a different privilege level
+say in a different sandbox,
+
+00:02:06.506 --> 00:02:09.066 A:middle
+and maybe you need to
+coordinate with multiple clients
+
+00:02:09.066 --> 00:02:11.106 A:middle
+if you're writing
+a Daemon on OS X.
+
+00:02:11.586 --> 00:02:15.096 A:middle
+And that's really all I'm
+going to go over in terms
+
+00:02:15.096 --> 00:02:18.226 A:middle
+of background for
+these two topics.
+
+00:02:18.226 --> 00:02:20.936 A:middle
+This is sort of a "what's new
+session" this year, so I --
+
+00:02:20.936 --> 00:02:24.206 A:middle
+here are a number of sessions
+from past years if you're new
+
+00:02:24.206 --> 00:02:26.116 A:middle
+to this technology
+or to the platforms.
+
+00:02:26.696 --> 00:02:29.046 A:middle
+That will get you up to speed,
+you should be able to see all
+
+00:02:29.046 --> 00:02:32.306 A:middle
+of those in your WWDC app
+or on the developer website.
+
+00:02:32.616 --> 00:02:37.056 A:middle
+So let's take a step
+back and think
+
+00:02:37.056 --> 00:02:40.516 A:middle
+about what our goal should
+be as application developers.
+
+00:02:41.376 --> 00:02:43.526 A:middle
+We'll see one of
+the primary goals is
+
+00:02:43.556 --> 00:02:45.596 A:middle
+to provide the best
+user experience
+
+00:02:45.596 --> 00:02:47.556 A:middle
+for the person using the device.
+
+00:02:48.086 --> 00:02:49.356 A:middle
+What do they care about?
+
+00:02:50.776 --> 00:02:54.116 A:middle
+The frontmost app and its
+user interface, that that be
+
+00:02:54.116 --> 00:02:55.426 A:middle
+as responsive as possible.
+
+00:02:56.016 --> 00:02:58.266 A:middle
+What do you need to
+provide on the system
+
+00:02:59.586 --> 00:03:02.966 A:middle
+as application developers
+to make this possible?
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:02:59.586 --> 00:03:02.966 A:middle
+as application developers
+to make this possible?
+
+00:03:02.966 --> 00:03:04.586 A:middle
+This responsive user
+interface well,
+
+00:03:04.956 --> 00:03:07.146 A:middle
+there must be enough
+resources available
+
+00:03:07.496 --> 00:03:09.376 A:middle
+so that the main thread
+of the frontmost app,
+
+00:03:09.716 --> 00:03:13.166 A:middle
+which is where all the UI event
+handling and UI drawing occurs,
+
+00:03:13.616 --> 00:03:16.966 A:middle
+can proceed unimpeded, as well
+
+00:03:16.966 --> 00:03:19.356 A:middle
+as all the associated
+infrastructure that is involved
+
+00:03:19.356 --> 00:03:21.856 A:middle
+in pushing pixels to the
+screen or getting events
+
+00:03:22.166 --> 00:03:24.946 A:middle
+from the input devices.
+
+00:03:26.616 --> 00:03:28.746 A:middle
+Other work that is
+not directly related
+
+00:03:28.746 --> 00:03:30.756 A:middle
+to this task should
+execute off the main thread
+
+00:03:30.756 --> 00:03:33.676 A:middle
+of the application independently
+off the main thread,
+
+00:03:33.676 --> 00:03:35.366 A:middle
+and ideally at lower-priority.
+
+00:03:36.636 --> 00:03:37.956 A:middle
+Let's talk about priorities.
+
+00:03:39.946 --> 00:03:42.976 A:middle
+Very generically
+priorities are a mechanism
+
+00:03:43.036 --> 00:03:46.376 A:middle
+to resolve resource
+contention on the system.
+
+00:03:47.256 --> 00:03:49.166 A:middle
+The idea is that
+under contention,
+
+00:03:49.166 --> 00:03:51.986 A:middle
+the high priorities win, but
+if there's no contention,
+
+00:03:52.716 --> 00:03:55.216 A:middle
+the low priorities aren't
+really a restriction they will
+
+00:03:55.286 --> 00:03:56.846 A:middle
+proceed normally.
+
+00:03:57.556 --> 00:04:00.076 A:middle
+So an example of that that
+you are probably familiar
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:03:57.556 --> 00:04:00.076 A:middle
+So an example of that that
+you are probably familiar
+
+00:04:00.076 --> 00:04:01.206 A:middle
+with is scheduling priority.
+
+00:04:01.846 --> 00:04:04.326 A:middle
+This is something you
+can set on your threads
+
+00:04:04.326 --> 00:04:08.016 A:middle
+that tells the Kernel scheduler
+how you would like access
+
+00:04:08.016 --> 00:04:12.046 A:middle
+to the CPU prioritized, and the
+idea is that under contention,
+
+00:04:12.046 --> 00:04:14.096 A:middle
+high priorities get
+to the CPU first.
+
+00:04:14.586 --> 00:04:17.666 A:middle
+But even if you set low-priority
+there's no restriction
+
+00:04:17.755 --> 00:04:19.646 A:middle
+to your execution if
+they're no contention,
+
+00:04:20.076 --> 00:04:21.736 A:middle
+but then if something
+high-priority comes along
+
+00:04:21.736 --> 00:04:25.546 A:middle
+like a UI action, then you might
+not run for a period of time
+
+00:04:25.546 --> 00:04:26.456 A:middle
+if you're at low-priority.
+
+00:04:27.536 --> 00:04:30.586 A:middle
+Similar concept for I/O that
+we've had for a long time
+
+00:04:30.586 --> 00:04:33.096 A:middle
+that you might be familiar with
+on the GDC background queue,
+
+00:04:33.476 --> 00:04:35.886 A:middle
+the I/O that you perform
+on that queue are tagged
+
+00:04:35.886 --> 00:04:36.796 A:middle
+as low-priority.
+
+00:04:37.316 --> 00:04:38.516 A:middle
+Again, this is no restriction
+
+00:04:38.516 --> 00:04:40.296 A:middle
+if there's no high-priority
+I/O present,
+
+00:04:40.386 --> 00:04:42.296 A:middle
+it will just proceed
+normally in that case.
+
+00:04:42.766 --> 00:04:44.606 A:middle
+But if there is say,
+the main thread
+
+00:04:44.606 --> 00:04:47.156 A:middle
+of an application loading an
+image for display in the UI,
+
+00:04:47.596 --> 00:04:50.606 A:middle
+if such high-priority
+I/O is present,
+
+00:04:50.856 --> 00:04:54.026 A:middle
+the low-priority I/O
+will be deprioritized.
+
+00:04:56.736 --> 00:04:59.866 A:middle
+But it turns out that our system
+actually has many other resource
+
+00:04:59.866 --> 00:05:02.366 A:middle
+controls of this type,
+and to configure all
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:04:59.866 --> 00:05:02.366 A:middle
+controls of this type,
+and to configure all
+
+00:05:02.366 --> 00:05:03.916 A:middle
+of this correctly
+is very complex
+
+00:05:03.976 --> 00:05:05.996 A:middle
+and a lot of knobs involved.
+
+00:05:06.476 --> 00:05:08.256 A:middle
+There isn't really any
+unified approach for you
+
+00:05:08.256 --> 00:05:11.476 A:middle
+to know what settings
+that should be used in all
+
+00:05:11.476 --> 00:05:13.616 A:middle
+of these cases, and
+no good way for you
+
+00:05:13.616 --> 00:05:17.046 A:middle
+to tell the system your
+intent behind setting specific
+
+00:05:17.046 --> 00:05:19.746 A:middle
+configuration values, and
+this is what we wanted
+
+00:05:19.746 --> 00:05:22.236 A:middle
+to address this year
+with the introduction
+
+00:05:22.236 --> 00:05:23.996 A:middle
+of Quality of Service Classes.
+
+00:05:23.996 --> 00:05:30.276 A:middle
+Quality of Service Classes are
+a new concept whose goal is
+
+00:05:30.546 --> 00:05:33.396 A:middle
+to allow you the developer to
+communicate intent to the system
+
+00:05:33.766 --> 00:05:36.116 A:middle
+by giving an explicit
+classification of work
+
+00:05:36.326 --> 00:05:37.726 A:middle
+that your application performs
+
+00:05:38.076 --> 00:05:41.056 A:middle
+with a single abstract
+parameter, and move away
+
+00:05:41.056 --> 00:05:42.786 A:middle
+from this situation of having
+
+00:05:42.786 --> 00:05:45.256 A:middle
+to dictate very specific
+configuration values
+
+00:05:45.256 --> 00:05:47.406 A:middle
+for all the possible things
+that you could configure.
+
+00:05:48.656 --> 00:05:52.336 A:middle
+Among the effects of
+setting Quality of Service,
+
+00:05:52.506 --> 00:05:54.636 A:middle
+the two we talked about,
+CPU scheduling priority
+
+00:05:54.636 --> 00:05:57.526 A:middle
+and I/O priority, but
+also configuration
+
+00:05:57.526 --> 00:06:00.336 A:middle
+of timer coalescing
+and hints to the CPU
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:05:57.526 --> 00:06:00.336 A:middle
+of timer coalescing
+and hints to the CPU
+
+00:06:00.536 --> 00:06:02.456 A:middle
+that it should prefer throughput
+
+00:06:02.456 --> 00:06:05.206 A:middle
+versus more energy
+efficient modes of execution,
+
+00:06:05.726 --> 00:06:10.166 A:middle
+and potentially more parameters
+today or in the future
+
+00:06:10.166 --> 00:06:11.156 A:middle
+that you don't need to know
+
+00:06:11.156 --> 00:06:14.186 A:middle
+about as an application
+developer or can't even know
+
+00:06:14.186 --> 00:06:15.566 A:middle
+about yet because
+they don't exist yet.
+
+00:06:15.566 --> 00:06:19.476 A:middle
+In particular, we might be
+tuning these configuration
+
+00:06:19.476 --> 00:06:21.246 A:middle
+values that are actually
+used underneath the colors
+
+00:06:21.246 --> 00:06:23.776 A:middle
+differently for different
+platforms of different devices,
+
+00:06:24.206 --> 00:06:25.656 A:middle
+but you don't have
+to know about that.
+
+00:06:25.656 --> 00:06:28.136 A:middle
+You can just specify
+this abstract parameter.
+
+00:06:28.726 --> 00:06:32.966 A:middle
+So the core Quality of Service
+Classes we're introducing are
+
+00:06:32.996 --> 00:06:34.996 A:middle
+user-interactive,
+user-initiated,
+
+00:06:35.166 --> 00:06:36.426 A:middle
+utility, and background.
+
+00:06:36.946 --> 00:06:40.406 A:middle
+I'll go through each
+of those in turn.
+
+00:06:40.606 --> 00:06:43.676 A:middle
+User-Interactive is the quality
+of service of the main thread
+
+00:06:43.676 --> 00:06:46.316 A:middle
+of the application, and we set
+that up for you automatically.
+
+00:06:46.906 --> 00:06:48.886 A:middle
+It's -- should be used
+
+00:06:48.886 --> 00:06:51.406 A:middle
+for anything that's directly
+involved in event handling,
+
+00:06:51.716 --> 00:06:55.146 A:middle
+UI drawing, and anything
+of that nature,
+
+00:06:55.846 --> 00:06:59.126 A:middle
+but overall for an
+application we expect
+
+00:06:59.126 --> 00:07:01.446 A:middle
+that this should be a small
+fraction of the total work
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:06:59.126 --> 00:07:01.446 A:middle
+that this should be a small
+fraction of the total work
+
+00:07:01.446 --> 00:07:03.816 A:middle
+that an application does,
+especially in the case
+
+00:07:03.816 --> 00:07:05.256 A:middle
+where the user isn't
+directly interacting
+
+00:07:05.256 --> 00:07:06.016 A:middle
+with the application.
+
+00:07:08.236 --> 00:07:12.006 A:middle
+The User-Initiated Quality
+of Service class is intended
+
+00:07:12.006 --> 00:07:13.756 A:middle
+for work that's asynchronous
+to the UI
+
+00:07:13.756 --> 00:07:17.326 A:middle
+but directly UI-initiated, or
+anything that a user is waiting
+
+00:07:17.326 --> 00:07:18.546 A:middle
+for immediate results.
+
+00:07:19.066 --> 00:07:23.096 A:middle
+This could be things that are
+required for the user to be able
+
+00:07:23.096 --> 00:07:25.846 A:middle
+to continue his interaction
+with the current action
+
+00:07:25.846 --> 00:07:30.356 A:middle
+that he's doing in the UI.
+
+00:07:30.356 --> 00:07:32.276 A:middle
+Anything that is not of
+that nature should run
+
+00:07:32.276 --> 00:07:34.546 A:middle
+at the lower Quality of
+Service class like Utility
+
+00:07:34.826 --> 00:07:36.656 A:middle
+which is intended for
+long running tasks
+
+00:07:36.656 --> 00:07:40.066 A:middle
+but user visible progress such
+as a long learning computation,
+
+00:07:40.256 --> 00:07:43.506 A:middle
+intensive I/O, or
+networking, but anything
+
+00:07:43.506 --> 00:07:47.466 A:middle
+that really feeds data
+to the user interface
+
+00:07:47.466 --> 00:07:49.156 A:middle
+on a long running basis.
+
+00:07:49.946 --> 00:07:51.886 A:middle
+You might also put
+things like getting ready
+
+00:07:51.886 --> 00:07:54.516 A:middle
+for the next UI request if
+you can confidently predict
+
+00:07:54.516 --> 00:07:57.046 A:middle
+that that will be needed very
+soon, that Quality of Service.
+
+00:07:57.446 --> 00:08:00.386 A:middle
+But this is already one of
+the energy efficient Quality
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:07:57.446 --> 00:08:00.386 A:middle
+But this is already one of
+the energy efficient Quality
+
+00:08:00.386 --> 00:08:03.366 A:middle
+of Service Classes, so it's
+important to put as much work
+
+00:08:03.616 --> 00:08:08.106 A:middle
+as feasible in your application
+at this Quality of Service Class
+
+00:08:08.106 --> 00:08:11.806 A:middle
+or lower in order to maximize
+your user's battery life.
+
+00:08:14.536 --> 00:08:17.066 A:middle
+The next level is Background.
+
+00:08:17.496 --> 00:08:20.446 A:middle
+That is intended for work
+that the user is unaware of,
+
+00:08:20.876 --> 00:08:22.686 A:middle
+that the work is
+currently occurring.
+
+00:08:22.986 --> 00:08:25.456 A:middle
+He may have opted into the
+performance of that work
+
+00:08:25.456 --> 00:08:27.436 A:middle
+in the past saying like, "I want
+
+00:08:27.436 --> 00:08:30.816 A:middle
+to have an hourly backup
+occurring," but he doesn't see
+
+00:08:30.816 --> 00:08:33.706 A:middle
+that occurring currently
+when it's going on.
+
+00:08:34.145 --> 00:08:35.436 A:middle
+Anything that might
+be prefetching,
+
+00:08:35.436 --> 00:08:38.686 A:middle
+opportunistic prefetching of
+data, or that might be work
+
+00:08:38.686 --> 00:08:40.655 A:middle
+that could be deferrable
+for long periods of time
+
+00:08:41.046 --> 00:08:43.285 A:middle
+or just generally
+maintenance or cleanup
+
+00:08:43.285 --> 00:08:44.636 A:middle
+where I can tunnel
+to an application.
+
+00:08:44.916 --> 00:08:47.816 A:middle
+So how do you go
+about choosing one
+
+00:08:47.816 --> 00:08:49.216 A:middle
+of these Quality
+of Service classes?
+
+00:08:50.276 --> 00:08:52.196 A:middle
+There's a couple of
+questions you can ask yourself
+
+00:08:52.196 --> 00:08:54.236 A:middle
+that will help with that.
+
+00:08:54.946 --> 00:08:56.426 A:middle
+Going through the list
+for User-Interactive,
+
+00:08:56.426 --> 00:08:57.606 A:middle
+you should ask yourself,
+
+00:08:57.606 --> 00:09:00.396 A:middle
+"Is this work actively
+involved in updating the UI?"
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:08:57.606 --> 00:09:00.396 A:middle
+"Is this work actively
+involved in updating the UI?"
+
+00:09:00.476 --> 00:09:02.476 A:middle
+If that's not the case
+it probably shouldn't run
+
+00:09:02.476 --> 00:09:03.576 A:middle
+at this Quality of Service.
+
+00:09:04.056 --> 00:09:06.406 A:middle
+For User Initiated,
+similarly, is this work required
+
+00:09:06.406 --> 00:09:07.826 A:middle
+to continue the user
+interaction?
+
+00:09:07.826 --> 00:09:09.986 A:middle
+Like we said, if
+that's not the case,
+
+00:09:09.986 --> 00:09:11.246 A:middle
+this is not the right level.
+
+00:09:12.536 --> 00:09:14.836 A:middle
+Utility, the question
+is, is the user aware
+
+00:09:14.836 --> 00:09:15.956 A:middle
+of the progress of the work?
+
+00:09:16.736 --> 00:09:17.866 A:middle
+So, there's exceptions to this
+
+00:09:17.866 --> 00:09:20.996 A:middle
+but that's typically
+the criteria for being
+
+00:09:20.996 --> 00:09:23.126 A:middle
+at this level, and
+for Background,
+
+00:09:23.316 --> 00:09:24.796 A:middle
+should you be at
+Background or not.
+
+00:09:25.526 --> 00:09:27.866 A:middle
+Can this work be deferred
+to start at a better time?
+
+00:09:28.606 --> 00:09:30.646 A:middle
+If the answer to that
+question is, yes,
+
+00:09:30.646 --> 00:09:32.246 A:middle
+then you probably shouldn't
+actually be scheduling
+
+00:09:32.246 --> 00:09:33.096 A:middle
+that work right now.
+
+00:09:33.436 --> 00:09:35.096 A:middle
+You should be using an
+alternative mechanism
+
+00:09:35.096 --> 00:09:36.936 A:middle
+to start the work
+in the first place
+
+00:09:36.936 --> 00:09:38.516 A:middle
+like this background
+activity scheduler.
+
+00:09:38.996 --> 00:09:42.456 A:middle
+For more on that, please see the
+Writing Energy Efficient Code,
+
+00:09:42.456 --> 00:09:44.346 A:middle
+Part one session from yesterday.
+
+00:09:46.536 --> 00:09:48.586 A:middle
+So once you've picked
+one of these Quality
+
+00:09:48.586 --> 00:09:50.836 A:middle
+of Service classes,
+say User-Initiated,
+
+00:09:51.096 --> 00:09:54.216 A:middle
+another way to think about
+your choices are to compare
+
+00:09:54.416 --> 00:09:56.266 A:middle
+with the other classes
+above and below you.
+
+00:09:56.266 --> 00:09:57.596 A:middle
+So, you could ask
+questions like,
+
+00:09:57.976 --> 00:10:01.266 A:middle
+Is it okay for user-interactive
+work to happen before my work
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:09:57.976 --> 00:10:01.266 A:middle
+Is it okay for user-interactive
+work to happen before my work
+
+00:10:01.396 --> 00:10:04.776 A:middle
+at User-Initiated, or,
+is it okay for my work
+
+00:10:04.776 --> 00:10:06.696 A:middle
+at User-Initiated to
+compete with other work
+
+00:10:06.866 --> 00:10:08.396 A:middle
+at User-Initiated
+Quality of Service?
+
+00:10:08.396 --> 00:10:10.846 A:middle
+If the answer to
+that question is, no,
+
+00:10:10.846 --> 00:10:13.126 A:middle
+then you should probably
+move on below User-Initiated,
+
+00:10:13.956 --> 00:10:18.086 A:middle
+and similarly, is it okay for
+my work to take precedence
+
+00:10:18.116 --> 00:10:20.406 A:middle
+over work at Utility
+Quality of Service?
+
+00:10:21.736 --> 00:10:23.296 A:middle
+So to recap this section,
+
+00:10:23.476 --> 00:10:29.176 A:middle
+we talked about the facilities
+we have and need for being able
+
+00:10:29.176 --> 00:10:31.006 A:middle
+to provide a responsive
+user interface,
+
+00:10:31.136 --> 00:10:32.896 A:middle
+particularly asynchronous
+execution,
+
+00:10:33.266 --> 00:10:36.786 A:middle
+at the correct priority, but
+it wasn't really very easy
+
+00:10:36.856 --> 00:10:40.956 A:middle
+until now to express your intent
+as far as priority is concerned,
+
+00:10:41.536 --> 00:10:43.476 A:middle
+and that we were addressing
+that with the Quality
+
+00:10:43.476 --> 00:10:47.096 A:middle
+of Service Classes which provide
+an explicit classification
+
+00:10:47.096 --> 00:10:49.576 A:middle
+of work for you and we talked
+
+00:10:49.576 --> 00:10:51.196 A:middle
+about the questions
+you can ask yourself
+
+00:10:51.196 --> 00:10:52.616 A:middle
+to choose the right QoS Class.
+
+00:10:53.756 --> 00:10:57.766 A:middle
+So let's look at the
+Quality of Service Class API
+
+00:10:58.626 --> 00:11:00.196 A:middle
+that you'll be writing
+code with.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:10:58.626 --> 00:11:00.196 A:middle
+that you'll be writing
+code with.
+
+00:11:00.696 --> 00:11:04.676 A:middle
+You can provide Quality of
+Service Classes at a number
+
+00:11:04.676 --> 00:11:07.556 A:middle
+of levels in the system,
+starting with threads
+
+00:11:07.766 --> 00:11:11.326 A:middle
+if you use manually-created
+NSThreads or Pthreads,
+
+00:11:11.646 --> 00:11:12.506 A:middle
+you can provide Quality
+
+00:11:12.506 --> 00:11:14.476 A:middle
+of Service Class on
+those at creation.
+
+00:11:14.956 --> 00:11:17.356 A:middle
+We won't talk about
+this in detail here,
+
+00:11:17.606 --> 00:11:19.056 A:middle
+but it's pretty simple.
+
+00:11:19.056 --> 00:11:21.966 A:middle
+You can look that up
+in the documentation.
+
+00:11:22.526 --> 00:11:24.796 A:middle
+We'll talk about how to
+provide Quality of Service
+
+00:11:24.796 --> 00:11:28.726 A:middle
+on dispatch queues and dispatch
+blocks, and yesterday's session
+
+00:11:28.956 --> 00:11:31.056 A:middle
+on writing energy efficient
+code talked about how
+
+00:11:31.056 --> 00:11:32.536 A:middle
+to provide Quality of Service
+
+00:11:32.536 --> 00:11:34.396 A:middle
+on NSOperation queue
+and NSOperation.
+
+00:11:35.386 --> 00:11:38.276 A:middle
+In rare cases, it's also useful
+to provide Quality of Service
+
+00:11:38.276 --> 00:11:39.596 A:middle
+on processes at a whole.
+
+00:11:39.856 --> 00:11:41.326 A:middle
+Again, that's something
+that you can look
+
+00:11:41.326 --> 00:11:42.456 A:middle
+up in the documentation.
+
+00:11:42.916 --> 00:11:47.056 A:middle
+So here under Quality of
+Service Class Constants
+
+00:11:47.056 --> 00:11:49.036 A:middle
+that we've provided in
+the headers that will pass
+
+00:11:49.036 --> 00:11:51.886 A:middle
+through the APIs, these are the
+four classes we talked about.
+
+00:11:52.336 --> 00:11:55.476 A:middle
+The sys/qos.h header has
+constants that you typically use
+
+00:11:55.476 --> 00:11:59.066 A:middle
+at the lower level APIs, and
+foundation.h has a coolant,
+
+00:11:59.236 --> 00:12:01.276 A:middle
+and in fact, interchangeable
+constants
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:11:59.236 --> 00:12:01.276 A:middle
+and in fact, interchangeable
+constants
+
+00:12:01.616 --> 00:12:04.716 A:middle
+for user at the NS APIs.
+
+00:12:04.876 --> 00:12:07.606 A:middle
+But the QS.h header has
+two additional values
+
+00:12:07.606 --> 00:12:09.556 A:middle
+that we'll talk about right now.
+
+00:12:10.136 --> 00:12:14.466 A:middle
+The QoS Class default is a
+class that fits in the middle
+
+00:12:14.466 --> 00:12:16.976 A:middle
+between User-Interactive
+-- the UI classes, rather,
+
+00:12:16.976 --> 00:12:20.336 A:middle
+and the non UI classes,
+and this is what we use
+
+00:12:20.336 --> 00:12:23.236 A:middle
+when we have no more
+specific QoS information.
+
+00:12:24.006 --> 00:12:25.706 A:middle
+For instant, for a
+thread that was created
+
+00:12:25.706 --> 00:12:26.966 A:middle
+without any specific QoS,
+
+00:12:26.966 --> 00:12:29.336 A:middle
+it will run at the
+default Quality of Service.
+
+00:12:29.806 --> 00:12:32.906 A:middle
+Similarly, for the PCD
+Global Default Queue,
+
+00:12:33.356 --> 00:12:36.246 A:middle
+that runs at Quality
+of Service default.
+
+00:12:36.966 --> 00:12:40.416 A:middle
+It's not in itself intended as
+a work classification for you
+
+00:12:40.416 --> 00:12:42.376 A:middle
+to use to specify intent,
+
+00:12:42.836 --> 00:12:46.426 A:middle
+it's just so you shouldn't
+typically set it, except maybe
+
+00:12:46.426 --> 00:12:48.126 A:middle
+when you're resetting
+to a previous state
+
+00:12:48.216 --> 00:12:50.456 A:middle
+or maybe propagating a state
+from one place to another.
+
+00:12:50.456 --> 00:12:53.656 A:middle
+The other special value
+is QoS underscore Class
+
+00:12:53.656 --> 00:12:54.746 A:middle
+underscore Unspecified.
+
+00:12:54.746 --> 00:12:56.866 A:middle
+This isn't an actually
+class, this is the absence
+
+00:12:56.866 --> 00:12:59.366 A:middle
+of QoS information, the
+nil value if you will,
+
+00:12:59.896 --> 00:13:01.436 A:middle
+and this indicates to us
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:12:59.896 --> 00:13:01.436 A:middle
+and this indicates to us
+
+00:13:01.436 --> 00:13:05.476 A:middle
+that maybe they should be
+inferring the Quality of Service
+
+00:13:05.476 --> 00:13:07.596 A:middle
+from a different place
+like the work origin.
+
+00:13:08.176 --> 00:13:10.526 A:middle
+It is also something that
+you'll might see returned
+
+00:13:11.026 --> 00:13:15.256 A:middle
+from the thread header APIs if a
+thread was opted out of Quality
+
+00:13:15.256 --> 00:13:17.286 A:middle
+of Service by use
+of a legacy API.
+
+00:13:18.116 --> 00:13:20.626 A:middle
+These are things that might
+manipulate these underlying
+
+00:13:20.626 --> 00:13:22.216 A:middle
+knobs directly that we talked
+
+00:13:22.216 --> 00:13:26.296 A:middle
+about that then become
+incompatible with the Quality
+
+00:13:26.296 --> 00:13:29.566 A:middle
+of Service unified
+concept in which case,
+
+00:13:29.626 --> 00:13:31.816 A:middle
+so this would be
+things like skipparam,
+
+00:13:31.916 --> 00:13:34.236 A:middle
+in which case we will opt
+out the thread out of Quality
+
+00:13:34.236 --> 00:13:36.596 A:middle
+of Service and you
+will see this value
+
+00:13:36.596 --> 00:13:39.586 A:middle
+as the one returned
+from the current QoS.
+
+00:13:39.986 --> 00:13:43.576 A:middle
+In addition to the classes,
+
+00:13:43.896 --> 00:13:45.616 A:middle
+we also provide you
+an initial parameter
+
+00:13:46.366 --> 00:13:48.556 A:middle
+that indicates relative position
+
+00:13:48.556 --> 00:13:51.546 A:middle
+within a QoS class band,
+or relative priority.
+
+00:13:52.506 --> 00:13:59.066 A:middle
+So rather than having five
+discreet classes, we can think
+
+00:13:59.066 --> 00:14:02.046 A:middle
+of QoS really as a set
+of five priority bands
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:13:59.066 --> 00:14:02.046 A:middle
+of QoS really as a set
+of five priority bands
+
+00:14:02.506 --> 00:14:05.346 A:middle
+where you can position yourself
+inside one of these bands,
+
+00:14:05.796 --> 00:14:08.556 A:middle
+and you can only lower
+yourself from the default.
+
+00:14:08.606 --> 00:14:11.966 A:middle
+So, you can provide a value
+between minus 15 and zero
+
+00:14:12.246 --> 00:14:17.076 A:middle
+to position yourself lower than
+most other people in that band,
+
+00:14:17.646 --> 00:14:20.566 A:middle
+and it's really only intended
+for unusual situations.
+
+00:14:20.566 --> 00:14:23.276 A:middle
+We expect that in most
+cases, the zero value --
+
+00:14:23.476 --> 00:14:25.956 A:middle
+default zero value will
+be perfectly sufficient,
+
+00:14:26.506 --> 00:14:28.086 A:middle
+but if you have special
+situations
+
+00:14:28.086 --> 00:14:30.876 A:middle
+like interdependent work at the
+same Quality of Service class
+
+00:14:30.876 --> 00:14:32.476 A:middle
+that needs slightly
+differing priority
+
+00:14:32.896 --> 00:14:36.116 A:middle
+or produce a consumer scenario
+so one or other side might need
+
+00:14:36.116 --> 00:14:38.306 A:middle
+to be slightly high-priority
+to get a good flow,
+
+00:14:39.076 --> 00:14:40.826 A:middle
+this is the tool for that.
+
+00:14:40.826 --> 00:14:46.716 A:middle
+Now let's talk about the
+API you'll use with threads.
+
+00:14:48.276 --> 00:14:52.676 A:middle
+As mentioned, QoS is kind of
+a thread specific concept,
+
+00:14:53.086 --> 00:14:56.996 A:middle
+and you can get the QoS class
+off the currently running thread
+
+00:14:56.996 --> 00:14:58.856 A:middle
+with the qos class
+self function.
+
+00:14:59.396 --> 00:15:01.466 A:middle
+This will return what the
+thread is currently running at.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:14:59.396 --> 00:15:01.466 A:middle
+This will return what the
+thread is currently running at.
+
+00:15:01.466 --> 00:15:04.716 A:middle
+This is not only in the cases
+of manually-created threads,
+
+00:15:04.716 --> 00:15:07.656 A:middle
+but if work starts running
+where your specified QoS would,
+
+00:15:08.126 --> 00:15:09.786 A:middle
+the GCD or NSOperation APIs,
+
+00:15:09.786 --> 00:15:13.316 A:middle
+once it starts running the
+thread will have a QoS value
+
+00:15:13.316 --> 00:15:14.806 A:middle
+and this is how you get it.
+
+00:15:15.356 --> 00:15:18.696 A:middle
+The other thread concept we
+have is the Initial QoS Class
+
+00:15:18.806 --> 00:15:20.256 A:middle
+of the main thread.
+
+00:15:20.426 --> 00:15:22.656 A:middle
+This is something the system
+chooses for you when it brings
+
+00:15:22.656 --> 00:15:25.526 A:middle
+up the main thread, and
+that's selected depending
+
+00:15:25.636 --> 00:15:26.926 A:middle
+on what kind of process you are.
+
+00:15:27.336 --> 00:15:30.126 A:middle
+If you're an App, that will be
+the User-Interactive Quality
+
+00:15:30.126 --> 00:15:30.726 A:middle
+of Service.
+
+00:15:30.726 --> 00:15:32.566 A:middle
+If you were an XPC
+service or Daemon,
+
+00:15:32.786 --> 00:15:34.706 A:middle
+it will be the default
+Quality of Service,
+
+00:15:34.786 --> 00:15:36.516 A:middle
+and because that
+can change later
+
+00:15:36.516 --> 00:15:40.226 A:middle
+on if the main thread changes
+itself, then you can go back
+
+00:15:40.226 --> 00:15:41.786 A:middle
+to that original
+value with this API.
+
+00:15:41.786 --> 00:15:47.826 A:middle
+For the APIs in GCD and QoS,
+
+00:15:47.826 --> 00:15:51.816 A:middle
+let's look at the existing
+global queues that we've had
+
+00:15:52.156 --> 00:15:56.186 A:middle
+since the beginning, and you'll
+see we'll be mapping those
+
+00:15:56.186 --> 00:15:57.636 A:middle
+to Quality of Service Classes.
+
+00:15:58.186 --> 00:16:00.876 A:middle
+So the main queue, which
+in an application maps
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:15:58.186 --> 00:16:00.876 A:middle
+So the main queue, which
+in an application maps
+
+00:16:00.876 --> 00:16:02.736 A:middle
+through the main thread of
+the application obviously runs
+
+00:16:02.806 --> 00:16:04.606 A:middle
+that User Interactive
+quality of service.
+
+00:16:05.156 --> 00:16:07.856 A:middle
+You know, mapping the
+high default and low queue
+
+00:16:07.856 --> 00:16:10.846 A:middle
+to User Initiated, Default
+and Utility respectively,
+
+00:16:11.666 --> 00:16:16.496 A:middle
+and the Background priority,
+concurrent queue is mapped
+
+00:16:16.496 --> 00:16:17.936 A:middle
+to the background QoS class.
+
+00:16:18.326 --> 00:16:20.206 A:middle
+That one is pretty much
+a one-to-one mapping.
+
+00:16:20.206 --> 00:16:23.696 A:middle
+The others, it's worth noting,
+are a slightly larger spread
+
+00:16:24.226 --> 00:16:27.066 A:middle
+of behavior than what you've
+had before with high, default,
+
+00:16:27.066 --> 00:16:28.276 A:middle
+and low, which were
+very similar.
+
+00:16:28.626 --> 00:16:31.766 A:middle
+So, this might be something
+to watch out for when you move
+
+00:16:32.186 --> 00:16:35.176 A:middle
+up to current releases.
+
+00:16:35.626 --> 00:16:41.786 A:middle
+Getting a Global Queue with
+QoS directly is also easy.
+
+00:16:41.786 --> 00:16:44.886 A:middle
+Just use the existing dispatch
+to get global Queue API
+
+00:16:45.146 --> 00:16:48.626 A:middle
+with the utility QoS constant,
+that's the first constant
+
+00:16:48.626 --> 00:16:51.606 A:middle
+in this example rather than the
+existing priority constants.
+
+00:16:52.316 --> 00:16:54.946 A:middle
+And this is really what we
+recommend you start doing
+
+00:16:54.946 --> 00:16:58.056 A:middle
+from now on to be able to
+express that intent directly
+
+00:16:58.056 --> 00:17:00.636 A:middle
+of what you want rather
+than take advantage
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:16:58.056 --> 00:17:00.636 A:middle
+of what you want rather
+than take advantage
+
+00:17:00.636 --> 00:17:01.766 A:middle
+of the compatibility mapping.
+
+00:17:02.936 --> 00:17:05.826 A:middle
+Once you have a queue, you
+can also ask for its QoS class
+
+00:17:05.826 --> 00:17:08.445 A:middle
+with the dispatch queue
+get QoS class getter.
+
+00:17:08.695 --> 00:17:11.915 A:middle
+Not that QoS class is an
+immutable property of the queue
+
+00:17:12.165 --> 00:17:13.986 A:middle
+that is specified when
+the queue is created.
+
+00:17:14.826 --> 00:17:17.096 A:middle
+For a queue that you create
+yourself, how do you do that?
+
+00:17:17.215 --> 00:17:21.066 A:middle
+With the dispatch queue adder
+make with QoS class API.
+
+00:17:21.066 --> 00:17:24.726 A:middle
+This will really turn an
+attribute for the QoS Class
+
+00:17:24.726 --> 00:17:27.576 A:middle
+that you have requested,
+like Utility in this example,
+
+00:17:27.976 --> 00:17:31.456 A:middle
+and you then pass that attribute
+to the dispatch you create API
+
+00:17:32.226 --> 00:17:35.326 A:middle
+and get a Utility serial
+queue in this example.
+
+00:17:38.606 --> 00:17:41.256 A:middle
+Now let's move onto
+a new concept
+
+00:17:41.416 --> 00:17:44.316 A:middle
+that we're introducing
+this year for QoS
+
+00:17:45.156 --> 00:17:48.936 A:middle
+and other reasons called
+Dispatch Block Objects.
+
+00:17:49.886 --> 00:17:52.316 A:middle
+We've always had
+blocks in GCD as sort
+
+00:17:52.316 --> 00:17:54.096 A:middle
+of a fundamental unit
+of work, of course.
+
+00:17:54.586 --> 00:17:56.516 A:middle
+We are enhancing that
+concept slightly this year
+
+00:17:56.516 --> 00:17:58.756 A:middle
+with Dispatch Block
+Objects to allow you
+
+00:17:58.756 --> 00:18:00.946 A:middle
+to configure properties
+of individual units
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:17:58.756 --> 00:18:00.946 A:middle
+to configure properties
+of individual units
+
+00:18:00.946 --> 00:18:02.496 A:middle
+of work on a queue directly.
+
+00:18:03.186 --> 00:18:06.246 A:middle
+And it will also allow you to
+address individual work units
+
+00:18:06.626 --> 00:18:09.546 A:middle
+for the purposes of
+waiting for their completion
+
+00:18:10.006 --> 00:18:12.706 A:middle
+or getting notified
+about their completion
+
+00:18:12.706 --> 00:18:14.186 A:middle
+or being able to cancel them.
+
+00:18:14.916 --> 00:18:16.876 A:middle
+So, this is something that
+lots of people have requested
+
+00:18:16.876 --> 00:18:19.676 A:middle
+over year that you be able to
+cancel blocks in the GCD queue.
+
+00:18:19.676 --> 00:18:21.846 A:middle
+Hopefully this helps
+out with that.
+
+00:18:23.056 --> 00:18:26.926 A:middle
+Otherwise, we are -- the goal
+was to integrate transparently
+
+00:18:26.926 --> 00:18:29.486 A:middle
+with the existing API that
+we already had without having
+
+00:18:29.486 --> 00:18:31.906 A:middle
+to introduce a lot of
+additional functionality.
+
+00:18:32.436 --> 00:18:33.916 A:middle
+So, the way we achieve that is
+
+00:18:33.956 --> 00:18:36.156 A:middle
+by using the concept
+of a wrapper block.
+
+00:18:36.576 --> 00:18:40.346 A:middle
+You start with an existing GCD
+block of type dispatch block t
+
+00:18:40.806 --> 00:18:43.436 A:middle
+which is that function
+at the right of a block
+
+00:18:43.436 --> 00:18:46.906 A:middle
+that takes no arguments and
+returns no return value,
+
+00:18:47.466 --> 00:18:50.016 A:middle
+and we wrap that in another
+block of the same type
+
+00:18:50.626 --> 00:18:53.306 A:middle
+which contains these additional
+configuration parameters
+
+00:18:53.306 --> 00:18:55.086 A:middle
+of QoS Class and Flags.
+
+00:18:56.236 --> 00:18:58.876 A:middle
+That operation creates
+a heap object of course,
+
+00:18:58.876 --> 00:19:02.576 A:middle
+so this is really like
+similar to calling block copy
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:18:58.876 --> 00:19:02.576 A:middle
+so this is really like
+similar to calling block copy
+
+00:19:02.576 --> 00:19:05.566 A:middle
+on the nested block, so in
+a seed program you will have
+
+00:19:05.566 --> 00:19:09.516 A:middle
+to call block release on the
+return object to get rid of it,
+
+00:19:09.756 --> 00:19:13.296 A:middle
+or in Objective-C programs,
+send a release message
+
+00:19:13.296 --> 00:19:14.596 A:middle
+or let arch do that for you.
+
+00:19:16.956 --> 00:19:18.936 A:middle
+Quick example of
+that API in action,
+
+00:19:19.256 --> 00:19:22.326 A:middle
+we create a local variable
+of this type dispatch block t
+
+00:19:22.486 --> 00:19:26.326 A:middle
+and send it to the result of the
+dispatch block create function.
+
+00:19:26.636 --> 00:19:29.196 A:middle
+Here passing no flags
+and just a block literal,
+
+00:19:29.586 --> 00:19:32.416 A:middle
+and this is very similar to
+block create at this point,
+
+00:19:33.016 --> 00:19:34.776 A:middle
+and then we can just
+pass that block object
+
+00:19:34.776 --> 00:19:39.186 A:middle
+to the existing dispatch, async
+API and do some work while
+
+00:19:39.186 --> 00:19:41.596 A:middle
+that is synchronous and
+this log is occurring,
+
+00:19:41.996 --> 00:19:44.986 A:middle
+and finally maybe we need
+to wait on that result,
+
+00:19:45.326 --> 00:19:46.886 A:middle
+so we call the dispatch
+wait API,
+
+00:19:47.006 --> 00:19:48.796 A:middle
+passing in that block
+object directly
+
+00:19:49.116 --> 00:19:51.276 A:middle
+and now we don't need any
+additional setup to wait
+
+00:19:51.276 --> 00:19:53.676 A:middle
+for the result to face
+[inaudible] like we might have
+
+00:19:53.676 --> 00:19:57.026 A:middle
+in the patch with dispatch
+group or dispatch centerfolds.
+
+00:19:57.526 --> 00:20:00.556 A:middle
+And finally as mentioned,
+in a C program you have
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:19:57.526 --> 00:20:00.556 A:middle
+And finally as mentioned,
+in a C program you have
+
+00:20:00.616 --> 00:20:02.306 A:middle
+to block release that
+reference created
+
+00:20:02.346 --> 00:20:06.606 A:middle
+by dispatch block create.
+
+00:20:06.746 --> 00:20:09.436 A:middle
+Second example here we use
+the dispatch block create
+
+00:20:09.436 --> 00:20:11.846 A:middle
+with QoS Class API to
+create a block object
+
+00:20:11.846 --> 00:20:14.086 A:middle
+that has a specific assigned
+Quality of Service Class
+
+00:20:14.136 --> 00:20:15.556 A:middle
+that we want for
+just that block.
+
+00:20:15.666 --> 00:20:19.756 A:middle
+So here we've chosen Utility
+minus 8 derivative just
+
+00:20:19.756 --> 00:20:22.846 A:middle
+as an example, and we
+pass, again, that block,
+
+00:20:22.846 --> 00:20:26.736 A:middle
+to dispatch async, and maybe we
+do some work and then decide,
+
+00:20:26.736 --> 00:20:30.716 A:middle
+"Oh we really didn't need this
+Utility Quality of Service work
+
+00:20:30.716 --> 00:20:34.406 A:middle
+at all," so we then pass it to
+the block to dispatch cancel
+
+00:20:34.876 --> 00:20:37.146 A:middle
+which will mark that
+block as cancelled
+
+00:20:37.146 --> 00:20:38.726 A:middle
+and if it hasn't
+started executing
+
+00:20:38.726 --> 00:20:42.046 A:middle
+yet when it gets de-queued it
+will just return straight away.
+
+00:20:42.616 --> 00:20:45.836 A:middle
+So, this allows you to sort
+of take back the end queue
+
+00:20:45.946 --> 00:20:48.016 A:middle
+that we thought in the
+past was not possible.
+
+00:20:48.016 --> 00:20:53.956 A:middle
+It's important to note this
+cancellation is not preemptive.
+
+00:20:53.956 --> 00:20:54.546 A:middle
+It's very similar
+
+00:20:54.546 --> 00:20:56.596 A:middle
+to the dispatch source
+cancellation that we've had.
+
+00:20:56.596 --> 00:20:57.706 A:middle
+If the block is started,
+
+00:20:58.086 --> 00:21:00.586 A:middle
+cancellation will not stop
+it from doing anything.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:20:58.086 --> 00:21:00.586 A:middle
+cancellation will not stop
+it from doing anything.
+
+00:21:00.976 --> 00:21:03.436 A:middle
+The block can check for
+cancellation on itself
+
+00:21:03.636 --> 00:21:06.006 A:middle
+with the test cancel
+API of course.
+
+00:21:08.936 --> 00:21:13.086 A:middle
+Finally, last example here we'll
+be showing the use of a flag
+
+00:21:13.086 --> 00:21:15.516 A:middle
+when we call the
+dispatch block create API.
+
+00:21:15.516 --> 00:21:18.586 A:middle
+We're using the detached
+flag here which is something
+
+00:21:18.586 --> 00:21:21.916 A:middle
+that you might have heard about
+in the Activity Tracing Session
+
+00:21:21.916 --> 00:21:23.356 A:middle
+if you went to that
+this morning.
+
+00:21:23.676 --> 00:21:26.946 A:middle
+It's a concept of being able
+to disassociate that block
+
+00:21:26.946 --> 00:21:29.326 A:middle
+that you're going to schedule
+from what is currently going
+
+00:21:29.326 --> 00:21:33.166 A:middle
+on in the thread that caused the
+dispatch block create for work
+
+00:21:33.166 --> 00:21:35.866 A:middle
+that should not be correlated
+such as internal work
+
+00:21:35.866 --> 00:21:38.966 A:middle
+to the application like
+clean caches in this example.
+
+00:21:39.416 --> 00:21:41.506 A:middle
+You know of course, we pass
+that again to dispatch async,
+
+00:21:41.626 --> 00:21:44.246 A:middle
+and in this case we will
+use the dispatch notify API
+
+00:21:44.246 --> 00:21:48.696 A:middle
+to schedule a notification block
+on the main queue to tell us
+
+00:21:48.696 --> 00:21:51.066 A:middle
+when that clean cache
+block is completed.
+
+00:21:51.986 --> 00:21:53.356 A:middle
+This is very similar
+
+00:21:53.356 --> 00:21:56.396 A:middle
+to the dispatch group
+notifier API that we've had.
+
+00:21:57.586 --> 00:21:59.726 A:middle
+Now that we've talked
+about the interaction --
+
+00:21:59.846 --> 00:22:01.696 A:middle
+at least talked about
+the various levels
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:21:59.846 --> 00:22:01.696 A:middle
+at least talked about
+the various levels
+
+00:22:01.696 --> 00:22:04.626 A:middle
+where you can specify Quality
+of Service, we have to talk
+
+00:22:04.626 --> 00:22:07.796 A:middle
+about how they interact when you
+specify them at multiple levels
+
+00:22:07.796 --> 00:22:12.056 A:middle
+at once, and for Asynchronous
+Blocks, the default behavior is
+
+00:22:12.056 --> 00:22:14.326 A:middle
+that we will always prefer
+the Quality of Service Class
+
+00:22:14.326 --> 00:22:17.406 A:middle
+of the queue if it has a
+Quality of Service Class.
+
+00:22:17.826 --> 00:22:20.846 A:middle
+Or if it doesn't, we will look
+at the immediate target queue
+
+00:22:20.846 --> 00:22:23.506 A:middle
+if that's one of the global
+target queues with Quality
+
+00:22:23.506 --> 00:22:26.056 A:middle
+of Service like the default --
+
+00:22:26.056 --> 00:22:28.886 A:middle
+sorry, like the high/low
+Background but not the default,
+
+00:22:29.176 --> 00:22:31.496 A:middle
+or one of the ones that
+you specifically requested
+
+00:22:31.646 --> 00:22:32.586 A:middle
+with Quality of Service.
+
+00:22:32.586 --> 00:22:34.806 A:middle
+In that case, we
+really use that as sort
+
+00:22:34.806 --> 00:22:38.446 A:middle
+of a backwards compatibility
+method with the existing way
+
+00:22:38.446 --> 00:22:41.726 A:middle
+to specify priority in
+GCD, or the target queue.
+
+00:22:42.576 --> 00:22:45.776 A:middle
+If you don't have any of these
+two pieces of information,
+
+00:22:45.776 --> 00:22:48.476 A:middle
+we will use the Block
+Quality of Service class
+
+00:22:48.476 --> 00:22:51.146 A:middle
+if you've specified it
+with the creation API,
+
+00:22:51.146 --> 00:22:54.776 A:middle
+or otherwise we will use
+Quality of Service inferred
+
+00:22:54.776 --> 00:22:55.856 A:middle
+from the submitting thread.
+
+00:22:56.906 --> 00:22:58.856 A:middle
+What do we mean by
+that inferred QoS?
+
+00:22:59.206 --> 00:23:01.196 A:middle
+This is the Quality of
+Service that we captured
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:22:59.206 --> 00:23:01.196 A:middle
+This is the Quality of
+Service that we captured
+
+00:23:01.376 --> 00:23:03.176 A:middle
+at the time the block was
+submitted to the queue,
+
+00:23:03.176 --> 00:23:05.076 A:middle
+so this is the Quality of
+Service that was active
+
+00:23:05.496 --> 00:23:07.516 A:middle
+on the thread that
+called dispatch async
+
+00:23:07.516 --> 00:23:09.666 A:middle
+at the time the block
+was submitted.
+
+00:23:10.036 --> 00:23:12.826 A:middle
+We will -- because this
+is an automatic mechanism,
+
+00:23:12.826 --> 00:23:15.576 A:middle
+we will translate User
+Incorrective to User Initiated
+
+00:23:15.576 --> 00:23:18.606 A:middle
+for you to make sure that you
+don't propagate the main thread
+
+00:23:19.186 --> 00:23:22.896 A:middle
+priority inadvertently to lots
+of places in the application.
+
+00:23:23.796 --> 00:23:26.866 A:middle
+But otherwise, if there's no
+Quality of Service specified
+
+00:23:26.866 --> 00:23:29.156 A:middle
+on the queue, we will
+use this mechanism.
+
+00:23:29.156 --> 00:23:31.206 A:middle
+This is intended for queues
+
+00:23:31.256 --> 00:23:34.506 A:middle
+that might not have
+a specific identity
+
+00:23:34.506 --> 00:23:36.386 A:middle
+that it can assign a
+Quality of Service to
+
+00:23:36.796 --> 00:23:39.076 A:middle
+or that don't really
+serve a single purpose
+
+00:23:39.076 --> 00:23:42.066 A:middle
+where it is appropriate for
+the Quality of Service Class
+
+00:23:42.066 --> 00:23:44.166 A:middle
+from the client, if
+you roll off the queue,
+
+00:23:44.306 --> 00:23:46.276 A:middle
+to actually determine
+what you run it.
+
+00:23:46.736 --> 00:23:49.186 A:middle
+So things that mediate between
+many different clients would be
+
+00:23:49.866 --> 00:23:51.446 A:middle
+a good candidate for that.
+
+00:23:52.516 --> 00:23:55.196 A:middle
+For synchronous blocks, the
+rules are slightly different,
+
+00:23:55.196 --> 00:23:57.036 A:middle
+but you will default
+to the Quality
+
+00:23:57.036 --> 00:24:00.256 A:middle
+of Service Class off the
+block if there's such a thing,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:23:57.036 --> 00:24:00.256 A:middle
+of Service Class off the
+block if there's such a thing,
+
+00:24:00.506 --> 00:24:02.356 A:middle
+or otherwise use the one
+off the current thread.
+
+00:24:02.476 --> 00:24:04.386 A:middle
+This is very similar to
+what has always happened
+
+00:24:04.386 --> 00:24:05.146 A:middle
+with this batch sync.
+
+00:24:05.146 --> 00:24:06.616 A:middle
+It actually executes
+the block that you pass
+
+00:24:06.616 --> 00:24:08.756 A:middle
+on the calling thread itself.
+
+00:24:09.336 --> 00:24:11.696 A:middle
+Note that this will only ever
+raise the Quality of Service,
+
+00:24:11.696 --> 00:24:14.196 A:middle
+so as not to prevent any
+work later on in the thread
+
+00:24:14.196 --> 00:24:17.026 A:middle
+after the dispatch sync
+returns from making progress.
+
+00:24:18.306 --> 00:24:19.256 A:middle
+These are just default.
+
+00:24:19.256 --> 00:24:23.356 A:middle
+We also provide you explicit
+control over these options.
+
+00:24:23.656 --> 00:24:26.266 A:middle
+You can use the Dispatch
+Block Inherent QoS flag
+
+00:24:26.266 --> 00:24:30.156 A:middle
+when you create a block -- a
+special block object to tell us
+
+00:24:30.156 --> 00:24:33.466 A:middle
+to prefer, always prefer the
+QoS of the queue or the thread,
+
+00:24:34.126 --> 00:24:38.636 A:middle
+or conversely to pass the
+Dispatch Block Enforce QoS Class
+
+00:24:38.636 --> 00:24:41.776 A:middle
+flag so that we will always
+prefer the block's Quality
+
+00:24:41.776 --> 00:24:44.256 A:middle
+of Service even if we go to
+a queue that has a Quality
+
+00:24:44.256 --> 00:24:46.156 A:middle
+of Service itself, but again,
+
+00:24:46.156 --> 00:24:48.446 A:middle
+in these cases we only
+ever raise the Quality
+
+00:24:48.446 --> 00:24:49.866 A:middle
+of Service to something higher.
+
+00:24:52.876 --> 00:24:55.266 A:middle
+Now that we've talked about
+all these different ways
+
+00:24:55.266 --> 00:24:58.546 A:middle
+of introducing different
+priorities into your process,
+
+00:24:58.546 --> 00:25:00.276 A:middle
+we have to talk about
+the priority inversions.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:24:58.546 --> 00:25:00.276 A:middle
+we have to talk about
+the priority inversions.
+
+00:25:01.066 --> 00:25:03.246 A:middle
+What is a priority inversion?"
+
+00:25:03.356 --> 00:25:07.076 A:middle
+In general, it's just some
+situation where the progress
+
+00:25:07.076 --> 00:25:10.136 A:middle
+of high-priority work
+depends on either the results
+
+00:25:10.266 --> 00:25:11.366 A:middle
+of some low-priority work
+
+00:25:11.746 --> 00:25:15.496 A:middle
+or a resource held
+by low-priority work.
+
+00:25:15.706 --> 00:25:18.456 A:middle
+And in the debugging
+scenario you would see this
+
+00:25:18.456 --> 00:25:20.836 A:middle
+as high-priority threats
+that are either blocked
+
+00:25:21.206 --> 00:25:25.056 A:middle
+or maybe even spinning
+or polling results
+
+00:25:25.056 --> 00:25:28.916 A:middle
+from a low-priority thread that
+you might also see present.
+
+00:25:30.066 --> 00:25:31.136 A:middle
+So in a synchronous situation
+
+00:25:31.136 --> 00:25:33.896 A:middle
+like that it would
+be high Quality
+
+00:25:33.896 --> 00:25:36.676 A:middle
+of Service thread waiting on
+lower Quality of Service work.
+
+00:25:37.246 --> 00:25:39.496 A:middle
+We will actually try
+to resolve inversions
+
+00:25:39.666 --> 00:25:42.646 A:middle
+in very specific cases for you,
+
+00:25:42.646 --> 00:25:47.236 A:middle
+namely when you call dispatch
+sync and dispatch wait the block
+
+00:25:47.436 --> 00:25:50.636 A:middle
+on a serial queue, or when
+you call pthread mutex lock
+
+00:25:51.326 --> 00:25:54.276 A:middle
+or any facilities built
+on top it like NSLock.
+
+00:25:54.866 --> 00:25:58.626 A:middle
+In those cases, the system
+will try to raise the Quality
+
+00:25:58.626 --> 00:26:03.156 A:middle
+of Service of the work that is
+being waited on to the Quality
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:25:58.626 --> 00:26:03.156 A:middle
+of Service of the work that is
+being waited on to the Quality
+
+00:26:03.156 --> 00:26:03.996 A:middle
+of Service of the waiter.
+
+00:26:06.116 --> 00:26:08.646 A:middle
+The asynchronous case is
+obviously also possible.
+
+00:26:08.926 --> 00:26:11.226 A:middle
+Say you have submitted a
+high Quality of Service block
+
+00:26:11.226 --> 00:26:14.006 A:middle
+to a serial queue that was
+created with lower Quality
+
+00:26:14.006 --> 00:26:16.676 A:middle
+of Service or that contains
+some blocks with lower Quality
+
+00:26:16.676 --> 00:26:17.696 A:middle
+of Service earlier on.
+
+00:26:18.156 --> 00:26:21.376 A:middle
+Now this block is -- some
+high-priority work is backed
+
+00:26:21.376 --> 00:26:23.436 A:middle
+up behind lower-priority
+work asynchronously.
+
+00:26:24.106 --> 00:26:26.476 A:middle
+In the case of a serial
+queue specifically again,
+
+00:26:26.716 --> 00:26:28.856 A:middle
+the system will attempt
+to automatically resolve
+
+00:26:28.856 --> 00:26:31.366 A:middle
+that for you by raising
+the Quality of Service
+
+00:26:31.366 --> 00:26:33.876 A:middle
+of the queue temporarily
+until you have reached
+
+00:26:33.876 --> 00:26:35.336 A:middle
+that high Quality
+of Service work.
+
+00:26:36.716 --> 00:26:39.946 A:middle
+But of course, rather than
+relying on the system to try
+
+00:26:39.946 --> 00:26:41.996 A:middle
+and resolve these situations
+for you, it's much better
+
+00:26:41.996 --> 00:26:44.286 A:middle
+if you can avoid these
+inversions in the first place.
+
+00:26:44.686 --> 00:26:47.586 A:middle
+So if that's possible,
+you should attempt to do
+
+00:26:47.586 --> 00:26:49.296 A:middle
+that if you see that
+type of problem.
+
+00:26:49.726 --> 00:26:52.846 A:middle
+One technique is to
+decouple shared data
+
+00:26:53.006 --> 00:26:55.876 A:middle
+between multiple priority
+levels as much as you can
+
+00:26:56.166 --> 00:27:00.226 A:middle
+by using finer grade
+synchronization mechanisms,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:26:56.166 --> 00:27:00.226 A:middle
+by using finer grade
+synchronization mechanisms,
+
+00:27:00.226 --> 00:27:03.896 A:middle
+finer granularity, and
+move work outside of blocks
+
+00:27:03.896 --> 00:27:05.576 A:middle
+or serial queues if
+that is possible.
+
+00:27:06.436 --> 00:27:10.866 A:middle
+Another technique is to
+prefer asynchronous execution
+
+00:27:10.866 --> 00:27:12.186 A:middle
+over synchronous waiting,
+
+00:27:12.546 --> 00:27:14.956 A:middle
+because synchronous
+waiting typically leads
+
+00:27:14.956 --> 00:27:17.546 A:middle
+to chain soft waiters
+in situations like this
+
+00:27:17.546 --> 00:27:19.356 A:middle
+where one guy is waiting
+on the next is waiting
+
+00:27:19.356 --> 00:27:20.446 A:middle
+on something else, etcetera.
+
+00:27:20.976 --> 00:27:22.586 A:middle
+But in asynchronous execution,
+
+00:27:23.086 --> 00:27:25.246 A:middle
+so now that is much
+easier to resolve.
+
+00:27:26.516 --> 00:27:31.286 A:middle
+And also something worth looking
+at here is spinning or polling
+
+00:27:31.286 --> 00:27:33.906 A:middle
+for completion where
+my high quality
+
+00:27:33.906 --> 00:27:35.946 A:middle
+of service thread might
+actually be, by doing that,
+
+00:27:35.946 --> 00:27:38.546 A:middle
+holding off the low-priority
+work that it's waiting for,
+
+00:27:38.956 --> 00:27:42.466 A:middle
+and particularly look at for
+timer-based "synchronization"
+
+00:27:42.726 --> 00:27:46.636 A:middle
+in quotes, which is some
+kind of checking for a result
+
+00:27:46.776 --> 00:27:49.626 A:middle
+after an amount of time, that
+might not immediately appear
+
+00:27:49.626 --> 00:27:51.206 A:middle
+to be a polling loop,
+but in fact is,
+
+00:27:51.206 --> 00:27:53.776 A:middle
+especially if it's some
+priority inversion situation.
+
+00:27:54.096 --> 00:27:57.396 A:middle
+So to recap this section,
+
+00:27:57.396 --> 00:28:01.446 A:middle
+we talked about the QoS Class
+constants that you can use,
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:27:57.396 --> 00:28:01.446 A:middle
+we talked about the QoS Class
+constants that you can use,
+
+00:28:01.906 --> 00:28:04.966 A:middle
+the concept of relative
+Quality of Service priority,
+
+00:28:05.476 --> 00:28:11.196 A:middle
+the APIs for queues and
+blocks, and the interaction
+
+00:28:11.196 --> 00:28:13.386 A:middle
+of multiple Quality of
+Service specifications
+
+00:28:13.386 --> 00:28:15.486 A:middle
+if you've given them to blocks
+of queues at the same time,
+
+00:28:15.986 --> 00:28:18.896 A:middle
+along with what we do
+for priority inversions
+
+00:28:18.896 --> 00:28:22.896 A:middle
+and what you can
+do to avoid them.
+
+00:28:23.096 --> 00:28:25.406 A:middle
+Our next section is
+about the Propagation
+
+00:28:25.406 --> 00:28:26.926 A:middle
+of Execution Context.
+
+00:28:28.176 --> 00:28:31.266 A:middle
+What is Execution Context
+here, this is a set
+
+00:28:31.266 --> 00:28:33.916 A:middle
+of thread-local attributes that
+the system maintains for you.
+
+00:28:34.286 --> 00:28:37.736 A:middle
+This includes the Activity ID
+that we heard about this morning
+
+00:28:37.736 --> 00:28:39.556 A:middle
+in the Activity Tracing session
+
+00:28:40.006 --> 00:28:43.406 A:middle
+that underlies the correlation
+aspect of Activity Tracing.
+
+00:28:43.886 --> 00:28:46.886 A:middle
+It also includes properties
+of the current IPC request
+
+00:28:46.886 --> 00:28:52.316 A:middle
+if you say in a XPC Event
+Handler, such as the originator
+
+00:28:52.416 --> 00:28:55.126 A:middle
+of a chain of IPC across
+multiple processes,
+
+00:28:55.556 --> 00:28:58.716 A:middle
+or the importance of that
+originator, and we'll talk more
+
+00:28:58.716 --> 00:28:59.846 A:middle
+about that in a while.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:29:01.736 --> 00:29:06.376 A:middle
+The interesting thing about
+this Execution Context is
+
+00:29:06.376 --> 00:29:09.266 A:middle
+that we automatically
+propagate it for you.
+
+00:29:09.266 --> 00:29:12.186 A:middle
+We propagate it across
+threads and processes with GCD,
+
+00:29:12.186 --> 00:29:14.036 A:middle
+NSOperationQueue, and
+other Foundation APIs,
+
+00:29:14.036 --> 00:29:16.806 A:middle
+and we propagate
+it across processes
+
+00:29:17.136 --> 00:29:19.896 A:middle
+like XPC and other IPC APIs.
+
+00:29:20.886 --> 00:29:23.866 A:middle
+So an example of that
+graphically would be we have two
+
+00:29:23.866 --> 00:29:25.356 A:middle
+queues here that are running
+
+00:29:25.356 --> 00:29:27.076 A:middle
+with two different
+execution contexts,
+
+00:29:27.456 --> 00:29:31.086 A:middle
+two different activity IDs
+as a proxy for one and two.
+
+00:29:31.446 --> 00:29:34.806 A:middle
+If you do a Dispatch Async from
+Q1 to Q3, that will transport
+
+00:29:34.856 --> 00:29:38.456 A:middle
+that activity ID1 transparently
+for you to that other Q,
+
+00:29:38.826 --> 00:29:41.876 A:middle
+or if that Q1 talks to
+a different processor
+
+00:29:41.876 --> 00:29:44.916 A:middle
+at XPC we will transport
+that execution context
+
+00:29:45.216 --> 00:29:47.946 A:middle
+across process, and then of
+course inside that process,
+
+00:29:47.946 --> 00:29:49.706 A:middle
+we can continue to
+propagate, as well.
+
+00:29:52.196 --> 00:29:54.106 A:middle
+Now because this is
+automatic propagation,
+
+00:29:54.106 --> 00:29:56.276 A:middle
+sometimes you may
+need to prevent
+
+00:29:56.276 --> 00:29:58.306 A:middle
+that because it might
+be inappropriate
+
+00:29:58.306 --> 00:29:59.826 A:middle
+in some situations, and that is
+
+00:29:59.826 --> 00:30:01.986 A:middle
+where the DISPATCH
+BLOCK DETACHED flag
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:29:59.826 --> 00:30:01.986 A:middle
+where the DISPATCH
+BLOCK DETACHED flag
+
+00:30:02.076 --> 00:30:03.926 A:middle
+to the dispatch block
+create API comes in.
+
+00:30:04.686 --> 00:30:07.946 A:middle
+This would be used for any type
+of work that's asynchronous
+
+00:30:08.496 --> 00:30:11.226 A:middle
+and to be disassociated from
+the principle activity that's
+
+00:30:11.276 --> 00:30:14.816 A:middle
+currently ongoing, so anything
+that is not directly related
+
+00:30:14.816 --> 00:30:18.376 A:middle
+to say, the UI action that an
+application is undertaking right
+
+00:30:18.376 --> 00:30:19.486 A:middle
+now, or in a Daemon.
+
+00:30:19.826 --> 00:30:25.666 A:middle
+You can't IPC request if you
+have to do some related but work
+
+00:30:25.746 --> 00:30:27.736 A:middle
+that may not be directly
+attributable
+
+00:30:27.736 --> 00:30:29.396 A:middle
+to say, the IPC request.
+
+00:30:30.006 --> 00:30:32.256 A:middle
+A typical example of that
+is an asynchronous long
+
+00:30:32.256 --> 00:30:34.456 A:middle
+running-cleanup or
+Daemon of that nature.
+
+00:30:36.116 --> 00:30:38.836 A:middle
+We have a couple of things
+that are detached by default.
+
+00:30:39.256 --> 00:30:41.996 A:middle
+The Dispatch source handlers,
+the blocks that specify
+
+00:30:42.216 --> 00:30:44.026 A:middle
+as Dispatch source
+handlers, or the blocks
+
+00:30:44.026 --> 00:30:46.296 A:middle
+that pass the dispatch after
+are detached by default.
+
+00:30:47.156 --> 00:30:49.726 A:middle
+So same animation as before.
+
+00:30:49.726 --> 00:30:53.186 A:middle
+The upper half, we have
+asynchronous propagation
+
+00:30:53.186 --> 00:30:57.206 A:middle
+of the activities automatically,
+but say Q3 now discovers
+
+00:30:57.206 --> 00:30:58.826 A:middle
+that it has to do some
+maintenance operation
+
+00:30:59.166 --> 00:31:01.276 A:middle
+that really shouldn't be
+associated to this activity.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:30:59.166 --> 00:31:01.276 A:middle
+that really shouldn't be
+associated to this activity.
+
+00:31:01.276 --> 00:31:07.786 A:middle
+It uses the Detached Block
+API to create a separate unit
+
+00:31:08.506 --> 00:31:11.266 A:middle
+of work that is not
+related to this activity,
+
+00:31:11.516 --> 00:31:15.116 A:middle
+which then maybe later on can
+create its own Activity ID
+
+00:31:15.116 --> 00:31:19.616 A:middle
+that is separate from the
+one that it originated from.
+
+00:31:19.746 --> 00:31:21.176 A:middle
+We also provide facilities
+for you
+
+00:31:21.176 --> 00:31:23.336 A:middle
+to manually propagate
+this execution context
+
+00:31:23.756 --> 00:31:26.466 A:middle
+with the DISPATCH BLOCK
+ASSIGN CURRENT flag.
+
+00:31:27.036 --> 00:31:29.606 A:middle
+This assigns the current
+Quality of Service Class
+
+00:31:29.606 --> 00:31:30.786 A:middle
+and Execution Context
+
+00:31:30.786 --> 00:31:33.726 A:middle
+at the time you call the
+dispatch block create API
+
+00:31:33.856 --> 00:31:34.316 A:middle
+to the block.
+
+00:31:35.116 --> 00:31:37.386 A:middle
+And this is particularly
+useful in cases where you want
+
+00:31:37.386 --> 00:31:39.626 A:middle
+to store the block yourself
+in some data structure.
+
+00:31:39.626 --> 00:31:41.606 A:middle
+Say you have your
+own thread pool
+
+00:31:41.966 --> 00:31:45.836 A:middle
+or your own threading model, and
+you then later on want to call
+
+00:31:45.836 --> 00:31:48.366 A:middle
+that block on one of those
+threads and we can't really make
+
+00:31:48.366 --> 00:31:51.276 A:middle
+that connection that you
+transported work across threads
+
+00:31:51.276 --> 00:31:54.196 A:middle
+for you in that case
+because we don't understand
+
+00:31:54.196 --> 00:31:55.006 A:middle
+that relationship.
+
+00:31:55.126 --> 00:31:59.856 A:middle
+Similarly, you might decide
+to later on submit a block
+
+00:31:59.856 --> 00:32:01.836 A:middle
+to a dispatch queue but you
+want to capture this state
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:31:59.856 --> 00:32:01.836 A:middle
+to a dispatch queue but you
+want to capture this state
+
+00:32:02.376 --> 00:32:04.876 A:middle
+that occurred when
+you stored the work.
+
+00:32:08.936 --> 00:32:12.626 A:middle
+For XPC, as mentioned, the
+propagation is automatic.
+
+00:32:12.626 --> 00:32:15.526 A:middle
+XPC connections propagate
+both Quality of Service Class
+
+00:32:15.526 --> 00:32:17.746 A:middle
+and Execution Context
+automatically
+
+00:32:17.836 --> 00:32:21.326 A:middle
+to the remote XPC Event Handler.
+
+00:32:21.896 --> 00:32:27.166 A:middle
+Worth noting that the capture
+of the current state happens
+
+00:32:27.166 --> 00:32:28.796 A:middle
+when the Send operation occurs,
+
+00:32:29.136 --> 00:32:33.296 A:middle
+so we call the XPC
+Connection Send API.
+
+00:32:33.296 --> 00:32:35.946 A:middle
+That's what Message Send
+API, this is what --
+
+00:32:35.946 --> 00:32:38.826 A:middle
+that's the point at which
+we captured that state,
+
+00:32:39.156 --> 00:32:42.376 A:middle
+and note that XPC handlers
+prefer the propagated Quality
+
+00:32:42.376 --> 00:32:44.056 A:middle
+of Service over that
+on the queues
+
+00:32:44.056 --> 00:32:45.356 A:middle
+that they run on by default.
+
+00:32:48.856 --> 00:32:53.026 A:middle
+For XPC Services that you
+might be writing in OS X,
+
+00:32:53.396 --> 00:32:55.936 A:middle
+we have talked about in
+the past about the concept
+
+00:32:55.936 --> 00:32:58.776 A:middle
+of importance boosting
+in past years' sessions.
+
+00:32:59.166 --> 00:33:02.436 A:middle
+This is still present this
+year, but it's slightly changed.
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:32:59.166 --> 00:33:02.436 A:middle
+This is still present this
+year, but it's slightly changed.
+
+00:33:02.816 --> 00:33:05.496 A:middle
+We -- this is a mechanism
+that's used
+
+00:33:05.496 --> 00:33:08.166 A:middle
+to initially clamp the
+XPC Service process
+
+00:33:08.166 --> 00:33:09.556 A:middle
+to Background Quality of Service
+
+00:33:09.886 --> 00:33:14.256 A:middle
+and only unclamp it during
+the IPC with the UI process.
+
+00:33:14.786 --> 00:33:18.426 A:middle
+So this allows XPC services
+to have as little impact
+
+00:33:18.426 --> 00:33:20.916 A:middle
+on the system as a whole when
+they're not directly in use,
+
+00:33:21.616 --> 00:33:26.496 A:middle
+and XPC manages the lifetime of
+that boost automatically for you
+
+00:33:26.606 --> 00:33:28.386 A:middle
+until either the reply is sent
+
+00:33:28.386 --> 00:33:29.976 A:middle
+or you've released
+the last reference
+
+00:33:29.976 --> 00:33:31.716 A:middle
+of the XPC message
+that you've received.
+
+00:33:32.286 --> 00:33:36.466 A:middle
+Additionally this
+year, the lifetime
+
+00:33:36.466 --> 00:33:38.456 A:middle
+of that boost will also be
+maintained while there is
+
+00:33:38.456 --> 00:33:41.496 A:middle
+asynchronous work that was
+submitted from the context
+
+00:33:41.946 --> 00:33:45.026 A:middle
+of the handler, the XPC
+Handler was submitted --
+
+00:33:45.606 --> 00:33:46.696 A:middle
+is ongoing, sorry.
+
+00:33:47.086 --> 00:33:50.366 A:middle
+So this is done right at
+propagation of execution context
+
+00:33:50.366 --> 00:33:51.896 A:middle
+that contains this
+important state.
+
+00:33:52.456 --> 00:33:55.026 A:middle
+So this is typically what
+you want in a process
+
+00:33:55.026 --> 00:33:56.596 A:middle
+if you're creating
+asynchronous work
+
+00:33:56.596 --> 00:33:58.286 A:middle
+that is related to
+the IPC request.
+
+00:33:58.856 --> 00:34:01.646 A:middle
+The process shouldn't
+become clamped again
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:33:58.856 --> 00:34:01.646 A:middle
+The process shouldn't
+become clamped again
+
+00:34:01.646 --> 00:34:05.256 A:middle
+until that work is done, but
+of course, it is also possible
+
+00:34:05.256 --> 00:34:07.386 A:middle
+that you might have
+unrelated work generated there
+
+00:34:07.466 --> 00:34:10.016 A:middle
+and in those cases you
+should make sure to use
+
+00:34:10.016 --> 00:34:13.866 A:middle
+that Detached Block flag
+to submit that work,
+
+00:34:13.996 --> 00:34:16.706 A:middle
+because otherwise you might
+be keeping the XPC service
+
+00:34:16.706 --> 00:34:22.576 A:middle
+unboostered, unclamped, for
+a longer period of time.
+
+00:34:22.576 --> 00:34:26.295 A:middle
+Now to recap, we talked
+about execution context
+
+00:34:26.356 --> 00:34:29.416 A:middle
+and the attributes
+that we track therein.
+
+00:34:29.826 --> 00:34:33.186 A:middle
+Automatic propagation of
+this context along with QoS
+
+00:34:33.186 --> 00:34:35.545 A:middle
+and how you can control
+that propagation manually,
+
+00:34:36.196 --> 00:34:42.235 A:middle
+as well as, the aspects
+pertaining to XPC propagation
+
+00:34:42.235 --> 00:34:45.335 A:middle
+and importance boosting.
+
+00:34:45.446 --> 00:34:49.826 A:middle
+So finally, I want to give
+a shout out to a couple
+
+00:34:49.826 --> 00:34:52.416 A:middle
+of very exciting new features
+that we're introducing this year
+
+00:34:52.416 --> 00:34:54.966 A:middle
+around Diagnostics
+of Asynchronous Code
+
+00:34:54.966 --> 00:34:56.346 A:middle
+and Debugging of
+Asynchronous Code.
+
+00:34:56.346 --> 00:34:59.046 A:middle
+First off, the Xcode
+6 CPU Report --
+
+00:34:59.206 --> 00:35:04.086 A:middle
+this is what you would
+use to diagnose or confirm
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:34:59.206 --> 00:35:04.086 A:middle
+this is what you would
+use to diagnose or confirm
+
+00:35:04.086 --> 00:35:06.206 A:middle
+that you have done your
+adoption of Quality
+
+00:35:06.206 --> 00:35:07.396 A:middle
+of Service classes correctly.
+
+00:35:07.876 --> 00:35:11.616 A:middle
+If you stop in the debugger
+at the breakpoint say,
+
+00:35:11.996 --> 00:35:15.906 A:middle
+you can click on the CPU gauge
+tab to get the CPU report,
+
+00:35:16.456 --> 00:35:19.196 A:middle
+and here you can see the
+total amount of CPU used
+
+00:35:19.196 --> 00:35:21.126 A:middle
+by the process in a graph.
+
+00:35:21.126 --> 00:35:22.636 A:middle
+And new this year for each
+
+00:35:22.636 --> 00:35:24.986 A:middle
+of the threads involved we
+will also show you the Quality
+
+00:35:24.986 --> 00:35:29.036 A:middle
+of Service of that thread that
+it is currently running at.
+
+00:35:29.036 --> 00:35:31.306 A:middle
+So in this example,
+if you want to confirm
+
+00:35:31.306 --> 00:35:33.806 A:middle
+that you have correctly
+adopted Utility Quality
+
+00:35:33.806 --> 00:35:36.576 A:middle
+of Service class, this would
+provide that confirmation
+
+00:35:36.576 --> 00:35:38.396 A:middle
+since we see most
+of the CPU time
+
+00:35:38.596 --> 00:35:41.396 A:middle
+in the overall graph is actually
+in that thread that was running
+
+00:35:41.396 --> 00:35:43.326 A:middle
+at Utility Quality of Service.
+
+00:35:43.426 --> 00:35:48.346 A:middle
+Next up, Xcode 6
+CPU debugging --
+
+00:35:48.346 --> 00:35:49.816 A:middle
+you may have seen
+this on Monday.
+
+00:35:50.196 --> 00:35:52.746 A:middle
+It's a really exciting feature
+that hopefully will help
+
+00:35:52.746 --> 00:35:54.546 A:middle
+out a lot with debugging
+asynchronous code.
+
+00:35:55.656 --> 00:36:00.066 A:middle
+Not only does the Xcode
+debugger now show back traces
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:35:55.656 --> 00:36:00.066 A:middle
+Not only does the Xcode
+debugger now show back traces
+
+00:36:00.066 --> 00:36:02.896 A:middle
+from the currently running
+code, which in the case
+
+00:36:02.896 --> 00:36:05.696 A:middle
+of an asynchronously-executed
+block isn't always
+
+00:36:05.696 --> 00:36:06.876 A:middle
+as helpful as it could be.
+
+00:36:06.916 --> 00:36:13.326 A:middle
+It will also stitch in the
+back trace that was captured
+
+00:36:13.326 --> 00:36:14.436 A:middle
+when the block was enqueued.
+
+00:36:14.626 --> 00:36:18.716 A:middle
+So this shows you a past
+historical back trace of when
+
+00:36:18.716 --> 00:36:20.176 A:middle
+that block was submitted
+to the queue,
+
+00:36:20.906 --> 00:36:24.136 A:middle
+and you can distinguish the two
+halves by seeing that the icons
+
+00:36:24.136 --> 00:36:26.806 A:middle
+for the currently live
+back trace are colored
+
+00:36:26.866 --> 00:36:29.966 A:middle
+and the historically-captured
+back traces
+
+00:36:30.456 --> 00:36:36.306 A:middle
+from the enqueue event
+are colored on gray.
+
+00:36:36.536 --> 00:36:40.006 A:middle
+In addition to showing you
+currently running blocks,
+
+00:36:40.306 --> 00:36:45.076 A:middle
+the queue view of the debugger
+can also show you the set
+
+00:36:45.076 --> 00:36:46.366 A:middle
+of enqueued blocks on a queue.
+
+00:36:46.916 --> 00:36:49.376 A:middle
+So these are things that are not
+running yet but will be running
+
+00:36:49.376 --> 00:36:52.306 A:middle
+on that queue in the future,
+which sometimes other source
+
+00:36:52.306 --> 00:36:54.666 A:middle
+of something not occurring, and
+that can be really difficult
+
+00:36:54.666 --> 00:36:56.416 A:middle
+to track down if you don't
+have something like this.
+
+00:36:56.986 --> 00:37:01.286 A:middle
+So here, it will also show you
+how many pending blocks exist
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:36:56.986 --> 00:37:01.286 A:middle
+So here, it will also show you
+how many pending blocks exist
+
+00:37:01.286 --> 00:37:03.916 A:middle
+on this queue, and
+for each of the blocks
+
+00:37:03.916 --> 00:37:05.706 A:middle
+if you just close the
+triangle we can see
+
+00:37:05.706 --> 00:37:06.846 A:middle
+where that block was enqueued.
+
+00:37:07.956 --> 00:37:11.306 A:middle
+Finally, a really exciting
+feature we're introducing this
+
+00:37:11.306 --> 00:37:13.536 A:middle
+year called Activity Tracing
+that I've mentioned already.
+
+00:37:13.996 --> 00:37:15.186 A:middle
+It was covered this morning.
+
+00:37:15.706 --> 00:37:19.976 A:middle
+Just a quick reference,
+this will allow you
+
+00:37:19.976 --> 00:37:24.066 A:middle
+to have additional
+information about asynchronous
+
+00:37:24.126 --> 00:37:26.046 A:middle
+or past events in
+your crash reports.
+
+00:37:26.516 --> 00:37:31.106 A:middle
+You're adding concept
+of bread crumb trails
+
+00:37:31.106 --> 00:37:33.886 A:middle
+which are past high-level
+events that occurred leading
+
+00:37:33.886 --> 00:37:35.106 A:middle
+up to the point of the crash,
+
+00:37:35.456 --> 00:37:36.736 A:middle
+directing into your
+crash report,
+
+00:37:36.736 --> 00:37:39.426 A:middle
+as well as the Activity ID.
+
+00:37:39.426 --> 00:37:42.346 A:middle
+This is the Activity ID that
+I was talking about before
+
+00:37:42.346 --> 00:37:44.446 A:middle
+in being tracked in
+the execution context.
+
+00:37:44.446 --> 00:37:49.416 A:middle
+That is also available directly
+in your crash report along
+
+00:37:49.416 --> 00:37:51.096 A:middle
+with the meta data
+associated to it,
+
+00:37:51.466 --> 00:37:55.496 A:middle
+and in particular the most
+interesting part, trace messages
+
+00:37:55.496 --> 00:37:58.186 A:middle
+for that activity scoped
+to that specific activity
+
+00:37:58.186 --> 00:38:01.536 A:middle
+from both the crashing
+process and any processes
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:37:58.186 --> 00:38:01.536 A:middle
+from both the crashing
+process and any processes
+
+00:38:01.536 --> 00:38:05.296 A:middle
+that the activity has propagated
+to by this propagation
+
+00:38:05.296 --> 00:38:07.006 A:middle
+of execution context
+that we talked about.
+
+00:38:07.516 --> 00:38:11.196 A:middle
+And this is also available
+directly in the debugger when,
+
+00:38:11.486 --> 00:38:14.176 A:middle
+say in this case, you have
+crashed with the sync abort.
+
+00:38:14.176 --> 00:38:16.776 A:middle
+You can type the thread
+info command and see
+
+00:38:16.776 --> 00:38:19.496 A:middle
+that there was an activity
+present, with its name
+
+00:38:19.496 --> 00:38:22.826 A:middle
+and 5 messages, and it will
+show you the meta data,
+
+00:38:22.826 --> 00:38:25.756 A:middle
+the bread crumb, and those
+trace messages directly
+
+00:38:25.756 --> 00:38:26.236 A:middle
+in the debugger.
+
+00:38:26.316 --> 00:38:28.116 A:middle
+So this can be a
+really powerful way
+
+00:38:28.116 --> 00:38:31.096 A:middle
+of debugging asynchronous
+code as well
+
+00:38:31.096 --> 00:38:33.646 A:middle
+by inserting trace message
+the system keeps for you
+
+00:38:33.646 --> 00:38:37.866 A:middle
+and displays to you when you
+crash in the same activity
+
+00:38:38.136 --> 00:38:39.286 A:middle
+that we've propagated for you.
+
+00:38:42.516 --> 00:38:45.766 A:middle
+So in summary, we went
+over some background,
+
+00:38:46.026 --> 00:38:49.686 A:middle
+then talked about Quality of
+Service Classes, the new concept
+
+00:38:49.686 --> 00:38:51.116 A:middle
+that we're introducing
+this year,
+
+00:38:51.116 --> 00:38:54.256 A:middle
+and then the APIs surrounding
+that, as well as the propagation
+
+00:38:54.256 --> 00:38:57.326 A:middle
+of Quality of Service and
+Execution Context across threads
+
+00:38:57.326 --> 00:39:01.696 A:middle
+and processes, and finally some
+exciting news about diagnostics
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000
+
+00:38:57.326 --> 00:39:01.696 A:middle
+and processes, and finally some
+exciting news about diagnostics
+
+00:39:01.726 --> 00:39:04.476 A:middle
+and queue debugging that
+we're introducing this year.
+
+00:39:05.596 --> 00:39:08.706 A:middle
+For more information,
+please see Paul Danbold,
+
+00:39:08.706 --> 00:39:10.406 A:middle
+our Core OS Technologies
+Evangelist,
+
+00:39:11.336 --> 00:39:14.436 A:middle
+and the documentation on
+GCD on the developers site,
+
+00:39:14.436 --> 00:39:17.046 A:middle
+as well as all the
+related sessions
+
+00:39:17.046 --> 00:39:19.996 A:middle
+that have already occurred
+this week, in particular,
+
+00:39:20.396 --> 00:39:23.016 A:middle
+the Writing Energy Efficient
+Code Part 1 session went
+
+00:39:23.016 --> 00:39:25.286 A:middle
+into more detail on
+Quality of Service
+
+00:39:25.286 --> 00:39:26.826 A:middle
+with different set of examples.
+
+00:39:27.326 --> 00:39:29.096 A:middle
+If you would like
+more information
+
+00:39:29.096 --> 00:39:31.906 A:middle
+on that please see that,
+as well as the Debugging
+
+00:39:32.116 --> 00:39:34.446 A:middle
+in Xcode session,
+view the live demo
+
+00:39:34.446 --> 00:39:35.686 A:middle
+of the queue debugging feature,
+
+00:39:36.186 --> 00:39:38.466 A:middle
+and provides some more
+information on that as well.
+
+00:39:39.246 --> 00:39:42.126 A:middle
+The Fix Bugs Faster using
+Activity Tracing session
+
+00:39:42.126 --> 00:39:45.356 A:middle
+of this morning goes into lots
+of detail about that Activity ID
+
+00:39:45.356 --> 00:39:50.526 A:middle
+and Activity Tracing mechanism
+that you saw, and that is it.
+
+00:39:50.636 --> 00:39:50.986 A:middle
+Thank you.
+
+00:39:51.916 --> 00:39:58.610 A:middle
+[ Applause ]
+
