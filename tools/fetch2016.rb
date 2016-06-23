@@ -6,8 +6,11 @@ p Time.now
 baseurl = "https://developer.apple.com"
 doc = Nokogiri::HTML(open(baseurl + "/videos/wwdc2016/"))
 
-doc.search("section[class='featured-video']/a").each do |link|
+doc.search("//a[contains(@href,'videos/play/wwdc2016')]").each do |link|
 	title = link.content.gsub(/$\s+/, '')
+	if title.nil? || title.empty?
+	    next
+	end
 	href = link.attr("href")
 	session = href.split('/').last
 
@@ -31,6 +34,9 @@ doc.search("section[class='featured-video']/a").each do |link|
 	end
 
 	videolink = page.search("section[class='col-85 center']/video/source").first
+	if videolink.nil?
+	    next
+	end
 	vhref = videolink.attr("src")
 	uri = URI(vhref)
 	uri.path = uri.path.split('/')[0...-1].join('/') + '/'
