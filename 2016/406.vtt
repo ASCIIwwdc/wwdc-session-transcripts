@@ -1,0 +1,3511 @@
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:07.516 --> 00:00:22.056 A:middle
+[ Music ]
+
+00:00:22.556 --> 00:00:24.616 A:middle
+&gt;&gt; Good morning and
+welcome to session 406,
+
+00:00:24.756 --> 00:00:26.036 A:middle
+Optimizing App Startup Time.
+
+00:00:26.596 --> 00:00:29.136 A:middle
+My name is Nick Kledzik,
+and today my colleague Louis
+
+00:00:29.136 --> 00:00:31.096 A:middle
+and I are going to take
+you on a guided tour
+
+00:00:31.096 --> 00:00:32.276 A:middle
+of how a process launches.
+
+00:00:34.216 --> 00:00:38.226 A:middle
+Now you may be wondering,
+is this topic right for me.
+
+00:00:38.646 --> 00:00:41.406 A:middle
+So we had our crack developing
+marketing team do some research,
+
+00:00:41.646 --> 00:00:43.786 A:middle
+and they determined there are
+three groups that will benefit
+
+00:00:43.786 --> 00:00:44.696 A:middle
+by listening to this talk.
+
+00:00:45.716 --> 00:00:49.646 A:middle
+The first, is app
+developers that have a app
+
+00:00:49.646 --> 00:00:50.646 A:middle
+that launches to slowly.
+
+00:00:52.406 --> 00:00:55.826 A:middle
+The second group, is app
+developers that don't want to be
+
+00:00:55.826 --> 00:00:56.366 A:middle
+in the first group [laughter].
+
+00:00:59.266 --> 00:01:01.786 A:middle
+And lastly, is anyone
+who's just really curious
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:00:59.266 --> 00:01:01.786 A:middle
+And lastly, is anyone
+who's just really curious
+
+00:01:01.906 --> 00:01:03.196 A:middle
+about how the OS operates.
+
+00:01:04.916 --> 00:01:06.906 A:middle
+So this talk is going to
+be divided in two sections,
+
+00:01:06.906 --> 00:01:10.276 A:middle
+the first is more theory and
+the second more practical,
+
+00:01:10.276 --> 00:01:11.906 A:middle
+I'll be doing the
+first theory part.
+
+00:01:13.926 --> 00:01:16.156 A:middle
+And in it I'll be walking
+you through all the steps
+
+00:01:16.156 --> 00:01:17.846 A:middle
+that happen, all
+the way up to main.
+
+00:01:18.996 --> 00:01:20.356 A:middle
+But in order for
+you to understand
+
+00:01:20.356 --> 00:01:21.916 A:middle
+and appreciate all
+the steps I first need
+
+00:01:21.916 --> 00:01:25.226 A:middle
+to give you a crash course
+on Mach-O and Virtual Memory.
+
+00:01:27.596 --> 00:01:29.416 A:middle
+So first some Mach-O
+terminology, quickly.
+
+00:01:30.036 --> 00:01:31.566 A:middle
+Mach-O is a bunch of file types
+
+00:01:31.816 --> 00:01:34.106 A:middle
+for different run
+time executables.
+
+00:01:34.326 --> 00:01:37.146 A:middle
+So the first executable, that's
+the main binary in an app,
+
+00:01:37.146 --> 00:01:39.096 A:middle
+it's also the main binary
+in an app extension.
+
+00:01:40.666 --> 00:01:44.676 A:middle
+A dylib is a dynamic library,
+on other platforms meet,
+
+00:01:44.796 --> 00:01:47.096 A:middle
+you may know those
+as DSOs or DLLs.
+
+00:01:47.096 --> 00:01:50.936 A:middle
+Our platform also has another
+kind of thing called a bundle.
+
+00:01:51.246 --> 00:01:52.986 A:middle
+Now a bundle's a
+special kind of dylib
+
+00:01:52.986 --> 00:01:55.646 A:middle
+that you cannot link against,
+all you can do is load it
+
+00:01:55.646 --> 00:01:57.866 A:middle
+at run time by an
+dlopen and that's used
+
+00:01:57.866 --> 00:01:58.896 A:middle
+on a Mac OS for plug-ins.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:02:00.416 --> 00:02:01.816 A:middle
+Last, is the term image.
+
+00:02:01.816 --> 00:02:03.646 A:middle
+Image refers to any
+of these three types.
+
+00:02:04.056 --> 00:02:05.266 A:middle
+And I'll be using
+that term a lot.
+
+00:02:06.096 --> 00:02:08.606 A:middle
+And lastly, the term
+framework is very overloaded
+
+00:02:08.606 --> 00:02:12.416 A:middle
+in our industry, but in this
+context, a framework is a dylib
+
+00:02:12.416 --> 00:02:14.276 A:middle
+with a special directory
+structure around it
+
+00:02:14.276 --> 00:02:15.796 A:middle
+to holds files needed
+by that dylib.
+
+00:02:17.236 --> 00:02:20.396 A:middle
+So let's dive right into
+the Mach-O image format.
+
+00:02:20.856 --> 00:02:22.796 A:middle
+A Mach-O image is
+divided into segments,
+
+00:02:24.196 --> 00:02:27.156 A:middle
+by convention all segment names
+are, use upper case letters.
+
+00:02:29.366 --> 00:02:33.446 A:middle
+Now, each segment is always
+a multiple of the page size,
+
+00:02:33.866 --> 00:02:36.266 A:middle
+in this example the text
+is 3 pages, the DATA
+
+00:02:36.266 --> 00:02:37.466 A:middle
+and LINKEDIT are each one page.
+
+00:02:38.496 --> 00:02:41.106 A:middle
+Now the page size is determined
+by the hardware, for arm64,
+
+00:02:41.106 --> 00:02:45.006 A:middle
+the page size is 16K,
+everything else it's 4k.
+
+00:02:46.256 --> 00:02:49.286 A:middle
+Now another way to look
+at the thing is sections.
+
+00:02:49.366 --> 00:02:51.126 A:middle
+So sections is something
+the compiler omits.
+
+00:02:51.566 --> 00:02:54.156 A:middle
+But sections are really just
+a subrange of a segment,
+
+00:02:55.006 --> 00:02:56.976 A:middle
+they don't have any of the
+constraints of being page size,
+
+00:02:57.396 --> 00:02:58.706 A:middle
+but they are non-overlapping.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:03:02.936 --> 00:03:06.556 A:middle
+Now, the most common segment
+names are TEXT, DATA, LINKEDIT,
+
+00:03:06.556 --> 00:03:09.796 A:middle
+in fact almost every binary has
+exactly those three segments.
+
+00:03:09.856 --> 00:03:12.166 A:middle
+You can add custom ones but it
+usually doesn't add any value.
+
+00:03:13.496 --> 00:03:14.666 A:middle
+So what are these used for?
+
+00:03:14.746 --> 00:03:17.216 A:middle
+Well TEXT is at the
+start of the file,
+
+00:03:17.216 --> 00:03:18.326 A:middle
+it contains the Mach header,
+
+00:03:18.326 --> 00:03:20.586 A:middle
+it contains any machine
+instructions as well
+
+00:03:20.586 --> 00:03:22.456 A:middle
+as any read only constant
+such as c strings.
+
+00:03:23.236 --> 00:03:25.366 A:middle
+The DATA segment is rewrite,
+
+00:03:25.476 --> 00:03:27.486 A:middle
+the DATA segment contains
+all your global variables.
+
+00:03:28.686 --> 00:03:29.956 A:middle
+And lastly, is the LINKEDIT.
+
+00:03:30.486 --> 00:03:32.576 A:middle
+Now the LINKEDIT doesn't
+contain your functions
+
+00:03:32.576 --> 00:03:34.706 A:middle
+of global variables, a
+LINKEDIT contains information
+
+00:03:34.706 --> 00:03:37.166 A:middle
+about your function of variables
+such as their name and address.
+
+00:03:39.566 --> 00:03:42.286 A:middle
+You may have also heard of
+universal files, what are they?
+
+00:03:43.016 --> 00:03:45.746 A:middle
+Well suppose you build
+an iOS app, for a 64 bit,
+
+00:03:45.746 --> 00:03:48.306 A:middle
+and now you have
+this Mach-O file,
+
+00:03:48.306 --> 00:03:50.356 A:middle
+so what happens the next code
+when you say you also want
+
+00:03:50.356 --> 00:03:52.216 A:middle
+to build it for 32 bit devices?
+
+00:03:53.016 --> 00:03:57.386 A:middle
+When you rebuild, Xcode will
+build another separate Mach-O
+
+00:03:57.386 --> 00:03:59.596 A:middle
+file, this one built
+for 32 bits, RB7.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:00.366 --> 00:04:04.236 A:middle
+And then those two files are
+merged into a third file,
+
+00:04:04.386 --> 00:04:05.646 A:middle
+called the Mach-O
+universal file.
+
+00:04:06.146 --> 00:04:07.506 A:middle
+And that has a header
+at the start,
+
+00:04:07.506 --> 00:04:09.716 A:middle
+and all the header has a
+list of all the architectures
+
+00:04:09.906 --> 00:04:11.466 A:middle
+and what their offsets
+are in the file.
+
+00:04:12.166 --> 00:04:14.596 A:middle
+And that header is
+also one page in size.
+
+00:04:15.176 --> 00:04:16.726 A:middle
+Now you may be wondering,
+
+00:04:16.976 --> 00:04:19.046 A:middle
+why are the segments
+multiple page sizes?
+
+00:04:19.046 --> 00:04:21.776 A:middle
+Why is the header a page sizes,
+and it's wasting a lot of space.
+
+00:04:22.656 --> 00:04:24.666 A:middle
+Well the reason everything
+is page based has to do
+
+00:04:24.666 --> 00:04:26.246 A:middle
+with our next topic
+which is virtual memory.
+
+00:04:27.336 --> 00:04:28.746 A:middle
+So what is virtual memory?
+
+00:04:30.556 --> 00:04:32.886 A:middle
+Some of you may know the
+adage in software engineering
+
+00:04:32.886 --> 00:04:33.976 A:middle
+that every problem can be solved
+
+00:04:33.976 --> 00:04:35.096 A:middle
+by adding a level
+of indirection.
+
+00:04:35.906 --> 00:04:38.916 A:middle
+So the problem with, that
+virtual memory solves,
+
+00:04:39.696 --> 00:04:41.856 A:middle
+is how do you manage
+all your physical RAM
+
+00:04:41.936 --> 00:04:42.996 A:middle
+when you have all
+these processes?
+
+00:04:43.456 --> 00:04:45.006 A:middle
+So they added a little
+of indirection.
+
+00:04:45.396 --> 00:04:48.996 A:middle
+Every process is a logical
+address space which gets mapped
+
+00:04:48.996 --> 00:04:50.376 A:middle
+to some physical page of RAM.
+
+00:04:51.246 --> 00:04:55.866 A:middle
+Now this mapping does not
+have to be one to one,
+
+00:04:56.396 --> 00:05:00.096 A:middle
+you could have logical addresses
+that go to no physical RAM
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:04:56.396 --> 00:05:00.096 A:middle
+you could have logical addresses
+that go to no physical RAM
+
+00:05:00.096 --> 00:05:02.176 A:middle
+and you can have multiple
+logical addresses that go
+
+00:05:02.176 --> 00:05:03.666 A:middle
+to the same physical RAM.
+
+00:05:04.536 --> 00:05:06.496 A:middle
+This offered lots of
+opportunities here.
+
+00:05:07.346 --> 00:05:08.856 A:middle
+So what can you do with VM?
+
+00:05:09.056 --> 00:05:10.996 A:middle
+Well first, if you
+have a logical address
+
+00:05:10.996 --> 00:05:14.066 A:middle
+that does not map to any
+physical RAM, when you access
+
+00:05:14.106 --> 00:05:16.466 A:middle
+that address in your
+process, a page fault happens.
+
+00:05:16.786 --> 00:05:19.106 A:middle
+At that point the kernel stops
+that thread and tries to figure
+
+00:05:19.106 --> 00:05:20.346 A:middle
+out what needs to happen.
+
+00:05:20.346 --> 00:05:24.826 A:middle
+The next thing is if
+you have two processes,
+
+00:05:25.466 --> 00:05:26.526 A:middle
+with different logical
+addresses,
+
+00:05:26.526 --> 00:05:28.066 A:middle
+mapping to the same
+physical page,
+
+00:05:28.316 --> 00:05:30.946 A:middle
+those two processes are now
+sharing the same bit of RAM.
+
+00:05:31.156 --> 00:05:32.596 A:middle
+You now have sharing
+between processes.
+
+00:05:34.446 --> 00:05:37.056 A:middle
+Another interesting feature
+is file backed mapping.
+
+00:05:38.166 --> 00:05:40.156 A:middle
+Rather than actually
+read an entire file
+
+00:05:40.156 --> 00:05:43.186 A:middle
+into RAM you can tell the VM
+system through the mmap call,
+
+00:05:44.306 --> 00:05:47.226 A:middle
+the I want this slice
+of this file mapped
+
+00:05:47.226 --> 00:05:49.046 A:middle
+to this address range
+in my process.
+
+00:05:49.756 --> 00:05:50.666 A:middle
+So why would you do that?
+
+00:05:51.416 --> 00:05:53.196 A:middle
+Well rather than having
+to read the entire file,
+
+00:05:53.256 --> 00:05:54.486 A:middle
+by having that mapping set up,
+
+00:05:55.076 --> 00:05:57.556 A:middle
+as you first access those
+different addresses,
+
+00:05:57.636 --> 00:06:01.266 A:middle
+as if you had read it in memory,
+each time you access an address
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:05:57.636 --> 00:06:01.266 A:middle
+as if you had read it in memory,
+each time you access an address
+
+00:06:01.266 --> 00:06:03.046 A:middle
+that hasn't been accessed before
+it will cause a page fault,
+
+00:06:03.046 --> 00:06:04.766 A:middle
+the kernel will read
+just that one page.
+
+00:06:05.186 --> 00:06:07.176 A:middle
+And that gives you lazy
+reading of your file.
+
+00:06:08.246 --> 00:06:10.066 A:middle
+Now we can put all
+these features together,
+
+00:06:10.626 --> 00:06:12.456 A:middle
+and what I told you about
+Mach-O you now realize
+
+00:06:12.456 --> 00:06:14.896 A:middle
+that the TEXT segment
+of any of that dylib
+
+00:06:14.896 --> 00:06:17.596 A:middle
+or image can be mapped
+into multiple processes,
+
+00:06:18.066 --> 00:06:20.816 A:middle
+it will be read lazily, and
+all those pages can be shared
+
+00:06:20.816 --> 00:06:21.796 A:middle
+between those processes.
+
+00:06:26.136 --> 00:06:27.366 A:middle
+What about the DATA segment?
+
+00:06:27.366 --> 00:06:28.676 A:middle
+The DATA segment is read, write,
+
+00:06:29.036 --> 00:06:30.956 A:middle
+so for that we have trick
+called copy on write,
+
+00:06:31.736 --> 00:06:34.776 A:middle
+it's kind of similar to
+the, cloning that seen
+
+00:06:34.776 --> 00:06:35.686 A:middle
+in the Apple file system.
+
+00:06:36.666 --> 00:06:39.876 A:middle
+What copy and write does is it
+optimistically shares the DATA
+
+00:06:39.876 --> 00:06:41.176 A:middle
+page between all the processes.
+
+00:06:42.406 --> 00:06:45.466 A:middle
+What happens when one process,
+as long as they're only reading
+
+00:06:45.466 --> 00:06:46.796 A:middle
+from the global variables
+that sharing works.
+
+00:06:46.996 --> 00:06:49.056 A:middle
+But as soon as one process
+actually tries to write
+
+00:06:49.246 --> 00:06:51.586 A:middle
+to its DATA page, the
+copy and write happens.
+
+00:06:51.986 --> 00:06:54.156 A:middle
+The copy and write causes
+the kernel to make a copy
+
+00:06:54.156 --> 00:06:55.676 A:middle
+of that page into
+another physical RAM
+
+00:06:55.676 --> 00:06:57.886 A:middle
+and redirect the
+mapping to go to that.
+
+00:06:58.106 --> 00:07:01.256 A:middle
+So that one process now has
+its own copy of that page.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:06:58.106 --> 00:07:01.256 A:middle
+So that one process now has
+its own copy of that page.
+
+00:07:02.646 --> 00:07:04.536 A:middle
+Which brings us to clean
+versus dirty pages.
+
+00:07:04.886 --> 00:07:06.916 A:middle
+So that copy is considered
+a dirty page.
+
+00:07:07.186 --> 00:07:08.916 A:middle
+A dirty page is something
+
+00:07:08.916 --> 00:07:11.236 A:middle
+that contains process
+specific information.
+
+00:07:11.936 --> 00:07:12.926 A:middle
+A clean page is something
+
+00:07:12.926 --> 00:07:14.586 A:middle
+that the kernel could
+regenerate later if needed
+
+00:07:14.586 --> 00:07:15.916 A:middle
+such as rereading from disc.
+
+00:07:16.456 --> 00:07:19.296 A:middle
+So dirty pages are much more
+expensive than clean pages.
+
+00:07:20.856 --> 00:07:22.816 A:middle
+And the last thing is the
+permission boundaries are
+
+00:07:22.816 --> 00:07:23.716 A:middle
+on page boundaries.
+
+00:07:24.386 --> 00:07:28.526 A:middle
+By that I mean the permissions
+are you can mark a page
+
+00:07:28.526 --> 00:07:30.156 A:middle
+readable, writable,
+or executable,
+
+00:07:30.156 --> 00:07:32.766 A:middle
+or any combination of those.
+
+00:07:33.586 --> 00:07:34.456 A:middle
+So let's put this all together,
+
+00:07:34.456 --> 00:07:35.586 A:middle
+I talked about the
+Mach-O format,
+
+00:07:35.766 --> 00:07:36.716 A:middle
+something about virtual memory,
+
+00:07:37.046 --> 00:07:38.026 A:middle
+let's see how they
+play together.
+
+00:07:38.716 --> 00:07:40.776 A:middle
+Now I'm going to skip
+ahead and talk a little,
+
+00:07:40.776 --> 00:07:43.976 A:middle
+how the dyld operates and in a
+few moments I'll actually walk
+
+00:07:43.976 --> 00:07:44.876 A:middle
+you through this but for now,
+
+00:07:44.876 --> 00:07:45.996 A:middle
+I just want to show
+you how this maps
+
+00:07:45.996 --> 00:07:47.436 A:middle
+between Mach-O and
+virtual memory.
+
+00:07:48.146 --> 00:07:51.246 A:middle
+So we have a dylib file here,
+and rather than reading it
+
+00:07:51.246 --> 00:07:52.786 A:middle
+in memory we've mapped
+it in memory.
+
+00:07:53.486 --> 00:07:57.476 A:middle
+So, in memory this dylib
+would have taken eight pages.
+
+00:07:59.516 --> 00:08:01.576 A:middle
+The savings, why it's
+different is these ZeroFills.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:07:59.516 --> 00:08:01.576 A:middle
+The savings, why it's
+different is these ZeroFills.
+
+00:08:01.966 --> 00:08:04.066 A:middle
+So it turns out most global
+variables are zero initially.
+
+00:08:04.456 --> 00:08:06.066 A:middle
+So the static [inaudible]
+makes an optimization
+
+00:08:06.066 --> 00:08:08.276 A:middle
+that moves all the zero
+global variables to the end,
+
+00:08:08.276 --> 00:08:09.986 A:middle
+and then takes up no disc space.
+
+00:08:10.536 --> 00:08:12.076 A:middle
+And instead, we use
+the VM feature
+
+00:08:12.426 --> 00:08:14.436 A:middle
+to tell the VM the first
+time this page is accessed,
+
+00:08:14.436 --> 00:08:15.106 A:middle
+fill it with zero's.
+
+00:08:15.826 --> 00:08:17.216 A:middle
+So it requires no reading.
+
+00:08:18.556 --> 00:08:21.066 A:middle
+So the first thing dyld
+has to do is it has to look
+
+00:08:21.066 --> 00:08:23.586 A:middle
+at the Mach header, in
+memory, in this process.
+
+00:08:23.866 --> 00:08:25.656 A:middle
+So it'll be looking at
+the top box in memory,
+
+00:08:26.146 --> 00:08:27.806 A:middle
+when that happens,
+there's nothing there,
+
+00:08:27.876 --> 00:08:29.966 A:middle
+there's no mapping to a physical
+page so a page fault happens.
+
+00:08:29.966 --> 00:08:31.996 A:middle
+At that point the kernel
+realizes this is mapped
+
+00:08:32.196 --> 00:08:34.765 A:middle
+to a file, so it'll read
+the first page of the file,
+
+00:08:35.655 --> 00:08:37.535 A:middle
+place it into physical
+RAM, set the mapping to it.
+
+00:08:38.546 --> 00:08:41.145 A:middle
+Now dyld can actually start
+reading through the Mach header.
+
+00:08:41.586 --> 00:08:43.496 A:middle
+It reads through the Mach
+header, the Mach header says oh,
+
+00:08:43.496 --> 00:08:44.155 A:middle
+there's some information
+
+00:08:44.155 --> 00:08:45.506 A:middle
+in the LINKEDIT segment
+you need to look at.
+
+00:08:45.966 --> 00:08:47.836 A:middle
+So again, dyld drops down what's
+
+00:08:47.836 --> 00:08:49.786 A:middle
+in the bottom box
+in process one.
+
+00:08:50.676 --> 00:08:51.936 A:middle
+Which again causes a page fault.
+
+00:08:53.616 --> 00:08:55.256 A:middle
+Kernel services it by reading
+
+00:08:55.256 --> 00:08:57.036 A:middle
+into another physical
+page of RAM, the LINKEDIT.
+
+00:08:57.226 --> 00:08:58.906 A:middle
+Now dyld can expect a LINKEDIT.
+
+00:08:59.556 --> 00:09:01.516 A:middle
+Now in process, the
+LINKEDIT will tell dyld,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:08:59.556 --> 00:09:01.516 A:middle
+Now in process, the
+LINKEDIT will tell dyld,
+
+00:09:01.516 --> 00:09:03.716 A:middle
+you need to make some
+fix ups to this DATA page
+
+00:09:03.716 --> 00:09:05.986 A:middle
+to make this dylib runable.
+
+00:09:07.206 --> 00:09:11.026 A:middle
+So, the same thing happens,
+dyld is now, reads some data
+
+00:09:11.026 --> 00:09:14.226 A:middle
+from the DATA page, but there's
+something different here.
+
+00:09:14.406 --> 00:09:16.306 A:middle
+dyld is actually going
+to write something back,
+
+00:09:16.306 --> 00:09:17.756 A:middle
+it's actually going to
+change that DATA page
+
+00:09:17.756 --> 00:09:19.546 A:middle
+and at this point, a
+copy on write happens.
+
+00:09:20.306 --> 00:09:21.286 A:middle
+And this page becomes dirty.
+
+00:09:23.076 --> 00:09:26.036 A:middle
+So what would have been
+8 pages of dirty RAM
+
+00:09:26.036 --> 00:09:28.626 A:middle
+if I just malloced eight pages
+and then the read the stuff
+
+00:09:28.626 --> 00:09:30.026 A:middle
+into it I would have
+eight pages of dirty RAM.
+
+00:09:30.026 --> 00:09:32.016 A:middle
+But now I only have one page of
+dirty RAM and two clean pages.
+
+00:09:32.506 --> 00:09:33.436 A:middle
+So what's going to happen
+
+00:09:33.436 --> 00:09:35.246 A:middle
+when the second process
+loads the same dylib.
+
+00:09:35.816 --> 00:09:38.876 A:middle
+So in the second process dyld
+goes through the same steps.
+
+00:09:38.876 --> 00:09:39.926 A:middle
+First it looks at
+the Mach header,
+
+00:09:40.786 --> 00:09:43.686 A:middle
+but this time the kernel says,
+ah, I already have that page
+
+00:09:43.686 --> 00:09:46.676 A:middle
+in RAM somewhere so it simply
+redirects the mapping to reuse
+
+00:09:46.676 --> 00:09:48.036 A:middle
+that page no iO was done.
+
+00:09:48.726 --> 00:09:50.506 A:middle
+The same think with
+LINKEDIT, it's much faster.
+
+00:09:51.306 --> 00:09:54.636 A:middle
+Now we get to the DATA page,
+at this point the kernel has
+
+00:09:54.636 --> 00:09:56.506 A:middle
+to look to see if the DATA page,
+
+00:09:56.656 --> 00:09:59.216 A:middle
+the clean copy already still
+exists in RAM somewhere,
+
+00:09:59.216 --> 00:10:02.496 A:middle
+and if it does it can reuse it,
+if not, it has to reread it.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:09:59.216 --> 00:10:02.496 A:middle
+and if it does it can reuse it,
+if not, it has to reread it.
+
+00:10:02.906 --> 00:10:04.986 A:middle
+And now in this process,
+dyld will dirty the RAM.
+
+00:10:06.266 --> 00:10:09.356 A:middle
+Now the last step is the
+LINKEDIT is only needed while
+
+00:10:09.356 --> 00:10:10.666 A:middle
+dyld is doing its operations.
+
+00:10:11.176 --> 00:10:13.316 A:middle
+So it can hint to the
+kernel, once it's done,
+
+00:10:13.766 --> 00:10:15.946 A:middle
+that it doesn't really need
+these LINKEDIT pages anymore,
+
+00:10:15.946 --> 00:10:17.746 A:middle
+you can reclaim them when
+someone else needs RAM.
+
+00:10:19.336 --> 00:10:21.896 A:middle
+So the result is now we have two
+processes sharing these dylibs,
+
+00:10:22.286 --> 00:10:23.506 A:middle
+each one would have
+been eight pages,
+
+00:10:23.626 --> 00:10:25.206 A:middle
+or a total of 16 dirty pages,
+
+00:10:25.606 --> 00:10:27.086 A:middle
+but now we only have
+two dirty pages
+
+00:10:27.086 --> 00:10:28.436 A:middle
+and one clean, shared page.
+
+00:10:29.076 --> 00:10:33.086 A:middle
+Two other minor things
+I want to go over is
+
+00:10:33.086 --> 00:10:35.846 A:middle
+that how security effects dyld,
+these two big security things
+
+00:10:35.846 --> 00:10:36.726 A:middle
+that have impacted dyld.
+
+00:10:36.956 --> 00:10:39.946 A:middle
+So one is ASLR, address
+space layout randomization,
+
+00:10:40.726 --> 00:10:42.726 A:middle
+this is a decade or
+two old technology,
+
+00:10:42.726 --> 00:10:44.636 A:middle
+where basically you
+randomize the load address.
+
+00:10:46.056 --> 00:10:50.456 A:middle
+The second is code signing, it
+has to, many of you have had
+
+00:10:50.456 --> 00:10:53.156 A:middle
+to deal with code signing,
+in Xcode, and you think
+
+00:10:53.156 --> 00:10:56.496 A:middle
+of code signing as, you
+run a cryptographic hash
+
+00:10:56.496 --> 00:10:59.666 A:middle
+over the entire file, and then
+sign it with your signature.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:00.016 --> 00:11:03.186 A:middle
+Well, in order to
+validate that run time,
+
+00:11:03.186 --> 00:11:04.966 A:middle
+that means the entire file
+would have to be re-read.
+
+00:11:05.356 --> 00:11:07.326 A:middle
+So instead what actually
+happens at build time,
+
+00:11:07.326 --> 00:11:10.986 A:middle
+is every single page of your
+Mach-O file gets its own
+
+00:11:11.166 --> 00:11:13.036 A:middle
+individual cryptographic hash.
+
+00:11:13.346 --> 00:11:15.136 A:middle
+And all those hashes are
+stored in the LINKEDIT.
+
+00:11:16.406 --> 00:11:19.346 A:middle
+This allows each
+page to be validated
+
+00:11:19.556 --> 00:11:21.046 A:middle
+that it hasn't been
+tampered with and was owned
+
+00:11:21.046 --> 00:11:22.666 A:middle
+by you at page in time.
+
+00:11:24.516 --> 00:11:26.656 A:middle
+Okay, so we finished the
+crash course, now I'm going
+
+00:11:26.656 --> 00:11:28.036 A:middle
+to walk you from exec to main.
+
+00:11:30.706 --> 00:11:33.006 A:middle
+So what is exec?
+
+00:11:33.126 --> 00:11:34.306 A:middle
+Exec is a system call.
+
+00:11:36.336 --> 00:11:38.306 A:middle
+When you trap into the kernel,
+you basically say I want
+
+00:11:38.306 --> 00:11:40.156 A:middle
+to replace this process
+with this new program.
+
+00:11:40.536 --> 00:11:42.926 A:middle
+The kernel wipes the entire
+address space and maps
+
+00:11:42.926 --> 00:11:44.646 A:middle
+in that executable
+you specified.
+
+00:11:45.106 --> 00:11:47.496 A:middle
+Now for ASLR it maps it
+in at a random address.
+
+00:11:48.456 --> 00:11:51.866 A:middle
+The next thing it does is from
+that random, back down to zero,
+
+00:11:52.706 --> 00:11:54.406 A:middle
+it marks that whole
+region inaccessible,
+
+00:11:54.406 --> 00:11:56.456 A:middle
+ad by that I mean it's
+marked not readable,
+
+00:11:56.456 --> 00:11:57.736 A:middle
+not writeable, not executable.
+
+00:11:58.816 --> 00:12:01.556 A:middle
+The size of that region is at
+least 4KB to 32 bit processes
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:11:58.816 --> 00:12:01.556 A:middle
+The size of that region is at
+least 4KB to 32 bit processes
+
+00:12:01.596 --> 00:12:04.546 A:middle
+and at least 4GB for
+64 bit processes.
+
+00:12:04.896 --> 00:12:06.856 A:middle
+This catches any NULL
+pointer references
+
+00:12:07.256 --> 00:12:08.656 A:middle
+and also foresees more bits,
+
+00:12:09.096 --> 00:12:11.506 A:middle
+it catches any, pointer
+truncations.
+
+00:12:13.516 --> 00:12:17.556 A:middle
+Now, life was easy for
+the first couple decades,
+
+00:12:17.556 --> 00:12:19.546 A:middle
+of Unix because all I
+do is map a program,
+
+00:12:19.546 --> 00:12:20.856 A:middle
+set the PC into it,
+and start running it.
+
+00:12:21.066 --> 00:12:22.506 A:middle
+And then shared libraries
+were invented.
+
+00:12:23.146 --> 00:12:24.686 A:middle
+So who loads dylibs?
+
+00:12:25.636 --> 00:12:27.666 A:middle
+They quickly realize that they
+got really complicated fast
+
+00:12:27.666 --> 00:12:29.646 A:middle
+and the kernel people didn't
+want the kernel to do it,
+
+00:12:29.646 --> 00:12:32.366 A:middle
+so instead a helper
+program was created.
+
+00:12:32.366 --> 00:12:34.116 A:middle
+In our platform it's
+called dyld.
+
+00:12:34.706 --> 00:12:37.056 A:middle
+On other Unix's you
+may know it as LD.SO.
+
+00:12:37.856 --> 00:12:40.056 A:middle
+So when the kernel's done
+mapping a process it now maps
+
+00:12:40.056 --> 00:12:42.666 A:middle
+another Mach-O called
+dyld into that process
+
+00:12:42.866 --> 00:12:44.146 A:middle
+at another random address.
+
+00:12:44.926 --> 00:12:48.066 A:middle
+Sets the PC into dyld and
+let's dyld finish launching
+
+00:12:49.106 --> 00:12:50.416 A:middle
+the process.
+
+00:12:50.536 --> 00:12:53.066 A:middle
+So now dyld's running in
+process and its job is
+
+00:12:53.066 --> 00:12:55.706 A:middle
+to load all the dylibs
+that you depend on
+
+00:12:55.936 --> 00:12:57.076 A:middle
+and get everything
+prepared and running.
+
+00:12:58.186 --> 00:12:59.276 A:middle
+So let's walk through
+those steps.
+
+00:12:59.756 --> 00:13:01.446 A:middle
+This is a whole bunch
+of steps and it has sort
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:12:59.756 --> 00:13:01.446 A:middle
+This is a whole bunch
+of steps and it has sort
+
+00:13:01.446 --> 00:13:03.356 A:middle
+of a timeline along
+the bottom here,
+
+00:13:03.356 --> 00:13:05.196 A:middle
+as we walk through these we'll
+walk through the timeline.
+
+00:13:06.316 --> 00:13:10.026 A:middle
+So first thing, is dyld has to
+map all the dependent dylibs.
+
+00:13:10.696 --> 00:13:12.066 A:middle
+Well what are the
+dependent dylibs?
+
+00:13:12.256 --> 00:13:16.246 A:middle
+To find those it first reads the
+header of the main executable
+
+00:13:16.336 --> 00:13:18.466 A:middle
+that the kernel already mapped
+in that header is a list
+
+00:13:18.466 --> 00:13:19.556 A:middle
+of all the dependent libraries.
+
+00:13:19.626 --> 00:13:21.466 A:middle
+So it's got to parse that out.
+
+00:13:22.116 --> 00:13:23.876 A:middle
+Then it has to find each dylib.
+
+00:13:25.446 --> 00:13:27.946 A:middle
+And once it's found each dylib
+it has to open and run the start
+
+00:13:27.946 --> 00:13:30.776 A:middle
+of each file, it needs to make
+sure that it is a Mach-O file,
+
+00:13:31.806 --> 00:13:33.816 A:middle
+validate it, find
+its code signature,
+
+00:13:33.816 --> 00:13:35.246 A:middle
+register that code
+signature to the kernel.
+
+00:13:35.866 --> 00:13:39.716 A:middle
+And then it can actually
+call mmap
+
+00:13:39.716 --> 00:13:40.896 A:middle
+at each segment in that dylib.
+
+00:13:42.516 --> 00:13:43.756 A:middle
+Okay, so that's pretty simple.
+
+00:13:44.506 --> 00:13:47.266 A:middle
+Your app knows about
+the kernel dyld,
+
+00:13:47.266 --> 00:13:50.046 A:middle
+dyld then says oh this app
+depends on A and B dylib,
+
+00:13:50.166 --> 00:13:51.166 A:middle
+load the two of those,
+we're done.
+
+00:13:51.546 --> 00:13:53.566 A:middle
+Well, it gets more
+complicated, because A.dylib
+
+00:13:53.566 --> 00:13:56.236 A:middle
+and B.dylib themselves could
+depend upon the dylibs.
+
+00:13:57.526 --> 00:14:00.426 A:middle
+So dyld has to do the same
+thing over again for each
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:13:57.526 --> 00:14:00.426 A:middle
+So dyld has to do the same
+thing over again for each
+
+00:14:00.426 --> 00:14:02.536 A:middle
+of those dylibs, and each
+of the dylibs may depend
+
+00:14:02.536 --> 00:14:04.036 A:middle
+on something that's already
+loaded or something new
+
+00:14:04.036 --> 00:14:05.736 A:middle
+so it has to determine whether
+it's already been loaded or not,
+
+00:14:05.736 --> 00:14:07.176 A:middle
+and if not, it needs to load it.
+
+00:14:07.896 --> 00:14:09.276 A:middle
+So, this continues on and on.
+
+00:14:10.676 --> 00:14:13.236 A:middle
+And eventually it has
+everything loaded.
+
+00:14:13.526 --> 00:14:16.616 A:middle
+Now if you look at a
+process, the average process
+
+00:14:16.616 --> 00:14:20.056 A:middle
+in our system, loads anywhere
+between 1 to 400 dylibs,
+
+00:14:20.056 --> 00:14:22.296 A:middle
+so that's a lot of
+dylibs to be loaded.
+
+00:14:23.186 --> 00:14:26.506 A:middle
+Luckily most of those are OS
+dylibs, and we do a lot of work
+
+00:14:26.506 --> 00:14:28.576 A:middle
+when building the
+OS to pre-calculate
+
+00:14:28.576 --> 00:14:30.616 A:middle
+and pre-cache a lot of
+the work that dyld has
+
+00:14:30.616 --> 00:14:31.516 A:middle
+to do to load these things.
+
+00:14:31.916 --> 00:14:34.046 A:middle
+So OS dylibs load
+very, very quickly.
+
+00:14:37.636 --> 00:14:40.556 A:middle
+So now we've loaded all the
+dylibs, but they're all sitting
+
+00:14:40.556 --> 00:14:41.866 A:middle
+in their floating
+independent of each other,
+
+00:14:41.866 --> 00:14:43.336 A:middle
+and now we actually have
+to bind them together.
+
+00:14:43.916 --> 00:14:45.406 A:middle
+That's called fix-ups.
+
+00:14:45.926 --> 00:14:48.166 A:middle
+But one thing about
+fix-ups is we've learned,
+
+00:14:48.416 --> 00:14:50.776 A:middle
+because of code signing we can't
+actually alter instructions.
+
+00:14:51.416 --> 00:14:53.916 A:middle
+So how does one dylib
+call into another dylib
+
+00:14:53.916 --> 00:14:55.966 A:middle
+if you can't change the
+instructions of how it calls?
+
+00:14:56.466 --> 00:14:57.986 A:middle
+Well, we call back
+our old friend,
+
+00:14:58.036 --> 00:14:59.306 A:middle
+and we add a lot
+of old indirection.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:15:00.166 --> 00:15:02.486 A:middle
+So our code-gen, is
+called dynamic PIC.
+
+00:15:02.976 --> 00:15:04.186 A:middle
+It's positioned independent
+code,
+
+00:15:04.186 --> 00:15:06.396 A:middle
+meaning the code can be loaded
+into the address and is dynamic,
+
+00:15:06.396 --> 00:15:09.466 A:middle
+meaning things are,
+addressed indirectly.
+
+00:15:10.046 --> 00:15:12.026 A:middle
+What that means is to call
+for one thing to another,
+
+00:15:12.546 --> 00:15:15.276 A:middle
+the co-gen actually creates
+a pointer in the DATA segment
+
+00:15:15.576 --> 00:15:17.296 A:middle
+and that pointer points
+to what you want to call.
+
+00:15:17.696 --> 00:15:21.916 A:middle
+The code loads that pointer
+and jumps to the pointer.
+
+00:15:22.406 --> 00:15:24.986 A:middle
+So all dyld is doing is
+fixing up pointers and data.
+
+00:15:26.936 --> 00:15:29.476 A:middle
+Now there's two main
+categories of fix-ups, rebasing
+
+00:15:29.476 --> 00:15:30.806 A:middle
+and binding, so what's
+the difference?
+
+00:15:31.366 --> 00:15:33.626 A:middle
+So rebasing is if you have
+a pointer that's pointing
+
+00:15:33.626 --> 00:15:37.106 A:middle
+to within your image, and any
+adjustments needed by that,
+
+00:15:37.556 --> 00:15:38.686 A:middle
+the second is binding.
+
+00:15:39.016 --> 00:15:41.116 A:middle
+Binding is if you're pointing
+something outside your image.
+
+00:15:41.296 --> 00:15:43.256 A:middle
+And they each need to
+be fixed up differently,
+
+00:15:43.296 --> 00:15:44.476 A:middle
+so I'll go through the steps.
+
+00:15:45.376 --> 00:15:47.686 A:middle
+But first, if you're
+curious, there's a command,
+
+00:15:47.686 --> 00:15:49.586 A:middle
+dyld info with a bunch
+of options on it.
+
+00:15:49.636 --> 00:15:52.866 A:middle
+You can run this on any binary
+and you'll see all the fix-ups
+
+00:15:52.866 --> 00:15:57.546 A:middle
+that dyld will have to be doing
+for that binary to prepare it.
+
+00:15:58.816 --> 00:15:59.536 A:middle
+So rebasing.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:00.816 --> 00:16:03.896 A:middle
+Well in the old age you could
+specify a preferred load address
+
+00:16:03.896 --> 00:16:07.596 A:middle
+for each dylib, and that
+preferred load address was the
+
+00:16:07.596 --> 00:16:10.106 A:middle
+static linker and dyld work
+together such that, if you load,
+
+00:16:10.106 --> 00:16:12.336 A:middle
+it to that preferred load
+address, all the pointers
+
+00:16:12.336 --> 00:16:14.476 A:middle
+and data that was supposed to
+code internally, were correct
+
+00:16:14.476 --> 00:16:15.806 A:middle
+and dyld wouldn't have
+to do any fix-ups.
+
+00:16:16.646 --> 00:16:17.776 A:middle
+But these days, with ASLR,
+
+00:16:17.776 --> 00:16:21.396 A:middle
+your dylib is loaded
+to a random address.
+
+00:16:22.036 --> 00:16:25.256 A:middle
+It's slid to some other address,
+which means all those pointers
+
+00:16:25.256 --> 00:16:27.256 A:middle
+and data are now still
+pointed to the old address.
+
+00:16:27.866 --> 00:16:31.346 A:middle
+So in order to fix those up,
+we need to calculate the slide,
+
+00:16:31.346 --> 00:16:33.236 A:middle
+which is how much has
+it moved, and for each
+
+00:16:33.236 --> 00:16:34.996 A:middle
+of those interior pointers,
+
+00:16:35.146 --> 00:16:36.906 A:middle
+to basically add the
+slide value to them.
+
+00:16:37.816 --> 00:16:41.446 A:middle
+So rebasing means going
+through all your data pointers,
+
+00:16:41.656 --> 00:16:43.846 A:middle
+that are internal, and basically
+adding a slide to them.
+
+00:16:44.286 --> 00:16:46.016 A:middle
+So the concept is very
+simple, read, add,
+
+00:16:46.016 --> 00:16:46.726 A:middle
+write, read, add, write.
+
+00:16:47.776 --> 00:16:49.066 A:middle
+But where are those
+data pointers?
+
+00:16:49.596 --> 00:16:51.166 A:middle
+Where those pointers
+are in your segment,
+
+00:16:51.496 --> 00:16:52.986 A:middle
+are encoded in the
+LINKEDIT segment.
+
+00:16:54.066 --> 00:16:56.926 A:middle
+Now, at this point, all we've
+had is everything mapped in,
+
+00:16:57.256 --> 00:16:58.446 A:middle
+so when we start doing rebasing,
+
+00:16:58.446 --> 00:17:00.276 A:middle
+we're actually causing
+page faults to page
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:16:58.446 --> 00:17:00.276 A:middle
+we're actually causing
+page faults to page
+
+00:17:00.276 --> 00:17:01.386 A:middle
+in all the DATA pages.
+
+00:17:01.776 --> 00:17:04.406 A:middle
+And then we causing copy and
+writes as we're changing them.
+
+00:17:04.576 --> 00:17:07.496 A:middle
+So rebasing can sometimes be
+expensive because of all the iO.
+
+00:17:07.996 --> 00:17:10.336 A:middle
+But one trick we do is
+we do it sequentially
+
+00:17:10.396 --> 00:17:11.736 A:middle
+and from the kernel's
+point of view,
+
+00:17:11.996 --> 00:17:14.156 A:middle
+it sees data faults
+happen sequentially.
+
+00:17:14.506 --> 00:17:17.246 A:middle
+And when it sees that, the
+kernel, is reading ahead for us
+
+00:17:17.596 --> 00:17:18.935 A:middle
+which makes the iO less costly.
+
+00:17:19.705 --> 00:17:23.695 A:middle
+So next is binding,
+binding is for pointers
+
+00:17:23.695 --> 00:17:25.266 A:middle
+that point outside your dylib.
+
+00:17:26.256 --> 00:17:28.636 A:middle
+They're actually bound by name,
+they're actually is the string,
+
+00:17:28.636 --> 00:17:30.796 A:middle
+in this case, malloc
+stored in the link edit,
+
+00:17:31.006 --> 00:17:33.256 A:middle
+that says this data pointer
+needs to point to malloc.
+
+00:17:33.596 --> 00:17:36.676 A:middle
+So at run time, dyld needs to
+actually find the implementation
+
+00:17:36.676 --> 00:17:41.396 A:middle
+of that symbol, which
+requires a lot of computation,
+
+00:17:41.396 --> 00:17:42.346 A:middle
+looking through symbol tables.
+
+00:17:42.646 --> 00:17:44.026 A:middle
+Once it's found, that
+values that's stored
+
+00:17:44.026 --> 00:17:44.856 A:middle
+in that data pointer.
+
+00:17:45.366 --> 00:17:47.256 A:middle
+So this is way more
+computationally complex
+
+00:17:47.256 --> 00:17:48.076 A:middle
+than rebasing is.
+
+00:17:48.616 --> 00:17:50.056 A:middle
+But there's very little iO
+
+00:17:50.056 --> 00:17:56.096 A:middle
+because rebasing has done
+most of the iO already.
+
+00:17:56.406 --> 00:17:59.466 A:middle
+Next, so ObjC has a
+bunch of DATA structures,
+
+00:17:59.466 --> 00:18:01.676 A:middle
+class DATA structure which
+is a pointer to its methods
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:17:59.466 --> 00:18:01.676 A:middle
+class DATA structure which
+is a pointer to its methods
+
+00:18:01.676 --> 00:18:03.216 A:middle
+and a pointer to a super
+gloss and so forth.
+
+00:18:03.436 --> 00:18:06.186 A:middle
+Almost all those are fixed
+up, via rebasing or binding.
+
+00:18:07.056 --> 00:18:10.776 A:middle
+But there's a few extra things
+that ObjC run time requires.
+
+00:18:11.516 --> 00:18:13.726 A:middle
+The first is ObjC
+is dynamic language
+
+00:18:13.726 --> 00:18:16.806 A:middle
+and you can request a class
+become substantiated by name.
+
+00:18:17.126 --> 00:18:19.286 A:middle
+So that means the ObjC run
+time has to maintain a table
+
+00:18:19.286 --> 00:18:21.096 A:middle
+of all names of which
+class that they map to.
+
+00:18:21.586 --> 00:18:23.546 A:middle
+So every time you load
+something, it defines a class,
+
+00:18:23.756 --> 00:18:25.556 A:middle
+its name needs to be
+registered with a global table.
+
+00:18:26.846 --> 00:18:28.546 A:middle
+Next, in C++ you may have heard
+
+00:18:28.546 --> 00:18:32.216 A:middle
+of the fragile ivar
+problem, sorry.
+
+00:18:32.606 --> 00:18:33.986 A:middle
+Fragile base class problem.
+
+00:18:35.116 --> 00:18:37.316 A:middle
+We don't have that problem
+with ObjC because one
+
+00:18:37.316 --> 00:18:39.116 A:middle
+of the fix-ups we do is
+we change the offsets
+
+00:18:39.116 --> 00:18:41.206 A:middle
+of all the ivars
+dynamically, at load time.
+
+00:18:42.996 --> 00:18:46.616 A:middle
+Next, in ObjC you
+can define categories
+
+00:18:46.616 --> 00:18:49.276 A:middle
+which change the
+methods of another class.
+
+00:18:49.556 --> 00:18:52.006 A:middle
+Sometimes those are in classes
+that are not in your image
+
+00:18:52.006 --> 00:18:55.706 A:middle
+on another dylib, that,
+those method fix-ups have
+
+00:18:55.706 --> 00:18:56.596 A:middle
+to be applied at this point.
+
+00:18:58.156 --> 00:19:00.646 A:middle
+And lastly, ObjC [inaudible] is
+based on selectors being unique
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:18:58.156 --> 00:19:00.646 A:middle
+And lastly, ObjC [inaudible] is
+based on selectors being unique
+
+00:19:00.646 --> 00:19:02.806 A:middle
+so we need unique selectors.
+
+00:19:05.036 --> 00:19:07.286 A:middle
+So now the work that we've
+done all the DATA fix-ups,
+
+00:19:07.386 --> 00:19:10.076 A:middle
+now we can do all
+the DATA fix-ups
+
+00:19:10.076 --> 00:19:11.946 A:middle
+that can be basically
+described statically.
+
+00:19:12.256 --> 00:19:14.226 A:middle
+So now's our chance to
+do dynamic DATA fix ups.
+
+00:19:14.816 --> 00:19:17.476 A:middle
+So in C++, you can
+have an initializer,
+
+00:19:17.476 --> 00:19:19.606 A:middle
+you can say [inaudible] equals
+whatever expression you want.
+
+00:19:20.156 --> 00:19:23.256 A:middle
+That arbitrary expression,
+at this time needs to be run
+
+00:19:23.336 --> 00:19:24.466 A:middle
+and it's run at this point now.
+
+00:19:24.766 --> 00:19:28.566 A:middle
+So the C++ compiler
+generates, initiliazers
+
+00:19:28.936 --> 00:19:30.606 A:middle
+for these arbitrary
+DATA initialization.
+
+00:19:31.676 --> 00:19:34.486 A:middle
+In ObjC, there's something
+called the +load method.
+
+00:19:34.986 --> 00:19:37.356 A:middle
+Now the +load method is
+deprecated, we recommend
+
+00:19:37.356 --> 00:19:38.056 A:middle
+that you don't use it.
+
+00:19:38.056 --> 00:19:39.586 A:middle
+We recommend you use
+a plus initialize.
+
+00:19:39.856 --> 00:19:41.506 A:middle
+But if you have one,
+it's run at this point.
+
+00:19:43.456 --> 00:19:45.476 A:middle
+So, now I have this big graph,
+
+00:19:45.476 --> 00:19:48.386 A:middle
+we have your main executable
+top, all the dylibs depend on,
+
+00:19:48.386 --> 00:19:50.806 A:middle
+this huge graph, we have
+to run initializers.
+
+00:19:51.286 --> 00:19:52.586 A:middle
+What order do we want them in?
+
+00:19:52.756 --> 00:19:54.316 A:middle
+Well, we run them bottom up.
+
+00:19:54.316 --> 00:19:58.896 A:middle
+And the reason is, when an
+initialize is run it may need
+
+00:19:58.896 --> 00:20:00.726 A:middle
+to call up some dylib
+and you want to make sure
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:19:58.896 --> 00:20:00.726 A:middle
+to call up some dylib
+and you want to make sure
+
+00:20:00.726 --> 00:20:02.506 A:middle
+that dylibs already
+ready to be called.
+
+00:20:02.776 --> 00:20:04.986 A:middle
+So by running the initializers
+from the bottom all the way
+
+00:20:04.986 --> 00:20:07.686 A:middle
+up the app class
+you're safe to call
+
+00:20:07.686 --> 00:20:09.466 A:middle
+into something you depend on.
+
+00:20:11.046 --> 00:20:12.836 A:middle
+So once all initiliazers
+are done,
+
+00:20:13.186 --> 00:20:15.646 A:middle
+now we actually finally get
+to call the main dyld program.
+
+00:20:17.546 --> 00:20:20.746 A:middle
+So you survived this theory
+part, you now all are experts
+
+00:20:20.746 --> 00:20:22.826 A:middle
+on how processes
+start, you now know
+
+00:20:22.826 --> 00:20:24.366 A:middle
+that dyld is a helper program,
+
+00:20:25.296 --> 00:20:27.046 A:middle
+it loads all dependent
+libraries,
+
+00:20:28.086 --> 00:20:31.116 A:middle
+fixing up all the DATA
+pages, runs initializers
+
+00:20:31.116 --> 00:20:32.066 A:middle
+and then jumps to main.
+
+00:20:32.556 --> 00:20:35.636 A:middle
+So now to put all this
+theory you've learned to use,
+
+00:20:35.906 --> 00:20:37.196 A:middle
+I'd like to hand
+it over to Louis,
+
+00:20:37.306 --> 00:20:40.276 A:middle
+who will be giving you
+some practical tips.
+
+00:20:41.516 --> 00:20:47.876 A:middle
+[ Applause ]
+
+00:20:48.376 --> 00:20:48.896 A:middle
+&gt;&gt; Thanks, Nick.
+
+00:20:50.916 --> 00:20:52.766 A:middle
+We've all had that experience
+where we pull our phone
+
+00:20:52.766 --> 00:20:56.506 A:middle
+out of our pocket, press the
+home button, and then tap
+
+00:20:56.506 --> 00:20:57.796 A:middle
+on an application
+we want to run.
+
+00:20:58.546 --> 00:21:01.026 A:middle
+And then tap, and tap, and
+tap again on some button
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:20:58.546 --> 00:21:01.026 A:middle
+And then tap, and tap, and
+tap again on some button
+
+00:21:01.026 --> 00:21:02.226 A:middle
+because it's not responding.
+
+00:21:03.236 --> 00:21:05.556 A:middle
+When that happens to me,
+it's really frustrating,
+
+00:21:05.556 --> 00:21:07.806 A:middle
+and I want to delete the app.
+
+00:21:08.636 --> 00:21:11.776 A:middle
+I'm Louis Gerbarg I
+work on dyld and today,
+
+00:21:11.776 --> 00:21:13.756 A:middle
+we're going to discuss how to
+make your app launch instantly,
+
+00:21:13.836 --> 00:21:16.000 A:middle
+so your users are delighted.
+
+00:21:23.556 --> 00:21:25.996 A:middle
+So first off, let's discuss
+what we're going to go
+
+00:21:25.996 --> 00:21:26.986 A:middle
+through in this part
+of the talk.
+
+00:21:29.076 --> 00:21:32.346 A:middle
+We're going to discuss how fast
+you actually need to launch
+
+00:21:32.346 --> 00:21:35.066 A:middle
+so that your users are going
+to have a good experience.
+
+00:21:36.816 --> 00:21:38.666 A:middle
+How to measure that launch time.
+
+00:21:38.946 --> 00:21:40.096 A:middle
+Because it can be
+very difficult.
+
+00:21:40.636 --> 00:21:43.066 A:middle
+The standard ways you measure
+your application don't apply
+
+00:21:43.066 --> 00:21:44.196 A:middle
+before your code can run.
+
+00:21:45.926 --> 00:21:47.316 A:middle
+We're going to go through a list
+
+00:21:47.316 --> 00:21:51.756 A:middle
+of the common reasons why your
+code, or sorry we're going to go
+
+00:21:51.756 --> 00:21:53.716 A:middle
+through a list of, why,
+
+00:21:53.716 --> 00:21:55.566 A:middle
+the common reasons your
+launch can be slow.
+
+00:21:56.646 --> 00:21:57.926 A:middle
+And finally, we're
+going to go through,
+
+00:21:57.926 --> 00:22:00.566 A:middle
+a way to fix all the slow downs.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:21:57.926 --> 00:22:00.566 A:middle
+a way to fix all the slow downs.
+
+00:22:01.376 --> 00:22:03.346 A:middle
+So I'm going to give
+you a little spoiler
+
+00:22:03.346 --> 00:22:06.546 A:middle
+for the rest of my talk.
+
+00:22:07.096 --> 00:22:08.236 A:middle
+You need to do less
+stuff [laughter].
+
+00:22:09.976 --> 00:22:12.756 A:middle
+Now, I don't mean your app
+should have less features,
+
+00:22:13.476 --> 00:22:14.366 A:middle
+I'm saying that your app has
+
+00:22:14.366 --> 00:22:16.616 A:middle
+to do less things
+before it's running.
+
+00:22:16.796 --> 00:22:18.636 A:middle
+We want you to figure
+out how to defer some
+
+00:22:18.636 --> 00:22:21.476 A:middle
+of your launch behaviors
+in order
+
+00:22:21.476 --> 00:22:23.776 A:middle
+to initialize them
+just before execution.
+
+00:22:26.326 --> 00:22:29.166 A:middle
+So, let's discuss the goals,
+how fast we want to launch.
+
+00:22:29.606 --> 00:22:34.686 A:middle
+Well, the launch time for
+various platforms are different.
+
+00:22:34.686 --> 00:22:38.946 A:middle
+But, a good, a good
+rule of thumb,
+
+00:22:39.846 --> 00:22:42.206 A:middle
+is 400 milliseconds
+is a good launch time.
+
+00:22:43.436 --> 00:22:48.336 A:middle
+Now, the reason for that is
+that we have launch animations
+
+00:22:48.466 --> 00:22:50.266 A:middle
+on the phone to give
+a sense of continuity
+
+00:22:50.266 --> 00:22:53.326 A:middle
+between the home screen
+and your application,
+
+00:22:53.326 --> 00:22:54.296 A:middle
+when you see it execute.
+
+00:22:54.856 --> 00:22:57.956 A:middle
+And those animations take
+time, and those animations,
+
+00:22:59.146 --> 00:23:01.606 A:middle
+give you a chance to
+hide your launch times.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:22:59.146 --> 00:23:01.606 A:middle
+give you a chance to
+hide your launch times.
+
+00:23:02.236 --> 00:23:03.806 A:middle
+Obviously that may be different,
+
+00:23:03.806 --> 00:23:05.976 A:middle
+in different context your app
+extensions are also applications
+
+00:23:05.976 --> 00:23:07.906 A:middle
+that have to launch, they launch
+in different amounts of time.
+
+00:23:08.576 --> 00:23:10.556 A:middle
+And a phone and TV, and a
+watch are different things,
+
+00:23:10.656 --> 00:23:14.066 A:middle
+but 400 milliseconds
+is a good target.
+
+00:23:14.296 --> 00:23:16.526 A:middle
+You can never take longer
+than 20 seconds to launch.
+
+00:23:16.556 --> 00:23:18.276 A:middle
+If you take longer
+than 20 seconds,
+
+00:23:18.596 --> 00:23:20.446 A:middle
+the OS will kill your
+app, assuming it's going
+
+00:23:20.446 --> 00:23:22.556 A:middle
+through an infinite loop, and
+we've all had that experience.
+
+00:23:22.556 --> 00:23:24.396 A:middle
+Where you click an app, it
+comes up to a home screen,
+
+00:23:24.396 --> 00:23:26.396 A:middle
+it doesn't respond, and
+then it just goes away,
+
+00:23:26.906 --> 00:23:28.266 A:middle
+and that's usually
+what's happening here.
+
+00:23:30.096 --> 00:23:33.526 A:middle
+Finally, it's very
+important to test
+
+00:23:33.526 --> 00:23:34.786 A:middle
+on your slowest supported
+device.
+
+00:23:34.786 --> 00:23:36.886 A:middle
+So those timers are
+constant values
+
+00:23:36.886 --> 00:23:39.426 A:middle
+across all supported
+devices on our platforms.
+
+00:23:39.896 --> 00:23:43.686 A:middle
+So, if you hit 400 milliseconds
+on a iPhone 6S that you're using
+
+00:23:43.686 --> 00:23:47.306 A:middle
+for testing right now, you're
+probably just barely hitting it,
+
+00:23:47.306 --> 00:23:49.376 A:middle
+you're probably not going
+to hit it on a iPhone 5.
+
+00:23:51.256 --> 00:23:54.116 A:middle
+So let's do a recap of
+Nick's part of the talk.
+
+00:23:54.116 --> 00:23:56.576 A:middle
+What do we have to do to
+launch, we have to parse images,
+
+00:23:56.576 --> 00:23:58.306 A:middle
+map images, rebase
+images, bind images,
+
+00:23:58.306 --> 00:24:00.326 A:middle
+run image initializers,
+and then call main.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:23:58.306 --> 00:24:00.326 A:middle
+run image initializers,
+and then call main.
+
+00:24:00.906 --> 00:24:02.506 A:middle
+If that sounds like
+a lot, it is,
+
+00:24:02.706 --> 00:24:04.016 A:middle
+I'm exhausted just saying it.
+
+00:24:04.866 --> 00:24:09.756 A:middle
+And then after that, we have
+to call UIApplicationMain,
+
+00:24:09.756 --> 00:24:11.776 A:middle
+you'll see that in
+your ObjC apps
+
+00:24:11.876 --> 00:24:13.576 A:middle
+or in your Swift apps
+handled implicitly.
+
+00:24:14.136 --> 00:24:16.366 A:middle
+That does some other things,
+
+00:24:16.366 --> 00:24:19.016 A:middle
+including running the
+framework initializers
+
+00:24:19.016 --> 00:24:20.026 A:middle
+and loading your nibs.
+
+00:24:20.666 --> 00:24:22.686 A:middle
+And then finally
+you'll get a call back
+
+00:24:22.686 --> 00:24:23.666 A:middle
+in your application delegate.
+
+00:24:24.226 --> 00:24:26.216 A:middle
+I'm mentioning these last
+two because those are counted
+
+00:24:26.216 --> 00:24:28.526 A:middle
+in those 400 milliseconds
+times that I just mentioned.
+
+00:24:28.906 --> 00:24:30.936 A:middle
+But we're not going to
+discuss them in this talk.
+
+00:24:31.436 --> 00:24:33.556 A:middle
+If you want a better view
+of what goes on there,
+
+00:24:33.556 --> 00:24:36.916 A:middle
+there's a talk from 2012, iOS
+app performance responsiveness.
+
+00:24:37.306 --> 00:24:39.246 A:middle
+I highly recommend you go
+back and view the video.
+
+00:24:40.066 --> 00:24:42.796 A:middle
+But that's the last we're going
+to speak of them right now.
+
+00:24:44.186 --> 00:24:47.976 A:middle
+So, let's move on, one more
+thing I want to talk about,
+
+00:24:48.136 --> 00:24:49.446 A:middle
+warm versus cold launches.
+
+00:24:50.026 --> 00:24:51.276 A:middle
+So when you launch an app,
+
+00:24:51.436 --> 00:24:53.136 A:middle
+we talk about warm
+and cold launches.
+
+00:24:53.546 --> 00:24:57.246 A:middle
+And a warm launch is an app
+where the application is already
+
+00:24:57.246 --> 00:24:59.486 A:middle
+in memory, either
+because it's been launched
+
+00:24:59.486 --> 00:25:02.736 A:middle
+and quit previously, and it's
+still sitting in the discache
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:24:59.486 --> 00:25:02.736 A:middle
+and quit previously, and it's
+still sitting in the discache
+
+00:25:03.226 --> 00:25:06.206 A:middle
+in the kernel, or because
+you just copied it over.
+
+00:25:07.276 --> 00:25:10.416 A:middle
+A cold launch is a launch
+where it's not in the discache.
+
+00:25:11.746 --> 00:25:15.216 A:middle
+And a cold launch is generally
+the more important to measure.
+
+00:25:16.736 --> 00:25:18.666 A:middle
+The reason a cold launch is more
+important to measure is that's
+
+00:25:18.666 --> 00:25:23.046 A:middle
+when your user is launching an
+app after rebooting the phone,
+
+00:25:23.046 --> 00:25:24.566 A:middle
+or for the first
+time in a long time,
+
+00:25:24.566 --> 00:25:26.956 A:middle
+that's when you really
+want it to be instant.
+
+00:25:27.316 --> 00:25:29.456 A:middle
+In order to measure
+those, you really need
+
+00:25:29.456 --> 00:25:30.946 A:middle
+to reboot between measurements.
+
+00:25:31.366 --> 00:25:34.876 A:middle
+Having said that,
+if you're working
+
+00:25:34.876 --> 00:25:36.216 A:middle
+on improving your warm launches,
+
+00:25:36.216 --> 00:25:37.776 A:middle
+your cold launches will
+tend to improve also.
+
+00:25:37.776 --> 00:25:40.016 A:middle
+You can do rapid development
+cycles on warm launches,
+
+00:25:40.426 --> 00:25:46.246 A:middle
+but then every so often,
+test with a cold launch.
+
+00:25:47.696 --> 00:25:52.066 A:middle
+So, how do we measure
+time before main?
+
+00:25:52.186 --> 00:25:55.376 A:middle
+Well, we have a built in
+measurement system in dyld,
+
+00:25:55.376 --> 00:25:58.446 A:middle
+you can access it through
+setting an environment variable.
+
+00:25:59.476 --> 00:26:00.836 A:middle
+DYLD Print Statistics.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:25:59.476 --> 00:26:00.836 A:middle
+DYLD Print Statistics.
+
+00:26:02.366 --> 00:26:04.746 A:middle
+And it's been available
+in shipping OSes actually,
+
+00:26:05.116 --> 00:26:06.876 A:middle
+but it prints out a lot
+
+00:26:06.956 --> 00:26:08.596 A:middle
+of internal debugging
+information that's not
+
+00:26:08.596 --> 00:26:10.796 A:middle
+particularly useful, it's
+missing some information
+
+00:26:10.796 --> 00:26:11.796 A:middle
+that you probably want.
+
+00:26:13.676 --> 00:26:14.976 A:middle
+And we're fixing that today.
+
+00:26:16.926 --> 00:26:19.686 A:middle
+So it's significantly
+improved on the new OSes.
+
+00:26:20.516 --> 00:26:23.786 A:middle
+[ Applause ]
+
+00:26:24.286 --> 00:26:27.626 A:middle
+It's going to put out, a lot
+more relevant information
+
+00:26:27.626 --> 00:26:29.406 A:middle
+for you that should
+give you actionable ways
+
+00:26:29.406 --> 00:26:30.816 A:middle
+to improve your launch times.
+
+00:26:31.286 --> 00:26:33.556 A:middle
+And it will be available
+in seed 2.
+
+00:26:35.946 --> 00:26:39.986 A:middle
+So, one other thing I want
+to talk about with this,
+
+00:26:40.556 --> 00:26:43.346 A:middle
+is that the debugger
+has to pause launch
+
+00:26:43.346 --> 00:26:46.736 A:middle
+on every single dylib load
+in order to parse the symbols
+
+00:26:46.736 --> 00:26:50.116 A:middle
+from your app and load your
+break points, over a USB cable
+
+00:26:50.116 --> 00:26:51.666 A:middle
+that can be very time consuming.
+
+00:26:52.856 --> 00:26:56.056 A:middle
+But dyld knows about that and
+it subtracts the debugger time
+
+00:26:56.056 --> 00:26:57.406 A:middle
+out from the numbers
+it's registering.
+
+00:26:57.456 --> 00:27:00.106 A:middle
+So you don't have to worry
+about it, but you notice it
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:26:57.456 --> 00:27:00.106 A:middle
+So you don't have to worry
+about it, but you notice it
+
+00:27:00.106 --> 00:27:02.506 A:middle
+because dyld's going to give
+you much smaller numbers
+
+00:27:02.506 --> 00:27:04.356 A:middle
+than you'll observe by looking
+at the clock on the wall.
+
+00:27:04.776 --> 00:27:06.546 A:middle
+That's expected and understood,
+
+00:27:07.066 --> 00:27:09.166 A:middle
+and it's everything's going
+correctly if you see that,
+
+00:27:09.166 --> 00:27:12.326 A:middle
+but I just wanted
+to make note of it.
+
+00:27:12.606 --> 00:27:19.176 A:middle
+So let's move on, to setting an
+environment variable in Xcode,
+
+00:27:20.836 --> 00:27:22.326 A:middle
+you just go to the
+scheme editor,
+
+00:27:23.046 --> 00:27:24.176 A:middle
+and you add it like this.
+
+00:27:24.846 --> 00:27:27.686 A:middle
+Once you do that you'll get the
+new console log into the output,
+
+00:27:27.686 --> 00:27:28.936 A:middle
+console output logged.
+
+00:27:29.366 --> 00:27:31.486 A:middle
+And what does that look like?
+
+00:27:32.686 --> 00:27:34.346 A:middle
+Well this is what the
+output looks like,
+
+00:27:34.346 --> 00:27:35.146 A:middle
+and we have a time bar
+
+00:27:35.146 --> 00:27:36.736 A:middle
+on the bottom representing
+the different parts of it.
+
+00:27:37.366 --> 00:27:38.316 A:middle
+And let's add one more thing.
+
+00:27:39.576 --> 00:27:42.216 A:middle
+Let's add an indicator for
+that 400 milliseconds target,
+
+00:27:42.756 --> 00:27:44.786 A:middle
+which this app I'm
+working on is not hitting.
+
+00:27:46.096 --> 00:27:50.766 A:middle
+So, if you look in, this is
+in order basically the steps
+
+00:27:50.766 --> 00:27:53.056 A:middle
+that Nick discussed in order to
+launch an app so let's just go
+
+00:27:53.056 --> 00:27:53.716 A:middle
+through them in order.
+
+00:27:56.076 --> 00:27:59.806 A:middle
+So dylib loading, the
+big thing to understand
+
+00:27:59.806 --> 00:28:01.706 A:middle
+about dylib loading and the
+slowdown that you'll see
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:27:59.806 --> 00:28:01.706 A:middle
+about dylib loading and the
+slowdown that you'll see
+
+00:28:01.706 --> 00:28:04.516 A:middle
+from it, is that embedded
+dylibs can be expensive.
+
+00:28:04.516 --> 00:28:07.636 A:middle
+So Nick said an average app
+can be 100 to 400 dylibs.
+
+00:28:08.536 --> 00:28:11.056 A:middle
+But OS dylibs are fast
+because when we build the OS,
+
+00:28:11.466 --> 00:28:14.146 A:middle
+we have ways of pre-calculating
+a lot of that data.
+
+00:28:14.146 --> 00:28:16.956 A:middle
+But we don't have every
+dylib in every app
+
+00:28:17.056 --> 00:28:18.306 A:middle
+when we're building the OS.
+
+00:28:18.476 --> 00:28:20.386 A:middle
+We can't pre-calculate them
+for the dylibs you embed
+
+00:28:20.386 --> 00:28:21.466 A:middle
+with your app, so we have to go
+
+00:28:21.466 --> 00:28:26.516 A:middle
+through a much slower
+process as we load those.
+
+00:28:27.376 --> 00:28:30.276 A:middle
+And the solution for
+this is that we just need
+
+00:28:30.276 --> 00:28:33.516 A:middle
+to use fewer dylibs
+and that can be rough.
+
+00:28:34.026 --> 00:28:37.996 A:middle
+And I'm not saying you can't
+use any, but there are a couple
+
+00:28:37.996 --> 00:28:39.976 A:middle
+of options here you can
+merge existing dylibs.
+
+00:28:40.506 --> 00:28:43.766 A:middle
+You can use static
+archives and link them
+
+00:28:44.056 --> 00:28:45.896 A:middle
+into both, into apps that way.
+
+00:28:46.506 --> 00:28:50.706 A:middle
+And you have an option to lazy
+load, which is to use dlopen,
+
+00:28:51.276 --> 00:28:55.166 A:middle
+but dlopen causes some
+subtle performance
+
+00:28:55.166 --> 00:28:57.746 A:middle
+and correctness issues,
+and it actually results
+
+00:28:57.746 --> 00:28:59.716 A:middle
+in doing more work later
+on, but it is deferred.
+
+00:28:59.716 --> 00:29:03.126 A:middle
+So, it's a viable option but
+you should think long and hard
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:28:59.716 --> 00:29:03.126 A:middle
+So, it's a viable option but
+you should think long and hard
+
+00:29:03.126 --> 00:29:06.736 A:middle
+about it and, I would discourage
+it if at all possible.
+
+00:29:07.656 --> 00:29:12.066 A:middle
+So, I have an app here that
+currently has 26 dylibs,
+
+00:29:12.566 --> 00:29:17.626 A:middle
+And it's taking 240
+milliseconds just to load those,
+
+00:29:18.886 --> 00:29:22.096 A:middle
+but if I change it and merge
+those dylibs into two dylibs,
+
+00:29:22.866 --> 00:29:25.906 A:middle
+then it only takes 20
+milliseconds to load the dylibs.
+
+00:29:26.326 --> 00:29:28.866 A:middle
+So I can still have dylibs, I
+can still use them to share,
+
+00:29:29.306 --> 00:29:33.986 A:middle
+functionality between my
+app and my extension, but,
+
+00:29:34.886 --> 00:29:36.336 A:middle
+limiting them will
+be very useful.
+
+00:29:36.336 --> 00:29:39.156 A:middle
+And I understand this is
+a tradeoff you're making
+
+00:29:39.156 --> 00:29:40.406 A:middle
+between your development
+convenience
+
+00:29:40.406 --> 00:29:42.426 A:middle
+and your application
+launch time for your users.
+
+00:29:42.856 --> 00:29:45.316 A:middle
+Because the more dylibs that you
+have the easier it is to build
+
+00:29:45.316 --> 00:29:47.046 A:middle
+and re-link your app in and
+the faster your development
+
+00:29:47.046 --> 00:29:47.446 A:middle
+cycles are.
+
+00:29:47.896 --> 00:29:51.396 A:middle
+So you absolutely can and should
+use some, but it's good to try
+
+00:29:51.396 --> 00:29:54.236 A:middle
+to target a limited number, we
+would, I would say off hand,
+
+00:29:54.236 --> 00:29:55.856 A:middle
+a good target's about
+a half a dozen.
+
+00:29:57.596 --> 00:30:00.856 A:middle
+So now that we've fixed up
+our dylib count let's move
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:29:57.596 --> 00:30:00.856 A:middle
+So now that we've fixed up
+our dylib count let's move
+
+00:30:00.856 --> 00:30:03.276 A:middle
+on to the next place where
+we're having a slowdown.
+
+00:30:03.686 --> 00:30:08.486 A:middle
+Between 350 milliseconds
+in binding and rebasing.
+
+00:30:09.106 --> 00:30:13.266 A:middle
+So as Nick mentioned, rebasing
+tends to be slower due to iO
+
+00:30:13.266 --> 00:30:15.336 A:middle
+and binding tends to be
+computationally expensive
+
+00:30:15.336 --> 00:30:16.396 A:middle
+but it's already done the iO.
+
+00:30:16.716 --> 00:30:19.216 A:middle
+So that iO is for both of
+them and they're comingled,
+
+00:30:19.216 --> 00:30:20.376 A:middle
+the timing's also comingled.
+
+00:30:22.416 --> 00:30:26.876 A:middle
+So if we go in and look at
+that, all that is fixing
+
+00:30:26.876 --> 00:30:28.176 A:middle
+up pointers in the DATA section.
+
+00:30:28.426 --> 00:30:32.176 A:middle
+So what we have to do, is
+just fix up fewer pointers.
+
+00:30:32.906 --> 00:30:35.026 A:middle
+Nick showed you a
+tool you can run
+
+00:30:35.026 --> 00:30:36.996 A:middle
+to see what pointers
+are being fixed
+
+00:30:36.996 --> 00:30:38.586 A:middle
+up in the DATA, section,
+dyld info.
+
+00:30:39.916 --> 00:30:43.046 A:middle
+And it shows what segments
+and sections things are in,
+
+00:30:43.046 --> 00:30:45.006 A:middle
+so that will give you a good
+idea of what's being fixed up.
+
+00:30:45.006 --> 00:30:48.466 A:middle
+For instance, if you see
+a symbol to an ObjC class
+
+00:30:48.466 --> 00:30:51.516 A:middle
+in ObjC section, that's probably
+
+00:30:51.516 --> 00:30:53.266 A:middle
+that you have a bunch
+of ObjC classes.
+
+00:30:54.006 --> 00:30:57.336 A:middle
+So, one of the things you
+can do is you can just
+
+00:30:57.336 --> 00:30:59.796 A:middle
+to reduce the number
+of ObjC classes object
+
+00:30:59.796 --> 00:31:01.066 A:middle
+and ivars that you have.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:30:59.796 --> 00:31:01.066 A:middle
+and ivars that you have.
+
+00:31:01.656 --> 00:31:04.866 A:middle
+So there are a number
+of coding styles
+
+00:31:04.866 --> 00:31:06.616 A:middle
+that are encouraging
+very small classes,
+
+00:31:06.616 --> 00:31:08.036 A:middle
+that maybe only have
+one or two functions.
+
+00:31:09.306 --> 00:31:15.086 A:middle
+And, those particular patterns
+may result in gradual slowdowns
+
+00:31:15.086 --> 00:31:16.766 A:middle
+of your applications as you
+add more and more of them.
+
+00:31:17.086 --> 00:31:18.416 A:middle
+So you should be
+careful about those.
+
+00:31:18.726 --> 00:31:21.926 A:middle
+Now having 100 or 1,000
+classes isn't a problem,
+
+00:31:21.926 --> 00:31:25.666 A:middle
+but we've seen apps with
+5, 10, 15, 20,000 classes.
+
+00:31:26.026 --> 00:31:29.136 A:middle
+And in those cases that can
+add up to 7 or 800 milliseconds
+
+00:31:29.136 --> 00:31:31.486 A:middle
+to your launch time for
+the kernel to page them in.
+
+00:31:32.916 --> 00:31:35.216 A:middle
+Another thing you can do is
+you can try to reduce your use
+
+00:31:35.216 --> 00:31:37.036 A:middle
+of C++ virtual functions.
+
+00:31:37.446 --> 00:31:39.926 A:middle
+So virtual functions create
+what we call V tables,
+
+00:31:40.296 --> 00:31:44.346 A:middle
+which are the same as ObjC
+metadata in that in the sense
+
+00:31:44.406 --> 00:31:46.966 A:middle
+that they create structures
+in the DATA section
+
+00:31:46.966 --> 00:31:47.906 A:middle
+that have to be fixed up.
+
+00:31:48.626 --> 00:31:51.786 A:middle
+They're smaller than
+ObjC, they're smaller
+
+00:31:51.786 --> 00:31:53.976 A:middle
+than ObjC metadata but
+they're still significant
+
+00:31:53.976 --> 00:31:55.056 A:middle
+for some applications.
+
+00:31:56.766 --> 00:31:58.286 A:middle
+You can use Swift structs.
+
+00:31:58.286 --> 00:32:01.506 A:middle
+So Swift tends to use less
+data that has pointers
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:31:58.286 --> 00:32:01.506 A:middle
+So Swift tends to use less
+data that has pointers
+
+00:32:01.506 --> 00:32:02.536 A:middle
+for fix-ups of this sort.
+
+00:32:03.676 --> 00:32:09.416 A:middle
+And, Swift is more inlinable and
+can better co-gen to avoid a lot
+
+00:32:09.416 --> 00:32:13.846 A:middle
+of that, so migrating to Swift
+is a great way to improve this.
+
+00:32:14.856 --> 00:32:17.076 A:middle
+And one other thing,
+you should be careful
+
+00:32:17.076 --> 00:32:20.536 A:middle
+about machine generated codes,
+so we have instances where,
+
+00:32:21.356 --> 00:32:25.776 A:middle
+you may describe some
+structures in terms of a DSL
+
+00:32:25.776 --> 00:32:28.296 A:middle
+or some custom language
+and then have a program
+
+00:32:28.296 --> 00:32:30.576 A:middle
+that generates other
+code from it.
+
+00:32:30.576 --> 00:32:33.516 A:middle
+And if those generated programs
+have a lot of pointers in them,
+
+00:32:33.826 --> 00:32:34.996 A:middle
+they can become very expensive
+
+00:32:34.996 --> 00:32:37.046 A:middle
+because when you generate your
+code you can generate very,
+
+00:32:37.046 --> 00:32:37.746 A:middle
+very large structures.
+
+00:32:37.746 --> 00:32:40.456 A:middle
+We've seen cases where,
+this causes megabytes
+
+00:32:40.456 --> 00:32:41.726 A:middle
+and megabytes of data.
+
+00:32:42.586 --> 00:32:44.616 A:middle
+But the upside is you
+usually have a lot of control
+
+00:32:44.616 --> 00:32:46.316 A:middle
+because you can just
+change the code generator
+
+00:32:46.316 --> 00:32:47.456 A:middle
+to use something
+that's not pointers,
+
+00:32:47.456 --> 00:32:50.156 A:middle
+for instance offset
+based, structures.
+
+00:32:50.746 --> 00:32:52.016 A:middle
+And that will be a big win.
+
+00:32:52.096 --> 00:32:54.966 A:middle
+So in this case, let's look
+at what's going on here
+
+00:32:54.966 --> 00:32:56.456 A:middle
+with my, with my load time.
+
+00:32:57.806 --> 00:33:01.396 A:middle
+And I have at least 10,000
+classes, I actually have 20,000,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:32:57.806 --> 00:33:01.396 A:middle
+And I have at least 10,000
+classes, I actually have 20,000,
+
+00:33:01.636 --> 00:33:02.806 A:middle
+so many it scrolled
+off the slide.
+
+00:33:04.006 --> 00:33:06.256 A:middle
+And if I cut it down
+to 1,000 classes,
+
+00:33:06.676 --> 00:33:09.966 A:middle
+I just cut my launch times, my
+time in this part of the launch
+
+00:33:09.966 --> 00:33:12.036 A:middle
+from 350 to 20 milliseconds.
+
+00:33:13.796 --> 00:33:20.566 A:middle
+So, now, everything but the
+initializer is actually below
+
+00:33:20.566 --> 00:33:24.976 A:middle
+that 400 millisecond mark,
+so we're doing pretty good.
+
+00:33:25.516 --> 00:33:29.026 A:middle
+So for ObjC set up, well Nick
+mentioned everything it had
+
+00:33:29.026 --> 00:33:29.436 A:middle
+to do.
+
+00:33:29.436 --> 00:33:33.576 A:middle
+It had to do class
+registration, it has to deal
+
+00:33:33.576 --> 00:33:36.416 A:middle
+with the non-fragile ivars, it
+has to do category registration
+
+00:33:36.416 --> 00:33:37.676 A:middle
+and it has to do
+selector uniquing.
+
+00:33:37.676 --> 00:33:40.166 A:middle
+And I'm not going to spend
+much time on this one at all,
+
+00:33:40.166 --> 00:33:44.796 A:middle
+and the reason I'm not is, we
+solved all of those by fixing
+
+00:33:44.796 --> 00:33:48.056 A:middle
+up the rebasing and
+data, and binding before.
+
+00:33:48.516 --> 00:33:49.886 A:middle
+All the reductions
+there are going
+
+00:33:49.886 --> 00:33:51.136 A:middle
+to be the same thing
+you want to do here.
+
+00:33:51.596 --> 00:33:53.826 A:middle
+So we just get a little bit of
+a free win here, it's small.
+
+00:33:53.826 --> 00:33:54.726 A:middle
+It's 8 milliseconds.
+
+00:33:55.116 --> 00:33:57.986 A:middle
+But we didn't do
+anything explicit for it.
+
+00:33:59.086 --> 00:34:02.746 A:middle
+And now finally, we're going
+to look at my initializers
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:33:59.086 --> 00:34:02.746 A:middle
+And now finally, we're going
+to look at my initializers
+
+00:34:03.026 --> 00:34:04.596 A:middle
+which are the big
+10 seconds here.
+
+00:34:05.766 --> 00:34:08.206 A:middle
+So I'm going to go a little more
+in depth on this than Nick did.
+
+00:34:08.636 --> 00:34:10.906 A:middle
+There are two types
+of initializers,
+
+00:34:11.585 --> 00:34:14.766 A:middle
+explicit initializers,
+things like +load.
+
+00:34:14.766 --> 00:34:17.356 A:middle
+As Nick said we recommend
+replacing that with +initialize,
+
+00:34:17.696 --> 00:34:21.606 A:middle
+which will cause the ObjC run
+time to initialize your code
+
+00:34:21.976 --> 00:34:24.186 A:middle
+when the classes were
+substantiated instead
+
+00:34:24.186 --> 00:34:27.536 A:middle
+of when the file is loaded.
+
+00:34:28.005 --> 00:34:31.216 A:middle
+Or, in C/C++ there's an
+attribute that can be put
+
+00:34:31.216 --> 00:34:35.646 A:middle
+onto functions which will
+cause it to, generate those
+
+00:34:35.646 --> 00:34:38.356 A:middle
+as initializers, so that's
+an explicit initializer,
+
+00:34:38.735 --> 00:34:41.016 A:middle
+that we just rather
+you didn't use.
+
+00:34:41.016 --> 00:34:43.126 A:middle
+We rather you replace them
+with call site initializers.
+
+00:34:43.596 --> 00:34:46.966 A:middle
+So by call site initializers I
+mean things like dispatch once.
+
+00:34:48.025 --> 00:34:50.806 A:middle
+Or if you're in cross
+platform code, pthread once.
+
+00:34:50.886 --> 00:34:54.065 A:middle
+Or if you're in C++
+code, std once.
+
+00:34:54.735 --> 00:34:56.826 A:middle
+All these functions have
+basically the same sort
+
+00:34:56.826 --> 00:34:59.226 A:middle
+of functionality
+where, any code in one
+
+00:34:59.226 --> 00:35:01.006 A:middle
+of these blocks will be
+executed the first time its hit
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:34:59.226 --> 00:35:01.006 A:middle
+of these blocks will be
+executed the first time its hit
+
+00:35:01.006 --> 00:35:01.626 A:middle
+and only that.
+
+00:35:02.086 --> 00:35:04.346 A:middle
+Dispatch once is very, very
+optimized in our system.
+
+00:35:04.596 --> 00:35:07.146 A:middle
+After the first execution of
+it, it's basically equivalent
+
+00:35:07.146 --> 00:35:10.526 A:middle
+to a no op running past it, so
+I highly recommend that instead
+
+00:35:10.526 --> 00:35:12.876 A:middle
+of using, explicit initializers.
+
+00:35:14.106 --> 00:35:15.836 A:middle
+So let's move on to
+implicit initializers.
+
+00:35:16.186 --> 00:35:18.616 A:middle
+So inplicit initializers are
+what Nick described mostly
+
+00:35:18.616 --> 00:35:21.686 A:middle
+from C++ globals with
+non-trivial initializers,
+
+00:35:21.686 --> 00:35:23.446 A:middle
+with non-trivial constructors.
+
+00:35:24.566 --> 00:35:27.066 A:middle
+And one option is
+you can replace those
+
+00:35:27.216 --> 00:35:30.106 A:middle
+with call site initializers
+like we just mentioned.
+
+00:35:30.486 --> 00:35:32.876 A:middle
+There's certainly places
+where you can place globals
+
+00:35:32.876 --> 00:35:36.606 A:middle
+with non-global structures
+or pointers to objects
+
+00:35:36.606 --> 00:35:37.456 A:middle
+that you will initialize.
+
+00:35:39.156 --> 00:35:43.556 A:middle
+Another option is that you don't
+have non-trivial initializers.
+
+00:35:43.556 --> 00:35:46.666 A:middle
+So in C++ there's initializers
+called a POD a plain old data.
+
+00:35:47.596 --> 00:35:51.066 A:middle
+And if you're objects are just
+plain old datas, the static,
+
+00:35:51.066 --> 00:35:54.746 A:middle
+or the static linker will
+pre-calculate all the data
+
+00:35:54.746 --> 00:35:56.956 A:middle
+for the DATA section, lay it
+out as just data seen there,
+
+00:35:56.956 --> 00:35:58.886 A:middle
+it doesn't have to be run, it
+doesn't have to be fixed up.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:01.366 --> 00:36:06.176 A:middle
+Finally, it can be
+really hard to find these,
+
+00:36:06.896 --> 00:36:08.986 A:middle
+because they're implicit,
+but we have a warning
+
+00:36:08.986 --> 00:36:11.346 A:middle
+in the compiler
+-Wglobal-constructors
+
+00:36:11.346 --> 00:36:12.866 A:middle
+and if you do that it will give
+you warnings whenever you're
+
+00:36:12.866 --> 00:36:13.606 A:middle
+generating one of these.
+
+00:36:13.606 --> 00:36:16.686 A:middle
+So it's good to add that to
+the flags your compiler uses.
+
+00:36:18.446 --> 00:36:20.606 A:middle
+Another option is just
+to rewrite them in Swift.
+
+00:36:21.376 --> 00:36:25.276 A:middle
+And the reason is, Swift
+has global variables
+
+00:36:25.276 --> 00:36:26.526 A:middle
+and they'll be initialized,
+they're guaranteed
+
+00:36:26.526 --> 00:36:27.886 A:middle
+to be initialized
+before you use them.
+
+00:36:27.966 --> 00:36:29.606 A:middle
+But the way it does it, instead,
+
+00:36:29.896 --> 00:36:32.436 A:middle
+is instead of using
+an initializer, it,
+
+00:36:32.436 --> 00:36:34.376 A:middle
+behind the scenes, uses
+dispatch once for you.
+
+00:36:34.376 --> 00:36:35.966 A:middle
+It uses one of those
+call site initializers.
+
+00:36:36.606 --> 00:36:39.406 A:middle
+So moving to Swift will
+take care of this for you,
+
+00:36:39.696 --> 00:36:41.346 A:middle
+so I highly encourage
+it that's an option.
+
+00:36:41.576 --> 00:36:46.146 A:middle
+Finally, in your initializers
+please don't call dlopen,
+
+00:36:46.146 --> 00:36:49.166 A:middle
+that will be a big performance
+hit for a bunch of reasons.
+
+00:36:49.796 --> 00:36:53.346 A:middle
+When dyld's running it's
+before the app has started and,
+
+00:36:53.866 --> 00:36:55.836 A:middle
+we can do things like
+turn off our locking,
+
+00:36:55.836 --> 00:36:56.736 A:middle
+because we're single threaded.
+
+00:36:57.176 --> 00:37:01.116 A:middle
+As soon as dlopens
+happened, in those situations,
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:36:57.176 --> 00:37:01.116 A:middle
+As soon as dlopens
+happened, in those situations,
+
+00:37:01.576 --> 00:37:03.046 A:middle
+the graph of how our
+initializers have
+
+00:37:03.046 --> 00:37:04.716 A:middle
+to run changes, we could
+have multiple threads,
+
+00:37:04.716 --> 00:37:05.966 A:middle
+we have to turn on
+locking, it's just going
+
+00:37:05.966 --> 00:37:07.276 A:middle
+to be a big performance mess.
+
+00:37:07.656 --> 00:37:09.756 A:middle
+You also can have
+subtle deadlocking
+
+00:37:09.756 --> 00:37:11.046 A:middle
+and undefined behaviors.
+
+00:37:12.416 --> 00:37:16.326 A:middle
+Also, please don't start
+threads in your initializers,
+
+00:37:17.056 --> 00:37:18.186 A:middle
+basically for the same reason.
+
+00:37:18.506 --> 00:37:20.006 A:middle
+You can set up a mute
+text if you have to
+
+00:37:20.006 --> 00:37:22.696 A:middle
+and mute text even have like,
+preferred mute texts even have,
+
+00:37:23.116 --> 00:37:25.056 A:middle
+predefined static values
+that you can set them
+
+00:37:25.056 --> 00:37:26.116 A:middle
+up with that run no code.
+
+00:37:26.606 --> 00:37:28.946 A:middle
+But actually starting a
+thread in your initializer is,
+
+00:37:29.436 --> 00:37:32.616 A:middle
+potentially a big performance
+and correctness issue.
+
+00:37:32.816 --> 00:37:35.286 A:middle
+So here we have some
+code, I have a C++ class
+
+00:37:35.286 --> 00:37:36.466 A:middle
+with a non-trivial initializer.
+
+00:37:36.766 --> 00:37:38.346 A:middle
+&gt;&gt; I'm having trouble
+with the connection.
+
+00:37:38.776 --> 00:37:41.046 A:middle
+Please try again in a moment.
+
+00:37:41.336 --> 00:37:42.216 A:middle
+&gt;&gt; Well, thank you Siri.
+
+00:37:42.966 --> 00:37:46.506 A:middle
+I'm having a, I have a
+non-trivial initializer.
+
+00:37:47.666 --> 00:37:52.576 A:middle
+And I guess I had it in for
+debugging all commented out
+
+00:37:52.576 --> 00:37:56.176 A:middle
+and okay, I'm down to
+50 milliseconds, total.
+
+00:37:56.176 --> 00:37:59.946 A:middle
+I have plenty of time
+to initialize my nibs
+
+00:37:59.946 --> 00:38:01.466 A:middle
+and do everything else,
+we're in very good shape.
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:37:59.946 --> 00:38:01.466 A:middle
+and do everything else,
+we're in very good shape.
+
+00:38:02.356 --> 00:38:04.526 A:middle
+So now that we've
+gone through that,
+
+00:38:06.666 --> 00:38:11.006 A:middle
+let's talk about what we
+should know if you just,
+
+00:38:11.276 --> 00:38:12.976 A:middle
+this was really long
+and pretty dense.
+
+00:38:13.466 --> 00:38:15.846 A:middle
+The first one is please
+use dyld print statistics
+
+00:38:15.846 --> 00:38:16.976 A:middle
+to measure your times, add it
+
+00:38:16.976 --> 00:38:18.786 A:middle
+to your performance
+or aggression suites.
+
+00:38:19.146 --> 00:38:22.536 A:middle
+So you can track how your
+app is performing over time,
+
+00:38:22.536 --> 00:38:24.306 A:middle
+so as you're actively doing
+something you don't find it
+
+00:38:24.306 --> 00:38:28.436 A:middle
+months later and have
+trouble debugging it.
+
+00:38:29.106 --> 00:38:33.336 A:middle
+You can improve your app launch
+time by, reducing the number
+
+00:38:33.336 --> 00:38:38.276 A:middle
+of dylibs you have, reducing the
+amount of ObjC classes you have,
+
+00:38:38.606 --> 00:38:40.656 A:middle
+and eliminating your
+static initializers.
+
+00:38:41.166 --> 00:38:46.036 A:middle
+And you can improve in
+general by using more Swift
+
+00:38:46.036 --> 00:38:47.576 A:middle
+because it just does
+the right things.
+
+00:38:47.576 --> 00:38:50.856 A:middle
+Finally, dlopen usage
+is discouraged,
+
+00:38:50.856 --> 00:38:52.866 A:middle
+it causes subtle
+performance issues
+
+00:38:52.866 --> 00:38:54.186 A:middle
+that are hard to diagnose.
+
+00:38:54.886 --> 00:38:57.626 A:middle
+For more information you can
+see the URL up on screen.
+
+00:38:59.656 --> 00:39:01.486 A:middle
+There are several related
+sessions later in the week
+
+
+WEBVTT
+X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000
+
+00:38:59.656 --> 00:39:01.486 A:middle
+There are several related
+sessions later in the week
+
+00:39:01.616 --> 00:39:05.306 A:middle
+and again, there's the app
+performance session from 2012
+
+00:39:05.306 --> 00:39:07.386 A:middle
+that goes into the other
+parts of app launch,
+
+00:39:07.526 --> 00:39:09.226 A:middle
+that highly recommend you
+watch, if you're interested.
+
+00:39:09.886 --> 00:39:11.686 A:middle
+Thank you for coming
+everybody, have a great week.
+
+00:39:12.516 --> 00:39:21.950 A:middle
+[ Applause ]
+
