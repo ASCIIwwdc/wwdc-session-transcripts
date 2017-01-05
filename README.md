@@ -4,7 +4,7 @@ As used by [ASCIIwwdc](http://asciiwwdc.com).
 
 ## Methodology
 
-Transcripts for WWDC sessions are aggregated from subtitles included in session videos from 2010, 2013, and 2014.
+Transcripts for WWDC sessions are aggregated from subtitles included in session videos from 2010, 2013, 2014, 2015 and 2016.
 
 The code used to automatically scrape and collect this information for 2014 sessions is as follows:
 
