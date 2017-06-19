@@ -1,0 +1,3736 @@
+WEBVTT
+
+00:00:08.516 --> 00:00:16.500 A:middle
+[ Background voices ]
+
+00:00:24.056 --> 00:00:24.606 A:middle
+&gt;&gt; Good morning.
+
+00:00:26.576 --> 00:00:28.376 A:middle
+Welcome to the understanding
+
+00:00:28.376 --> 00:00:30.936 A:middle
+undefined behavior session.
+
+00:00:31.286 --> 00:00:33.076 A:middle
+I know all of you have already
+
+00:00:33.076 --> 00:00:34.886 A:middle
+spent countless hours debugging
+
+00:00:34.886 --> 00:00:36.466 A:middle
+bugs that would just disappear
+
+00:00:36.466 --> 00:00:38.036 A:middle
+when you switched from release
+
+00:00:38.036 --> 00:00:38.756 A:middle
+to debug mode.
+
+00:00:39.296 --> 00:00:40.946 A:middle
+You might even have lost users
+
+00:00:41.306 --> 00:00:42.566 A:middle
+because you couldn't reproduce
+
+00:00:42.566 --> 00:00:43.916 A:middle
+the bugs that happened only on
+
+00:00:43.916 --> 00:00:44.616 A:middle
+their device.
+
+00:00:45.366 --> 00:00:46.786 A:middle
+Those might be signs that you
+
+00:00:46.786 --> 00:00:48.246 A:middle
+have undefined behavior in your
+
+00:00:48.246 --> 00:00:48.500 A:middle
+code.
+
+00:00:49.956 --> 00:00:51.676 A:middle
+I'm Fred. I work on the client
+
+00:00:51.676 --> 00:00:53.626 A:middle
+compiler team and today I'll
+
+00:00:53.626 --> 00:00:55.266 A:middle
+start by explaining what
+
+00:00:55.266 --> 00:00:57.176 A:middle
+undefined behavior is and why it
+
+00:00:57.176 --> 00:00:57.846 A:middle
+exists.
+
+00:00:58.586 --> 00:00:59.526 A:middle
+Then we'll dive into the
+
+00:00:59.526 --> 00:01:01.026 A:middle
+compiler and see how its
+
+00:01:01.026 --> 00:01:02.636 A:middle
+interactions with undefined
+
+00:01:02.636 --> 00:01:04.216 A:middle
+behavior cause those subtle
+
+00:01:04.216 --> 00:01:04.726 A:middle
+bugs.
+
+00:01:05.596 --> 00:01:08.496 A:middle
+Those bugs might not only cost
+
+00:01:08.496 --> 00:01:09.936 A:middle
+you a lot of debugging time.
+
+00:01:10.446 --> 00:01:11.456 A:middle
+They might have security
+
+00:01:11.456 --> 00:01:12.166 A:middle
+implications.
+
+00:01:12.756 --> 00:01:14.596 A:middle
+Ryan, from our security team,
+
+00:01:14.896 --> 00:01:16.156 A:middle
+will tell you more about this
+
+00:01:16.346 --> 00:01:18.656 A:middle
+and how you can use our tools to
+
+00:01:18.656 --> 00:01:19.666 A:middle
+avoid those issues.
+
+00:01:20.896 --> 00:01:22.506 A:middle
+Finally, my colleague Anna will
+
+00:01:22.506 --> 00:01:23.856 A:middle
+come to the stage and tell you
+
+00:01:23.856 --> 00:01:25.366 A:middle
+how SWF tackles this problem
+
+00:01:25.366 --> 00:01:25.806 A:middle
+space.
+
+00:01:27.616 --> 00:01:30.336 A:middle
+So, what is undefined behavior?
+
+00:01:32.076 --> 00:01:34.846 A:middle
+Undefined behavior happens when
+
+00:01:34.846 --> 00:01:36.856 A:middle
+your code has correct syntax but
+
+00:01:36.856 --> 00:01:39.376 A:middle
+its behavior is not within the
+
+00:01:39.496 --> 00:01:43.286 A:middle
+bounds of what the language
+
+00:01:43.866 --> 00:01:44.046 A:middle
+allows.
+
+00:01:45.336 --> 00:01:48.106 A:middle
+The C and C++ standards have
+
+00:01:48.106 --> 00:01:49.926 A:middle
+really similar definitions of
+
+00:01:49.926 --> 00:01:52.166 A:middle
+undefined behavior in the
+
+00:01:52.166 --> 00:01:52.616 A:middle
+standard.
+
+00:01:53.106 --> 00:01:54.006 A:middle
+Let's have a look at what the
+
+00:01:54.006 --> 00:01:55.216 A:middle
+C++ standard says.
+
+00:01:57.396 --> 00:02:00.126 A:middle
+Undefined behavior: Behavior for
+
+00:02:00.126 --> 00:02:01.496 A:middle
+which this international
+
+00:02:01.496 --> 00:02:03.216 A:middle
+standard imposes no
+
+00:02:03.216 --> 00:02:04.006 A:middle
+requirements.
+
+00:02:04.926 --> 00:02:06.556 A:middle
+Well, that's helpful, right?
+
+00:02:07.286 --> 00:02:11.436 A:middle
+To be fair, it comes with a note
+
+00:02:11.546 --> 00:02:12.846 A:middle
+that gives more details but it's
+
+00:02:12.876 --> 00:02:14.066 A:middle
+too long to put up on the screen
+
+00:02:14.336 --> 00:02:15.176 A:middle
+so here's a summary.
+
+00:02:17.706 --> 00:02:18.986 A:middle
+So, what can the compiler do?
+
+00:02:19.266 --> 00:02:20.606 A:middle
+If you knew about undefined
+
+00:02:20.606 --> 00:02:22.176 A:middle
+behavior before coming to this
+
+00:02:22.176 --> 00:02:23.996 A:middle
+session, you might have heard
+
+00:02:23.996 --> 00:02:25.146 A:middle
+that if you have undefined
+
+00:02:25.146 --> 00:02:26.986 A:middle
+behavior, the compiler is
+
+00:02:26.986 --> 00:02:28.276 A:middle
+allowed to wipe your disc.
+
+00:02:29.066 --> 00:02:30.676 A:middle
+I guarantee this is not going to
+
+00:02:30.676 --> 00:02:31.046 A:middle
+happen.
+
+00:02:31.916 --> 00:02:32.726 A:middle
+So, what can I do?
+
+00:02:33.766 --> 00:02:35.116 A:middle
+The compiler can choose to
+
+00:02:35.116 --> 00:02:37.286 A:middle
+diagnose the issues using
+
+00:02:37.286 --> 00:02:38.526 A:middle
+warnings or errors.
+
+00:02:39.186 --> 00:02:41.076 A:middle
+This is by far our preferred
+
+00:02:41.076 --> 00:02:42.516 A:middle
+solution and it is very
+
+00:02:42.516 --> 00:02:43.976 A:middle
+actionable on your side and it
+
+00:02:43.976 --> 00:02:44.826 A:middle
+prevents the issue and the
+
+00:02:44.826 --> 00:02:45.296 A:middle
+source.
+
+00:02:45.606 --> 00:02:48.866 A:middle
+The compiler can also choose to
+
+00:02:48.866 --> 00:02:50.416 A:middle
+act in a documented manner.
+
+00:02:51.106 --> 00:02:52.806 A:middle
+Basically, choosing to define
+
+00:02:52.976 --> 00:02:54.086 A:middle
+what the standard left
+
+00:02:54.086 --> 00:02:54.696 A:middle
+undefined.
+
+00:02:55.416 --> 00:02:57.466 A:middle
+We do not do this a lot but
+
+00:02:57.466 --> 00:02:58.376 A:middle
+there are some kinds of
+
+00:02:58.376 --> 00:02:59.936 A:middle
+undefined behavior, which are
+
+00:02:59.936 --> 00:03:01.496 A:middle
+way to common not to support.
+
+00:03:04.286 --> 00:03:05.916 A:middle
+And finally, the compiler can
+
+00:03:05.916 --> 00:03:07.846 A:middle
+produce unpredictable results.
+
+00:03:08.336 --> 00:03:09.826 A:middle
+This is the part we are going to
+
+00:03:09.826 --> 00:03:10.836 A:middle
+focus on today.
+
+00:03:12.056 --> 00:03:14.216 A:middle
+Note that unpredictable includes
+
+00:03:14.216 --> 00:03:16.606 A:middle
+behaving as you intended, which
+
+00:03:16.606 --> 00:03:18.526 A:middle
+is why some of those bugs will
+
+00:03:18.526 --> 00:03:19.486 A:middle
+be really evasive.
+
+00:03:20.616 --> 00:03:23.606 A:middle
+There is a lot of undefined
+
+00:03:23.606 --> 00:03:25.036 A:middle
+behavior in the C family of
+
+00:03:25.036 --> 00:03:25.546 A:middle
+languages.
+
+00:03:26.226 --> 00:03:27.596 A:middle
+This is just a small sample.
+
+00:03:28.866 --> 00:03:30.746 A:middle
+The C standard has a list in
+
+00:03:30.796 --> 00:03:32.996 A:middle
+Annex J of all the known sources
+
+00:03:32.996 --> 00:03:33.966 A:middle
+of undefined behavior.
+
+00:03:33.966 --> 00:03:37.506 A:middle
+There are around 200 of them.
+
+00:03:37.756 --> 00:03:39.016 A:middle
+At this point, you might be
+
+00:03:39.016 --> 00:03:41.486 A:middle
+wondering why is undefined
+
+00:03:41.486 --> 00:03:42.796 A:middle
+behavior even a thing?
+
+00:03:42.966 --> 00:03:44.316 A:middle
+Why is it defined in the
+
+00:03:44.316 --> 00:03:45.006 A:middle
+standards?
+
+00:03:45.006 --> 00:03:46.426 A:middle
+Were people just lazy?
+
+00:03:46.426 --> 00:03:47.546 A:middle
+They didn't want to define
+
+00:03:47.546 --> 00:03:48.006 A:middle
+everything?
+
+00:03:49.066 --> 00:03:49.846 A:middle
+Of course, not.
+
+00:03:50.686 --> 00:03:51.836 A:middle
+This is about tradeoffs.
+
+00:03:52.656 --> 00:03:55.366 A:middle
+C has been designed to favor
+
+00:03:55.706 --> 00:03:58.096 A:middle
+performance, affordability, and
+
+00:03:58.096 --> 00:03:59.506 A:middle
+ease of implementation over
+
+00:03:59.506 --> 00:04:00.016 A:middle
+safety.
+
+00:04:01.666 --> 00:04:03.316 A:middle
+The C family of languages has
+
+00:04:03.316 --> 00:04:04.806 A:middle
+inherited those tradeoffs.
+
+00:04:06.136 --> 00:04:08.026 A:middle
+Those were deliberate choices
+
+00:04:08.246 --> 00:04:09.316 A:middle
+and they still make a lot of
+
+00:04:09.316 --> 00:04:10.946 A:middle
+sense in many circumstances
+
+00:04:10.946 --> 00:04:11.286 A:middle
+today.
+
+00:04:12.266 --> 00:04:16.886 A:middle
+Our OSs run fast thanks to them.
+
+00:04:16.886 --> 00:04:18.746 A:middle
+But as with every tradeoff,
+
+00:04:18.776 --> 00:04:20.416 A:middle
+there is a price to pay and in
+
+00:04:20.416 --> 00:04:22.006 A:middle
+this case it is you, the
+
+00:04:22.006 --> 00:04:24.196 A:middle
+developers, who are paying it.
+
+00:04:24.586 --> 00:04:25.896 A:middle
+This is why it is really
+
+00:04:25.896 --> 00:04:27.466 A:middle
+important that you know that it
+
+00:04:27.466 --> 00:04:29.926 A:middle
+exists and how to deal with it.
+
+00:04:30.496 --> 00:04:33.586 A:middle
+As I said, there are way too
+
+00:04:33.586 --> 00:04:35.466 A:middle
+many kinds of undefined behavior
+
+00:04:35.546 --> 00:04:37.056 A:middle
+to go through all of them but
+
+00:04:37.436 --> 00:04:38.836 A:middle
+let's just go through a few
+
+00:04:38.836 --> 00:04:39.816 A:middle
+examples to make sure
+
+00:04:39.816 --> 00:04:43.136 A:middle
+everybody's on the same page.
+
+00:04:43.336 --> 00:04:45.426 A:middle
+My first example is the use of
+
+00:04:45.426 --> 00:04:46.936 A:middle
+an uninitialized value.
+
+00:04:47.646 --> 00:04:49.326 A:middle
+In this function, we have a
+
+00:04:49.326 --> 00:04:50.396 A:middle
+local variable, value.
+
+00:04:51.016 --> 00:04:52.386 A:middle
+It is used in the return
+
+00:04:52.386 --> 00:04:55.536 A:middle
+statement but it is initialized
+
+00:04:55.536 --> 00:04:57.596 A:middle
+only if the condition to the if
+
+00:04:57.596 --> 00:04:58.346 A:middle
+block is true.
+
+00:04:59.316 --> 00:05:01.346 A:middle
+If you pass any positive number
+
+00:05:01.346 --> 00:05:02.986 A:middle
+to this function, it will invoke
+
+00:05:02.986 --> 00:05:05.136 A:middle
+undefined behavior as value will
+
+00:05:05.136 --> 00:05:06.626 A:middle
+be used and initialized.
+
+00:05:07.986 --> 00:05:09.386 A:middle
+In this simple case, the
+
+00:05:09.386 --> 00:05:10.646 A:middle
+compiler will catch the issue
+
+00:05:10.646 --> 00:05:11.376 A:middle
+and warn about it.
+
+00:05:12.816 --> 00:05:14.416 A:middle
+The static analyzer would give
+
+00:05:14.416 --> 00:05:15.976 A:middle
+you that information too and it
+
+00:05:15.976 --> 00:05:18.156 A:middle
+would catch more complex cases
+
+00:05:18.316 --> 00:05:21.026 A:middle
+of the same kind.
+
+00:05:22.426 --> 00:05:23.786 A:middle
+My second example is about
+
+00:05:23.786 --> 00:05:24.906 A:middle
+misaligned pointers.
+
+00:05:25.256 --> 00:05:28.136 A:middle
+In this function, we take a
+
+00:05:28.136 --> 00:05:29.656 A:middle
+character pointer as an argument
+
+00:05:30.796 --> 00:05:32.836 A:middle
+but inside the function, we use
+
+00:05:32.836 --> 00:05:34.076 A:middle
+it as an integer pointer.
+
+00:05:34.786 --> 00:05:36.976 A:middle
+The issue is that not every
+
+00:05:36.976 --> 00:05:38.376 A:middle
+character pointer is a valid
+
+00:05:38.376 --> 00:05:39.236 A:middle
+integer pointer.
+
+00:05:40.746 --> 00:05:42.606 A:middle
+Integers have to be correctly
+
+00:05:42.606 --> 00:05:43.076 A:middle
+aligned.
+
+00:05:43.416 --> 00:05:44.886 A:middle
+Usually this means their address
+
+00:05:44.886 --> 00:05:46.166 A:middle
+needs to be a multiple of four.
+
+00:05:47.406 --> 00:05:48.836 A:middle
+This kind of code will often
+
+00:05:48.836 --> 00:05:50.606 A:middle
+cause issues when porting code
+
+00:05:50.606 --> 00:05:52.086 A:middle
+between different architectures,
+
+00:05:52.206 --> 00:05:53.896 A:middle
+which have different alignment
+
+00:05:53.896 --> 00:05:55.156 A:middle
+constraints at the hardware
+
+00:05:55.526 --> 00:05:56.046 A:middle
+level.
+
+00:05:56.856 --> 00:05:58.816 A:middle
+This year, in Xcode 9 we
+
+00:05:58.816 --> 00:06:00.246 A:middle
+introduced the new Runtime tool,
+
+00:06:00.356 --> 00:06:01.366 A:middle
+the Undefined Behavior
+
+00:06:01.366 --> 00:06:02.796 A:middle
+Sanitizer, which would catch
+
+00:06:02.796 --> 00:06:03.660 A:middle
+this issue.
+
+00:06:07.646 --> 00:06:09.906 A:middle
+My last example is about
+
+00:06:09.906 --> 00:06:10.516 A:middle
+lifetimes.
+
+00:06:11.706 --> 00:06:13.926 A:middle
+Variables are defined only
+
+00:06:13.926 --> 00:06:15.296 A:middle
+within the scope -- our
+
+00:06:15.416 --> 00:06:17.116 A:middle
+variables are valued only within
+
+00:06:17.116 --> 00:06:18.436 A:middle
+the scope they are defined in.
+
+00:06:19.336 --> 00:06:20.946 A:middle
+Here, we take the address of the
+
+00:06:20.946 --> 00:06:22.056 A:middle
+default value variable.
+
+00:06:23.166 --> 00:06:25.416 A:middle
+Default is defined within the if
+
+00:06:25.416 --> 00:06:27.556 A:middle
+block and exists only there.
+
+00:06:28.036 --> 00:06:29.946 A:middle
+But by using this pointer
+
+00:06:30.336 --> 00:06:32.116 A:middle
+outside of the block, we invoke
+
+00:06:32.116 --> 00:06:33.026 A:middle
+undefined behavior.
+
+00:06:34.776 --> 00:06:37.476 A:middle
+Again, our tools will catch
+
+00:06:37.476 --> 00:06:37.696 A:middle
+that.
+
+00:06:38.606 --> 00:06:42.236 A:middle
+Now that we have a better idea
+
+00:06:42.236 --> 00:06:44.366 A:middle
+of the issues we are talking
+
+00:06:44.366 --> 00:06:46.526 A:middle
+about, let's take a look at how
+
+00:06:46.526 --> 00:06:47.816 A:middle
+they interact with the compiler
+
+00:06:49.506 --> 00:06:50.876 A:middle
+and how they can produce those
+
+00:06:50.876 --> 00:06:51.676 A:middle
+surprising bugs.
+
+00:06:52.576 --> 00:06:55.546 A:middle
+First, let's look at what the
+
+00:06:55.546 --> 00:06:56.776 A:middle
+compiler, what undefined
+
+00:06:56.776 --> 00:06:58.376 A:middle
+behavior means to the compiler.
+
+00:06:59.266 --> 00:07:01.556 A:middle
+It is not actively looking for
+
+00:07:01.556 --> 00:07:03.976 A:middle
+it to transform it in weird
+
+00:07:03.976 --> 00:07:04.386 A:middle
+ways.
+
+00:07:04.776 --> 00:07:05.706 A:middle
+This is not happening.
+
+00:07:06.306 --> 00:07:07.616 A:middle
+But the compiler makes the
+
+00:07:07.616 --> 00:07:09.356 A:middle
+assumption that there is no
+
+00:07:09.356 --> 00:07:11.116 A:middle
+undefined behavior in your code
+
+00:07:11.556 --> 00:07:12.976 A:middle
+because otherwise the semantics
+
+00:07:12.976 --> 00:07:14.086 A:middle
+of your code wouldn't be well
+
+00:07:14.086 --> 00:07:14.556 A:middle
+defined.
+
+00:07:15.656 --> 00:07:17.696 A:middle
+By making this assumption, the
+
+00:07:17.696 --> 00:07:20.216 A:middle
+compiler gathers information to
+
+00:07:20.456 --> 00:07:21.616 A:middle
+better optimize your code.
+
+00:07:21.716 --> 00:07:24.756 A:middle
+Here are a few examples.
+
+00:07:26.416 --> 00:07:28.296 A:middle
+As it is undefined to overflow
+
+00:07:28.296 --> 00:07:30.346 A:middle
+assigned integer, if X is
+
+00:07:30.346 --> 00:07:31.986 A:middle
+assigned integer, the compiler
+
+00:07:31.986 --> 00:07:33.976 A:middle
+can assume that X is lower than
+
+00:07:33.976 --> 00:07:34.616 A:middle
+X + 1.
+
+00:07:35.386 --> 00:07:37.326 A:middle
+This is a very simple but very
+
+00:07:37.326 --> 00:07:38.696 A:middle
+powerful assumption to make when
+
+00:07:38.696 --> 00:07:40.226 A:middle
+dealing, for example, with loop
+
+00:07:40.226 --> 00:07:41.036 A:middle
+optimizations.
+
+00:07:42.836 --> 00:07:45.826 A:middle
+As I said, pointers need to be
+
+00:07:45.826 --> 00:07:46.296 A:middle
+aligned.
+
+00:07:47.136 --> 00:07:48.416 A:middle
+And by making the assumption
+
+00:07:48.416 --> 00:07:49.916 A:middle
+that they are, the compiler can
+
+00:07:49.916 --> 00:07:52.056 A:middle
+use more powerful memory access
+
+00:07:52.056 --> 00:07:53.396 A:middle
+instructions like vector
+
+00:07:53.396 --> 00:07:55.046 A:middle
+instructions to make your code
+
+00:07:55.046 --> 00:07:55.786 A:middle
+way faster.
+
+00:07:56.356 --> 00:08:00.736 A:middle
+And last example, it is
+
+00:08:00.736 --> 00:08:02.246 A:middle
+undefined to dereference another
+
+00:08:02.246 --> 00:08:03.986 A:middle
+pointer, so the compiler can
+
+00:08:03.986 --> 00:08:05.596 A:middle
+assume that each pointer that is
+
+00:08:05.596 --> 00:08:08.456 A:middle
+dereferenced cannot be now and
+
+00:08:08.456 --> 00:08:09.976 A:middle
+use this information to further
+
+00:08:09.976 --> 00:08:10.696 A:middle
+optimize your code.
+
+00:08:12.946 --> 00:08:14.526 A:middle
+So, let's get a little bit more
+
+00:08:14.526 --> 00:08:16.496 A:middle
+concrete and look at how a
+
+00:08:16.496 --> 00:08:17.416 A:middle
+compiler works.
+
+00:08:18.346 --> 00:08:19.856 A:middle
+At a very high level, the
+
+00:08:19.856 --> 00:08:21.336 A:middle
+compiler takes your source code
+
+00:08:22.236 --> 00:08:23.466 A:middle
+and transforms it into an
+
+00:08:23.466 --> 00:08:24.666 A:middle
+intermediate representation.
+
+00:08:24.996 --> 00:08:27.466 A:middle
+It then applies a pipeline of
+
+00:08:27.466 --> 00:08:29.016 A:middle
+optimizations to generate
+
+00:08:29.016 --> 00:08:30.316 A:middle
+optimizations to generate the
+
+00:08:30.676 --> 00:08:30.846 A:middle
+binary.
+
+00:08:30.846 --> 00:08:32.766 A:middle
+Each of those optimizations has
+
+00:08:32.766 --> 00:08:35.076 A:middle
+one goal, generate a more
+
+00:08:35.076 --> 00:08:37.266 A:middle
+efficient representation of its
+
+00:08:37.266 --> 00:08:39.106 A:middle
+input while preserving the
+
+00:08:39.106 --> 00:08:39.796 A:middle
+semantics.
+
+00:08:40.326 --> 00:08:44.266 A:middle
+But I introduced the session by
+
+00:08:44.426 --> 00:08:45.726 A:middle
+talking about those bugs that
+
+00:08:45.796 --> 00:08:47.376 A:middle
+would reproduce in release mode
+
+00:08:47.416 --> 00:08:48.386 A:middle
+but not in debug mode.
+
+00:08:48.386 --> 00:08:49.526 A:middle
+So, how is that behavior
+
+00:08:49.526 --> 00:08:50.226 A:middle
+preserving?
+
+00:08:51.266 --> 00:08:52.916 A:middle
+Let's look at a simple example.
+
+00:08:54.056 --> 00:08:55.716 A:middle
+Here we have our compiler at the
+
+00:08:55.716 --> 00:08:56.066 A:middle
+top.
+
+00:08:57.506 --> 00:08:58.946 A:middle
+It has only one optimization -
+
+00:08:59.266 --> 00:09:00.416 A:middle
+dead code elimination.
+
+00:09:01.066 --> 00:09:03.886 A:middle
+Dead code elimination looks for
+
+00:09:03.886 --> 00:09:06.666 A:middle
+code that cannot be executed or
+
+00:09:06.666 --> 00:09:08.156 A:middle
+that doesn't affect the result
+
+00:09:08.156 --> 00:09:10.186 A:middle
+of your program in any way and
+
+00:09:10.186 --> 00:09:11.526 A:middle
+it removes this code, thus
+
+00:09:11.526 --> 00:09:13.326 A:middle
+making your apps smaller.
+
+00:09:14.786 --> 00:09:16.166 A:middle
+Let's apply this compiler to a
+
+00:09:16.166 --> 00:09:17.236 A:middle
+simple function.
+
+00:09:18.276 --> 00:09:19.636 A:middle
+The function has only two
+
+00:09:19.636 --> 00:09:20.916 A:middle
+statements, one variable
+
+00:09:20.916 --> 00:09:22.576 A:middle
+assignment and a return
+
+00:09:22.576 --> 00:09:23.006 A:middle
+statement.
+
+00:09:23.636 --> 00:09:26.906 A:middle
+We run dead code elimination.
+
+00:09:27.896 --> 00:09:29.876 A:middle
+The variable is not used so
+
+00:09:29.986 --> 00:09:32.426 A:middle
+let's get rid of it.
+
+00:09:32.686 --> 00:09:34.616 A:middle
+And here, look at what we got.
+
+00:09:35.546 --> 00:09:37.216 A:middle
+What happens if we pass another
+
+00:09:37.216 --> 00:09:38.236 A:middle
+pointer to this function?
+
+00:09:38.776 --> 00:09:40.646 A:middle
+The unoptimized version will
+
+00:09:40.646 --> 00:09:42.936 A:middle
+crash but the optimized version
+
+00:09:42.936 --> 00:09:44.346 A:middle
+will happily return 42.
+
+00:09:44.996 --> 00:09:46.476 A:middle
+So, we have a difference in
+
+00:09:46.476 --> 00:09:46.956 A:middle
+behavior.
+
+00:09:47.936 --> 00:09:49.576 A:middle
+But by passing null to this
+
+00:09:49.576 --> 00:09:51.496 A:middle
+function, you invoked undefined
+
+00:09:51.496 --> 00:09:53.756 A:middle
+behavior as it is undefined to
+
+00:09:53.756 --> 00:09:54.966 A:middle
+dereference another pointer.
+
+00:09:56.156 --> 00:09:57.756 A:middle
+I'll repeat that.
+
+00:09:57.756 --> 00:09:59.566 A:middle
+It is undefined to dereference
+
+00:09:59.566 --> 00:10:00.226 A:middle
+another pointer.
+
+00:10:00.276 --> 00:10:02.056 A:middle
+It is not defined to crash.
+
+00:10:03.216 --> 00:10:05.116 A:middle
+If dereferencing another pointer
+
+00:10:05.116 --> 00:10:07.456 A:middle
+was defined to crash or if for
+
+00:10:07.456 --> 00:10:08.826 A:middle
+some other reason the compiler
+
+00:10:08.826 --> 00:10:10.166 A:middle
+couldn't make the assumption
+
+00:10:10.546 --> 00:10:12.236 A:middle
+that dereferenced pointers were
+
+00:10:12.236 --> 00:10:14.796 A:middle
+valid, it would be really hard
+
+00:10:14.796 --> 00:10:16.306 A:middle
+to make any transformations on
+
+00:10:16.306 --> 00:10:17.236 A:middle
+the memory accesses.
+
+00:10:17.396 --> 00:10:19.066 A:middle
+Like, it couldn't reorder them.
+
+00:10:19.066 --> 00:10:21.086 A:middle
+It couldn't merge them or it
+
+00:10:21.086 --> 00:10:22.206 A:middle
+couldn't remove the useless
+
+00:10:22.206 --> 00:10:23.296 A:middle
+ones, like we just saw.
+
+00:10:26.166 --> 00:10:27.696 A:middle
+Dealing with memory access is a
+
+00:10:27.796 --> 00:10:29.346 A:middle
+huge part of the compiler job.
+
+00:10:30.586 --> 00:10:31.896 A:middle
+So, here you have an example of
+
+00:10:32.026 --> 00:10:34.306 A:middle
+how undefined behavior changes
+
+00:10:34.306 --> 00:10:35.546 A:middle
+the behavior of your program
+
+00:10:35.546 --> 00:10:37.046 A:middle
+between unoptimized and
+
+00:10:37.046 --> 00:10:37.816 A:middle
+optimized code.
+
+00:10:38.436 --> 00:10:39.426 A:middle
+But there's more I want to show
+
+00:10:39.426 --> 00:10:39.616 A:middle
+you.
+
+00:10:40.186 --> 00:10:41.536 A:middle
+Let's move to a slightly more
+
+00:10:41.536 --> 00:10:42.526 A:middle
+complicated example.
+
+00:10:44.136 --> 00:10:45.956 A:middle
+Here again we have our compiler
+
+00:10:45.956 --> 00:10:47.856 A:middle
+that's up and our source at the
+
+00:10:47.856 --> 00:10:48.276 A:middle
+bottom.
+
+00:10:49.206 --> 00:10:51.246 A:middle
+This example is actually derived
+
+00:10:51.506 --> 00:10:53.106 A:middle
+from a real issue that happened
+
+00:10:53.106 --> 00:10:54.536 A:middle
+in our big open source code days
+
+00:10:54.716 --> 00:10:55.746 A:middle
+a few years ago.
+
+00:10:55.976 --> 00:10:57.586 A:middle
+So, do not disregard it as
+
+00:10:57.586 --> 00:10:58.926 A:middle
+completely theoretical.
+
+00:11:00.786 --> 00:11:02.426 A:middle
+When you have a big function
+
+00:11:02.616 --> 00:11:03.996 A:middle
+that is modified by multiple
+
+00:11:04.076 --> 00:11:05.566 A:middle
+people over a long period of
+
+00:11:05.566 --> 00:11:07.896 A:middle
+time, it's easy to end up with
+
+00:11:07.896 --> 00:11:09.426 A:middle
+artifacts from the past, like
+
+00:11:09.426 --> 00:11:10.786 A:middle
+this unused variable at the top
+
+00:11:10.786 --> 00:11:11.406 A:middle
+of the function.
+
+00:11:12.606 --> 00:11:14.786 A:middle
+Now, let's compile this code.
+
+00:11:15.296 --> 00:11:16.596 A:middle
+Our new compiler has one more
+
+00:11:16.596 --> 00:11:17.336 A:middle
+optimization.
+
+00:11:17.986 --> 00:11:19.226 A:middle
+Redundant null check
+
+00:11:19.226 --> 00:11:19.976 A:middle
+elimination.
+
+00:11:20.916 --> 00:11:22.186 A:middle
+This optimization is a
+
+00:11:22.186 --> 00:11:23.796 A:middle
+specialized version of dead code
+
+00:11:23.796 --> 00:11:24.526 A:middle
+elimination.
+
+00:11:24.976 --> 00:11:26.436 A:middle
+It will look for pointers
+
+00:11:26.436 --> 00:11:28.596 A:middle
+compared against now and tries
+
+00:11:28.626 --> 00:11:30.536 A:middle
+to decide if statically at this
+
+00:11:30.576 --> 00:11:33.336 A:middle
+point of the program it can
+
+00:11:33.726 --> 00:11:36.316 A:middle
+prove that the pointer is either
+
+00:11:36.316 --> 00:11:37.456 A:middle
+null or nonnull.
+
+00:11:38.776 --> 00:11:40.296 A:middle
+And when it can do so, it just
+
+00:11:40.296 --> 00:11:41.526 A:middle
+removes the code that can never
+
+00:11:41.526 --> 00:11:42.366 A:middle
+be executed.
+
+00:11:43.316 --> 00:11:46.626 A:middle
+In this case, P is dereferenced
+
+00:11:46.626 --> 00:11:47.846 A:middle
+in the first line of the
+
+00:11:47.846 --> 00:11:48.356 A:middle
+function.
+
+00:11:48.426 --> 00:11:49.856 A:middle
+So, of course the pointer cannot
+
+00:11:49.856 --> 00:11:50.206 A:middle
+be null.
+
+00:11:50.806 --> 00:11:51.776 A:middle
+Let's remove the null check.
+
+00:11:52.396 --> 00:11:56.376 A:middle
+We then move on to our second
+
+00:11:56.376 --> 00:11:57.066 A:middle
+optimization.
+
+00:11:57.416 --> 00:11:58.656 A:middle
+We already know about dead code
+
+00:11:58.656 --> 00:11:59.396 A:middle
+elimination.
+
+00:12:00.116 --> 00:12:01.066 A:middle
+Unused is unused.
+
+00:12:01.616 --> 00:12:02.296 A:middle
+It goes away.
+
+00:12:03.846 --> 00:12:05.796 A:middle
+And here's the result of our
+
+00:12:05.796 --> 00:12:06.396 A:middle
+compilation.
+
+00:12:07.716 --> 00:12:10.006 A:middle
+Now, let's play the same game.
+
+00:12:10.006 --> 00:12:11.596 A:middle
+What happens if we pass null to
+
+00:12:11.596 --> 00:12:12.166 A:middle
+this function?
+
+00:12:12.876 --> 00:12:14.956 A:middle
+The unoptimized version will
+
+00:12:14.956 --> 00:12:15.446 A:middle
+crash.
+
+00:12:16.306 --> 00:12:18.356 A:middle
+The optimized version will crash
+
+00:12:18.356 --> 00:12:18.576 A:middle
+too.
+
+00:12:19.436 --> 00:12:20.806 A:middle
+But note that they don't crash
+
+00:12:20.806 --> 00:12:21.476 A:middle
+in the same spot.
+
+00:12:21.946 --> 00:12:23.296 A:middle
+The unoptimized version crashes
+
+00:12:23.296 --> 00:12:24.086 A:middle
+on the first line.
+
+00:12:24.506 --> 00:12:26.116 A:middle
+The optimized version crashes on
+
+00:12:26.116 --> 00:12:26.916 A:middle
+the last line.
+
+00:12:27.706 --> 00:12:29.296 A:middle
+Those could be hundreds of
+
+00:12:29.296 --> 00:12:30.376 A:middle
+thousands of lines away.
+
+00:12:31.226 --> 00:12:32.996 A:middle
+This is a very important lesson
+
+00:12:32.996 --> 00:12:34.236 A:middle
+to learn about undefined
+
+00:12:34.236 --> 00:12:34.766 A:middle
+behavior.
+
+00:12:35.356 --> 00:12:37.786 A:middle
+When it causes an issue, whether
+
+00:12:37.786 --> 00:12:39.996 A:middle
+it is another reference, an
+
+00:12:39.996 --> 00:12:42.136 A:middle
+integer overflow, memory
+
+00:12:42.136 --> 00:12:44.126 A:middle
+corruption due to an out of
+
+00:12:44.126 --> 00:12:45.686 A:middle
+bound access or any other kind
+
+00:12:45.686 --> 00:12:47.336 A:middle
+of undefined behavior, the
+
+00:12:47.336 --> 00:12:49.106 A:middle
+symptom you see will often be
+
+00:12:49.106 --> 00:12:50.526 A:middle
+very far away from the root
+
+00:12:50.526 --> 00:12:51.336 A:middle
+cause of the issue.
+
+00:12:53.566 --> 00:12:54.806 A:middle
+There is one more thing I want
+
+00:12:54.806 --> 00:12:55.306 A:middle
+to show you.
+
+00:12:56.096 --> 00:12:58.606 A:middle
+Let's restart the compilation
+
+00:12:58.606 --> 00:12:59.606 A:middle
+with a slightly different
+
+00:12:59.606 --> 00:13:00.056 A:middle
+compiler.
+
+00:13:01.136 --> 00:13:02.496 A:middle
+As you see, we just see swapped
+
+00:13:02.646 --> 00:13:03.656 A:middle
+the two optimizations.
+
+00:13:04.386 --> 00:13:05.556 A:middle
+Let's compile the same code
+
+00:13:05.556 --> 00:13:05.906 A:middle
+again.
+
+00:13:08.366 --> 00:13:10.266 A:middle
+Dead code elimination, unused is
+
+00:13:10.266 --> 00:13:10.906 A:middle
+still unused.
+
+00:13:10.906 --> 00:13:12.056 A:middle
+It goes away.
+
+00:13:13.696 --> 00:13:15.736 A:middle
+Now we try to apply redundant
+
+00:13:15.736 --> 00:13:17.330 A:middle
+null check elimination.
+
+00:13:18.186 --> 00:13:19.846 A:middle
+There is nothing to - there is
+
+00:13:19.846 --> 00:13:21.266 A:middle
+nothing to reason anymore about
+
+00:13:21.266 --> 00:13:22.786 A:middle
+the value of the P pointer so
+
+00:13:22.786 --> 00:13:24.136 A:middle
+the optimization just does
+
+00:13:24.136 --> 00:13:24.656 A:middle
+nothing.
+
+00:13:25.176 --> 00:13:27.886 A:middle
+And here's the result of our
+
+00:13:28.046 --> 00:13:29.366 A:middle
+second compilation of the same
+
+00:13:29.366 --> 00:13:29.616 A:middle
+code.
+
+00:13:30.446 --> 00:13:33.036 A:middle
+Note that in this case if you
+
+00:13:33.036 --> 00:13:34.726 A:middle
+pass a null pointer to the
+
+00:13:34.726 --> 00:13:36.466 A:middle
+optimized version, it will not
+
+00:13:36.886 --> 00:13:37.000 A:middle
+crash.
+
+00:13:39.036 --> 00:13:41.816 A:middle
+Now, imagine your app has the
+
+00:13:41.816 --> 00:13:43.726 A:middle
+code on the left and the
+
+00:13:43.726 --> 00:13:44.946 A:middle
+developer who added the null
+
+00:13:44.946 --> 00:13:46.116 A:middle
+check to this function at some
+
+00:13:46.116 --> 00:13:48.836 A:middle
+point added a few uses of the
+
+00:13:48.836 --> 00:13:50.146 A:middle
+function with another argument.
+
+00:13:51.186 --> 00:13:52.586 A:middle
+You might have never realized
+
+00:13:52.586 --> 00:13:54.136 A:middle
+that it is an issue because your
+
+00:13:54.136 --> 00:13:55.566 A:middle
+compiler is acting like compiler
+
+00:13:55.566 --> 00:13:55.846 A:middle
+2.
+
+00:13:56.826 --> 00:13:58.646 A:middle
+But there is no guarantee that
+
+00:13:58.646 --> 00:14:00.396 A:middle
+in the future it will not act
+
+00:14:00.396 --> 00:14:02.206 A:middle
+like compiler 1 and break your
+
+00:14:02.206 --> 00:14:02.486 A:middle
+code.
+
+00:14:03.726 --> 00:14:05.356 A:middle
+This is maybe the most important
+
+00:14:05.356 --> 00:14:06.606 A:middle
+thing to remember about
+
+00:14:06.606 --> 00:14:07.476 A:middle
+undefined behavior.
+
+00:14:07.716 --> 00:14:09.466 A:middle
+The fact that you don't have an
+
+00:14:09.466 --> 00:14:11.226 A:middle
+issue today doesn't mean that
+
+00:14:11.226 --> 00:14:12.806 A:middle
+that change in the compiler will
+
+00:14:12.806 --> 00:14:13.866 A:middle
+not cause it to break in the
+
+00:14:13.866 --> 00:14:14.276 A:middle
+future.
+
+00:14:15.786 --> 00:14:17.266 A:middle
+And your compiler might be
+
+00:14:17.266 --> 00:14:18.686 A:middle
+changing behavior more than you
+
+00:14:18.686 --> 00:14:18.996 A:middle
+think.
+
+00:14:20.966 --> 00:14:22.796 A:middle
+During a single day, each time
+
+00:14:22.796 --> 00:14:24.046 A:middle
+you switch between debug and
+
+00:14:24.046 --> 00:14:25.796 A:middle
+release mode or each time you
+
+00:14:25.796 --> 00:14:26.776 A:middle
+change the optimization
+
+00:14:26.776 --> 00:14:29.026 A:middle
+settings, you run a different
+
+00:14:29.026 --> 00:14:30.396 A:middle
+instance of the compiler with a
+
+00:14:30.396 --> 00:14:31.476 A:middle
+very different set of
+
+00:14:31.476 --> 00:14:32.786 A:middle
+transformations applied to your
+
+00:14:32.786 --> 00:14:33.136 A:middle
+code.
+
+00:14:35.016 --> 00:14:36.996 A:middle
+Maybe more surprisingly, each
+
+00:14:36.996 --> 00:14:38.086 A:middle
+time you switch from a real
+
+00:14:38.086 --> 00:14:39.776 A:middle
+device to a simulator or vice
+
+00:14:39.776 --> 00:14:42.196 A:middle
+versa, you are targeting a
+
+00:14:42.196 --> 00:14:43.746 A:middle
+different architecture, which
+
+00:14:43.746 --> 00:14:45.566 A:middle
+might react differently to
+
+00:14:45.566 --> 00:14:46.496 A:middle
+undefined behavior.
+
+00:14:47.076 --> 00:14:50.746 A:middle
+And, of course, each time you
+
+00:14:50.746 --> 00:14:52.656 A:middle
+upgrade Xcode to a new major
+
+00:14:52.656 --> 00:14:54.656 A:middle
+version, you get a brand new
+
+00:14:54.656 --> 00:14:55.176 A:middle
+compiler.
+
+00:14:55.176 --> 00:14:58.176 A:middle
+And we work hard all year long
+
+00:14:58.176 --> 00:14:59.356 A:middle
+to make the compiler better,
+
+00:14:59.476 --> 00:15:01.136 A:middle
+generate faster, smaller code.
+
+00:15:02.126 --> 00:15:05.296 A:middle
+Many of those improvements could
+
+00:15:05.296 --> 00:15:06.656 A:middle
+reveal undefined behavior in
+
+00:15:06.656 --> 00:15:07.500 A:middle
+your code.
+
+00:15:09.336 --> 00:15:12.336 A:middle
+So, before moving along, just,
+
+00:15:12.616 --> 00:15:13.996 A:middle
+let's just summarize what we
+
+00:15:13.996 --> 00:15:14.886 A:middle
+learned about undefined
+
+00:15:14.886 --> 00:15:15.336 A:middle
+behavior.
+
+00:15:17.486 --> 00:15:19.836 A:middle
+Undefined behavior will not
+
+00:15:19.836 --> 00:15:21.176 A:middle
+trigger bugs reliably.
+
+00:15:22.016 --> 00:15:23.406 A:middle
+One of your configurations could
+
+00:15:23.406 --> 00:15:24.936 A:middle
+be working while the other one
+
+00:15:24.936 --> 00:15:25.416 A:middle
+breaks.
+
+00:15:26.746 --> 00:15:28.706 A:middle
+When undefined behavior breaks,
+
+00:15:28.956 --> 00:15:31.166 A:middle
+when it breaks your code, the
+
+00:15:31.166 --> 00:15:33.136 A:middle
+symptom you are seeing might be
+
+00:15:33.296 --> 00:15:35.106 A:middle
+thousands of lines away or maybe
+
+00:15:35.106 --> 00:15:37.316 A:middle
+even hours of executions away
+
+00:15:37.946 --> 00:15:39.356 A:middle
+from the real root cause of the
+
+00:15:39.356 --> 00:15:39.886 A:middle
+issue.
+
+00:15:40.456 --> 00:15:41.486 A:middle
+This could be really hard to
+
+00:15:41.486 --> 00:15:42.676 A:middle
+debug if you are not prepared
+
+00:15:42.676 --> 00:15:43.026 A:middle
+for it.
+
+00:15:45.076 --> 00:15:48.336 A:middle
+And lastly, the fact that you
+
+00:15:48.336 --> 00:15:50.586 A:middle
+don't have any bugs today that
+
+00:15:50.586 --> 00:15:52.496 A:middle
+you know of doesn't mean that
+
+00:15:52.496 --> 00:15:54.036 A:middle
+you don't have any bugs due to
+
+00:15:54.036 --> 00:15:54.886 A:middle
+undefined behavior.
+
+00:15:55.266 --> 00:15:56.556 A:middle
+And if you have undefined
+
+00:15:56.556 --> 00:15:58.796 A:middle
+behavior, it will break at some
+
+00:15:58.796 --> 00:15:59.646 A:middle
+point in the future.
+
+00:16:01.016 --> 00:16:03.106 A:middle
+When it breaks, it could cost
+
+00:16:03.106 --> 00:16:04.776 A:middle
+you a lot of debugging time but
+
+00:16:04.776 --> 00:16:06.246 A:middle
+it could also put your users'
+
+00:16:06.246 --> 00:16:07.036 A:middle
+data at risk.
+
+00:16:08.076 --> 00:16:09.516 A:middle
+Here's Ryan to tell you more
+
+00:16:09.516 --> 00:16:11.096 A:middle
+about the security implications
+
+00:16:11.096 --> 00:16:12.206 A:middle
+of undefined behavior.
+
+00:16:14.516 --> 00:16:18.896 A:middle
+[ Applause ]
+
+00:16:19.396 --> 00:16:19.816 A:middle
+&gt;&gt; Thanks, Fred.
+
+00:16:21.616 --> 00:16:23.276 A:middle
+So, who here remembers the
+
+00:16:23.276 --> 00:16:24.496 A:middle
+heartbleed vulnerability from a
+
+00:16:24.496 --> 00:16:25.126 A:middle
+few years ago?
+
+00:16:26.096 --> 00:16:26.916 A:middle
+Well, if you're like me, you
+
+00:16:26.916 --> 00:16:27.866 A:middle
+probably had to go and change
+
+00:16:27.866 --> 00:16:29.356 A:middle
+your password on like 100
+
+00:16:29.356 --> 00:16:31.246 A:middle
+different websites or maybe
+
+00:16:31.486 --> 00:16:33.026 A:middle
+patch some of your own backend
+
+00:16:33.026 --> 00:16:33.516 A:middle
+servers.
+
+00:16:34.486 --> 00:16:35.446 A:middle
+Well, heartbleed was an
+
+00:16:35.446 --> 00:16:37.216 A:middle
+out-of-bounds read in a widely
+
+00:16:37.216 --> 00:16:38.556 A:middle
+used cryptographic library
+
+00:16:38.556 --> 00:16:39.506 A:middle
+called open SSL.
+
+00:16:40.196 --> 00:16:41.906 A:middle
+By sending just one packet to an
+
+00:16:41.906 --> 00:16:43.686 A:middle
+affected server, an attacker
+
+00:16:43.686 --> 00:16:44.926 A:middle
+would receive in reply a few
+
+00:16:44.926 --> 00:16:46.056 A:middle
+kilobytes of the server
+
+00:16:46.056 --> 00:16:48.136 A:middle
+process's heap memory, which
+
+00:16:48.136 --> 00:16:51.796 A:middle
+turned into a pretty significant
+
+00:16:52.056 --> 00:16:53.586 A:middle
+privacy and security exposure.
+
+00:16:55.696 --> 00:16:58.826 A:middle
+Now, that out-of-bounds read in
+
+00:16:58.826 --> 00:17:00.236 A:middle
+heartbleed is an example of
+
+00:17:00.236 --> 00:17:01.956 A:middle
+undefined behavior and it turns
+
+00:17:01.956 --> 00:17:03.316 A:middle
+out that undefined behavior is
+
+00:17:03.316 --> 00:17:04.346 A:middle
+at the core of many different
+
+00:17:04.346 --> 00:17:05.026 A:middle
+types of security
+
+00:17:05.026 --> 00:17:05.626 A:middle
+vulnerabilities.
+
+00:17:06.466 --> 00:17:08.186 A:middle
+To name just a few, you could
+
+00:17:08.186 --> 00:17:11.556 A:middle
+think of buffer overflows, uses
+
+00:17:11.556 --> 00:17:14.016 A:middle
+of uninitialized variables, heat
+
+00:17:14.016 --> 00:17:16.766 A:middle
+misuse bugs like use after free
+
+00:17:16.766 --> 00:17:17.466 A:middle
+and double free.
+
+00:17:18.086 --> 00:17:19.526 A:middle
+And also race conditions.
+
+00:17:22.296 --> 00:17:24.216 A:middle
+So, keep in mind that your users
+
+00:17:24.416 --> 00:17:27.316 A:middle
+trust your app and potentially
+
+00:17:27.526 --> 00:17:29.026 A:middle
+with their personal information
+
+00:17:29.026 --> 00:17:30.926 A:middle
+such as their photos or their
+
+00:17:30.926 --> 00:17:31.766 A:middle
+private messages.
+
+00:17:32.196 --> 00:17:32.996 A:middle
+And so you should do everything
+
+00:17:32.996 --> 00:17:34.146 A:middle
+you can to make sure that your
+
+00:17:34.146 --> 00:17:35.746 A:middle
+app is as safe and secure as
+
+00:17:35.746 --> 00:17:36.226 A:middle
+possible.
+
+00:17:37.376 --> 00:17:38.286 A:middle
+And if you're a framework
+
+00:17:38.286 --> 00:17:39.686 A:middle
+developer, remember that your
+
+00:17:39.686 --> 00:17:41.236 A:middle
+client apps inherit all of your
+
+00:17:41.236 --> 00:17:42.286 A:middle
+bugs, just like all those
+
+00:17:42.286 --> 00:17:43.706 A:middle
+websites inherited the
+
+00:17:43.706 --> 00:17:44.676 A:middle
+heartbleed vulnerability.
+
+00:17:45.256 --> 00:17:48.516 A:middle
+But the good news that there are
+
+00:17:48.516 --> 00:17:49.506 A:middle
+tools that could help you.
+
+00:17:50.296 --> 00:17:52.396 A:middle
+Now, too often we developers
+
+00:17:52.396 --> 00:17:54.616 A:middle
+reach for our tools only after a
+
+00:17:54.616 --> 00:17:55.876 A:middle
+bug has manifested some other
+
+00:17:55.876 --> 00:17:56.166 A:middle
+way.
+
+00:17:56.166 --> 00:17:57.326 A:middle
+Maybe it showed up in our users'
+
+00:17:57.326 --> 00:17:58.066 A:middle
+crash logs.
+
+00:17:58.836 --> 00:18:00.566 A:middle
+But by running tools early and
+
+00:18:00.566 --> 00:18:02.636 A:middle
+often throughout development, we
+
+00:18:02.636 --> 00:18:03.956 A:middle
+can catch these issues before
+
+00:18:03.956 --> 00:18:05.476 A:middle
+they ever become a problem that
+
+00:18:05.476 --> 00:18:08.416 A:middle
+affects our customers.
+
+00:18:08.416 --> 00:18:11.326 A:middle
+So, I wanted to relate a story
+
+00:18:11.326 --> 00:18:12.826 A:middle
+of how one of these tools,
+
+00:18:12.826 --> 00:18:15.636 A:middle
+Address Sanitizer, saved macOS
+
+00:18:15.636 --> 00:18:16.096 A:middle
+Yosemite.
+
+00:18:17.536 --> 00:18:19.246 A:middle
+So, about one month before the
+
+00:18:19.246 --> 00:18:20.856 A:middle
+macOS Yosemite public release,
+
+00:18:21.236 --> 00:18:22.396 A:middle
+many new crashes started
+
+00:18:22.396 --> 00:18:23.916 A:middle
+appearing throughout the system.
+
+00:18:24.446 --> 00:18:26.166 A:middle
+And we had a hunch that we had a
+
+00:18:26.166 --> 00:18:28.766 A:middle
+heap corruption bug that was in
+
+00:18:28.766 --> 00:18:30.796 A:middle
+one of the low-level system
+
+00:18:30.796 --> 00:18:31.346 A:middle
+frameworks.
+
+00:18:31.966 --> 00:18:32.836 A:middle
+Well, we were having a really
+
+00:18:32.836 --> 00:18:34.226 A:middle
+hard time reproducing the issue.
+
+00:18:34.846 --> 00:18:35.676 A:middle
+And without being able to
+
+00:18:35.676 --> 00:18:36.776 A:middle
+reproduce it, we didn't have a
+
+00:18:36.776 --> 00:18:38.436 A:middle
+smoking gun that was pointing to
+
+00:18:38.436 --> 00:18:39.886 A:middle
+a specific function that was
+
+00:18:39.886 --> 00:18:40.876 A:middle
+causing the heap corruption.
+
+00:18:41.966 --> 00:18:43.646 A:middle
+And so we turned to a tool that
+
+00:18:43.646 --> 00:18:46.516 A:middle
+at the time was very new, called
+
+00:18:46.516 --> 00:18:48.096 A:middle
+Address Sanitizer, and we
+
+00:18:48.096 --> 00:18:49.256 A:middle
+thought it would help us catch
+
+00:18:49.256 --> 00:18:50.246 A:middle
+this heap corruption bug.
+
+00:18:50.366 --> 00:18:51.676 A:middle
+So, we instrumented some of the
+
+00:18:51.676 --> 00:18:53.256 A:middle
+system frameworks and we loaded
+
+00:18:53.256 --> 00:18:53.626 A:middle
+it up.
+
+00:18:53.626 --> 00:18:54.656 A:middle
+And sure enough, Address
+
+00:18:54.656 --> 00:18:55.726 A:middle
+Sanitizer did its job
+
+00:18:55.726 --> 00:18:57.516 A:middle
+wonderfully and honed right in
+
+00:18:57.516 --> 00:18:59.486 A:middle
+on this piece of code.
+
+00:18:59.576 --> 00:19:01.476 A:middle
+So, to summarize it briefly, we
+
+00:19:03.196 --> 00:19:04.886 A:middle
+had a CF string and we were
+
+00:19:04.886 --> 00:19:07.026 A:middle
+constructing a path to a file
+
+00:19:07.026 --> 00:19:09.146 A:middle
+inside the user's library
+
+00:19:09.146 --> 00:19:10.056 A:middle
+cache's directory.
+
+00:19:11.056 --> 00:19:12.106 A:middle
+And then we needed to convert
+
+00:19:12.106 --> 00:19:14.026 A:middle
+this C string, sorry, convert
+
+00:19:14.026 --> 00:19:15.676 A:middle
+this CF string into a C string.
+
+00:19:16.186 --> 00:19:17.406 A:middle
+And so, I mean, that's a pretty
+
+00:19:17.406 --> 00:19:18.176 A:middle
+straightforward thing, right?
+
+00:19:18.176 --> 00:19:19.526 A:middle
+We have to measure the length of
+
+00:19:19.526 --> 00:19:22.206 A:middle
+the CF string, allocate buffer
+
+00:19:22.206 --> 00:19:23.106 A:middle
+on the heap of that many
+
+00:19:23.106 --> 00:19:25.766 A:middle
+characters and copy the bytes
+
+00:19:25.766 --> 00:19:26.196 A:middle
+into it.
+
+00:19:27.186 --> 00:19:28.876 A:middle
+And, oh yeah.
+
+00:19:28.876 --> 00:19:30.376 A:middle
+We forgot one thing which is
+
+00:19:30.376 --> 00:19:31.706 A:middle
+that C strings need to be null
+
+00:19:31.706 --> 00:19:32.216 A:middle
+terminated.
+
+00:19:32.966 --> 00:19:35.816 A:middle
+And so we have to add that too.
+
+00:19:36.046 --> 00:19:38.236 A:middle
+But we made a mistake, an off by
+
+00:19:38.236 --> 00:19:38.796 A:middle
+one error.
+
+00:19:38.856 --> 00:19:40.026 A:middle
+Because we didn't include that
+
+00:19:40.026 --> 00:19:41.696 A:middle
+null byte when we were computing
+
+00:19:41.696 --> 00:19:43.036 A:middle
+the size of the allocation that
+
+00:19:43.036 --> 00:19:43.436 A:middle
+we needed.
+
+00:19:44.706 --> 00:19:46.496 A:middle
+And so we actually overflowed
+
+00:19:46.496 --> 00:19:46.966 A:middle
+our buffer.
+
+00:19:47.566 --> 00:19:50.606 A:middle
+But most of the time this didn't
+
+00:19:50.606 --> 00:19:52.006 A:middle
+have any impact on the user.
+
+00:19:52.616 --> 00:19:54.266 A:middle
+And that's because the heap will
+
+00:19:54.266 --> 00:19:55.756 A:middle
+round up the size of the
+
+00:19:55.756 --> 00:19:56.436 A:middle
+allocation.
+
+00:19:56.436 --> 00:19:57.866 A:middle
+In this case, let's say we
+
+00:19:57.866 --> 00:19:58.866 A:middle
+rounded it up to the next
+
+00:19:58.866 --> 00:20:00.226 A:middle
+multiple of 16 bytes.
+
+00:20:01.066 --> 00:20:02.176 A:middle
+And so when we write our null
+
+00:20:02.176 --> 00:20:04.296 A:middle
+byte into that unused space at
+
+00:20:04.296 --> 00:20:05.776 A:middle
+the end, that there's no
+
+00:20:05.776 --> 00:20:06.576 A:middle
+consequence, right?
+
+00:20:08.436 --> 00:20:11.146 A:middle
+But let's see what happens when
+
+00:20:11.816 --> 00:20:13.476 A:middle
+one of the variables in that
+
+00:20:13.476 --> 00:20:15.216 A:middle
+buffer changes, and that's the
+
+00:20:15.216 --> 00:20:15.806 A:middle
+username.
+
+00:20:17.166 --> 00:20:19.286 A:middle
+Well, if the length of the
+
+00:20:19.286 --> 00:20:20.926 A:middle
+username changes, the amount of
+
+00:20:20.926 --> 00:20:22.446 A:middle
+unused space would also change.
+
+00:20:22.856 --> 00:20:23.866 A:middle
+And it turned out that if the
+
+00:20:23.866 --> 00:20:27.246 A:middle
+user's username was exactly 11
+
+00:20:27.246 --> 00:20:28.986 A:middle
+characters long, there wouldn't
+
+00:20:28.986 --> 00:20:30.606 A:middle
+be any unused space and we would
+
+00:20:30.606 --> 00:20:32.286 A:middle
+end up corrupting the adjacent
+
+00:20:32.286 --> 00:20:33.546 A:middle
+object on the heap and causing
+
+00:20:33.546 --> 00:20:34.786 A:middle
+some other part of the code to
+
+00:20:34.786 --> 00:20:35.246 A:middle
+crash.
+
+00:20:36.076 --> 00:20:37.246 A:middle
+And so this was the secret to
+
+00:20:37.246 --> 00:20:39.256 A:middle
+why it was so hard to catch
+
+00:20:39.576 --> 00:20:41.886 A:middle
+normally but Address Sanitizer
+
+00:20:41.886 --> 00:20:43.016 A:middle
+did a great job of finding it
+
+00:20:43.016 --> 00:20:43.396 A:middle
+right away.
+
+00:20:44.806 --> 00:20:47.056 A:middle
+Now, in this case, this off by
+
+00:20:47.056 --> 00:20:48.796 A:middle
+one probably didn't have many
+
+00:20:48.796 --> 00:20:49.996 A:middle
+security consequences.
+
+00:20:50.466 --> 00:20:54.216 A:middle
+But many other similar bugs can
+
+00:20:54.396 --> 00:20:55.856 A:middle
+result in exploitable
+
+00:20:55.856 --> 00:20:56.566 A:middle
+vulnerabilities.
+
+00:20:57.326 --> 00:20:58.736 A:middle
+And remember that security flaws
+
+00:20:59.066 --> 00:21:00.946 A:middle
+often don't manifest until
+
+00:21:01.026 --> 00:21:02.196 A:middle
+they've been exploited.
+
+00:21:03.146 --> 00:21:04.576 A:middle
+So, running tools like Address
+
+00:21:04.576 --> 00:21:06.006 A:middle
+Sanitizer early and throughout
+
+00:21:06.076 --> 00:21:07.596 A:middle
+the development process can help
+
+00:21:07.596 --> 00:21:09.166 A:middle
+you catch these before they ever
+
+00:21:09.166 --> 00:21:10.686 A:middle
+reach your customer devices.
+
+00:21:13.676 --> 00:21:15.956 A:middle
+So, let's talk about the tools
+
+00:21:16.256 --> 00:21:17.546 A:middle
+that you have at your disposal
+
+00:21:17.576 --> 00:21:19.416 A:middle
+to catch undefined behavior.
+
+00:21:20.146 --> 00:21:22.616 A:middle
+First we'll talk about the
+
+00:21:22.616 --> 00:21:26.176 A:middle
+compiler, the static analyzer in
+
+00:21:26.206 --> 00:21:29.576 A:middle
+Xcode, and the Sanitizers -
+
+00:21:29.776 --> 00:21:31.596 A:middle
+Address Sanitizer, Thread
+
+00:21:31.596 --> 00:21:33.406 A:middle
+Sanitizer and the Undefined
+
+00:21:33.406 --> 00:21:34.296 A:middle
+Behavior Sanitizer.
+
+00:21:35.236 --> 00:21:36.026 A:middle
+So, let's start with the
+
+00:21:36.026 --> 00:21:36.416 A:middle
+compiler.
+
+00:21:37.066 --> 00:21:39.906 A:middle
+So, the compiler alerts you to
+
+00:21:39.906 --> 00:21:41.686 A:middle
+parts of your code that might be
+
+00:21:41.686 --> 00:21:43.136 A:middle
+a little suspicious and it does
+
+00:21:43.136 --> 00:21:44.226 A:middle
+this in the form of compiler
+
+00:21:44.226 --> 00:21:44.586 A:middle
+warnings.
+
+00:21:45.296 --> 00:21:46.286 A:middle
+Believe it or not, they're not
+
+00:21:46.286 --> 00:21:47.196 A:middle
+just there to annoy you.
+
+00:21:48.756 --> 00:21:50.446 A:middle
+Now, every release of Xcode has
+
+00:21:50.536 --> 00:21:51.936 A:middle
+better warnings and great
+
+00:21:51.936 --> 00:21:53.506 A:middle
+features like fixits, so you can
+
+00:21:53.506 --> 00:21:54.486 A:middle
+resolve them with just one
+
+00:21:54.486 --> 00:21:54.786 A:middle
+click.
+
+00:21:55.866 --> 00:21:57.366 A:middle
+To learn what's new in the
+
+00:21:57.366 --> 00:21:58.766 A:middle
+compiler this year, check out
+
+00:21:58.766 --> 00:22:00.336 A:middle
+the What's New in LLDM talk
+
+00:22:00.726 --> 00:22:01.836 A:middle
+which is later this afternoon.
+
+00:22:02.406 --> 00:22:05.786 A:middle
+Now, you might be wondering, do
+
+00:22:05.786 --> 00:22:07.286 A:middle
+I have the recommended set of
+
+00:22:07.586 --> 00:22:08.606 A:middle
+warnings turned on for my
+
+00:22:08.606 --> 00:22:09.086 A:middle
+project?
+
+00:22:09.706 --> 00:22:10.656 A:middle
+Well, every time you upgrade
+
+00:22:10.656 --> 00:22:12.236 A:middle
+Xcode, you'll be presented with
+
+00:22:12.236 --> 00:22:13.396 A:middle
+the opportunity to modernize
+
+00:22:13.396 --> 00:22:13.946 A:middle
+your project.
+
+00:22:14.286 --> 00:22:15.376 A:middle
+And you can also do this at any
+
+00:22:15.376 --> 00:22:17.356 A:middle
+time using the validate settings
+
+00:22:17.426 --> 00:22:19.186 A:middle
+option and that'll help you get
+
+00:22:19.306 --> 00:22:20.406 A:middle
+into a good state again.
+
+00:22:21.756 --> 00:22:22.556 A:middle
+And there's one more build
+
+00:22:22.556 --> 00:22:23.946 A:middle
+setting that I think you should
+
+00:22:23.946 --> 00:22:25.296 A:middle
+know about which is treat
+
+00:22:25.296 --> 00:22:26.646 A:middle
+warnings as errors.
+
+00:22:27.806 --> 00:22:29.086 A:middle
+And it does what it says on the
+
+00:22:29.086 --> 00:22:29.406 A:middle
+tin.
+
+00:22:29.816 --> 00:22:31.796 A:middle
+If your project already compiles
+
+00:22:31.796 --> 00:22:33.146 A:middle
+with relatively few warnings,
+
+00:22:33.426 --> 00:22:34.906 A:middle
+consider turning that on and
+
+00:22:34.906 --> 00:22:36.646 A:middle
+enforcing the self-discipline to
+
+00:22:36.646 --> 00:22:38.000 A:middle
+keep that compiler count low.
+
+00:22:41.836 --> 00:22:43.076 A:middle
+Now, let's talk about the static
+
+00:22:43.076 --> 00:22:43.526 A:middle
+analyzer.
+
+00:22:44.226 --> 00:22:45.326 A:middle
+The static analyzer can be
+
+00:22:45.326 --> 00:22:46.646 A:middle
+thought of as a supercharged
+
+00:22:46.646 --> 00:22:48.136 A:middle
+version of compiler warnings.
+
+00:22:48.186 --> 00:22:50.546 A:middle
+It explores your code and finds
+
+00:22:50.616 --> 00:22:52.556 A:middle
+bugs that only happen in very
+
+00:22:52.556 --> 00:22:54.606 A:middle
+particular conditions, maybe
+
+00:22:54.606 --> 00:22:55.966 A:middle
+conditions that aren't being hit
+
+00:22:56.066 --> 00:22:58.026 A:middle
+when you normally test your app.
+
+00:22:58.776 --> 00:23:01.066 A:middle
+So, what we recommend doing is
+
+00:23:01.066 --> 00:23:02.636 A:middle
+analyzing during every build.
+
+00:23:03.416 --> 00:23:04.386 A:middle
+There's a build setting for this
+
+00:23:04.466 --> 00:23:06.416 A:middle
+and when you turn it on, Xcode
+
+00:23:06.416 --> 00:23:08.276 A:middle
+will run a fast analysis pass
+
+00:23:08.446 --> 00:23:09.236 A:middle
+every time you build your
+
+00:23:09.236 --> 00:23:09.636 A:middle
+project.
+
+00:23:10.716 --> 00:23:13.116 A:middle
+And that makes sure that you can
+
+00:23:13.256 --> 00:23:14.566 A:middle
+find bugs that you've just
+
+00:23:14.566 --> 00:23:16.356 A:middle
+introduced as quickly as
+
+00:23:16.356 --> 00:23:16.786 A:middle
+possible.
+
+00:23:17.936 --> 00:23:19.136 A:middle
+But there's also a deeper mode
+
+00:23:19.416 --> 00:23:21.026 A:middle
+that the analyzer can run in and
+
+00:23:21.026 --> 00:23:23.006 A:middle
+you can use that at any time,
+
+00:23:23.326 --> 00:23:24.136 A:middle
+and that's the mode that we
+
+00:23:24.136 --> 00:23:25.596 A:middle
+recommend using under your
+
+00:23:25.596 --> 00:23:27.056 A:middle
+continuous integration in order
+
+00:23:27.056 --> 00:23:28.846 A:middle
+to make the most of the static
+
+00:23:28.846 --> 00:23:29.976 A:middle
+analyzer's bug finding
+
+00:23:29.976 --> 00:23:30.676 A:middle
+capabilities.
+
+00:23:34.456 --> 00:23:38.166 A:middle
+So, next I'm going to talk about
+
+00:23:38.776 --> 00:23:39.566 A:middle
+the Sanitizers.
+
+00:23:40.656 --> 00:23:43.976 A:middle
+But first to note, the
+
+00:23:43.976 --> 00:23:45.456 A:middle
+Sanitizers are Runtime tools.
+
+00:23:45.456 --> 00:23:47.346 A:middle
+Unlike the compiler or the
+
+00:23:47.346 --> 00:23:49.296 A:middle
+static analyzer, to get the most
+
+00:23:49.296 --> 00:23:51.136 A:middle
+out of the Sanitizers, you need
+
+00:23:51.136 --> 00:23:52.446 A:middle
+to actually run an exerciser
+
+00:23:52.446 --> 00:23:54.226 A:middle
+code that can only find bugs in
+
+00:23:55.166 --> 00:23:56.526 A:middle
+code that's actually being
+
+00:23:56.526 --> 00:23:57.136 A:middle
+executed.
+
+00:23:57.466 --> 00:23:58.196 A:middle
+So, keep that in mind.
+
+00:23:59.316 --> 00:24:03.166 A:middle
+But they offer a high degree of
+
+00:24:03.216 --> 00:24:04.766 A:middle
+bug finding capabilities.
+
+00:24:05.076 --> 00:24:07.996 A:middle
+So, first as I mentioned before,
+
+00:24:07.996 --> 00:24:09.116 A:middle
+there's Address Sanitizer.
+
+00:24:09.766 --> 00:24:11.376 A:middle
+Now, Address Sanitizer catches
+
+00:24:11.376 --> 00:24:12.936 A:middle
+memory corruption bugs like
+
+00:24:13.006 --> 00:24:14.286 A:middle
+buffer overflows and
+
+00:24:14.286 --> 00:24:15.156 A:middle
+use-after-free bugs.
+
+00:24:15.636 --> 00:24:16.526 A:middle
+And these ones are highly
+
+00:24:16.526 --> 00:24:17.396 A:middle
+correlated with security
+
+00:24:17.396 --> 00:24:18.000 A:middle
+vulnerabilities.
+
+00:24:21.216 --> 00:24:22.956 A:middle
+Then there's Thread Sanitizer,
+
+00:24:23.456 --> 00:24:24.796 A:middle
+which catches data races.
+
+00:24:24.896 --> 00:24:26.026 A:middle
+So, in your multithreaded app,
+
+00:24:26.706 --> 00:24:28.296 A:middle
+if two threads tried to access
+
+00:24:28.356 --> 00:24:30.226 A:middle
+the same piece of memory without
+
+00:24:30.266 --> 00:24:31.716 A:middle
+proper synchronization, you have
+
+00:24:31.716 --> 00:24:32.316 A:middle
+a data race.
+
+00:24:33.226 --> 00:24:34.166 A:middle
+But a cool thing about Thread
+
+00:24:34.166 --> 00:24:36.276 A:middle
+Sanitizer is that it catches
+
+00:24:36.276 --> 00:24:37.556 A:middle
+even potential data races.
+
+00:24:38.236 --> 00:24:40.056 A:middle
+So, even if in your execution of
+
+00:24:40.056 --> 00:24:41.486 A:middle
+the app everything seems to be
+
+00:24:41.486 --> 00:24:43.526 A:middle
+working great, Thread Sanitizer
+
+00:24:43.526 --> 00:24:45.406 A:middle
+can tell you if two operations
+
+00:24:45.406 --> 00:24:46.526 A:middle
+could potentially happen in a
+
+00:24:46.526 --> 00:24:48.106 A:middle
+different order and cause your
+
+00:24:48.106 --> 00:24:49.000 A:middle
+app to misbehave.
+
+00:24:52.066 --> 00:24:54.206 A:middle
+And new in Xcode 9 is the
+
+00:24:54.206 --> 00:24:55.726 A:middle
+Undefined Behavior Sanitizer.
+
+00:24:56.686 --> 00:24:58.726 A:middle
+It catches over 15 different
+
+00:24:58.726 --> 00:25:01.196 A:middle
+types of undefined behavior and
+
+00:25:01.196 --> 00:25:02.566 A:middle
+it extends either Address
+
+00:25:02.566 --> 00:25:04.776 A:middle
+Sanitizer or Thread Sanitizer so
+
+00:25:04.776 --> 00:25:06.206 A:middle
+you get even more bug-finding
+
+00:25:06.206 --> 00:25:06.516 A:middle
+power.
+
+00:25:07.236 --> 00:25:08.516 A:middle
+So, some of these types of
+
+00:25:08.516 --> 00:25:09.736 A:middle
+undefined behavior that it
+
+00:25:09.736 --> 00:25:11.576 A:middle
+catches include assigned integer
+
+00:25:11.576 --> 00:25:13.366 A:middle
+overflows and tightness match
+
+00:25:13.426 --> 00:25:15.076 A:middle
+bugs, which are also somewhat
+
+00:25:15.076 --> 00:25:16.426 A:middle
+related to security
+
+00:25:16.426 --> 00:25:17.496 A:middle
+vulnerabilities in some
+
+00:25:17.496 --> 00:25:17.976 A:middle
+contexts.
+
+00:25:17.976 --> 00:25:21.846 A:middle
+All of the sanitizers provide
+
+00:25:21.846 --> 00:25:23.136 A:middle
+you with really rich and
+
+00:25:23.136 --> 00:25:25.086 A:middle
+informative diagnostics that
+
+00:25:25.086 --> 00:25:26.936 A:middle
+help you hone in on the root
+
+00:25:26.936 --> 00:25:27.646 A:middle
+cause of a bug.
+
+00:25:28.306 --> 00:25:29.776 A:middle
+You can find a lot of really
+
+00:25:29.776 --> 00:25:30.886 A:middle
+helpful information in the
+
+00:25:30.886 --> 00:25:32.956 A:middle
+Runtime Issue Navigator such as
+
+00:25:32.956 --> 00:25:36.026 A:middle
+stack backtraces at important
+
+00:25:36.026 --> 00:25:39.756 A:middle
+parts during the bug's
+
+00:25:39.926 --> 00:25:40.266 A:middle
+execution.
+
+00:25:40.436 --> 00:25:41.736 A:middle
+So, we recommend turning on the
+
+00:25:41.736 --> 00:25:43.736 A:middle
+sanitizers during development.
+
+00:25:44.066 --> 00:25:45.036 A:middle
+You can do this in the scheme
+
+00:25:45.036 --> 00:25:46.236 A:middle
+editor under the diagnostics
+
+00:25:46.236 --> 00:25:46.486 A:middle
+tab.
+
+00:25:47.636 --> 00:25:48.576 A:middle
+And this is where you can also
+
+00:25:48.576 --> 00:25:50.816 A:middle
+turn it on for running your unit
+
+00:25:50.816 --> 00:25:51.216 A:middle
+tests.
+
+00:25:51.506 --> 00:25:53.356 A:middle
+And remember that the sanitizers
+
+00:25:53.636 --> 00:25:55.386 A:middle
+need good code coverage in order
+
+00:25:55.436 --> 00:25:56.926 A:middle
+to find bugs throughout your
+
+00:25:56.926 --> 00:25:58.126 A:middle
+program, and that's something
+
+00:25:58.126 --> 00:25:59.366 A:middle
+that your unit test can provide.
+
+00:25:59.956 --> 00:26:02.836 A:middle
+You can learn more about the
+
+00:26:02.836 --> 00:26:04.546 A:middle
+sanitizers and other Runtime
+
+00:26:04.546 --> 00:26:05.626 A:middle
+tools that are new this year in
+
+00:26:05.626 --> 00:26:07.686 A:middle
+Xcode at the Finding Bugs Using
+
+00:26:07.686 --> 00:26:09.966 A:middle
+Xcode Runtime Tools talk.
+
+00:26:12.416 --> 00:26:15.756 A:middle
+So, those are five powerful
+
+00:26:15.756 --> 00:26:16.936 A:middle
+tools that you have at your
+
+00:26:16.936 --> 00:26:19.056 A:middle
+disposal to track down undefined
+
+00:26:19.056 --> 00:26:21.116 A:middle
+behavior and address some of the
+
+00:26:21.116 --> 00:26:22.786 A:middle
+security vulnerabilities that
+
+00:26:23.246 --> 00:26:23.886 A:middle
+they may create.
+
+00:26:24.886 --> 00:26:26.026 A:middle
+But before moving on, there's
+
+00:26:26.026 --> 00:26:27.156 A:middle
+one more thing that I wanted to
+
+00:26:27.206 --> 00:26:28.786 A:middle
+talk about, which is the
+
+00:26:28.786 --> 00:26:29.536 A:middle
+language itself.
+
+00:26:29.536 --> 00:26:33.066 A:middle
+So, you can think of your use of
+
+00:26:33.066 --> 00:26:34.736 A:middle
+the language as your first line
+
+00:26:34.736 --> 00:26:36.426 A:middle
+of defense in writing safe and
+
+00:26:36.426 --> 00:26:37.026 A:middle
+secure code.
+
+00:26:37.816 --> 00:26:39.406 A:middle
+And so with that in mind, you
+
+00:26:39.406 --> 00:26:41.126 A:middle
+should prefer the safe
+
+00:26:41.126 --> 00:26:43.076 A:middle
+constructs that your library and
+
+00:26:43.076 --> 00:26:44.186 A:middle
+your language provide to you.
+
+00:26:45.086 --> 00:26:47.246 A:middle
+For instance, automatic
+
+00:26:47.246 --> 00:26:48.566 A:middle
+reference counting in Objective
+
+00:26:48.566 --> 00:26:48.996 A:middle
+C.
+
+00:26:49.396 --> 00:26:53.036 A:middle
+Or smart pointers in C++ free
+
+00:26:53.036 --> 00:26:54.206 A:middle
+you from the burden of having to
+
+00:26:54.206 --> 00:26:56.176 A:middle
+do a lot of the manual memory
+
+00:26:56.176 --> 00:26:57.746 A:middle
+management that results in bugs.
+
+00:26:58.796 --> 00:27:00.956 A:middle
+And if your standard library
+
+00:27:00.956 --> 00:27:02.116 A:middle
+provides you with container
+
+00:27:02.116 --> 00:27:03.906 A:middle
+classes like NSarray from
+
+00:27:03.906 --> 00:27:06.436 A:middle
+foundation, which check their
+
+00:27:06.436 --> 00:27:07.666 A:middle
+bounds automatically, you don't
+
+00:27:07.666 --> 00:27:08.746 A:middle
+have to worry so much about
+
+00:27:08.746 --> 00:27:09.526 A:middle
+buffer overflows.
+
+00:27:10.086 --> 00:27:13.446 A:middle
+But it's just key to understand
+
+00:27:13.446 --> 00:27:14.706 A:middle
+the tradeoffs that your language
+
+00:27:14.706 --> 00:27:16.836 A:middle
+is making when it comes to
+
+00:27:16.836 --> 00:27:17.966 A:middle
+safety and security.
+
+00:27:18.596 --> 00:27:20.316 A:middle
+And when these are very
+
+00:27:20.316 --> 00:27:21.876 A:middle
+important factors in your code,
+
+00:27:22.506 --> 00:27:24.936 A:middle
+consider using SWF, a language
+
+00:27:24.936 --> 00:27:25.956 A:middle
+that was designed from the
+
+00:27:25.956 --> 00:27:28.186 A:middle
+ground up to eliminate entire
+
+00:27:28.186 --> 00:27:30.126 A:middle
+categories of undefined
+
+00:27:30.126 --> 00:27:30.536 A:middle
+behavior.
+
+00:27:31.496 --> 00:27:32.676 A:middle
+And to tell you more about that,
+
+00:27:33.256 --> 00:27:34.086 A:middle
+I'd like to invite up my
+
+00:27:34.086 --> 00:27:35.786 A:middle
+colleague, Anna.
+
+00:27:37.516 --> 00:27:41.566 A:middle
+[ Applause ]
+
+00:27:42.066 --> 00:27:42.796 A:middle
+&gt;&gt; Thank you, Ryan.
+
+00:27:44.066 --> 00:27:46.816 A:middle
+Now let's talk about undefined
+
+00:27:46.876 --> 00:27:49.076 A:middle
+behavior and SWF.
+
+00:27:49.296 --> 00:27:50.446 A:middle
+While you can write code
+
+00:27:50.446 --> 00:27:52.986 A:middle
+fine-tuned for performance in
+
+00:27:52.986 --> 00:27:54.226 A:middle
+SWF, this language makes
+
+00:27:54.226 --> 00:27:55.756 A:middle
+different tradeoffs and was
+
+00:27:55.756 --> 00:27:57.316 A:middle
+designed to be much safer by
+
+00:27:57.316 --> 00:27:57.816 A:middle
+default.
+
+00:27:57.976 --> 00:28:00.056 A:middle
+As you've seen from the previous
+
+00:28:00.056 --> 00:28:02.426 A:middle
+examples, undefined behavior can
+
+00:28:02.506 --> 00:28:04.956 A:middle
+introduce very subtle bugs that
+
+00:28:04.956 --> 00:28:07.186 A:middle
+in turn could lead to security
+
+00:28:07.186 --> 00:28:07.786 A:middle
+exploits.
+
+00:28:08.406 --> 00:28:10.236 A:middle
+And this is simply summarized in
+
+00:28:10.236 --> 00:28:11.586 A:middle
+this code from SWF.org.
+
+00:28:12.276 --> 00:28:14.116 A:middle
+Undefined behavior is the enemy
+
+00:28:14.116 --> 00:28:14.776 A:middle
+of safety.
+
+00:28:16.076 --> 00:28:17.966 A:middle
+Safety in SWF is important on
+
+00:28:17.966 --> 00:28:18.666 A:middle
+many levels.
+
+00:28:19.136 --> 00:28:20.846 A:middle
+Let's see how some of the major
+
+00:28:20.846 --> 00:28:22.606 A:middle
+sources of undefined behavior
+
+00:28:22.896 --> 00:28:24.526 A:middle
+that Ryan and Fred talked about
+
+00:28:24.756 --> 00:28:26.246 A:middle
+are addressed in SWF using
+
+00:28:26.246 --> 00:28:27.156 A:middle
+different techniques.
+
+00:28:27.606 --> 00:28:29.366 A:middle
+The stricter type system gives
+
+00:28:29.366 --> 00:28:31.426 A:middle
+us optional types, which
+
+00:28:31.516 --> 00:28:33.546 A:middle
+statically prevent null point of
+
+00:28:33.546 --> 00:28:34.426 A:middle
+dereferences.
+
+00:28:35.216 --> 00:28:36.606 A:middle
+Use of an initialized variables
+
+00:28:36.606 --> 00:28:38.746 A:middle
+is eliminated by guarantee of
+
+00:28:38.746 --> 00:28:40.216 A:middle
+definite initialization.
+
+00:28:40.816 --> 00:28:42.466 A:middle
+Buffer and integer overflows are
+
+00:28:42.466 --> 00:28:44.776 A:middle
+checked at runtime and just like
+
+00:28:44.776 --> 00:28:46.586 A:middle
+in Objective C, automatic
+
+00:28:46.586 --> 00:28:48.336 A:middle
+reference counting is the SWF
+
+00:28:48.336 --> 00:28:51.166 A:middle
+answer to use after freeze as it
+
+00:28:51.296 --> 00:28:52.736 A:middle
+allows the developer not to
+
+00:28:52.736 --> 00:28:54.106 A:middle
+focus on manual memory
+
+00:28:54.106 --> 00:28:54.946 A:middle
+management issues.
+
+00:28:55.816 --> 00:28:57.336 A:middle
+So, let's look into some of this
+
+00:28:57.336 --> 00:28:58.026 A:middle
+in more detail.
+
+00:28:59.546 --> 00:29:01.876 A:middle
+Optional types is SWF answer to
+
+00:29:01.876 --> 00:29:03.186 A:middle
+null point of dereferences.
+
+00:29:03.556 --> 00:29:05.396 A:middle
+SWF has two kinds of types.
+
+00:29:05.986 --> 00:29:07.726 A:middle
+Here we have a nonoptional cake
+
+00:29:08.376 --> 00:29:09.806 A:middle
+and an optional cake, which you
+
+00:29:09.806 --> 00:29:11.636 A:middle
+can think of as a box that may
+
+00:29:11.636 --> 00:29:13.246 A:middle
+have a cake in it or might be
+
+00:29:13.246 --> 00:29:13.656 A:middle
+empty.
+
+00:29:14.566 --> 00:29:16.286 A:middle
+Now, as SWF tools, I can assure
+
+00:29:16.286 --> 00:29:18.176 A:middle
+you a bug that may have a cake
+
+00:29:18.176 --> 00:29:20.196 A:middle
+in it is definitely not the same
+
+00:29:20.196 --> 00:29:22.106 A:middle
+thing as this delicious triple
+
+00:29:22.106 --> 00:29:22.926 A:middle
+chocolate delight.
+
+00:29:23.376 --> 00:29:26.676 A:middle
+So, before using a value of
+
+00:29:26.676 --> 00:29:28.136 A:middle
+optional type, you need to check
+
+00:29:28.136 --> 00:29:28.396 A:middle
+for it.
+
+00:29:29.106 --> 00:29:30.346 A:middle
+Suppose we have a function
+
+00:29:30.346 --> 00:29:32.656 A:middle
+called receive package that is
+
+00:29:32.656 --> 00:29:34.356 A:middle
+declared to return an optional
+
+00:29:34.356 --> 00:29:34.966 A:middle
+cake type.
+
+00:29:36.126 --> 00:29:37.966 A:middle
+Don't jump for joy unless you
+
+00:29:37.966 --> 00:29:40.526 A:middle
+check and know for sure that it
+
+00:29:40.526 --> 00:29:41.636 A:middle
+will not return nil.
+
+00:29:42.436 --> 00:29:44.000 A:middle
+It's possible the cake is a lie.
+
+00:29:47.536 --> 00:29:49.636 A:middle
+Note that SWF's syntax provides
+
+00:29:49.636 --> 00:29:51.466 A:middle
+affordances for easy checking of
+
+00:29:51.466 --> 00:29:53.796 A:middle
+optional types, specifically to
+
+00:29:53.796 --> 00:29:55.356 A:middle
+lessen the burden of using this
+
+00:29:55.356 --> 00:29:56.506 A:middle
+types on the developer.
+
+00:29:57.846 --> 00:30:00.256 A:middle
+Another important reminder is
+
+00:30:00.256 --> 00:30:01.776 A:middle
+that you should not abuse the
+
+00:30:01.776 --> 00:30:04.246 A:middle
+fourth unwrap operator, which
+
+00:30:04.246 --> 00:30:05.376 A:middle
+will stop execution of the
+
+00:30:05.376 --> 00:30:06.726 A:middle
+program if the value is nil.
+
+00:30:07.556 --> 00:30:09.376 A:middle
+If the API has been declared to
+
+00:30:09.376 --> 00:30:11.306 A:middle
+return an optional, it means
+
+00:30:11.586 --> 00:30:12.966 A:middle
+that it might return nil so
+
+00:30:12.966 --> 00:30:14.656 A:middle
+check for it.
+
+00:30:14.946 --> 00:30:16.336 A:middle
+Now, the fourth unwrap should
+
+00:30:16.336 --> 00:30:18.716 A:middle
+only be used in rare cases when
+
+00:30:18.716 --> 00:30:20.766 A:middle
+you, the developer, know for
+
+00:30:20.766 --> 00:30:22.266 A:middle
+sure and can guarantee that the
+
+00:30:22.266 --> 00:30:23.616 A:middle
+return value is never nil.
+
+00:30:23.906 --> 00:30:25.416 A:middle
+However, that cannot be encoded
+
+00:30:25.416 --> 00:30:26.356 A:middle
+in the type system.
+
+00:30:27.076 --> 00:30:28.436 A:middle
+One example of that is when
+
+00:30:28.436 --> 00:30:29.886 A:middle
+you're loading an image asset
+
+00:30:29.956 --> 00:30:30.906 A:middle
+from the app bundle.
+
+00:30:33.016 --> 00:30:34.866 A:middle
+SWF also has a notion of
+
+00:30:34.866 --> 00:30:36.796 A:middle
+implicitly unwrapped optional
+
+00:30:36.796 --> 00:30:37.086 A:middle
+type.
+
+00:30:37.836 --> 00:30:39.576 A:middle
+This type is similar to
+
+00:30:39.576 --> 00:30:40.216 A:middle
+optional.
+
+00:30:40.426 --> 00:30:41.966 A:middle
+However, here the compiler does
+
+00:30:41.966 --> 00:30:45.996 A:middle
+not enforce that the values are
+
+00:30:46.076 --> 00:30:48.736 A:middle
+used before, the values are
+
+00:30:48.736 --> 00:30:50.066 A:middle
+checked before use, making no
+
+00:30:50.066 --> 00:30:51.226 A:middle
+compile time guarantees.
+
+00:30:52.736 --> 00:30:54.266 A:middle
+However, note that this type is
+
+00:30:54.266 --> 00:30:55.836 A:middle
+still much safer than the C
+
+00:30:55.836 --> 00:30:58.746 A:middle
+pointer type because using it is
+
+00:30:58.746 --> 00:30:59.776 A:middle
+defined behavior.
+
+00:31:00.536 --> 00:31:02.016 A:middle
+If the value's nil, the program
+
+00:31:02.016 --> 00:31:04.216 A:middle
+is guaranteed to stop execution,
+
+00:31:04.766 --> 00:31:07.306 A:middle
+making this model much more
+
+00:31:07.306 --> 00:31:07.926 A:middle
+secure.
+
+00:31:08.496 --> 00:31:11.216 A:middle
+Now, this type should be used
+
+00:31:11.276 --> 00:31:12.216 A:middle
+for properties that are
+
+00:31:12.216 --> 00:31:13.606 A:middle
+guaranteed to have a value.
+
+00:31:13.976 --> 00:31:15.096 A:middle
+However, they cannot be
+
+00:31:15.096 --> 00:31:16.536 A:middle
+initialized in the constructor.
+
+00:31:17.266 --> 00:31:18.796 A:middle
+Some of you might be using it
+
+00:31:18.796 --> 00:31:19.906 A:middle
+for IB outlets.
+
+00:31:20.766 --> 00:31:22.656 A:middle
+However, another source of
+
+00:31:22.656 --> 00:31:24.166 A:middle
+implicitly unwrapped optionals
+
+00:31:24.436 --> 00:31:26.306 A:middle
+are pointered types coming from
+
+00:31:26.306 --> 00:31:28.076 A:middle
+Objective C and C APIs.
+
+00:31:29.056 --> 00:31:31.096 A:middle
+And this source subverts the
+
+00:31:31.096 --> 00:31:32.786 A:middle
+type safety of SWF optionals.
+
+00:31:33.136 --> 00:31:34.206 A:middle
+So, what can we do here?
+
+00:31:34.816 --> 00:31:37.506 A:middle
+At the time SWF was released,
+
+00:31:37.506 --> 00:31:38.936 A:middle
+we've also added nullability
+
+00:31:38.936 --> 00:31:40.686 A:middle
+annotations to the Apple LLDM
+
+00:31:40.686 --> 00:31:41.246 A:middle
+compiler.
+
+00:31:41.856 --> 00:31:43.946 A:middle
+This annotation in C languages
+
+00:31:44.246 --> 00:31:46.536 A:middle
+communicate the intent of the
+
+00:31:46.536 --> 00:31:48.096 A:middle
+APIs but are also used to
+
+00:31:48.096 --> 00:31:49.806 A:middle
+enhance their SWF interfaces.
+
+00:31:50.536 --> 00:31:52.626 A:middle
+They allow us to map the unsafe
+
+00:31:52.656 --> 00:31:54.206 A:middle
+C pointers onto the optional
+
+00:31:54.206 --> 00:31:54.636 A:middle
+types.
+
+00:31:55.406 --> 00:31:56.716 A:middle
+Let's look at this example.
+
+00:31:57.306 --> 00:31:58.936 A:middle
+Here we have ancestor shared
+
+00:31:58.966 --> 00:32:00.376 A:middle
+with view method on NSview.
+
+00:32:00.376 --> 00:32:02.936 A:middle
+As you can see here, it takes a
+
+00:32:02.936 --> 00:32:04.836 A:middle
+non-null argument because it
+
+00:32:04.836 --> 00:32:06.766 A:middle
+does not make sense to look for
+
+00:32:06.766 --> 00:32:09.166 A:middle
+an ancestor between a nil and a
+
+00:32:09.166 --> 00:32:09.626 A:middle
+value.
+
+00:32:10.416 --> 00:32:11.956 A:middle
+On the other hand, its return
+
+00:32:11.956 --> 00:32:13.496 A:middle
+value is nullable because it's
+
+00:32:13.496 --> 00:32:15.416 A:middle
+possible the two views do not
+
+00:32:15.416 --> 00:32:16.646 A:middle
+have the same ancestor.
+
+00:32:18.526 --> 00:32:20.676 A:middle
+Now, as you can see here,
+
+00:32:20.846 --> 00:32:22.626 A:middle
+nullability directly maps onto
+
+00:32:22.626 --> 00:32:23.706 A:middle
+the SWF interface.
+
+00:32:24.066 --> 00:32:25.276 A:middle
+Non-null maps into the
+
+00:32:25.276 --> 00:32:27.326 A:middle
+nonoptional value and nullable
+
+00:32:27.326 --> 00:32:29.416 A:middle
+is mapped to the optional value.
+
+00:32:29.936 --> 00:32:32.296 A:middle
+Good news is that most Apple
+
+00:32:32.296 --> 00:32:34.606 A:middle
+APIs have been audited and
+
+00:32:34.606 --> 00:32:35.956 A:middle
+annotated with nullability
+
+00:32:35.956 --> 00:32:36.626 A:middle
+annotations.
+
+00:32:37.666 --> 00:32:40.076 A:middle
+However, if you have APIs or
+
+00:32:40.076 --> 00:32:42.046 A:middle
+just C or Objective C code that
+
+00:32:42.046 --> 00:32:44.196 A:middle
+interoperates with SWF, you too
+
+00:32:44.196 --> 00:32:45.216 A:middle
+can benefit from these
+
+00:32:45.216 --> 00:32:45.906 A:middle
+annotations.
+
+00:32:46.846 --> 00:32:48.716 A:middle
+In addition, you can use tools
+
+00:32:48.966 --> 00:32:50.026 A:middle
+such as the [inaudible] Static
+
+00:32:50.026 --> 00:32:51.996 A:middle
+Analyzer, Warnings, and
+
+00:32:51.996 --> 00:32:53.546 A:middle
+Undefined Behavior Sanitizer to
+
+00:32:53.546 --> 00:32:55.746 A:middle
+find inconsistencies of how this
+
+00:32:55.746 --> 00:32:57.226 A:middle
+these annotations are applied on
+
+00:32:57.226 --> 00:32:59.106 A:middle
+your C code or Objective C code.
+
+00:32:59.766 --> 00:33:01.706 A:middle
+Now, I really, really like this
+
+00:33:01.706 --> 00:33:03.626 A:middle
+example because it highlights
+
+00:33:03.626 --> 00:33:05.256 A:middle
+how the improvements to the LLDM
+
+00:33:05.256 --> 00:33:07.716 A:middle
+compiler, the SWF compiler, and
+
+00:33:07.716 --> 00:33:09.796 A:middle
+the frameworks work all together
+
+00:33:09.796 --> 00:33:12.000 A:middle
+to benefit the whole ecosystem.
+
+00:33:15.126 --> 00:33:17.106 A:middle
+SWF definite initialization is a
+
+00:33:17.106 --> 00:33:18.906 A:middle
+diagnostic feature based on deep
+
+00:33:18.906 --> 00:33:19.966 A:middle
+code analysis.
+
+00:33:20.746 --> 00:33:23.226 A:middle
+The SWF compiler guarantees that
+
+00:33:23.226 --> 00:33:26.276 A:middle
+values are initialized before
+
+00:33:26.276 --> 00:33:27.266 A:middle
+they are being used.
+
+00:33:28.236 --> 00:33:30.206 A:middle
+And this checking is done along
+
+00:33:30.206 --> 00:33:32.166 A:middle
+all branches through your
+
+00:33:32.166 --> 00:33:32.606 A:middle
+program.
+
+00:33:33.096 --> 00:33:34.406 A:middle
+Let's look at this example.
+
+00:33:34.976 --> 00:33:36.746 A:middle
+Here, the compiler will check
+
+00:33:36.786 --> 00:33:39.246 A:middle
+that my instance is initialized
+
+00:33:39.586 --> 00:33:42.276 A:middle
+on both the if and the else
+
+00:33:42.736 --> 00:33:44.446 A:middle
+branch of this code snippet
+
+00:33:44.736 --> 00:33:47.056 A:middle
+before it allows you to go on
+
+00:33:47.056 --> 00:33:49.646 A:middle
+and use this value.
+
+00:33:49.646 --> 00:33:51.246 A:middle
+Now, let's talk about buffer and
+
+00:33:51.246 --> 00:33:52.886 A:middle
+integer overflows, which are the
+
+00:33:52.886 --> 00:33:55.196 A:middle
+biggest sources of security
+
+00:33:55.196 --> 00:33:55.506 A:middle
+issues.
+
+00:33:56.526 --> 00:33:58.166 A:middle
+Overflows only raise an integer
+
+00:33:58.286 --> 00:34:00.596 A:middle
+and SWF terminate the execution
+
+00:34:00.596 --> 00:34:01.246 A:middle
+of the program.
+
+00:34:02.826 --> 00:34:04.126 A:middle
+You might ask this question.
+
+00:34:04.346 --> 00:34:05.866 A:middle
+Why is Runtime checking good?
+
+00:34:05.946 --> 00:34:07.926 A:middle
+Well, while your program will
+
+00:34:07.926 --> 00:34:10.766 A:middle
+still stop if you have a bug and
+
+00:34:10.766 --> 00:34:12.706 A:middle
+your buffer overflows, this
+
+00:34:12.706 --> 00:34:14.186 A:middle
+behavior is much better than the
+
+00:34:14.186 --> 00:34:14.816 A:middle
+alternative.
+
+00:34:15.496 --> 00:34:17.516 A:middle
+The behavior in SWF is much more
+
+00:34:17.516 --> 00:34:20.006 A:middle
+consistent and debuggable than
+
+00:34:20.006 --> 00:34:21.316 A:middle
+what you get in C and most
+
+00:34:21.316 --> 00:34:23.376 A:middle
+importantly, it gives very high
+
+00:34:23.376 --> 00:34:24.876 A:middle
+security guarantees.
+
+00:34:25.476 --> 00:34:26.946 A:middle
+The buffer overflow is not
+
+00:34:26.946 --> 00:34:27.746 A:middle
+exploitable.
+
+00:34:28.536 --> 00:34:30.096 A:middle
+It will not lead to the attacker
+
+00:34:30.096 --> 00:34:31.946 A:middle
+getting execution control of
+
+00:34:31.946 --> 00:34:33.256 A:middle
+your program.
+
+00:34:34.776 --> 00:34:36.236 A:middle
+Note that if you need to use
+
+00:34:36.236 --> 00:34:38.006 A:middle
+integer-wrapping behavior, you
+
+00:34:38.006 --> 00:34:41.066 A:middle
+can still do it using overflow
+
+00:34:41.066 --> 00:34:43.356 A:middle
+operators, which are also safe
+
+00:34:43.356 --> 00:34:44.806 A:middle
+and just perform modular
+
+00:34:44.806 --> 00:34:45.256 A:middle
+arithmetic.
+
+00:34:45.696 --> 00:34:49.926 A:middle
+Now, a question a lot of you
+
+00:34:49.926 --> 00:34:51.526 A:middle
+might be thinking about now is
+
+00:34:51.526 --> 00:34:53.586 A:middle
+does undefined behavior exist in
+
+00:34:53.586 --> 00:34:54.000 A:middle
+SWF?
+
+00:34:55.276 --> 00:34:57.086 A:middle
+And the answer is yes, but this
+
+00:34:57.086 --> 00:35:00.216 A:middle
+case is much rarer and often we
+
+00:35:00.216 --> 00:35:01.876 A:middle
+know that we are opting into
+
+00:35:01.876 --> 00:35:02.876 A:middle
+unsafe behavior.
+
+00:35:03.396 --> 00:35:06.676 A:middle
+So, for example we needed C
+
+00:35:06.676 --> 00:35:07.656 A:middle
+interoperability.
+
+00:35:07.656 --> 00:35:09.226 A:middle
+So, we needed to traffic in
+
+00:35:09.226 --> 00:35:09.906 A:middle
+these types.
+
+00:35:10.306 --> 00:35:12.276 A:middle
+Unsafe pointer, unsafe mutable
+
+00:35:12.276 --> 00:35:13.476 A:middle
+raw buffer pointer.
+
+00:35:14.256 --> 00:35:15.946 A:middle
+Note that you can tell that
+
+00:35:15.946 --> 00:35:17.726 A:middle
+these types are unsafe by just
+
+00:35:17.726 --> 00:35:18.786 A:middle
+looking at their names.
+
+00:35:18.786 --> 00:35:22.336 A:middle
+So, if your applications use C
+
+00:35:22.546 --> 00:35:24.746 A:middle
+or Objective C or otherwise
+
+00:35:24.746 --> 00:35:25.916 A:middle
+they're using these types, I
+
+00:35:25.916 --> 00:35:27.296 A:middle
+highly recommend using Address
+
+00:35:27.296 --> 00:35:28.336 A:middle
+Sanitizer too.
+
+00:35:28.576 --> 00:35:30.926 A:middle
+It will find memory corruptions
+
+00:35:31.226 --> 00:35:33.296 A:middle
+that this unsafety could bring
+
+00:35:33.296 --> 00:35:34.176 A:middle
+to your code.
+
+00:35:34.436 --> 00:35:38.266 A:middle
+Now, another example of unsafety
+
+00:35:38.326 --> 00:35:39.566 A:middle
+in SWF are simultaneous
+
+00:35:39.606 --> 00:35:40.366 A:middle
+accesses.
+
+00:35:40.956 --> 00:35:42.676 A:middle
+And SWF is nailing the model
+
+00:35:42.676 --> 00:35:44.006 A:middle
+down in this release with
+
+00:35:44.006 --> 00:35:45.666 A:middle
+enforcement of exclusive memory
+
+00:35:45.666 --> 00:35:46.136 A:middle
+access.
+
+00:35:46.846 --> 00:35:48.126 A:middle
+Let's look at a very simple
+
+00:35:48.126 --> 00:35:49.566 A:middle
+example to understand what this
+
+00:35:49.566 --> 00:35:50.276 A:middle
+is all about.
+
+00:35:50.276 --> 00:35:54.006 A:middle
+So, here we have a function that
+
+00:35:54.006 --> 00:35:55.726 A:middle
+takes two in out arguments.
+
+00:35:56.306 --> 00:35:57.676 A:middle
+In out means that the function
+
+00:35:57.676 --> 00:35:58.886 A:middle
+may change the value of these
+
+00:35:58.886 --> 00:35:59.446 A:middle
+arguments.
+
+00:36:00.216 --> 00:36:02.206 A:middle
+Calling this function and
+
+00:36:02.206 --> 00:36:04.066 A:middle
+passing it two values that point
+
+00:36:04.066 --> 00:36:06.436 A:middle
+to the same memory could result
+
+00:36:06.436 --> 00:36:07.826 A:middle
+in unpredictable behavior.
+
+00:36:09.176 --> 00:36:10.846 A:middle
+For those of you who are
+
+00:36:10.846 --> 00:36:12.396 A:middle
+familiar with restrictive work
+
+00:36:12.396 --> 00:36:14.266 A:middle
+in C, this is very similar.
+
+00:36:14.446 --> 00:36:16.666 A:middle
+But in SWF, this behavior is on
+
+00:36:16.666 --> 00:36:17.256 A:middle
+by default.
+
+00:36:17.736 --> 00:36:20.646 A:middle
+Now, this one, this is a very
+
+00:36:20.646 --> 00:36:23.116 A:middle
+simple and abstract example of
+
+00:36:23.116 --> 00:36:23.716 A:middle
+this problem.
+
+00:36:23.716 --> 00:36:25.046 A:middle
+However, I highly encourage you
+
+00:36:25.046 --> 00:36:26.716 A:middle
+to watch Watch New in SWF talk
+
+00:36:26.716 --> 00:36:28.596 A:middle
+for more examples of how this
+
+00:36:28.596 --> 00:36:30.706 A:middle
+could be visible in your code
+
+00:36:30.706 --> 00:36:32.766 A:middle
+and how it relates to your code.
+
+00:36:33.716 --> 00:36:36.206 A:middle
+So, to address this problem, SWF
+
+00:36:36.396 --> 00:36:38.336 A:middle
+could have chose to declare this
+
+00:36:38.336 --> 00:36:39.986 A:middle
+to be undefined behavior.
+
+00:36:41.036 --> 00:36:43.716 A:middle
+However, instead it decided to
+
+00:36:43.716 --> 00:36:44.766 A:middle
+follow its mantra, that
+
+00:36:44.766 --> 00:36:46.376 A:middle
+undefined behavior is the enemy
+
+00:36:46.376 --> 00:36:47.546 A:middle
+of safety and implement
+
+00:36:47.546 --> 00:36:49.246 A:middle
+solutions in the language that
+
+00:36:49.276 --> 00:36:50.976 A:middle
+provide stronger guarantees.
+
+00:36:51.456 --> 00:36:54.506 A:middle
+Coming up with the right
+
+00:36:54.506 --> 00:36:55.736 A:middle
+solution here is a balancing
+
+00:36:55.736 --> 00:36:55.986 A:middle
+act.
+
+00:36:56.436 --> 00:36:58.036 A:middle
+It's best to diagnose everything
+
+00:36:58.036 --> 00:37:00.156 A:middle
+statically but often that's not
+
+00:37:00.156 --> 00:37:01.606 A:middle
+possible without making the type
+
+00:37:01.606 --> 00:37:03.436 A:middle
+system too difficult to use.
+
+00:37:04.126 --> 00:37:05.506 A:middle
+Another solution are Runtime
+
+00:37:05.506 --> 00:37:05.976 A:middle
+checks.
+
+00:37:05.976 --> 00:37:07.986 A:middle
+However, the language Runtime
+
+00:37:07.986 --> 00:37:09.146 A:middle
+has to be performant.
+
+00:37:09.716 --> 00:37:10.836 A:middle
+And efficient.
+
+00:37:10.976 --> 00:37:12.576 A:middle
+And the overhead of any extra
+
+00:37:12.576 --> 00:37:13.906 A:middle
+checking cannot be too high.
+
+00:37:14.446 --> 00:37:17.366 A:middle
+So, the solution that the SWF
+
+00:37:17.366 --> 00:37:19.626 A:middle
+Project came up with consists of
+
+00:37:19.756 --> 00:37:20.986 A:middle
+tightening the language to
+
+00:37:20.986 --> 00:37:22.876 A:middle
+follow a slightly stricter rule
+
+00:37:23.576 --> 00:37:24.856 A:middle
+and using a combination of
+
+00:37:24.856 --> 00:37:27.176 A:middle
+static and dynamic checks to
+
+00:37:27.176 --> 00:37:29.876 A:middle
+ensure that unintended sharing
+
+00:37:29.876 --> 00:37:31.436 A:middle
+does not happen within the same
+
+00:37:31.866 --> 00:37:32.000 A:middle
+thread.
+
+00:37:34.296 --> 00:37:35.666 A:middle
+Unfortunately, checking for
+
+00:37:35.666 --> 00:37:37.606 A:middle
+exclusivity of accesses across
+
+00:37:37.606 --> 00:37:39.566 A:middle
+threads is too expensive.
+
+00:37:40.146 --> 00:37:41.276 A:middle
+And the tradeoff that was made
+
+00:37:41.276 --> 00:37:43.196 A:middle
+here was to rely on tools,
+
+00:37:43.586 --> 00:37:45.116 A:middle
+specifically Thread Sanitizer,
+
+00:37:45.396 --> 00:37:47.306 A:middle
+to catch violations involving
+
+00:37:47.306 --> 00:37:50.326 A:middle
+accesses from multiple threads.
+
+00:37:50.496 --> 00:37:51.736 A:middle
+In general, using Thread
+
+00:37:51.736 --> 00:37:53.366 A:middle
+Sanitizer is very beneficial for
+
+00:37:53.366 --> 00:37:55.346 A:middle
+your SWF code because data races
+
+00:37:55.346 --> 00:37:57.686 A:middle
+and access races are undefined
+
+00:37:57.686 --> 00:37:59.406 A:middle
+behavior in SWF and they could
+
+00:37:59.406 --> 00:38:00.596 A:middle
+lead to memory corruptions.
+
+00:38:01.196 --> 00:38:02.846 A:middle
+For more information about this
+
+00:38:02.846 --> 00:38:05.106 A:middle
+tool, watch the Finding Bugs
+
+00:38:05.316 --> 00:38:06.986 A:middle
+Using Xcode Runtime Tools talk.
+
+00:38:07.386 --> 00:38:10.626 A:middle
+Now, safety is a design choice
+
+00:38:10.626 --> 00:38:11.156 A:middle
+in SWF.
+
+00:38:11.396 --> 00:38:12.716 A:middle
+The language provides many
+
+00:38:12.716 --> 00:38:14.426 A:middle
+solutions to avoid undefined
+
+00:38:14.426 --> 00:38:16.466 A:middle
+behavior and prevent developers
+
+00:38:16.466 --> 00:38:18.836 A:middle
+from introducing subtle and
+
+00:38:18.836 --> 00:38:19.906 A:middle
+exploitable bugs.
+
+00:38:20.596 --> 00:38:24.266 A:middle
+Today we talked about undefined
+
+00:38:24.266 --> 00:38:25.906 A:middle
+behavior and how different
+
+00:38:25.906 --> 00:38:26.986 A:middle
+languages approach it.
+
+00:38:27.536 --> 00:38:29.866 A:middle
+C languages use undefined
+
+00:38:30.036 --> 00:38:31.916 A:middle
+behavior for portability and
+
+00:38:31.916 --> 00:38:32.806 A:middle
+optimizations.
+
+00:38:33.436 --> 00:38:34.736 A:middle
+However, we've seen that that
+
+00:38:34.736 --> 00:38:36.486 A:middle
+could lead to very subtle and
+
+00:38:36.486 --> 00:38:38.306 A:middle
+hard to debug bugs and even
+
+00:38:38.306 --> 00:38:39.806 A:middle
+introduce security exploits.
+
+00:38:40.366 --> 00:38:42.386 A:middle
+SWF chose to follow a different
+
+00:38:42.606 --> 00:38:44.116 A:middle
+path and was designed to be
+
+00:38:44.116 --> 00:38:45.176 A:middle
+safer by default.
+
+00:38:46.596 --> 00:38:48.036 A:middle
+Finally, regardless of your
+
+00:38:48.036 --> 00:38:49.646 A:middle
+language of choice, use all the
+
+00:38:49.646 --> 00:38:51.156 A:middle
+tools at your disposal as part
+
+00:38:51.156 --> 00:38:52.516 A:middle
+of your app release and testing
+
+00:38:52.516 --> 00:38:52.946 A:middle
+process.
+
+00:38:53.416 --> 00:38:55.076 A:middle
+That will make your apps more
+
+00:38:55.076 --> 00:38:57.000 A:middle
+secure and robust.
+
+00:39:00.086 --> 00:39:01.136 A:middle
+Here are some of the related
+
+00:39:01.136 --> 00:39:02.226 A:middle
+sessions that we've mentioned
+
+00:39:02.226 --> 00:39:02.636 A:middle
+today.
+
+00:39:03.176 --> 00:39:04.896 A:middle
+Thank you very much and enjoy
+
+00:39:04.896 --> 00:39:06.660 A:middle
+the rest of your day.
+
+00:39:07.516 --> 00:39:10.500 A:middle
+[ Applause ]

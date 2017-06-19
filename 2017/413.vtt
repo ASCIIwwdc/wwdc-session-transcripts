@@ -1,0 +1,3319 @@
+WEBVTT
+
+00:00:21.056 --> 00:00:21.976 A:middle
+&gt;&gt; Hello everybody.
+
+00:00:22.516 --> 00:00:26.596 A:middle
+[ Applause ]
+
+00:00:27.096 --> 00:00:27.916 A:middle
+Thanks for coming out this
+
+00:00:27.916 --> 00:00:28.366 A:middle
+morning.
+
+00:00:28.806 --> 00:00:29.956 A:middle
+I'm Louis Gerbarg.
+
+00:00:29.956 --> 00:00:31.626 A:middle
+I work on the dyld Team, and
+
+00:00:31.926 --> 00:00:33.066 A:middle
+today we're going to talk about
+
+00:00:33.066 --> 00:00:34.896 A:middle
+App Startup, Past, Present and
+
+00:00:34.896 --> 00:00:35.296 A:middle
+Future.
+
+00:00:36.446 --> 00:00:37.676 A:middle
+So we got a lot to go through,
+
+00:00:37.676 --> 00:00:38.596 A:middle
+so I'm just going to get into
+
+00:00:38.596 --> 00:00:38.716 A:middle
+it.
+
+00:00:39.796 --> 00:00:40.666 A:middle
+So first off I want to do an
+
+00:00:40.666 --> 00:00:41.566 A:middle
+overview of what we're going to
+
+00:00:41.566 --> 00:00:42.426 A:middle
+be talking about today.
+
+00:00:43.506 --> 00:00:46.346 A:middle
+So first we're going to review
+
+00:00:46.346 --> 00:00:47.856 A:middle
+some advice we gave from last
+
+00:00:47.856 --> 00:00:48.116 A:middle
+year.
+
+00:00:49.186 --> 00:00:50.246 A:middle
+Then I want to talk about some
+
+00:00:50.246 --> 00:00:52.126 A:middle
+new tooling we've developed to
+
+00:00:52.126 --> 00:00:53.816 A:middle
+make finding certain types of
+
+00:00:53.816 --> 00:00:55.316 A:middle
+app startup time problems
+
+00:00:55.316 --> 00:00:55.716 A:middle
+easier.
+
+00:00:56.846 --> 00:00:58.396 A:middle
+After that I want to take a side
+
+00:00:58.396 --> 00:00:59.946 A:middle
+tour into a brief history of
+
+00:00:59.946 --> 00:01:02.766 A:middle
+dyld on our platforms, and then
+
+00:01:02.766 --> 00:01:03.976 A:middle
+I want to discuss the all new
+
+00:01:03.976 --> 00:01:06.546 A:middle
+dyld that we're going to be
+
+00:01:06.796 --> 00:01:08.656 A:middle
+shipping in macOS High Sierra
+
+00:01:08.656 --> 00:01:10.216 A:middle
+and iOS 11.
+
+00:01:10.216 --> 00:01:11.896 A:middle
+And then finally, I want to talk
+
+00:01:11.896 --> 00:01:13.476 A:middle
+about best practices for this
+
+00:01:13.476 --> 00:01:15.966 A:middle
+new dyld.
+
+00:01:16.096 --> 00:01:18.966 A:middle
+So before that I just want to do
+
+00:01:18.966 --> 00:01:20.176 A:middle
+a little bit of bookkeeping.
+
+00:01:21.616 --> 00:01:23.086 A:middle
+So first off, we want your
+
+00:01:23.086 --> 00:01:23.796 A:middle
+feedback.
+
+00:01:24.206 --> 00:01:27.326 A:middle
+So if you have anything you want
+
+00:01:27.326 --> 00:01:28.606 A:middle
+to tell us, please file bugs
+
+00:01:28.606 --> 00:01:30.676 A:middle
+with the title DYLD USAGE, and
+
+00:01:30.676 --> 00:01:31.746 A:middle
+hopefully they will get back to
+
+00:01:31.746 --> 00:01:32.056 A:middle
+us.
+
+00:01:32.056 --> 00:01:35.296 A:middle
+And now I want to talk about
+
+00:01:35.296 --> 00:01:36.396 A:middle
+some terminology that I'm going
+
+00:01:36.396 --> 00:01:37.356 A:middle
+to use in the rest of this talk.
+
+00:01:38.776 --> 00:01:41.946 A:middle
+So first off, what does startup
+
+00:01:41.946 --> 00:01:42.706 A:middle
+time mean?
+
+00:01:43.816 --> 00:01:44.916 A:middle
+And startup time for the
+
+00:01:44.916 --> 00:01:47.676 A:middle
+purposes of this talk means time
+
+00:01:47.676 --> 00:01:49.446 A:middle
+spent before main.
+
+00:01:49.836 --> 00:01:52.396 A:middle
+Now, if you are writing an app,
+
+00:01:52.396 --> 00:01:53.676 A:middle
+you have to do more than that.
+
+00:01:53.676 --> 00:01:55.146 A:middle
+After that happens, there will
+
+00:01:55.146 --> 00:01:56.536 A:middle
+be nib loading and other things
+
+00:01:56.536 --> 00:01:58.596 A:middle
+like that and you have codes to
+
+00:01:58.596 --> 00:02:00.736 A:middle
+run after you -- in UI
+
+00:02:00.736 --> 00:02:02.086 A:middle
+application delegates and what
+
+00:02:02.806 --> 00:02:04.316 A:middle
+not, but you have more
+
+00:02:04.316 --> 00:02:05.836 A:middle
+visibility into that and there
+
+00:02:05.836 --> 00:02:07.446 A:middle
+are many other talks about that.
+
+00:02:07.596 --> 00:02:08.796 A:middle
+Today we just want to talk about
+
+00:02:08.796 --> 00:02:09.736 A:middle
+what happens before your main
+
+00:02:09.736 --> 00:02:11.056 A:middle
+executes and how you can speed
+
+00:02:11.056 --> 00:02:11.356 A:middle
+that up.
+
+00:02:12.786 --> 00:02:15.356 A:middle
+Additionally, I want to define a
+
+00:02:15.356 --> 00:02:16.736 A:middle
+launch closure, and this is a
+
+00:02:16.736 --> 00:02:17.496 A:middle
+new term.
+
+00:02:18.076 --> 00:02:21.046 A:middle
+And a launch closure is all of
+
+00:02:21.046 --> 00:02:22.226 A:middle
+the information necessary to
+
+00:02:22.226 --> 00:02:23.356 A:middle
+launch your application.
+
+00:02:23.666 --> 00:02:25.556 A:middle
+So what dylibs it uses, what the
+
+00:02:25.596 --> 00:02:27.296 A:middle
+offsets in them are for various
+
+00:02:27.296 --> 00:02:28.716 A:middle
+symbols, where their code
+
+00:02:28.716 --> 00:02:29.436 A:middle
+signatures are.
+
+00:02:30.656 --> 00:02:33.206 A:middle
+And with that, let's go into the
+
+00:02:33.206 --> 00:02:35.446 A:middle
+main body of the talk.
+
+00:02:35.676 --> 00:02:39.386 A:middle
+So last year I said do less, and
+
+00:02:39.386 --> 00:02:40.386 A:middle
+I'm going to say that again this
+
+00:02:40.386 --> 00:02:41.376 A:middle
+year and I'm always going to say
+
+00:02:41.376 --> 00:02:43.576 A:middle
+that because the less you do,
+
+00:02:44.296 --> 00:02:45.546 A:middle
+the faster we can launch.
+
+00:02:45.796 --> 00:02:47.416 A:middle
+And no matter how much we speed
+
+00:02:47.416 --> 00:02:49.116 A:middle
+things up, if we have less work,
+
+00:02:49.586 --> 00:02:50.586 A:middle
+it's going to go faster.
+
+00:02:51.766 --> 00:02:53.056 A:middle
+And the advice is basically the
+
+00:02:53.056 --> 00:02:53.496 A:middle
+same.
+
+00:02:54.646 --> 00:02:57.366 A:middle
+You should use fewer dylibs, if
+
+00:02:57.366 --> 00:02:59.146 A:middle
+you can, you should embed fewer
+
+00:02:59.146 --> 00:02:59.626 A:middle
+dylibs.
+
+00:02:59.846 --> 00:03:01.716 A:middle
+System ones are better in
+
+00:03:01.716 --> 00:03:03.056 A:middle
+certain ways from a time
+
+00:03:03.056 --> 00:03:03.856 A:middle
+perspective, and we'll go into
+
+00:03:03.856 --> 00:03:04.056 A:middle
+that.
+
+00:03:05.506 --> 00:03:06.896 A:middle
+You should declare fewer classes
+
+00:03:06.896 --> 00:03:09.956 A:middle
+and methods and you should run
+
+00:03:09.956 --> 00:03:11.546 A:middle
+fewer initializers.
+
+00:03:13.396 --> 00:03:15.166 A:middle
+Finally, I'm going to tell you
+
+00:03:15.166 --> 00:03:16.266 A:middle
+you can do a little bit more of
+
+00:03:16.266 --> 00:03:16.546 A:middle
+something.
+
+00:03:16.546 --> 00:03:18.416 A:middle
+You can use more Swift, and the
+
+00:03:18.416 --> 00:03:21.356 A:middle
+reason is Swift is designed in
+
+00:03:21.356 --> 00:03:23.506 A:middle
+such a way that it avoids a lot
+
+00:03:23.506 --> 00:03:25.456 A:middle
+of pitfalls that C, C++ and
+
+00:03:25.456 --> 00:03:27.026 A:middle
+Objective-C allow you to do.
+
+00:03:27.486 --> 00:03:28.476 A:middle
+Swift does not have
+
+00:03:28.476 --> 00:03:29.456 A:middle
+initializers.
+
+00:03:29.926 --> 00:03:31.216 A:middle
+Swift does not allow certain
+
+00:03:31.216 --> 00:03:32.236 A:middle
+types of misaligned data
+
+00:03:32.236 --> 00:03:33.776 A:middle
+structures that cost us time in
+
+00:03:33.776 --> 00:03:34.206 A:middle
+launch.
+
+00:03:34.626 --> 00:03:36.516 A:middle
+So, in general, moving to Swift
+
+00:03:36.716 --> 00:03:39.066 A:middle
+will make it easier for you to
+
+00:03:39.066 --> 00:03:40.996 A:middle
+get very responsive app startup.
+
+00:03:42.406 --> 00:03:44.266 A:middle
+So also, there are the Swift
+
+00:03:44.266 --> 00:03:45.726 A:middle
+size improvements and smaller is
+
+00:03:45.726 --> 00:03:47.576 A:middle
+better, so please move to this
+
+00:03:47.576 --> 00:03:48.586 A:middle
+new Swift that we've shipped
+
+00:03:48.586 --> 00:03:49.336 A:middle
+this year with the size
+
+00:03:49.336 --> 00:03:50.316 A:middle
+improvements and that's going to
+
+00:03:50.316 --> 00:03:50.986 A:middle
+help you out.
+
+00:03:51.976 --> 00:03:53.646 A:middle
+So now let me talk about some
+
+00:03:53.646 --> 00:03:57.146 A:middle
+new tooling we have.
+
+00:03:57.356 --> 00:04:00.456 A:middle
+So new in iOS 11 and macOS High
+
+00:04:00.456 --> 00:04:02.556 A:middle
+Sierra, we've added Static
+
+00:04:02.556 --> 00:04:03.746 A:middle
+Initializer Tracing to
+
+00:04:03.746 --> 00:04:05.126 A:middle
+Instruments.
+
+00:04:06.216 --> 00:04:07.886 A:middle
+So, yes, this is pretty exciting
+
+00:04:07.886 --> 00:04:09.876 A:middle
+stuff because initializers are
+
+00:04:09.876 --> 00:04:11.046 A:middle
+code that have to run before
+
+00:04:11.046 --> 00:04:12.926 A:middle
+main to set up objects for you,
+
+00:04:13.616 --> 00:04:14.616 A:middle
+and you haven't had much
+
+00:04:14.616 --> 00:04:15.736 A:middle
+visibility into what happens
+
+00:04:15.736 --> 00:04:16.386 A:middle
+before main.
+
+00:04:17.376 --> 00:04:19.106 A:middle
+So they're available through
+
+00:04:19.106 --> 00:04:20.276 A:middle
+Instruments and they provide
+
+00:04:20.276 --> 00:04:21.746 A:middle
+precise timing for each static
+
+00:04:21.746 --> 00:04:22.326 A:middle
+initializer.
+
+00:04:22.736 --> 00:04:24.596 A:middle
+So with that, I'd like to go to
+
+00:04:24.596 --> 00:04:25.326 A:middle
+a demo right now.
+
+00:04:25.746 --> 00:04:27.546 A:middle
+So over here I have an
+
+00:04:27.546 --> 00:04:29.796 A:middle
+application, and as most
+
+00:04:29.796 --> 00:04:31.706 A:middle
+applications at WWDC are, it's a
+
+00:04:31.706 --> 00:04:33.636 A:middle
+way of sharing cute pictures of
+
+00:04:33.636 --> 00:04:34.086 A:middle
+animals.
+
+00:04:35.156 --> 00:04:36.206 A:middle
+So here, let me launch it.
+
+00:04:36.786 --> 00:04:39.586 A:middle
+And, you know, it's taking a
+
+00:04:39.936 --> 00:04:44.066 A:middle
+little while here, but it's
+
+00:04:44.066 --> 00:04:45.826 A:middle
+still taking a while and it gets
+
+00:04:45.826 --> 00:04:47.376 A:middle
+up and we can see some
+
+00:04:47.376 --> 00:04:50.826 A:middle
+chinchillas and some cats.
+
+00:04:50.826 --> 00:04:53.346 A:middle
+And so let's take a look at why
+
+00:04:53.346 --> 00:04:54.826 A:middle
+it took that time.
+
+00:04:54.946 --> 00:04:56.636 A:middle
+So I'm going to go and I'm going
+
+00:04:56.636 --> 00:04:58.056 A:middle
+to rerun it under Instruments.
+
+00:04:58.916 --> 00:05:01.966 A:middle
+So we'll stop the execution of
+
+00:05:01.966 --> 00:05:06.306 A:middle
+the current one and run it.
+
+00:05:06.306 --> 00:05:08.076 A:middle
+And now if we go in, I'm going
+
+00:05:08.076 --> 00:05:09.526 A:middle
+to start with a blank template
+
+00:05:09.896 --> 00:05:12.266 A:middle
+and we can add the new Static
+
+00:05:12.266 --> 00:05:16.946 A:middle
+Initializer tool, which is right
+
+00:05:16.946 --> 00:05:17.346 A:middle
+there.
+
+00:05:17.606 --> 00:05:18.406 A:middle
+And while we're at it, I'm also
+
+00:05:18.406 --> 00:05:19.506 A:middle
+going to add a Time Profiler
+
+00:05:19.506 --> 00:05:20.386 A:middle
+because it's always kind of nice
+
+00:05:20.386 --> 00:05:20.976 A:middle
+to see what's going on.
+
+00:05:28.296 --> 00:05:28.766 A:middle
+There we go.
+
+00:05:29.876 --> 00:05:31.596 A:middle
+Okay. So now that we have those,
+
+00:05:31.596 --> 00:05:32.596 A:middle
+let's start running our
+
+00:05:32.596 --> 00:05:33.136 A:middle
+application.
+
+00:05:34.956 --> 00:05:36.976 A:middle
+So we're getting in our trace
+
+00:05:36.976 --> 00:05:41.516 A:middle
+data, and it's still not up, but
+
+00:05:41.516 --> 00:05:42.706 A:middle
+it just came up and as you can
+
+00:05:42.706 --> 00:05:46.006 A:middle
+see in the background there, we
+
+00:05:46.006 --> 00:05:47.076 A:middle
+had something fill in there.
+
+00:05:47.076 --> 00:05:48.686 A:middle
+So I'm going to just zoom in so
+
+00:05:48.686 --> 00:05:51.026 A:middle
+you can get a look, and I have a
+
+00:05:51.026 --> 00:05:51.686 A:middle
+function there called
+
+00:05:51.686 --> 00:05:53.766 A:middle
+waitForNetworkDebugger, and
+
+00:05:53.766 --> 00:05:54.556 A:middle
+that's right, because I was
+
+00:05:54.556 --> 00:05:56.086 A:middle
+loading these off of an adjacent
+
+00:05:56.086 --> 00:05:57.736 A:middle
+feed that we had up on our site.
+
+00:05:57.736 --> 00:05:59.776 A:middle
+I was trying to debug that.
+
+00:05:59.846 --> 00:06:01.816 A:middle
+So let's go and -- I just want
+
+00:06:01.816 --> 00:06:02.876 A:middle
+to actually take a quick look
+
+00:06:02.876 --> 00:06:04.496 A:middle
+here in the CPU Usage tool.
+
+00:06:04.616 --> 00:06:07.406 A:middle
+So you can see that that
+
+00:06:07.406 --> 00:06:08.776 A:middle
+initializer's roughly the same
+
+00:06:08.776 --> 00:06:10.776 A:middle
+length as my CPU usage.
+
+00:06:11.276 --> 00:06:12.276 A:middle
+So if I go down there, I can
+
+00:06:12.276 --> 00:06:15.236 A:middle
+actually drill down into dyld,
+
+00:06:15.646 --> 00:06:18.436 A:middle
+and if I do that, we're actually
+
+00:06:18.436 --> 00:06:19.326 A:middle
+going to see what was taking all
+
+00:06:19.326 --> 00:06:24.446 A:middle
+that time, and that time is 9.5
+
+00:06:24.446 --> 00:06:28.686 A:middle
+seconds, 9.5 seconds into the
+
+00:06:28.686 --> 00:06:29.266 A:middle
+initializer.
+
+00:06:29.266 --> 00:06:29.916 A:middle
+It's pretty deep.
+
+00:06:29.916 --> 00:06:30.986 A:middle
+You don't usually have to do
+
+00:06:30.986 --> 00:06:31.816 A:middle
+this, but I want to show you
+
+00:06:31.816 --> 00:06:33.856 A:middle
+what's going on.
+
+00:06:34.756 --> 00:06:36.296 A:middle
+And down in here I can finally
+
+00:06:36.296 --> 00:06:38.386 A:middle
+see waitForNetworkDebugger,
+
+00:06:38.386 --> 00:06:39.226 A:middle
+which is what we saw up in the
+
+00:06:39.226 --> 00:06:40.636 A:middle
+initializer call, but now it's
+
+00:06:40.636 --> 00:06:41.976 A:middle
+very easy for you to find that.
+
+00:06:42.706 --> 00:06:45.076 A:middle
+So now that we've done that, I'm
+
+00:06:45.076 --> 00:06:49.816 A:middle
+going to go back over into Xcode
+
+00:06:49.816 --> 00:06:51.626 A:middle
+and, oh, yeah, that's the
+
+00:06:51.626 --> 00:06:52.856 A:middle
+waitForNetworkDebugger call that
+
+00:06:52.856 --> 00:06:53.376 A:middle
+I implemented.
+
+00:06:53.376 --> 00:06:54.516 A:middle
+I implemented it in C because
+
+00:06:54.516 --> 00:06:55.516 A:middle
+Swift won't even let you do
+
+00:06:55.516 --> 00:06:57.616 A:middle
+something like this, which is
+
+00:06:57.676 --> 00:06:59.686 A:middle
+because this is a bad idea, but
+
+00:06:59.686 --> 00:07:01.156 A:middle
+I created a constructor there.
+
+00:07:01.156 --> 00:07:02.636 A:middle
+So if I go back to my source
+
+00:07:02.636 --> 00:07:06.276 A:middle
+code -- if I go back to my
+
+00:07:06.276 --> 00:07:08.786 A:middle
+source code, I can just delete
+
+00:07:08.786 --> 00:07:11.426 A:middle
+that function because it was
+
+00:07:11.426 --> 00:07:12.326 A:middle
+just for debugging anyway.
+
+00:07:13.196 --> 00:07:16.656 A:middle
+If I run it, my app's going to
+
+00:07:16.656 --> 00:07:17.836 A:middle
+come up almost instantly.
+
+00:07:18.916 --> 00:07:21.226 A:middle
+So we just saw how to quickly
+
+00:07:21.226 --> 00:07:23.276 A:middle
+find what stack initializers are
+
+00:07:23.276 --> 00:07:24.206 A:middle
+causing you slowdowns.
+
+00:07:24.206 --> 00:07:26.486 A:middle
+This will work across multiple
+
+00:07:26.486 --> 00:07:28.246 A:middle
+dylibs, including system dylibs
+
+00:07:28.246 --> 00:07:29.506 A:middle
+that may be taking a long time
+
+00:07:29.506 --> 00:07:30.656 A:middle
+because of inputs you've given
+
+00:07:30.656 --> 00:07:32.036 A:middle
+them, such as complicated nibs.
+
+00:07:32.036 --> 00:07:35.356 A:middle
+It depends on new infrastructure
+
+00:07:35.356 --> 00:07:39.376 A:middle
+in High Sierra and iOS 11's
+
+00:07:39.376 --> 00:07:41.766 A:middle
+kernel and dyld, so you need to
+
+00:07:41.766 --> 00:07:42.966 A:middle
+be running the new builds to see
+
+00:07:42.966 --> 00:07:43.236 A:middle
+this.
+
+00:07:43.906 --> 00:07:45.986 A:middle
+And it catches most initializers
+
+00:07:45.986 --> 00:07:47.036 A:middle
+now and there's some edge cases
+
+00:07:47.036 --> 00:07:48.166 A:middle
+we're still working on adding,
+
+00:07:48.656 --> 00:07:50.216 A:middle
+but we think this is going to
+
+00:07:50.216 --> 00:07:52.406 A:middle
+allow you to quickly find out
+
+00:07:52.606 --> 00:07:54.286 A:middle
+what is taking time during your
+
+00:07:54.286 --> 00:07:55.266 A:middle
+app launch so that you get
+
+00:07:55.266 --> 00:07:56.846 A:middle
+quicker, more responsive
+
+00:07:56.846 --> 00:07:58.006 A:middle
+application launches that will
+
+00:07:58.006 --> 00:07:58.866 A:middle
+make your users happy.
+
+00:07:59.646 --> 00:07:59.956 A:middle
+Thank you.
+
+00:08:00.516 --> 00:08:05.106 A:middle
+[ Applause ]
+
+00:08:05.606 --> 00:08:07.286 A:middle
+Okay. So now I said we'd do a
+
+00:08:07.286 --> 00:08:10.016 A:middle
+brief history of dyld.
+
+00:08:10.016 --> 00:08:11.676 A:middle
+So Dynamic Linking Through the
+
+00:08:11.676 --> 00:08:12.256 A:middle
+Ages.
+
+00:08:12.886 --> 00:08:14.206 A:middle
+So originally we shipped the
+
+00:08:14.206 --> 00:08:16.346 A:middle
+first dyld -- these didn't have
+
+00:08:16.346 --> 00:08:16.986 A:middle
+version numbers, but
+
+00:08:16.986 --> 00:08:18.086 A:middle
+retroactively we're giving them
+
+00:08:18.086 --> 00:08:18.236 A:middle
+them.
+
+00:08:19.336 --> 00:08:21.006 A:middle
+And this was dyld 1 and it
+
+00:08:21.006 --> 00:08:23.306 A:middle
+shipped as part of NeXTStep 3.3
+
+00:08:24.276 --> 00:08:26.566 A:middle
+back in 1996.
+
+00:08:26.566 --> 00:08:30.806 A:middle
+Before that, NeXT used static
+
+00:08:30.806 --> 00:08:31.276 A:middle
+binaries.
+
+00:08:32.556 --> 00:08:34.266 A:middle
+And it's worth noting this
+
+00:08:34.376 --> 00:08:37.536 A:middle
+predates the POSIX dlopen calls
+
+00:08:37.536 --> 00:08:38.496 A:middle
+being standardized.
+
+00:08:38.676 --> 00:08:40.556 A:middle
+Now, dlopen did exist on some
+
+00:08:40.556 --> 00:08:40.916 A:middle
+Unix.
+
+00:08:40.916 --> 00:08:42.386 A:middle
+They were proprietary extensions
+
+00:08:42.816 --> 00:08:44.576 A:middle
+that later people adopted.
+
+00:08:45.136 --> 00:08:46.666 A:middle
+And NeXTStep had different
+
+00:08:46.726 --> 00:08:48.696 A:middle
+proprietary extensions, so
+
+00:08:49.486 --> 00:08:50.396 A:middle
+people wrote third-party
+
+00:08:50.396 --> 00:08:51.706 A:middle
+wrappers on the early versions
+
+00:08:51.706 --> 00:08:53.556 A:middle
+of macOS 10 to support standard
+
+00:08:53.556 --> 00:08:54.296 A:middle
+Unix software.
+
+00:08:54.796 --> 00:08:56.786 A:middle
+The problem was they didn't
+
+00:08:56.786 --> 00:08:57.626 A:middle
+quite support the same
+
+00:08:57.626 --> 00:08:58.126 A:middle
+semantics.
+
+00:08:58.126 --> 00:08:59.166 A:middle
+There were some weird edge cases
+
+00:08:59.166 --> 00:09:01.046 A:middle
+where it didn't work, and
+
+00:09:01.046 --> 00:09:01.916 A:middle
+ultimately they were kind of
+
+00:09:01.916 --> 00:09:02.336 A:middle
+slow.
+
+00:09:03.166 --> 00:09:05.176 A:middle
+It also was written before most
+
+00:09:05.176 --> 00:09:07.516 A:middle
+systems used large C++ dynamic
+
+00:09:07.516 --> 00:09:08.326 A:middle
+libraries, and this is
+
+00:09:08.326 --> 00:09:08.896 A:middle
+important.
+
+00:09:09.546 --> 00:09:11.436 A:middle
+C++ has a number of features,
+
+00:09:11.436 --> 00:09:12.616 A:middle
+such as how its initializer
+
+00:09:12.616 --> 00:09:13.586 A:middle
+ordering works.
+
+00:09:13.586 --> 00:09:16.556 A:middle
+And one definition rule; they
+
+00:09:16.556 --> 00:09:17.456 A:middle
+work well in a static
+
+00:09:17.456 --> 00:09:18.556 A:middle
+environment, but are actually
+
+00:09:18.556 --> 00:09:20.836 A:middle
+fairly hard to do, at least with
+
+00:09:20.896 --> 00:09:22.086 A:middle
+good performance, in a dynamic
+
+00:09:22.086 --> 00:09:22.576 A:middle
+environment.
+
+00:09:23.046 --> 00:09:25.006 A:middle
+So large C++ code bases cause
+
+00:09:25.006 --> 00:09:26.096 A:middle
+the dynamic linker to have to do
+
+00:09:26.096 --> 00:09:28.796 A:middle
+a lot of work and it was quite
+
+00:09:28.796 --> 00:09:29.076 A:middle
+slow.
+
+00:09:32.856 --> 00:09:35.096 A:middle
+We also added one other feature
+
+00:09:35.376 --> 00:09:37.746 A:middle
+before we shipped macOS 10.0,
+
+00:09:37.746 --> 00:09:39.156 A:middle
+Cheetah, and that's called
+
+00:09:39.156 --> 00:09:39.806 A:middle
+prebinding.
+
+00:09:40.596 --> 00:09:41.606 A:middle
+And for those of you in the
+
+00:09:41.606 --> 00:09:43.456 A:middle
+audience who know what
+
+00:09:43.456 --> 00:09:45.656 A:middle
+prebinding is, I know it was
+
+00:09:46.266 --> 00:09:47.666 A:middle
+kind of painful; and for the
+
+00:09:47.666 --> 00:09:49.306 A:middle
+rest of you, prebinding was a
+
+00:09:49.306 --> 00:09:51.346 A:middle
+technology where we would try to
+
+00:09:51.346 --> 00:09:52.996 A:middle
+find fixed addresses for every
+
+00:09:52.996 --> 00:09:55.236 A:middle
+dylib in the system and for your
+
+00:09:55.236 --> 00:09:58.286 A:middle
+application, and the dynamic
+
+00:09:58.286 --> 00:09:59.076 A:middle
+loader would try to load
+
+00:09:59.076 --> 00:10:00.036 A:middle
+everything at those addresses
+
+00:10:00.036 --> 00:10:01.886 A:middle
+and if it succeeded, it would
+
+00:10:01.926 --> 00:10:04.316 A:middle
+edit all of those binaries to
+
+00:10:04.316 --> 00:10:05.726 A:middle
+have those precalculated
+
+00:10:05.726 --> 00:10:06.876 A:middle
+addresses in it, and then the
+
+00:10:06.876 --> 00:10:07.936 A:middle
+next time when it put them in
+
+00:10:07.936 --> 00:10:09.126 A:middle
+the same addresses, it didn't
+
+00:10:09.126 --> 00:10:10.356 A:middle
+have to do any additional work.
+
+00:10:11.206 --> 00:10:13.196 A:middle
+And that sped up launch a lot,
+
+00:10:14.086 --> 00:10:16.486 A:middle
+but it meant that we were
+
+00:10:16.566 --> 00:10:18.066 A:middle
+editing your binaries on every
+
+00:10:18.066 --> 00:10:20.916 A:middle
+launch, and that's not great for
+
+00:10:20.916 --> 00:10:22.676 A:middle
+all sorts of reasons, not the
+
+00:10:22.676 --> 00:10:23.716 A:middle
+least of which is security.
+
+00:10:24.276 --> 00:10:27.506 A:middle
+So then came dyld 2, and we
+
+00:10:27.506 --> 00:10:28.576 A:middle
+shipped that as part of macOS
+
+00:10:28.706 --> 00:10:29.096 A:middle
+Tiger.
+
+00:10:30.296 --> 00:10:32.696 A:middle
+And dyld 2 was a complete
+
+00:10:32.696 --> 00:10:33.526 A:middle
+rewrite of dyld.
+
+00:10:33.526 --> 00:10:37.816 A:middle
+It had correct support for C++
+
+00:10:37.816 --> 00:10:39.086 A:middle
+initializer semantics, so we
+
+00:10:39.086 --> 00:10:40.126 A:middle
+slightly extended the mach-o
+
+00:10:40.126 --> 00:10:43.606 A:middle
+format and we updated dyld so
+
+00:10:43.606 --> 00:10:46.126 A:middle
+that we could get efficient C++
+
+00:10:46.126 --> 00:10:47.026 A:middle
+library support.
+
+00:10:47.836 --> 00:10:49.536 A:middle
+It also has a full native dlopen
+
+00:10:49.536 --> 00:10:51.586 A:middle
+and dlsym implementation with
+
+00:10:51.586 --> 00:10:52.566 A:middle
+correct semantics, at which
+
+00:10:52.566 --> 00:10:54.206 A:middle
+point we deprecated the Legacy
+
+00:10:54.206 --> 00:10:54.626 A:middle
+API's.
+
+00:10:55.066 --> 00:10:56.226 A:middle
+They are still on macOS.
+
+00:10:56.306 --> 00:10:57.536 A:middle
+They have never shipped on any
+
+00:10:57.536 --> 00:10:58.666 A:middle
+of our other platforms.
+
+00:10:59.216 --> 00:11:03.776 A:middle
+It was designed for speed and
+
+00:11:03.776 --> 00:11:04.666 A:middle
+because it was designed for
+
+00:11:04.666 --> 00:11:06.656 A:middle
+speed, it had limited sanity
+
+00:11:06.656 --> 00:11:06.996 A:middle
+checking.
+
+00:11:06.996 --> 00:11:08.696 A:middle
+We did not have the malware
+
+00:11:08.696 --> 00:11:09.816 A:middle
+environment we have today.
+
+00:11:11.256 --> 00:11:13.246 A:middle
+It also has security issues
+
+00:11:13.246 --> 00:11:14.836 A:middle
+because of that, that we had to
+
+00:11:14.836 --> 00:11:16.426 A:middle
+go back and retrofit in a number
+
+00:11:16.426 --> 00:11:18.326 A:middle
+of features to make it safer on
+
+00:11:18.516 --> 00:11:20.096 A:middle
+today's platforms.
+
+00:11:21.216 --> 00:11:23.296 A:middle
+Finally, because it was so much
+
+00:11:23.296 --> 00:11:24.296 A:middle
+faster we could reduce the
+
+00:11:24.296 --> 00:11:25.246 A:middle
+amount of prebinding.
+
+00:11:25.246 --> 00:11:26.536 A:middle
+Rather than editing your
+
+00:11:26.536 --> 00:11:29.716 A:middle
+applications, we just edited the
+
+00:11:29.716 --> 00:11:31.046 A:middle
+system libraries and we could do
+
+00:11:31.046 --> 00:11:33.106 A:middle
+that just at software update
+
+00:11:33.106 --> 00:11:33.506 A:middle
+times.
+
+00:11:33.506 --> 00:11:34.776 A:middle
+And if you've ever seen the
+
+00:11:34.776 --> 00:11:36.416 A:middle
+phrase optimizing system
+
+00:11:36.416 --> 00:11:37.826 A:middle
+performance appear in your
+
+00:11:37.826 --> 00:11:39.996 A:middle
+software update, that was added
+
+00:11:40.486 --> 00:11:43.396 A:middle
+to the installer to be displayed
+
+00:11:43.396 --> 00:11:45.696 A:middle
+during the time we were updating
+
+00:11:45.756 --> 00:11:46.276 A:middle
+prebinding.
+
+00:11:46.566 --> 00:11:48.316 A:middle
+Nowadays it is used for all the
+
+00:11:48.316 --> 00:11:50.756 A:middle
+optimizations, but that was the
+
+00:11:51.406 --> 00:11:51.616 A:middle
+impetus.
+
+00:11:51.756 --> 00:11:53.996 A:middle
+So we shipped dyld 2 back then
+
+00:11:55.256 --> 00:11:57.036 A:middle
+and we've done a number of
+
+00:11:57.036 --> 00:11:58.076 A:middle
+improvements over the years,
+
+00:11:58.076 --> 00:11:59.286 A:middle
+significant improvements.
+
+00:11:59.446 --> 00:12:01.066 A:middle
+First off, we've added a ton of
+
+00:12:01.066 --> 00:12:02.166 A:middle
+more architectures and
+
+00:12:02.166 --> 00:12:02.896 A:middle
+platforms.
+
+00:12:02.896 --> 00:12:08.066 A:middle
+Since dyld 2 shipped on PowerPC,
+
+00:12:08.066 --> 00:12:10.466 A:middle
+we've added x86, x86 64 arm,
+
+00:12:10.466 --> 00:12:11.576 A:middle
+arm64, and a number of
+
+00:12:11.576 --> 00:12:12.656 A:middle
+subvariants of those.
+
+00:12:13.686 --> 00:12:15.386 A:middle
+We've also shipped iOS, tvOS,
+
+00:12:15.386 --> 00:12:16.746 A:middle
+and watchOS, all of which
+
+00:12:16.746 --> 00:12:18.096 A:middle
+required significant new work in
+
+00:12:18.096 --> 00:12:18.336 A:middle
+dyld.
+
+00:12:18.336 --> 00:12:21.766 A:middle
+We've improved security in a
+
+00:12:21.766 --> 00:12:22.836 A:middle
+number of ways.
+
+00:12:23.696 --> 00:12:25.696 A:middle
+We added codesigning support, we
+
+00:12:25.696 --> 00:12:27.386 A:middle
+added some for ASLR, which is a
+
+00:12:27.386 --> 00:12:29.006 A:middle
+technology Address Space Layout
+
+00:12:29.006 --> 00:12:32.166 A:middle
+Randomization, which means that
+
+00:12:32.166 --> 00:12:33.006 A:middle
+every time you loaded the
+
+00:12:33.006 --> 00:12:33.746 A:middle
+libraries it may be at a
+
+00:12:33.746 --> 00:12:34.686 A:middle
+different address.
+
+00:12:34.686 --> 00:12:36.446 A:middle
+If you want more details on
+
+00:12:36.446 --> 00:12:38.626 A:middle
+that, last year's talk where
+
+00:12:38.626 --> 00:12:41.646 A:middle
+Nick went into extreme detail on
+
+00:12:41.646 --> 00:12:43.276 A:middle
+how we launch an app, goes into
+
+00:12:43.276 --> 00:12:43.476 A:middle
+that.
+
+00:12:43.476 --> 00:12:44.756 A:middle
+And finally, we added a
+
+00:12:44.756 --> 00:12:46.456 A:middle
+significant bounds checking to a
+
+00:12:46.456 --> 00:12:47.626 A:middle
+number of things in the mach-o
+
+00:12:47.626 --> 00:12:49.466 A:middle
+header so that you couldn't do
+
+00:12:49.466 --> 00:12:50.446 A:middle
+certain types of attach with
+
+00:12:50.446 --> 00:12:51.396 A:middle
+malformed binaries.
+
+00:12:52.656 --> 00:12:54.396 A:middle
+Finally, we improved
+
+00:12:54.396 --> 00:12:56.446 A:middle
+performance, and because we
+
+00:12:56.446 --> 00:12:58.406 A:middle
+improved performance, we could
+
+00:12:58.406 --> 00:12:59.766 A:middle
+get rid of prebinding and
+
+00:12:59.766 --> 00:13:01.096 A:middle
+replace it with something called
+
+00:13:01.096 --> 00:13:02.156 A:middle
+the shared cache.
+
+00:13:03.146 --> 00:13:04.776 A:middle
+So what is the shared cache?
+
+00:13:05.326 --> 00:13:08.666 A:middle
+Well, it was introduced in iOS
+
+00:13:08.666 --> 00:13:11.606 A:middle
+3.1 and macOS Snow Leopard, and
+
+00:13:11.876 --> 00:13:13.326 A:middle
+it completely replaced
+
+00:13:13.326 --> 00:13:13.806 A:middle
+prebinding.
+
+00:13:14.896 --> 00:13:16.676 A:middle
+It's a single file containing
+
+00:13:16.676 --> 00:13:18.566 A:middle
+most of the system dylibs.
+
+00:13:18.936 --> 00:13:20.106 A:middle
+And because we merged them into
+
+00:13:20.106 --> 00:13:21.356 A:middle
+a single file, we can do certain
+
+00:13:21.356 --> 00:13:22.466 A:middle
+types of optimizations.
+
+00:13:22.986 --> 00:13:24.496 A:middle
+We can rearrange all of their
+
+00:13:24.496 --> 00:13:25.726 A:middle
+text segments and all of their
+
+00:13:25.726 --> 00:13:27.116 A:middle
+data segments and rewrite their
+
+00:13:27.116 --> 00:13:29.266 A:middle
+entire symbol tables to reduce
+
+00:13:29.266 --> 00:13:31.316 A:middle
+the size and to make it so we
+
+00:13:31.316 --> 00:13:33.456 A:middle
+need to mount fewer regions in
+
+00:13:33.456 --> 00:13:34.486 A:middle
+each process.
+
+00:13:35.326 --> 00:13:36.766 A:middle
+It also allows us to pack binary
+
+00:13:36.766 --> 00:13:39.866 A:middle
+segments and save a lot of RAM.
+
+00:13:39.866 --> 00:13:41.486 A:middle
+It effectively is a prelinker
+
+00:13:41.486 --> 00:13:42.516 A:middle
+for the dylibs.
+
+00:13:43.456 --> 00:13:44.996 A:middle
+And while I'm not going to go
+
+00:13:44.996 --> 00:13:45.806 A:middle
+into any particular
+
+00:13:45.806 --> 00:13:48.166 A:middle
+optimizations here, the RAM
+
+00:13:48.166 --> 00:13:49.776 A:middle
+savings are substantial.
+
+00:13:49.776 --> 00:13:51.316 A:middle
+On an average iOS system, this
+
+00:13:51.316 --> 00:13:53.246 A:middle
+is the difference in about 500
+
+00:13:53.246 --> 00:13:54.986 A:middle
+megs to a gigabyte of RAM at
+
+00:13:54.986 --> 00:13:55.496 A:middle
+runtime.
+
+00:13:57.296 --> 00:13:59.076 A:middle
+It also prebuilds data
+
+00:13:59.076 --> 00:14:01.326 A:middle
+structures that dyld and Ob-C
+
+00:14:01.326 --> 00:14:02.536 A:middle
+are going to use at runtime so
+
+00:14:02.536 --> 00:14:03.696 A:middle
+that we don't have to do it on
+
+00:14:03.696 --> 00:14:04.066 A:middle
+launch.
+
+00:14:04.066 --> 00:14:05.136 A:middle
+And again, that saves more RAM
+
+00:14:05.136 --> 00:14:07.556 A:middle
+and a lot of time.
+
+00:14:07.766 --> 00:14:09.426 A:middle
+It's built locally on macOS, so
+
+00:14:09.426 --> 00:14:10.836 A:middle
+when you see optimizing system
+
+00:14:11.066 --> 00:14:12.896 A:middle
+performance, we are running
+
+00:14:12.896 --> 00:14:15.196 A:middle
+update dyld shared cache, among
+
+00:14:15.196 --> 00:14:17.856 A:middle
+things that happen, but on all
+
+00:14:17.856 --> 00:14:18.806 A:middle
+of our other platforms we
+
+00:14:18.806 --> 00:14:20.096 A:middle
+actually build it at Apple and
+
+00:14:20.096 --> 00:14:20.816 A:middle
+ship it to you.
+
+00:14:21.356 --> 00:14:23.526 A:middle
+So now that I've talked about
+
+00:14:23.526 --> 00:14:25.666 A:middle
+the shared cache, I want to move
+
+00:14:25.666 --> 00:14:27.346 A:middle
+into dyld 3.
+
+00:14:28.736 --> 00:14:30.936 A:middle
+dyld 3 is a brand-new dynamic
+
+00:14:30.936 --> 00:14:32.626 A:middle
+linker, and we're announcing it
+
+00:14:32.626 --> 00:14:32.956 A:middle
+today.
+
+00:14:33.556 --> 00:14:36.036 A:middle
+It's a complete rethink of how
+
+00:14:36.036 --> 00:14:38.756 A:middle
+we do dynamic linking and it's
+
+00:14:38.756 --> 00:14:41.306 A:middle
+going to be on by default for
+
+00:14:41.306 --> 00:14:43.426 A:middle
+most macOS system apps in this
+
+00:14:43.426 --> 00:14:46.556 A:middle
+week's seed, and it will be on
+
+00:14:46.556 --> 00:14:48.186 A:middle
+by default for all system apps
+
+00:14:48.476 --> 00:14:51.676 A:middle
+on 2017 Apple OS platforms.
+
+00:14:53.376 --> 00:14:55.046 A:middle
+We will completely replace dyld
+
+00:14:55.046 --> 00:14:57.146 A:middle
+2 in future Apple OS platforms
+
+00:14:57.356 --> 00:14:58.506 A:middle
+for all third-party apps as
+
+00:14:58.506 --> 00:14:58.926 A:middle
+well.
+
+00:15:00.306 --> 00:15:02.086 A:middle
+So why did we rewrite the
+
+00:15:02.086 --> 00:15:03.806 A:middle
+dynamic linker again?
+
+00:15:06.116 --> 00:15:08.296 A:middle
+Well, first off, performance.
+
+00:15:08.776 --> 00:15:09.816 A:middle
+In case that's not a recurring
+
+00:15:09.856 --> 00:15:12.106 A:middle
+theme, we want every ounce of
+
+00:15:12.106 --> 00:15:13.936 A:middle
+launch speed we can get.
+
+00:15:14.366 --> 00:15:16.616 A:middle
+Additionally, we thought what is
+
+00:15:16.616 --> 00:15:17.726 A:middle
+the minimum, what is the
+
+00:15:17.906 --> 00:15:19.006 A:middle
+theoretical minimum that we
+
+00:15:19.006 --> 00:15:20.246 A:middle
+could do to get an app up and
+
+00:15:20.246 --> 00:15:21.896 A:middle
+running and how could we achieve
+
+00:15:21.896 --> 00:15:22.146 A:middle
+that.
+
+00:15:23.446 --> 00:15:26.496 A:middle
+Security. So as I said, we
+
+00:15:26.496 --> 00:15:27.796 A:middle
+retrofitted a number of security
+
+00:15:27.796 --> 00:15:29.726 A:middle
+features into dyld 2, but it's
+
+00:15:29.726 --> 00:15:31.276 A:middle
+really hard to add that kind of
+
+00:15:31.276 --> 00:15:32.176 A:middle
+stuff after the fact.
+
+00:15:32.576 --> 00:15:33.586 A:middle
+I think we've done a good job
+
+00:15:33.586 --> 00:15:36.006 A:middle
+with it in recent years, but
+
+00:15:36.676 --> 00:15:37.996 A:middle
+it's really, really difficult to
+
+00:15:37.996 --> 00:15:38.396 A:middle
+do that.
+
+00:15:38.396 --> 00:15:40.496 A:middle
+And so can we have more
+
+00:15:40.496 --> 00:15:42.346 A:middle
+aggressive security checking and
+
+00:15:42.346 --> 00:15:43.356 A:middle
+be designed for security up
+
+00:15:43.356 --> 00:15:43.706 A:middle
+front?
+
+00:15:44.646 --> 00:15:47.076 A:middle
+Finally, testability and
+
+00:15:47.076 --> 00:15:47.916 A:middle
+reliability.
+
+00:15:48.486 --> 00:15:50.376 A:middle
+Can we make dyld easier to test?
+
+00:15:50.376 --> 00:15:52.686 A:middle
+So Apple ships a ton of great
+
+00:15:52.686 --> 00:15:53.846 A:middle
+testing frameworks, like XCTest,
+
+00:15:53.846 --> 00:15:55.316 A:middle
+that you should be using, and we
+
+00:15:55.316 --> 00:15:57.766 A:middle
+should be using, but they depend
+
+00:15:57.766 --> 00:15:59.216 A:middle
+on low level features of dynamic
+
+00:15:59.216 --> 00:16:00.786 A:middle
+linker to insert those libraries
+
+00:16:00.786 --> 00:16:02.506 A:middle
+into processes, so they
+
+00:16:02.616 --> 00:16:04.276 A:middle
+fundamentally cannot be used for
+
+00:16:04.276 --> 00:16:05.616 A:middle
+testing the existing dyld code,
+
+00:16:05.616 --> 00:16:06.926 A:middle
+and that also makes it harder
+
+00:16:06.926 --> 00:16:08.426 A:middle
+for us to test security and
+
+00:16:08.426 --> 00:16:09.296 A:middle
+performance features.
+
+00:16:10.676 --> 00:16:13.566 A:middle
+And so how did we do that?
+
+00:16:13.566 --> 00:16:15.916 A:middle
+Well, we've moved most of dyld
+
+00:16:15.916 --> 00:16:17.176 A:middle
+out of process.
+
+00:16:17.736 --> 00:16:20.526 A:middle
+It's now mostly just a regular
+
+00:16:20.526 --> 00:16:22.296 A:middle
+daemon and we can test that just
+
+00:16:22.296 --> 00:16:23.856 A:middle
+like everybody else does with
+
+00:16:23.856 --> 00:16:25.666 A:middle
+standard testing tools, which is
+
+00:16:25.666 --> 00:16:26.666 A:middle
+going to allow us to move even
+
+00:16:26.666 --> 00:16:27.766 A:middle
+faster in the future in
+
+00:16:27.766 --> 00:16:30.026 A:middle
+improving this.
+
+00:16:30.226 --> 00:16:32.756 A:middle
+It also lets the bit of dyld
+
+00:16:32.866 --> 00:16:35.416 A:middle
+that stays in process be as
+
+00:16:35.416 --> 00:16:36.966 A:middle
+small as possible and that
+
+00:16:36.966 --> 00:16:38.786 A:middle
+reduces the attack surface in
+
+00:16:38.786 --> 00:16:39.926 A:middle
+your applications.
+
+00:16:41.856 --> 00:16:44.276 A:middle
+It also speeds up launch because
+
+00:16:44.276 --> 00:16:46.506 A:middle
+the fastest code is code you
+
+00:16:46.506 --> 00:16:49.536 A:middle
+never write, followed closely by
+
+00:16:49.536 --> 00:16:51.096 A:middle
+code you almost never execute.
+
+00:16:52.486 --> 00:16:53.726 A:middle
+So to tell you how we did this
+
+00:16:53.916 --> 00:16:56.086 A:middle
+I'm going to briefly show how
+
+00:16:56.086 --> 00:16:57.696 A:middle
+dyld 2 launches an app.
+
+00:16:58.016 --> 00:16:59.736 A:middle
+And again, we went into this in
+
+00:16:59.736 --> 00:17:01.636 A:middle
+much more detail in last year's
+
+00:17:01.636 --> 00:17:02.896 A:middle
+talk, Optimizing App Startup
+
+00:17:02.896 --> 00:17:04.566 A:middle
+Time, so if you want to pause,
+
+00:17:04.566 --> 00:17:05.236 A:middle
+if you're watching this on
+
+00:17:05.236 --> 00:17:06.906 A:middle
+video, and go watch that, that
+
+00:17:06.906 --> 00:17:07.686 A:middle
+might be a good idea.
+
+00:17:07.686 --> 00:17:09.196 A:middle
+Or if you just want to follow
+
+00:17:09.196 --> 00:17:11.016 A:middle
+along here, I'm going to go
+
+00:17:11.016 --> 00:17:11.586 A:middle
+through it briefly.
+
+00:17:12.756 --> 00:17:14.326 A:middle
+So first off we have dyld 2 and
+
+00:17:15.016 --> 00:17:15.976 A:middle
+your app starts launching.
+
+00:17:16.726 --> 00:17:18.496 A:middle
+So we have to parse your mach-o,
+
+00:17:18.496 --> 00:17:20.616 A:middle
+and as we parse your mach-o we
+
+00:17:20.616 --> 00:17:21.786 A:middle
+find what libraries you need,
+
+00:17:22.846 --> 00:17:24.746 A:middle
+and then they may have other
+
+00:17:24.746 --> 00:17:26.036 A:middle
+libraries that they need, and we
+
+00:17:26.116 --> 00:17:27.916 A:middle
+do that recursively until we
+
+00:17:27.916 --> 00:17:29.006 A:middle
+have a complete graph of all
+
+00:17:29.006 --> 00:17:30.366 A:middle
+your dylibs, and for an average
+
+00:17:30.746 --> 00:17:32.326 A:middle
+graph of application on iOS
+
+00:17:32.326 --> 00:17:33.556 A:middle
+that's between 3- and 600
+
+00:17:33.556 --> 00:17:34.506 A:middle
+dylibs, so it's a lot of them
+
+00:17:34.506 --> 00:17:36.716 A:middle
+and a lot of work.
+
+00:17:36.916 --> 00:17:38.196 A:middle
+We then map in all the mach-o
+
+00:17:38.196 --> 00:17:40.226 A:middle
+files so we get them into your
+
+00:17:40.226 --> 00:17:40.966 A:middle
+address space.
+
+00:17:41.556 --> 00:17:43.996 A:middle
+We then perform symbol lookups,
+
+00:17:43.996 --> 00:17:45.756 A:middle
+so we actually look and say if
+
+00:17:45.756 --> 00:17:47.406 A:middle
+your application uses printf, we
+
+00:17:47.406 --> 00:17:48.726 A:middle
+go and look and see that printf
+
+00:17:48.726 --> 00:17:51.376 A:middle
+is in lib system, and we find
+
+00:17:51.376 --> 00:17:52.206 A:middle
+the address of it and we
+
+00:17:52.206 --> 00:17:53.306 A:middle
+basically copy that into a
+
+00:17:53.306 --> 00:17:54.206 A:middle
+function pointer in your
+
+00:17:54.206 --> 00:17:54.746 A:middle
+application.
+
+00:17:56.296 --> 00:17:57.836 A:middle
+Then we do what's called binding
+
+00:17:57.836 --> 00:17:58.786 A:middle
+and rebasing, which is where we
+
+00:17:58.866 --> 00:18:00.276 A:middle
+copy those pointers in and we
+
+00:18:00.276 --> 00:18:02.136 A:middle
+also -- because you're at a
+
+00:18:02.136 --> 00:18:03.736 A:middle
+random address all of your
+
+00:18:03.736 --> 00:18:05.286 A:middle
+pointers have to have that base
+
+00:18:05.286 --> 00:18:05.976 A:middle
+address added to them.
+
+00:18:06.156 --> 00:18:08.816 A:middle
+And then finally, we can run all
+
+00:18:08.816 --> 00:18:09.846 A:middle
+of your initializers, which is
+
+00:18:09.846 --> 00:18:10.806 A:middle
+what I showed the tooling for
+
+00:18:10.806 --> 00:18:12.546 A:middle
+earlier, and at that point we're
+
+00:18:12.546 --> 00:18:13.516 A:middle
+ready to call your main in
+
+00:18:13.516 --> 00:18:14.576 A:middle
+launch, and that's a lot of
+
+00:18:14.576 --> 00:18:14.906 A:middle
+work.
+
+00:18:15.926 --> 00:18:17.596 A:middle
+So how can we make this faster
+
+00:18:17.776 --> 00:18:18.916 A:middle
+and how can we move it out of
+
+00:18:18.916 --> 00:18:19.356 A:middle
+process?
+
+00:18:19.356 --> 00:18:21.656 A:middle
+Well, first off we identify the
+
+00:18:21.656 --> 00:18:23.356 A:middle
+security sensitive components.
+
+00:18:23.896 --> 00:18:25.186 A:middle
+And from our perspective the
+
+00:18:25.446 --> 00:18:27.096 A:middle
+biggest ones of those are
+
+00:18:27.096 --> 00:18:28.356 A:middle
+parsing mach-o headers and
+
+00:18:28.356 --> 00:18:30.486 A:middle
+finding dependencies because
+
+00:18:30.836 --> 00:18:32.266 A:middle
+malformed mach-o headers allow
+
+00:18:32.266 --> 00:18:34.466 A:middle
+people to do certain attacks and
+
+00:18:35.266 --> 00:18:36.916 A:middle
+your applications may use
+
+00:18:37.196 --> 00:18:39.216 A:middle
+@rpaths, which are search paths,
+
+00:18:39.216 --> 00:18:41.886 A:middle
+and by malforming those or
+
+00:18:41.886 --> 00:18:42.896 A:middle
+inserting libraries in the right
+
+00:18:42.896 --> 00:18:44.166 A:middle
+places, people can subvert
+
+00:18:44.166 --> 00:18:45.016 A:middle
+applications.
+
+00:18:45.446 --> 00:18:47.656 A:middle
+So we do all of that out of
+
+00:18:47.656 --> 00:18:49.886 A:middle
+process in the daemon, and then
+
+00:18:49.886 --> 00:18:51.456 A:middle
+we identify the expensive parts
+
+00:18:51.456 --> 00:18:53.996 A:middle
+of it, which are cache-able, and
+
+00:18:53.996 --> 00:18:55.106 A:middle
+those are the symbol lookups.
+
+00:18:55.146 --> 00:18:57.066 A:middle
+Because in a given library,
+
+00:18:57.066 --> 00:18:58.246 A:middle
+unless you perform the software
+
+00:18:58.246 --> 00:19:00.246 A:middle
+update or change the library on
+
+00:19:00.246 --> 00:19:01.946 A:middle
+disk, the symbols will always be
+
+00:19:01.946 --> 00:19:02.986 A:middle
+at the same offset in that
+
+00:19:02.986 --> 00:19:03.466 A:middle
+library.
+
+00:19:04.306 --> 00:19:05.486 A:middle
+So we've identified these.
+
+00:19:05.736 --> 00:19:06.706 A:middle
+Let me show you how they look in
+
+00:19:06.706 --> 00:19:06.976 A:middle
+dyld 3.
+
+00:19:11.546 --> 00:19:13.786 A:middle
+So we moved those all up front,
+
+00:19:13.926 --> 00:19:15.196 A:middle
+at which point we write a
+
+00:19:15.196 --> 00:19:16.026 A:middle
+closure to disk.
+
+00:19:16.026 --> 00:19:17.266 A:middle
+So as I said earlier, a launch
+
+00:19:17.266 --> 00:19:19.346 A:middle
+closure is everything you need
+
+00:19:19.346 --> 00:19:22.526 A:middle
+to launch the app.
+
+00:19:22.526 --> 00:19:25.596 A:middle
+And then we move it -- we can
+
+00:19:25.596 --> 00:19:26.876 A:middle
+use that in process later.
+
+00:19:26.876 --> 00:19:28.956 A:middle
+So dyld 3 is three components.
+
+00:19:30.166 --> 00:19:32.076 A:middle
+It's an out-of-process mach-o
+
+00:19:32.076 --> 00:19:33.106 A:middle
+parser and compiler.
+
+00:19:34.176 --> 00:19:35.806 A:middle
+It's an in-process engine that
+
+00:19:35.806 --> 00:19:39.126 A:middle
+runs launch closures, and it's a
+
+00:19:39.166 --> 00:19:41.096 A:middle
+launch closer caching service.
+
+00:19:42.896 --> 00:19:44.706 A:middle
+Most launches use the cache and
+
+00:19:44.706 --> 00:19:46.046 A:middle
+never have to invoke the
+
+00:19:46.046 --> 00:19:47.706 A:middle
+out-of-process mach-o parser or
+
+00:19:47.706 --> 00:19:48.306 A:middle
+compiler.
+
+00:19:50.236 --> 00:19:52.366 A:middle
+And launch closures are much
+
+00:19:52.366 --> 00:19:53.436 A:middle
+simpler than mach-o.
+
+00:19:54.276 --> 00:19:55.746 A:middle
+They are memory map files we
+
+00:19:55.876 --> 00:19:57.026 A:middle
+don't have to parse in any
+
+00:19:57.026 --> 00:19:57.856 A:middle
+complicated way.
+
+00:19:57.856 --> 00:19:59.126 A:middle
+We can validate them simply.
+
+00:19:59.126 --> 00:20:00.526 A:middle
+They are built for speed.
+
+00:20:01.096 --> 00:20:04.606 A:middle
+And so let's talk about each one
+
+00:20:04.606 --> 00:20:05.306 A:middle
+of those parts a little bit
+
+00:20:05.306 --> 00:20:05.496 A:middle
+more.
+
+00:20:06.416 --> 00:20:09.236 A:middle
+So dyld 3 is an out-of-process
+
+00:20:09.236 --> 00:20:09.996 A:middle
+mach-o parser.
+
+00:20:10.856 --> 00:20:11.636 A:middle
+So what does that do?
+
+00:20:11.636 --> 00:20:12.936 A:middle
+It resolves all the search
+
+00:20:12.936 --> 00:20:15.586 A:middle
+paths, all the rpaths, all the
+
+00:20:15.586 --> 00:20:16.796 A:middle
+environment variables that can
+
+00:20:16.796 --> 00:20:17.656 A:middle
+affect your launch.
+
+00:20:18.336 --> 00:20:19.596 A:middle
+Then it parses the mach-o
+
+00:20:19.596 --> 00:20:22.156 A:middle
+binaries and it performs all of
+
+00:20:22.156 --> 00:20:23.226 A:middle
+those symbol lookups.
+
+00:20:24.936 --> 00:20:26.456 A:middle
+Finally, it creates the closure
+
+00:20:26.456 --> 00:20:29.046 A:middle
+with the results, and it's that
+
+00:20:29.046 --> 00:20:30.466 A:middle
+normal daemon so that we can get
+
+00:20:30.466 --> 00:20:31.626 A:middle
+that improved testing
+
+00:20:31.626 --> 00:20:32.266 A:middle
+infrastructure.
+
+00:20:34.536 --> 00:20:36.476 A:middle
+dyld is a small in-process
+
+00:20:36.476 --> 00:20:38.246 A:middle
+engine as well, and this is the
+
+00:20:38.246 --> 00:20:39.246 A:middle
+part that will be in your
+
+00:20:39.246 --> 00:20:40.666 A:middle
+process and this is what you
+
+00:20:40.666 --> 00:20:41.376 A:middle
+will mostly see.
+
+00:20:42.456 --> 00:20:43.836 A:middle
+So all it does is it validates
+
+00:20:43.836 --> 00:20:45.336 A:middle
+that the launch closure is
+
+00:20:45.336 --> 00:20:48.186 A:middle
+correct and then it just maps in
+
+00:20:48.186 --> 00:20:50.696 A:middle
+the dylibs and jumps to main.
+
+00:20:50.696 --> 00:20:51.596 A:middle
+And one of the things you may
+
+00:20:51.596 --> 00:20:54.416 A:middle
+notice is it never needs to pars
+
+00:20:54.416 --> 00:20:55.926 A:middle
+a mach-o header or perform a
+
+00:20:55.926 --> 00:20:56.616 A:middle
+symbol lookup.
+
+00:20:56.666 --> 00:20:57.856 A:middle
+We don't have to do those to
+
+00:20:57.856 --> 00:20:58.846 A:middle
+launch your app anymore.
+
+00:20:58.896 --> 00:21:00.056 A:middle
+And since that's where we're
+
+00:21:00.056 --> 00:21:02.496 A:middle
+spending most of our time, it's
+
+00:21:02.496 --> 00:21:03.796 A:middle
+going to result in much faster
+
+00:21:03.796 --> 00:21:04.666 A:middle
+app launches for you.
+
+00:21:06.336 --> 00:21:09.416 A:middle
+Finally, dyld 3 is a launch
+
+00:21:09.416 --> 00:21:10.966 A:middle
+closure caching service.
+
+00:21:11.486 --> 00:21:14.386 A:middle
+So what does that mean?
+
+00:21:14.386 --> 00:21:16.406 A:middle
+Well, system app closures we're
+
+00:21:16.476 --> 00:21:18.436 A:middle
+just building directly into the
+
+00:21:18.436 --> 00:21:18.996 A:middle
+shared cache.
+
+00:21:18.996 --> 00:21:20.036 A:middle
+We already have this tool that
+
+00:21:20.036 --> 00:21:21.416 A:middle
+runs and analyzes every mach-o
+
+00:21:21.416 --> 00:21:21.966 A:middle
+in the system.
+
+00:21:23.076 --> 00:21:24.396 A:middle
+We can just put them directly
+
+00:21:24.396 --> 00:21:25.746 A:middle
+into the shared cache, so it's
+
+00:21:25.746 --> 00:21:27.306 A:middle
+mapped in with all the dylibs to
+
+00:21:27.306 --> 00:21:27.716 A:middle
+start with.
+
+00:21:27.716 --> 00:21:29.076 A:middle
+We don't even need to open
+
+00:21:29.076 --> 00:21:30.036 A:middle
+another file.
+
+00:21:31.296 --> 00:21:33.766 A:middle
+For third-party apps we're going
+
+00:21:33.766 --> 00:21:35.806 A:middle
+to build your closure during app
+
+00:21:35.996 --> 00:21:38.856 A:middle
+install or system updates
+
+00:21:39.286 --> 00:21:40.576 A:middle
+because at that point the system
+
+00:21:40.576 --> 00:21:41.356 A:middle
+library has changed.
+
+00:21:41.816 --> 00:21:44.276 A:middle
+So by default these will all be
+
+00:21:44.276 --> 00:21:46.606 A:middle
+prebuilt for you on iOS and tvOS
+
+00:21:46.606 --> 00:21:48.776 A:middle
+and watchOS before you even run.
+
+00:21:49.886 --> 00:21:51.396 A:middle
+On macOS, because you can side
+
+00:21:51.396 --> 00:21:53.296 A:middle
+load applications, the
+
+00:21:53.296 --> 00:21:55.656 A:middle
+in-process engine can RPC out to
+
+00:21:55.656 --> 00:21:57.186 A:middle
+the daemon if necessary on first
+
+00:21:57.186 --> 00:22:00.006 A:middle
+launch, and then after that it
+
+00:22:00.236 --> 00:22:02.146 A:middle
+will be able to use a cached
+
+00:22:02.146 --> 00:22:03.166 A:middle
+closure just like everything
+
+00:22:03.166 --> 00:22:03.566 A:middle
+else.
+
+00:22:04.916 --> 00:22:06.476 A:middle
+But like I said, that is not
+
+00:22:06.476 --> 00:22:08.856 A:middle
+necessary on any of our other
+
+00:22:08.856 --> 00:22:09.516 A:middle
+platforms.
+
+00:22:10.666 --> 00:22:11.696 A:middle
+So now that I've talked about
+
+00:22:11.696 --> 00:22:13.176 A:middle
+this dynamic linker that we'll
+
+00:22:13.176 --> 00:22:14.436 A:middle
+be using for system apps this
+
+00:22:14.436 --> 00:22:15.366 A:middle
+year and for your apps in the
+
+00:22:15.366 --> 00:22:17.016 A:middle
+future, I want to talk to you
+
+00:22:17.016 --> 00:22:18.176 A:middle
+about some potential issues you
+
+00:22:18.176 --> 00:22:19.066 A:middle
+might see with it so that you
+
+00:22:19.066 --> 00:22:20.596 A:middle
+can start updating your apps for
+
+00:22:20.596 --> 00:22:20.966 A:middle
+it now.
+
+00:22:24.046 --> 00:22:25.336 A:middle
+So first off, it is fully
+
+00:22:25.336 --> 00:22:28.526 A:middle
+compatible with dyld 2.x. So
+
+00:22:29.666 --> 00:22:32.596 A:middle
+some existing API's will cause
+
+00:22:32.816 --> 00:22:34.006 A:middle
+you to run slower or use
+
+00:22:34.006 --> 00:22:35.766 A:middle
+fallback modes in dyld 3 though,
+
+00:22:36.076 --> 00:22:37.636 A:middle
+so we'd like you to avoid those,
+
+00:22:37.636 --> 00:22:38.376 A:middle
+and we'll go into those in a
+
+00:22:38.376 --> 00:22:38.746 A:middle
+second.
+
+00:22:39.346 --> 00:22:40.296 A:middle
+Also, some existing
+
+00:22:40.296 --> 00:22:42.006 A:middle
+optimizations that you are doing
+
+00:22:42.006 --> 00:22:44.126 A:middle
+may not be necessary anymore, so
+
+00:22:44.126 --> 00:22:45.946 A:middle
+you don't have to rip them out
+
+00:22:46.036 --> 00:22:47.226 A:middle
+but, you know, it may not be
+
+00:22:47.226 --> 00:22:48.796 A:middle
+worth putting in a lot of
+
+00:22:48.796 --> 00:22:49.026 A:middle
+effort.
+
+00:22:49.026 --> 00:22:49.706 A:middle
+The other thing I want to talk
+
+00:22:49.776 --> 00:22:51.016 A:middle
+about is that we're going to
+
+00:22:51.016 --> 00:22:52.986 A:middle
+have stricter linking semantics.
+
+00:22:52.986 --> 00:22:53.966 A:middle
+So what do I mean by that?
+
+00:22:53.966 --> 00:22:56.106 A:middle
+Well, there's a lot of things
+
+00:22:56.106 --> 00:22:58.836 A:middle
+that maybe work most of the
+
+00:22:58.836 --> 00:23:00.986 A:middle
+time, but aren't actually
+
+00:23:00.986 --> 00:23:03.196 A:middle
+correct even today and so we've
+
+00:23:03.196 --> 00:23:04.566 A:middle
+identified a lot of those.
+
+00:23:04.566 --> 00:23:06.266 A:middle
+As we've been putting the new
+
+00:23:06.266 --> 00:23:07.656 A:middle
+dynamic linker in, that tends to
+
+00:23:07.656 --> 00:23:08.916 A:middle
+find all these edge cases.
+
+00:23:08.916 --> 00:23:10.646 A:middle
+So what we've been doing is
+
+00:23:10.646 --> 00:23:11.196 A:middle
+we've been putting in
+
+00:23:11.196 --> 00:23:12.876 A:middle
+workarounds for old binaries,
+
+00:23:13.196 --> 00:23:15.656 A:middle
+but we do not intend to carry
+
+00:23:15.656 --> 00:23:16.396 A:middle
+those forward.
+
+00:23:16.396 --> 00:23:17.956 A:middle
+We will do linked on or after
+
+00:23:17.956 --> 00:23:19.056 A:middle
+checks to see what SDK you were
+
+00:23:19.056 --> 00:23:20.646 A:middle
+built with and we will disable
+
+00:23:20.646 --> 00:23:21.556 A:middle
+those workarounds for new
+
+00:23:21.556 --> 00:23:23.916 A:middle
+binaries so that you move to
+
+00:23:23.916 --> 00:23:26.706 A:middle
+these improved -- you fix these
+
+00:23:26.706 --> 00:23:27.056 A:middle
+issues.
+
+00:23:28.406 --> 00:23:29.406 A:middle
+So new binaries will cause
+
+00:23:29.406 --> 00:23:30.046 A:middle
+linker issues.
+
+00:23:30.046 --> 00:23:33.506 A:middle
+So, first off, I want to talk
+
+00:23:33.506 --> 00:23:35.516 A:middle
+about unaligned pointers in your
+
+00:23:35.516 --> 00:23:36.236 A:middle
+data segments.
+
+00:23:36.236 --> 00:23:37.416 A:middle
+So what do I mean by this?
+
+00:23:37.416 --> 00:23:39.596 A:middle
+Well, when you have a global
+
+00:23:39.596 --> 00:23:41.106 A:middle
+structure that points to a
+
+00:23:41.106 --> 00:23:42.586 A:middle
+function or another global
+
+00:23:42.586 --> 00:23:44.666 A:middle
+structure, that's a pointer that
+
+00:23:44.666 --> 00:23:45.826 A:middle
+we have to fix up before you
+
+00:23:45.826 --> 00:23:49.226 A:middle
+launch, and pointers must be
+
+00:23:49.226 --> 00:23:50.526 A:middle
+naturally aligned on our system
+
+00:23:50.556 --> 00:23:52.426 A:middle
+for best performance.
+
+00:23:53.166 --> 00:23:56.166 A:middle
+And fixing up unaligned pointers
+
+00:23:56.236 --> 00:23:57.406 A:middle
+is much more complex.
+
+00:23:57.406 --> 00:23:59.726 A:middle
+They can span multiple pages,
+
+00:23:59.726 --> 00:24:01.106 A:middle
+which can cause more page faults
+
+00:24:01.106 --> 00:24:02.476 A:middle
+and other issues, and they can
+
+00:24:02.476 --> 00:24:05.146 A:middle
+have atomicity issues related to
+
+00:24:05.386 --> 00:24:06.496 A:middle
+multiprocessors.
+
+00:24:07.656 --> 00:24:09.576 A:middle
+The static linker already emits
+
+00:24:09.576 --> 00:24:13.226 A:middle
+a warning for this, ld warning,
+
+00:24:13.226 --> 00:24:14.716 A:middle
+pointer not aligned at address,
+
+00:24:14.716 --> 00:24:15.876 A:middle
+and that's an address, often
+
+00:24:15.876 --> 00:24:17.716 A:middle
+your data segments.
+
+00:24:18.416 --> 00:24:19.436 A:middle
+And if you're fixing all
+
+00:24:19.436 --> 00:24:20.596 A:middle
+warnings, you should --
+
+00:24:20.596 --> 00:24:22.116 A:middle
+hopefully you've already taken
+
+00:24:22.116 --> 00:24:23.306 A:middle
+care of this.
+
+00:24:23.306 --> 00:24:24.256 A:middle
+The seeds that we have out this
+
+00:24:24.256 --> 00:24:25.876 A:middle
+week have some issues with Swift
+
+00:24:25.876 --> 00:24:27.456 A:middle
+keypaths, but they will be fixed
+
+00:24:27.546 --> 00:24:28.916 A:middle
+so you can ignore those, but
+
+00:24:28.916 --> 00:24:30.096 A:middle
+other than that, please go and
+
+00:24:30.096 --> 00:24:30.856 A:middle
+fix these issues.
+
+00:24:31.566 --> 00:24:32.686 A:middle
+So for those of you who are
+
+00:24:32.686 --> 00:24:33.696 A:middle
+asking how would you get
+
+00:24:33.696 --> 00:24:34.826 A:middle
+something like this, I'm going
+
+00:24:34.826 --> 00:24:35.866 A:middle
+to just show you real quick.
+
+00:24:36.346 --> 00:24:38.146 A:middle
+If you don't know how, it takes
+
+00:24:38.146 --> 00:24:38.956 A:middle
+a lot of work.
+
+00:24:38.956 --> 00:24:40.346 A:middle
+You can't do it in Swift.
+
+00:24:40.346 --> 00:24:41.466 A:middle
+So again, use more Swift.
+
+00:24:42.306 --> 00:24:44.166 A:middle
+This code here will do it, so
+
+00:24:44.166 --> 00:24:45.296 A:middle
+let me show you what's going on.
+
+00:24:46.566 --> 00:24:49.546 A:middle
+First off, I have attributes
+
+00:24:49.816 --> 00:24:51.126 A:middle
+forcing specific alignment.
+
+00:24:51.126 --> 00:24:52.376 A:middle
+So by default the compiler's
+
+00:24:52.376 --> 00:24:53.536 A:middle
+going to align it correctly for
+
+00:24:53.536 --> 00:24:53.756 A:middle
+you.
+
+00:24:54.316 --> 00:24:55.496 A:middle
+But sometimes you may need
+
+00:24:55.496 --> 00:24:56.836 A:middle
+special alignments and this case
+
+00:24:56.836 --> 00:24:58.376 A:middle
+I've said change whatever the
+
+00:24:58.376 --> 00:24:59.986 A:middle
+default alignment rules are to
+
+00:24:59.986 --> 00:25:01.126 A:middle
+one, and I've done that in two
+
+00:25:01.126 --> 00:25:02.466 A:middle
+different ways just to be
+
+00:25:02.496 --> 00:25:03.726 A:middle
+really, really bad, so you have
+
+00:25:03.726 --> 00:25:04.876 A:middle
+to fix both of these.
+
+00:25:05.776 --> 00:25:08.726 A:middle
+Then I constructed a global
+
+00:25:08.726 --> 00:25:09.356 A:middle
+variable.
+
+00:25:09.356 --> 00:25:11.256 A:middle
+That global variable sets a
+
+00:25:11.256 --> 00:25:12.356 A:middle
+pointer in with the structures
+
+00:25:12.356 --> 00:25:13.936 A:middle
+and that's going to force the
+
+00:25:13.936 --> 00:25:15.766 A:middle
+dynamic linker to fix up that
+
+00:25:15.766 --> 00:25:16.646 A:middle
+pointer on launch.
+
+00:25:17.216 --> 00:25:19.296 A:middle
+So if you see code like this,
+
+00:25:19.296 --> 00:25:20.576 A:middle
+you can just remove the
+
+00:25:20.576 --> 00:25:21.436 A:middle
+alignments.
+
+00:25:21.796 --> 00:25:22.826 A:middle
+You could rearrange the
+
+00:25:22.826 --> 00:25:24.336 A:middle
+structure so that the pointer
+
+00:25:24.336 --> 00:25:25.846 A:middle
+goes first, because that's a
+
+00:25:26.046 --> 00:25:26.766 A:middle
+better alignment thing.
+
+00:25:27.126 --> 00:25:28.066 A:middle
+And there's plenty of guides
+
+00:25:28.066 --> 00:25:29.286 A:middle
+online about C structure
+
+00:25:29.286 --> 00:25:30.036 A:middle
+alignment if you want to get
+
+00:25:30.036 --> 00:25:31.986 A:middle
+into the nitty-gritty, but
+
+00:25:32.466 --> 00:25:33.526 A:middle
+hopefully you don't have to deal
+
+00:25:33.526 --> 00:25:34.786 A:middle
+with this, and if you write
+
+00:25:34.786 --> 00:25:35.866 A:middle
+Swift, you definitely don't have
+
+00:25:35.866 --> 00:25:35.976 A:middle
+to.
+
+00:25:38.786 --> 00:25:41.516 A:middle
+So next off, eager symbol
+
+00:25:41.516 --> 00:25:42.116 A:middle
+resolution.
+
+00:25:42.576 --> 00:25:43.566 A:middle
+So what do I mean by this?
+
+00:25:44.196 --> 00:25:46.316 A:middle
+So dyld 2 performs what we call
+
+00:25:46.316 --> 00:25:47.486 A:middle
+lazy symbol resolution.
+
+00:25:48.026 --> 00:25:50.016 A:middle
+So I said up front that dyld has
+
+00:25:50.016 --> 00:25:51.406 A:middle
+to load all those symbols and
+
+00:25:51.406 --> 00:25:52.406 A:middle
+that's something expensive that
+
+00:25:52.406 --> 00:25:53.316 A:middle
+we want to cache.
+
+00:25:53.786 --> 00:25:56.876 A:middle
+It's actually too expensive to
+
+00:25:56.876 --> 00:25:59.786 A:middle
+run up front on existing
+
+00:25:59.786 --> 00:26:00.386 A:middle
+applications.
+
+00:26:00.386 --> 00:26:01.326 A:middle
+It would take too long.
+
+00:26:01.776 --> 00:26:03.756 A:middle
+So instead, we use a mechanism
+
+00:26:03.756 --> 00:26:05.186 A:middle
+we call lazy symbol resolution,
+
+00:26:05.186 --> 00:26:08.576 A:middle
+where, by default, the function
+
+00:26:08.576 --> 00:26:10.056 A:middle
+pointer in your binary for,
+
+00:26:10.056 --> 00:26:11.276 A:middle
+let's say, printf, doesn't point
+
+00:26:11.276 --> 00:26:11.906 A:middle
+to printf.
+
+00:26:12.466 --> 00:26:14.566 A:middle
+By default it points to a
+
+00:26:14.566 --> 00:26:17.886 A:middle
+function in dyld that returns a
+
+00:26:17.976 --> 00:26:19.566 A:middle
+function pointer to printf.
+
+00:26:20.166 --> 00:26:22.836 A:middle
+And so when we launch, you'll
+
+00:26:22.836 --> 00:26:24.466 A:middle
+call printf, it goes into dyld,
+
+00:26:24.466 --> 00:26:26.596 A:middle
+we return what we call the
+
+00:26:26.596 --> 00:26:27.656 A:middle
+printf and call it on your
+
+00:26:27.656 --> 00:26:28.626 A:middle
+behalf the first time and then
+
+00:26:28.626 --> 00:26:30.116 A:middle
+on the second time you go
+
+00:26:30.116 --> 00:26:30.966 A:middle
+straight to printf.
+
+00:26:31.976 --> 00:26:33.546 A:middle
+But since we are caching and
+
+00:26:33.546 --> 00:26:34.846 A:middle
+calculating all these symbols up
+
+00:26:34.846 --> 00:26:36.326 A:middle
+front now, there's no additional
+
+00:26:36.326 --> 00:26:37.796 A:middle
+cost at app launch time to find
+
+00:26:37.796 --> 00:26:39.376 A:middle
+them all up front, so we are
+
+00:26:39.376 --> 00:26:41.856 A:middle
+going to do that.
+
+00:26:42.046 --> 00:26:44.666 A:middle
+Now, having said that, missing
+
+00:26:44.666 --> 00:26:46.126 A:middle
+symbols behave differently when
+
+00:26:46.126 --> 00:26:46.746 A:middle
+you do this.
+
+00:26:47.356 --> 00:26:49.576 A:middle
+On existing lazy systems, if you
+
+00:26:49.576 --> 00:26:51.646 A:middle
+are missing a symbol, the first
+
+00:26:51.646 --> 00:26:53.516 A:middle
+call -- you'll launch correctly
+
+00:26:53.516 --> 00:26:54.666 A:middle
+and the first time you call that
+
+00:26:54.666 --> 00:26:55.726 A:middle
+symbol, you'll crash.
+
+00:26:56.406 --> 00:26:57.516 A:middle
+With eager symbols you'll crash
+
+00:26:57.666 --> 00:26:57.976 A:middle
+up front.
+
+00:27:03.656 --> 00:27:04.946 A:middle
+So we do have a compatibility
+
+00:27:04.946 --> 00:27:06.656 A:middle
+mode for this, and the way we're
+
+00:27:06.656 --> 00:27:09.206 A:middle
+going to do that is that we are
+
+00:27:09.206 --> 00:27:12.586 A:middle
+going to just have a symbol
+
+00:27:12.636 --> 00:27:14.286 A:middle
+inside dyld 3 that automatically
+
+00:27:14.286 --> 00:27:16.166 A:middle
+crashes, and if we can't find
+
+00:27:16.166 --> 00:27:17.616 A:middle
+your symbol, we will bind that
+
+00:27:17.616 --> 00:27:18.846 A:middle
+symbol, so on first call you
+
+00:27:18.846 --> 00:27:19.566 A:middle
+will crash.
+
+00:27:20.196 --> 00:27:21.986 A:middle
+But again, that's how it works
+
+00:27:21.986 --> 00:27:22.706 A:middle
+on today's SDK.
+
+00:27:22.706 --> 00:27:25.006 A:middle
+If future SDK's we are going to
+
+00:27:25.006 --> 00:27:26.546 A:middle
+force all symbol resolution to
+
+00:27:26.546 --> 00:27:27.116 A:middle
+be up front.
+
+00:27:27.116 --> 00:27:28.116 A:middle
+So if you are missing a symbol,
+
+00:27:28.116 --> 00:27:29.666 A:middle
+you will crash, and that should
+
+00:27:29.666 --> 00:27:31.176 A:middle
+hopefully result in you
+
+00:27:31.176 --> 00:27:32.136 A:middle
+discovering crashes during
+
+00:27:32.136 --> 00:27:33.466 A:middle
+development instead of your
+
+00:27:33.466 --> 00:27:34.506 A:middle
+users discovering them at
+
+00:27:34.506 --> 00:27:35.246 A:middle
+runtime.
+
+00:27:36.056 --> 00:27:37.476 A:middle
+And you can simulate that
+
+00:27:37.476 --> 00:27:38.456 A:middle
+behavior now today.
+
+00:27:38.456 --> 00:27:39.646 A:middle
+There's a special linker flag
+
+00:27:40.666 --> 00:27:43.736 A:middle
+which is dyld bind at load, so
+
+00:27:43.736 --> 00:27:45.346 A:middle
+if you add this to your debug
+
+00:27:45.346 --> 00:27:46.576 A:middle
+build, as I said, it's much
+
+00:27:46.576 --> 00:27:47.866 A:middle
+slower, so please only put it in
+
+00:27:47.866 --> 00:27:49.666 A:middle
+your debug builds, but add this
+
+00:27:49.666 --> 00:27:50.806 A:middle
+to your debug builds and you'll
+
+00:27:50.806 --> 00:27:53.396 A:middle
+get more reliable behavior today
+
+00:27:53.396 --> 00:27:54.526 A:middle
+and it will get you ready for
+
+00:27:54.526 --> 00:27:55.296 A:middle
+what we're going to be doing in
+
+00:27:55.296 --> 00:27:56.086 A:middle
+dyld 3.
+
+00:27:57.616 --> 00:27:59.016 A:middle
+Again, only use that in your
+
+00:27:59.016 --> 00:27:59.606 A:middle
+test builds.
+
+00:28:00.696 --> 00:28:03.386 A:middle
+Dlopen, dlsym and dladdr.
+
+00:28:04.006 --> 00:28:05.106 A:middle
+So last year I got up here and
+
+00:28:05.106 --> 00:28:06.716 A:middle
+said please don't use them
+
+00:28:06.716 --> 00:28:07.816 A:middle
+unless you have to, but we
+
+00:28:07.816 --> 00:28:09.006 A:middle
+understand that you may have to,
+
+00:28:09.006 --> 00:28:10.686 A:middle
+and that's the same thing I'm
+
+00:28:10.686 --> 00:28:11.326 A:middle
+saying this year.
+
+00:28:11.906 --> 00:28:13.006 A:middle
+They have some problematic
+
+00:28:13.006 --> 00:28:15.346 A:middle
+semantics, but they are still
+
+00:28:15.346 --> 00:28:16.396 A:middle
+necessary in some cases.
+
+00:28:16.976 --> 00:28:18.306 A:middle
+Particularly, symbols found with
+
+00:28:18.306 --> 00:28:19.456 A:middle
+dlsym, we need to find it at
+
+00:28:19.456 --> 00:28:19.986 A:middle
+runtime.
+
+00:28:19.986 --> 00:28:21.036 A:middle
+We don't know ahead of time what
+
+00:28:21.036 --> 00:28:21.276 A:middle
+they are.
+
+00:28:21.276 --> 00:28:22.946 A:middle
+We can't do all that prefetching
+
+00:28:22.946 --> 00:28:24.166 A:middle
+and presearching.
+
+00:28:24.576 --> 00:28:26.126 A:middle
+So as soon as you use dlopen or
+
+00:28:26.126 --> 00:28:27.416 A:middle
+dlsym, we're going and we're
+
+00:28:27.416 --> 00:28:28.596 A:middle
+reading in all the pages for
+
+00:28:28.596 --> 00:28:29.856 A:middle
+your symbol table that we didn't
+
+00:28:29.856 --> 00:28:31.076 A:middle
+have to touch before.
+
+00:28:31.296 --> 00:28:32.916 A:middle
+So it's going to be a lot more
+
+00:28:32.916 --> 00:28:33.446 A:middle
+expensive.
+
+00:28:33.446 --> 00:28:35.366 A:middle
+Additionally, we might have to
+
+00:28:35.366 --> 00:28:39.236 A:middle
+RPC out to the daemon, depending
+
+00:28:39.236 --> 00:28:40.556 A:middle
+on how complicated it is.
+
+00:28:41.106 --> 00:28:42.186 A:middle
+So we're working on some better
+
+00:28:42.186 --> 00:28:43.136 A:middle
+alternatives.
+
+00:28:43.926 --> 00:28:45.346 A:middle
+We don't have those yet.
+
+00:28:45.506 --> 00:28:46.936 A:middle
+But we also need to hear about
+
+00:28:46.936 --> 00:28:48.086 A:middle
+your use cases to make sure
+
+00:28:48.086 --> 00:28:48.966 A:middle
+we're designing something that
+
+00:28:48.966 --> 00:28:49.926 A:middle
+will work for you.
+
+00:28:50.536 --> 00:28:52.636 A:middle
+So please, again, they're not
+
+00:28:52.636 --> 00:28:53.886 A:middle
+going away, but they will be
+
+00:28:53.886 --> 00:28:55.016 A:middle
+slower and we want your
+
+00:28:55.016 --> 00:28:55.586 A:middle
+feedback.
+
+00:28:55.746 --> 00:28:58.666 A:middle
+I want to take a second to talk
+
+00:28:58.666 --> 00:28:59.956 A:middle
+about dlclose specifically.
+
+00:28:59.956 --> 00:29:01.506 A:middle
+And so dlclose is a bit of a
+
+00:29:01.506 --> 00:29:02.196 A:middle
+misnomer.
+
+00:29:02.656 --> 00:29:03.916 A:middle
+It's a Unix API, so that's the
+
+00:29:03.916 --> 00:29:05.216 A:middle
+name, but on our system, if we
+
+00:29:05.216 --> 00:29:06.336 A:middle
+had been writing it, it probably
+
+00:29:06.336 --> 00:29:08.126 A:middle
+would be called dlrelease
+
+00:29:08.736 --> 00:29:10.456 A:middle
+because it doesn't actually
+
+00:29:10.546 --> 00:29:11.406 A:middle
+close the dylib.
+
+00:29:11.406 --> 00:29:13.036 A:middle
+It decrements a refcount and if
+
+00:29:13.036 --> 00:29:15.096 A:middle
+the refcount hits zero, it
+
+00:29:15.096 --> 00:29:15.666 A:middle
+closes it.
+
+00:29:15.666 --> 00:29:17.206 A:middle
+And why is that important?
+
+00:29:18.216 --> 00:29:19.826 A:middle
+Well, it's not appropriate for
+
+00:29:19.826 --> 00:29:20.586 A:middle
+resource management.
+
+00:29:20.586 --> 00:29:22.636 A:middle
+If you have a library that
+
+00:29:22.636 --> 00:29:23.866 A:middle
+attaches to a piece of hardware,
+
+00:29:24.516 --> 00:29:25.986 A:middle
+you shouldn't shut down the
+
+00:29:25.986 --> 00:29:27.276 A:middle
+hardware in response to a
+
+00:29:27.276 --> 00:29:30.126 A:middle
+dlclose because some other code
+
+00:29:30.126 --> 00:29:31.256 A:middle
+in your app may have opened it
+
+00:29:31.256 --> 00:29:32.606 A:middle
+behind your back and so now your
+
+00:29:32.606 --> 00:29:33.576 A:middle
+hardware's not shutting down.
+
+00:29:33.576 --> 00:29:34.396 A:middle
+You should have explicit
+
+00:29:35.096 --> 00:29:35.906 A:middle
+resource management.
+
+00:29:36.576 --> 00:29:38.106 A:middle
+There are also a number of
+
+00:29:38.106 --> 00:29:39.496 A:middle
+features on our platforms that
+
+00:29:39.496 --> 00:29:41.546 A:middle
+prevent dylibs from unloading,
+
+00:29:41.546 --> 00:29:42.616 A:middle
+and I'd like to go through a few
+
+00:29:42.616 --> 00:29:44.436 A:middle
+of those because maybe you do
+
+00:29:44.436 --> 00:29:44.626 A:middle
+them.
+
+00:29:45.596 --> 00:29:47.176 A:middle
+You can have Objective-C classes
+
+00:29:47.176 --> 00:29:47.746 A:middle
+in your dylib.
+
+00:29:47.746 --> 00:29:48.976 A:middle
+That will make it not
+
+00:29:48.976 --> 00:29:49.876 A:middle
+unloadable.
+
+00:29:51.016 --> 00:29:52.066 A:middle
+You could have Swift classes.
+
+00:29:52.066 --> 00:29:53.296 A:middle
+That will also make it not
+
+00:29:53.296 --> 00:29:53.826 A:middle
+unloadable.
+
+00:29:53.826 --> 00:29:56.346 A:middle
+And you can have C under bar
+
+00:29:56.346 --> 00:29:57.816 A:middle
+thread or C++ thread local
+
+00:29:57.816 --> 00:29:59.256 A:middle
+variables, all of which make it
+
+00:29:59.256 --> 00:30:00.566 A:middle
+impossible to unload a dylib.
+
+00:30:01.526 --> 00:30:03.686 A:middle
+So on macOS, where there's a
+
+00:30:03.686 --> 00:30:05.646 A:middle
+number of existing Unix apps,
+
+00:30:05.646 --> 00:30:07.876 A:middle
+obviously we will keep this
+
+00:30:07.876 --> 00:30:09.986 A:middle
+working, but because almost
+
+00:30:09.986 --> 00:30:11.586 A:middle
+every dylib on all of our other
+
+00:30:11.586 --> 00:30:12.706 A:middle
+platforms does one of these
+
+00:30:12.706 --> 00:30:14.316 A:middle
+things, effectively it hasn't
+
+00:30:14.666 --> 00:30:16.256 A:middle
+really worked on any of them
+
+00:30:16.256 --> 00:30:16.626 A:middle
+ever.
+
+00:30:17.406 --> 00:30:19.006 A:middle
+So we are considering making it
+
+00:30:19.006 --> 00:30:20.366 A:middle
+just a straight up no-op, that
+
+00:30:20.366 --> 00:30:22.466 A:middle
+will not do anything on any of
+
+00:30:22.466 --> 00:30:23.256 A:middle
+those platforms.
+
+00:30:23.886 --> 00:30:25.926 A:middle
+If there's a reason why that's a
+
+00:30:25.926 --> 00:30:27.656 A:middle
+problem, please, we want to hear
+
+00:30:27.656 --> 00:30:28.826 A:middle
+about it.
+
+00:30:29.816 --> 00:30:31.266 A:middle
+Finally, I want to talk about
+
+00:30:31.266 --> 00:30:33.296 A:middle
+the dyld all image infos.
+
+00:30:34.166 --> 00:30:35.706 A:middle
+So this is an interface for
+
+00:30:35.766 --> 00:30:36.846 A:middle
+introspecting dylibs in a
+
+00:30:36.846 --> 00:30:38.176 A:middle
+process, and it comes from the
+
+00:30:38.176 --> 00:30:39.296 A:middle
+original dyld 1.
+
+00:30:40.626 --> 00:30:42.806 A:middle
+But it's just a struct in
+
+00:30:42.806 --> 00:30:44.356 A:middle
+memory, it's not an API, and
+
+00:30:44.866 --> 00:30:47.026 A:middle
+that was okay when we had five,
+
+00:30:47.156 --> 00:30:48.046 A:middle
+ten dylibs.
+
+00:30:48.446 --> 00:30:50.466 A:middle
+But as we've gotten to 300, 400,
+
+00:30:50.466 --> 00:30:51.766 A:middle
+500 dylibs, the way it's
+
+00:30:51.766 --> 00:30:53.556 A:middle
+designed wastes a lot of memory,
+
+00:30:53.556 --> 00:30:54.636 A:middle
+and we want that memory back.
+
+00:30:54.916 --> 00:30:55.986 A:middle
+We always want our performance
+
+00:30:55.986 --> 00:30:57.096 A:middle
+and we always want our memory.
+
+00:30:58.186 --> 00:30:59.426 A:middle
+So we're going to take it away
+
+00:30:59.426 --> 00:31:01.716 A:middle
+in future releases, but we will
+
+00:31:01.716 --> 00:31:03.776 A:middle
+be providing replacement API's
+
+00:31:03.776 --> 00:31:04.106 A:middle
+for it.
+
+00:31:04.926 --> 00:31:07.206 A:middle
+And so it's very rarely used,
+
+00:31:07.296 --> 00:31:08.776 A:middle
+but if you're using it, again, I
+
+00:31:08.776 --> 00:31:10.436 A:middle
+want to know why you're using it
+
+00:31:10.436 --> 00:31:11.266 A:middle
+and how you're using it and make
+
+00:31:11.266 --> 00:31:13.026 A:middle
+sure we design API's that fit
+
+00:31:13.026 --> 00:31:13.926 A:middle
+your use case.
+
+00:31:14.246 --> 00:31:15.076 A:middle
+There are a number of bits of it
+
+00:31:15.076 --> 00:31:16.306 A:middle
+that are vestigial and don't
+
+00:31:16.486 --> 00:31:17.706 A:middle
+quite do what you expect or work
+
+00:31:17.706 --> 00:31:20.226 A:middle
+anyway today, so if you aren't
+
+00:31:20.226 --> 00:31:21.156 A:middle
+using those, they may just go
+
+00:31:21.156 --> 00:31:22.196 A:middle
+away and we need to hear about
+
+00:31:22.196 --> 00:31:22.436 A:middle
+that.
+
+00:31:23.566 --> 00:31:24.536 A:middle
+So please let us know how you
+
+00:31:24.536 --> 00:31:24.856 A:middle
+use it.
+
+00:31:25.856 --> 00:31:26.856 A:middle
+So finally, let's talk about
+
+00:31:26.856 --> 00:31:27.776 A:middle
+best practices.
+
+00:31:28.476 --> 00:31:30.996 A:middle
+First, make sure you launch your
+
+00:31:30.996 --> 00:31:32.796 A:middle
+app with bind at load in your LD
+
+00:31:32.796 --> 00:31:34.986 A:middle
+FLAGS for debug builds only.
+
+00:31:36.356 --> 00:31:39.026 A:middle
+Fix any unaligned pointers in
+
+00:31:39.026 --> 00:31:39.906 A:middle
+your data segments.
+
+00:31:40.156 --> 00:31:42.906 A:middle
+Again, this warning is there.
+
+00:31:42.906 --> 00:31:43.806 A:middle
+You should try to be fixing all
+
+00:31:43.806 --> 00:31:44.536 A:middle
+of your warnings.
+
+00:31:44.826 --> 00:31:47.276 A:middle
+If you see it with the new Swift
+
+00:31:47.276 --> 00:31:48.626 A:middle
+keypath feature, you can ignore
+
+00:31:48.626 --> 00:31:51.146 A:middle
+that because we'll fix that.
+
+00:31:51.356 --> 00:31:52.356 A:middle
+You can make sure you are not
+
+00:31:52.356 --> 00:31:53.656 A:middle
+depending on any terminators
+
+00:31:53.656 --> 00:31:55.976 A:middle
+running when you call dlclose.
+
+00:31:56.506 --> 00:32:00.376 A:middle
+And we want you to let us know
+
+00:32:00.376 --> 00:32:02.696 A:middle
+why you're using dlopen, dlsym,
+
+00:32:02.836 --> 00:32:04.996 A:middle
+dladdr, and the all image info
+
+00:32:04.996 --> 00:32:06.256 A:middle
+structures to make sure that our
+
+00:32:06.256 --> 00:32:09.296 A:middle
+replacements are going to suit
+
+00:32:09.296 --> 00:32:09.706 A:middle
+your needs.
+
+00:32:09.986 --> 00:32:10.846 A:middle
+In the case of the ones that are
+
+00:32:10.846 --> 00:32:12.016 A:middle
+part of POSIX, they will stay
+
+00:32:12.016 --> 00:32:13.306 A:middle
+around, they will just be lower
+
+00:32:13.306 --> 00:32:13.836 A:middle
+performance.
+
+00:32:13.836 --> 00:32:14.896 A:middle
+In the case of all image infos,
+
+00:32:14.896 --> 00:32:16.556 A:middle
+it is going to go away to save
+
+00:32:16.556 --> 00:32:17.056 A:middle
+that memory.
+
+00:32:18.276 --> 00:32:20.056 A:middle
+Please file bug reports using
+
+00:32:20.056 --> 00:32:21.886 A:middle
+DYLD USAGE in their titles so
+
+00:32:21.886 --> 00:32:22.876 A:middle
+that they get to us so that we
+
+00:32:22.876 --> 00:32:24.156 A:middle
+can find out all of your usage
+
+00:32:24.156 --> 00:32:25.456 A:middle
+cases that we need to support.
+
+00:32:26.276 --> 00:32:28.076 A:middle
+And for more information, you
+
+00:32:28.076 --> 00:32:28.956 A:middle
+can go to this URL.
+
+00:32:30.096 --> 00:32:31.446 A:middle
+Related sessions.
+
+00:32:31.446 --> 00:32:33.666 A:middle
+So last year we did Optimizing
+
+00:32:33.666 --> 00:32:35.636 A:middle
+App Startup Time, so you may
+
+00:32:35.636 --> 00:32:38.156 A:middle
+want to go and watch that for a
+
+00:32:38.196 --> 00:32:39.476 A:middle
+refresher on how traditional
+
+00:32:39.476 --> 00:32:40.846 A:middle
+dynamic linking works.
+
+00:32:41.076 --> 00:32:42.866 A:middle
+It goes into much more detail
+
+00:32:42.866 --> 00:32:43.886 A:middle
+than I did here since I was
+
+00:32:43.886 --> 00:32:44.966 A:middle
+trying to discuss all the new
+
+00:32:44.966 --> 00:32:45.636 A:middle
+stuff we're doing.
+
+00:32:46.366 --> 00:32:47.566 A:middle
+So thank you everybody for
+
+00:32:47.566 --> 00:32:47.866 A:middle
+coming.
+
+00:32:47.866 --> 00:32:48.976 A:middle
+I hope you've had a great WWDC.
+
+00:32:49.516 --> 00:32:55.710 A:middle
+[ Applause ]
