@@ -1,0 +1,1471 @@
+WEBVTT
+
+00:00:17.666 --> 00:00:19.886 A:middle
+&gt;&gt; Hello, welcome to our session
+
+00:00:19.886 --> 00:00:21.876 A:middle
+on error handling best practices
+
+00:00:22.156 --> 00:00:23.856 A:middle
+for HTTP live streaming.
+
+00:00:24.596 --> 00:00:26.786 A:middle
+My name is Shravya Kunamalla and
+
+00:00:26.786 --> 00:00:28.506 A:middle
+I am an AVFoundation engineer.
+
+00:00:29.516 --> 00:00:30.546 A:middle
+Let's get started.
+
+00:00:31.116 --> 00:00:34.506 A:middle
+There are a huge number of Apple
+
+00:00:34.506 --> 00:00:36.336 A:middle
+developers streaming content
+
+00:00:36.336 --> 00:00:38.776 A:middle
+using our very popular HTTP live
+
+00:00:38.776 --> 00:00:39.276 A:middle
+streaming.
+
+00:00:40.126 --> 00:00:42.066 A:middle
+Over the years, the usage has
+
+00:00:42.066 --> 00:00:44.306 A:middle
+evolved into multiple complex
+
+00:00:44.416 --> 00:00:45.446 A:middle
+delivery scenarios.
+
+00:00:46.136 --> 00:00:48.046 A:middle
+The developers are doing live
+
+00:00:48.046 --> 00:00:50.876 A:middle
+event broadcasts, prerecorded
+
+00:00:51.466 --> 00:00:52.096 A:middle
+[inaudible], and in each of
+
+00:00:52.096 --> 00:00:53.696 A:middle
+these there are possibly
+
+00:00:53.696 --> 00:00:54.956 A:middle
+multiple different media
+
+00:00:54.956 --> 00:00:56.786 A:middle
+selections, variance at
+
+00:00:56.786 --> 00:00:58.756 A:middle
+different bit rates, audio and
+
+00:00:58.756 --> 00:01:00.066 A:middle
+subtitles of different
+
+00:01:00.066 --> 00:01:00.486 A:middle
+languages.
+
+00:01:01.366 --> 00:01:02.886 A:middle
+The content itself might be
+
+00:01:02.886 --> 00:01:04.726 A:middle
+protected and there could
+
+00:01:04.726 --> 00:01:06.196 A:middle
+possibly be millions of
+
+00:01:06.386 --> 00:01:08.406 A:middle
+simultaneous viewers subscribing
+
+00:01:08.406 --> 00:01:09.136 A:middle
+to your streams.
+
+00:01:10.116 --> 00:01:12.406 A:middle
+Given the enormity the system is
+
+00:01:12.406 --> 00:01:13.786 A:middle
+bound to run into errors.
+
+00:01:14.896 --> 00:01:17.026 A:middle
+A lot of developers and content
+
+00:01:17.026 --> 00:01:19.056 A:middle
+providers have asked us one
+
+00:01:19.056 --> 00:01:20.536 A:middle
+question in particular over the
+
+00:01:20.536 --> 00:01:22.916 A:middle
+years, what is the right thing
+
+00:01:22.916 --> 00:01:24.456 A:middle
+to do when an error happens.
+
+00:01:25.526 --> 00:01:27.506 A:middle
+And on very popular demand, we
+
+00:01:27.506 --> 00:01:29.096 A:middle
+present to you today the best
+
+00:01:29.126 --> 00:01:31.506 A:middle
+practices for handling errors on
+
+00:01:31.506 --> 00:01:33.666 A:middle
+both app and the server side.
+
+00:01:34.506 --> 00:01:37.526 A:middle
+Most of you listening to this
+
+00:01:37.526 --> 00:01:39.086 A:middle
+talk might already know all
+
+00:01:39.086 --> 00:01:41.156 A:middle
+about HLS delivery, but let's
+
+00:01:41.156 --> 00:01:42.456 A:middle
+quickly go through the overview.
+
+00:01:43.516 --> 00:01:45.296 A:middle
+We have a master playlist, this
+
+00:01:45.296 --> 00:01:47.106 A:middle
+consists of alternate versions
+
+00:01:47.106 --> 00:01:48.326 A:middle
+of the same presentation.
+
+00:01:49.286 --> 00:01:51.366 A:middle
+In this example, there is a 6
+
+00:01:51.366 --> 00:01:53.236 A:middle
+megabit and 2 megabit video,
+
+00:01:54.426 --> 00:01:55.926 A:middle
+English and French audio,
+
+00:01:57.116 --> 00:01:58.936 A:middle
+English and French subtitles.
+
+00:02:00.266 --> 00:02:02.056 A:middle
+Each of these is called a media
+
+00:02:02.056 --> 00:02:04.066 A:middle
+playlist and has its own
+
+00:02:04.066 --> 00:02:05.126 A:middle
+[inaudible] playlist.
+
+00:02:06.616 --> 00:02:08.686 A:middle
+The media playlist consists of
+
+00:02:08.686 --> 00:02:09.186 A:middle
+segments.
+
+00:02:09.956 --> 00:02:11.646 A:middle
+In case of life, the segment
+
+00:02:11.646 --> 00:02:13.326 A:middle
+list is updated at regular
+
+00:02:13.326 --> 00:02:15.236 A:middle
+intervals on playlist re-fetch.
+
+00:02:15.886 --> 00:02:17.376 A:middle
+The segments may be dropped off
+
+00:02:17.376 --> 00:02:18.766 A:middle
+from the beginning and new
+
+00:02:18.766 --> 00:02:22.376 A:middle
+segments are added to the end.
+
+00:02:22.376 --> 00:02:24.016 A:middle
+In case segments are protected
+
+00:02:24.266 --> 00:02:26.336 A:middle
+media playlist also contains
+
+00:02:27.026 --> 00:02:27.146 A:middle
+keys.
+
+00:02:28.566 --> 00:02:31.126 A:middle
+We also have session data, this
+
+00:02:31.126 --> 00:02:33.586 A:middle
+can be for example titles or
+
+00:02:33.806 --> 00:02:34.226 A:middle
+lyrics.
+
+00:02:35.966 --> 00:02:37.716 A:middle
+These are the resources that the
+
+00:02:37.716 --> 00:02:39.296 A:middle
+server is expected to deliver
+
+00:02:39.786 --> 00:02:42.236 A:middle
+and the HLS client needs for
+
+00:02:42.276 --> 00:02:42.736 A:middle
+playback.
+
+00:02:44.476 --> 00:02:46.176 A:middle
+So, what should the server do
+
+00:02:46.176 --> 00:02:48.106 A:middle
+when it's unable to deliver due
+
+00:02:48.106 --> 00:02:48.576 A:middle
+to errors?
+
+00:02:49.206 --> 00:02:51.056 A:middle
+What are the best practices for
+
+00:02:51.056 --> 00:02:52.856 A:middle
+handling both content and
+
+00:02:52.936 --> 00:02:54.506 A:middle
+delivery errors?
+
+00:02:56.036 --> 00:02:57.946 A:middle
+There are a number of iOS,
+
+00:02:58.116 --> 00:02:59.836 A:middle
+macOS, and tvOS clients
+
+00:03:00.046 --> 00:03:02.196 A:middle
+expecting resources from server.
+
+00:03:02.966 --> 00:03:04.816 A:middle
+The server should aim to deliver
+
+00:03:04.816 --> 00:03:07.126 A:middle
+the resources in time and if it
+
+00:03:07.216 --> 00:03:09.126 A:middle
+fails to do so, communicate the
+
+00:03:09.186 --> 00:03:11.146 A:middle
+right error code to AVPlayer.
+
+00:03:11.836 --> 00:03:13.826 A:middle
+This error code should clearly
+
+00:03:13.826 --> 00:03:15.336 A:middle
+convey the cause of error.
+
+00:03:16.066 --> 00:03:18.046 A:middle
+Was the request a valid request,
+
+00:03:18.356 --> 00:03:20.256 A:middle
+was it authorized, has the
+
+00:03:20.256 --> 00:03:21.596 A:middle
+server encountered an error?
+
+00:03:21.596 --> 00:03:24.086 A:middle
+Is the server incapable of
+
+00:03:24.086 --> 00:03:25.486 A:middle
+performing the request, for
+
+00:03:25.486 --> 00:03:27.416 A:middle
+example due to an unsupported
+
+00:03:27.416 --> 00:03:28.846 A:middle
+feature request?
+
+00:03:29.946 --> 00:03:32.136 A:middle
+Next, let's see the recommended
+
+00:03:32.136 --> 00:03:33.786 A:middle
+way to signal these various
+
+00:03:33.786 --> 00:03:35.186 A:middle
+errors to AVPlayer.
+
+00:03:35.766 --> 00:03:38.426 A:middle
+So, here is the list of failures
+
+00:03:38.426 --> 00:03:40.236 A:middle
+and the recommended error codes.
+
+00:03:41.106 --> 00:03:42.836 A:middle
+These are in compliance with the
+
+00:03:42.916 --> 00:03:44.596 A:middle
+standard HTTP error codes
+
+00:03:44.806 --> 00:03:47.296 A:middle
+specified in RFC7231.
+
+00:03:48.896 --> 00:03:50.866 A:middle
+Segments are protected and the
+
+00:03:50.866 --> 00:03:52.786 A:middle
+AVPlayer does not have the
+
+00:03:52.786 --> 00:03:55.366 A:middle
+required authentication, send
+
+00:03:55.366 --> 00:03:55.926 A:middle
+401.
+
+00:03:56.436 --> 00:03:59.056 A:middle
+If the client doesn't have
+
+00:03:59.056 --> 00:04:00.746 A:middle
+authorization for the content,
+
+00:04:01.736 --> 00:04:03.486 A:middle
+send 403.
+
+00:04:04.276 --> 00:04:06.076 A:middle
+For all temporary resource
+
+00:04:06.076 --> 00:04:07.316 A:middle
+unavailable cases like
+
+00:04:07.316 --> 00:04:10.326 A:middle
+[inaudible], send 404.
+
+00:04:11.306 --> 00:04:14.256 A:middle
+For permanent resource
+
+00:04:14.256 --> 00:04:17.366 A:middle
+unavailability, send 410.
+
+00:04:18.156 --> 00:04:20.196 A:middle
+For all unexpected server
+
+00:04:20.196 --> 00:04:21.526 A:middle
+conditions where no other
+
+00:04:21.526 --> 00:04:23.756 A:middle
+specific message applies, send
+
+00:04:23.756 --> 00:04:24.446 A:middle
+500.
+
+00:04:25.836 --> 00:04:27.676 A:middle
+Most of the content providers or
+
+00:04:27.676 --> 00:04:30.246 A:middle
+CDNs are cache in proxies which
+
+00:04:30.246 --> 00:04:31.826 A:middle
+are getting the content itself
+
+00:04:31.936 --> 00:04:33.286 A:middle
+from some encoder somewhere.
+
+00:04:34.086 --> 00:04:36.186 A:middle
+To notify of invalid response
+
+00:04:36.186 --> 00:04:38.626 A:middle
+from gateway, send 502.
+
+00:04:39.176 --> 00:04:41.986 A:middle
+If server is down for
+
+00:04:41.986 --> 00:04:44.536 A:middle
+maintenance or overloaded and is
+
+00:04:44.536 --> 00:04:45.946 A:middle
+unavailable for any other
+
+00:04:45.946 --> 00:04:48.036 A:middle
+reason, send 503.
+
+00:04:48.486 --> 00:04:53.146 A:middle
+For gateway timeout, send 504.
+
+00:04:53.726 --> 00:04:56.406 A:middle
+Now these error codes aren't
+
+00:04:56.406 --> 00:04:57.666 A:middle
+necessarily new they have been
+
+00:04:57.666 --> 00:04:58.496 A:middle
+around for a while.
+
+00:04:59.196 --> 00:05:00.796 A:middle
+And if we look closer at these
+
+00:05:00.796 --> 00:05:02.366 A:middle
+errors there is a class of
+
+00:05:02.366 --> 00:05:04.516 A:middle
+errors that are temporary like
+
+00:05:04.516 --> 00:05:06.276 A:middle
+resource and server temporary
+
+00:05:06.326 --> 00:05:07.086 A:middle
+unavailability.
+
+00:05:08.176 --> 00:05:10.926 A:middle
+Starting iOS 11 we now have a
+
+00:05:10.926 --> 00:05:12.686 A:middle
+way to explicitly communicate
+
+00:05:12.776 --> 00:05:14.116 A:middle
+such temporary failures to
+
+00:05:14.276 --> 00:05:18.606 A:middle
+AVPlayer by means of GAP tag.
+
+00:05:19.116 --> 00:05:21.556 A:middle
+We mark segments as GAP by the
+
+00:05:21.556 --> 00:05:23.726 A:middle
+use of EXT-X-GAP tag.
+
+00:05:24.656 --> 00:05:26.336 A:middle
+This can be applied to one or
+
+00:05:26.336 --> 00:05:27.096 A:middle
+more segments.
+
+00:05:27.666 --> 00:05:30.316 A:middle
+Put this in your playlist to
+
+00:05:30.316 --> 00:05:32.656 A:middle
+indicate GAP and enable AVPlayer
+
+00:05:33.136 --> 00:05:34.766 A:middle
+to make an informed decision.
+
+00:05:35.906 --> 00:05:38.396 A:middle
+On seeing this tag AVPlayer will
+
+00:05:38.396 --> 00:05:39.786 A:middle
+know that this is a temporary
+
+00:05:39.786 --> 00:05:41.986 A:middle
+failure and may decide to go to
+
+00:05:41.986 --> 00:05:43.996 A:middle
+a backup alternate or switch
+
+00:05:43.996 --> 00:05:44.346 A:middle
+down.
+
+00:05:45.726 --> 00:05:47.436 A:middle
+If nothing viable is available
+
+00:05:47.776 --> 00:05:50.216 A:middle
+in the utmost case AVPlayer will
+
+00:05:50.216 --> 00:05:52.146 A:middle
+play the available media until
+
+00:05:52.146 --> 00:05:53.746 A:middle
+we recover from the error
+
+00:05:53.746 --> 00:05:54.306 A:middle
+condition.
+
+00:05:54.866 --> 00:05:58.796 A:middle
+So, going back to failures and
+
+00:05:58.796 --> 00:05:59.466 A:middle
+error codes.
+
+00:06:00.216 --> 00:06:01.956 A:middle
+For which of these errors is the
+
+00:06:01.956 --> 00:06:05.336 A:middle
+GAP tag applicable, 404
+
+00:06:05.446 --> 00:06:06.366 A:middle
+temporary resource
+
+00:06:06.366 --> 00:06:09.836 A:middle
+unavailability and 503 server
+
+00:06:09.836 --> 00:06:11.996 A:middle
+unavailability always use GAP
+
+00:06:12.416 --> 00:06:12.506 A:middle
+tag.
+
+00:06:12.816 --> 00:06:14.376 A:middle
+Keep in mind, this tag is
+
+00:06:14.376 --> 00:06:16.816 A:middle
+applicable to both live and
+
+00:06:16.816 --> 00:06:17.916 A:middle
+[inaudible] playback, but the
+
+00:06:17.916 --> 00:06:20.146 A:middle
+use case is typically the live
+
+00:06:20.216 --> 00:06:20.656 A:middle
+scenario.
+
+00:06:21.726 --> 00:06:23.606 A:middle
+Next, let's move on to HLS
+
+00:06:23.606 --> 00:06:25.616 A:middle
+specific media error cases.
+
+00:06:27.146 --> 00:06:29.896 A:middle
+On live playback, the HLS pack
+
+00:06:30.036 --> 00:06:31.636 A:middle
+specifies that the playlist
+
+00:06:31.636 --> 00:06:34.006 A:middle
+needs to be updated on regular
+
+00:06:34.006 --> 00:06:34.506 A:middle
+intervals.
+
+00:06:35.616 --> 00:06:36.916 A:middle
+If the server is unable to
+
+00:06:36.916 --> 00:06:38.596 A:middle
+update the playlist in time
+
+00:06:38.596 --> 00:06:40.036 A:middle
+according to the published
+
+00:06:40.036 --> 00:06:42.356 A:middle
+target duration, we recommend to
+
+00:06:42.356 --> 00:06:44.006 A:middle
+communicate the stale playlist
+
+00:06:44.006 --> 00:06:46.276 A:middle
+to AVPlayer by sending 404.
+
+00:06:47.626 --> 00:06:49.526 A:middle
+Now returning stale playlist
+
+00:06:49.526 --> 00:06:51.746 A:middle
+itself is fine, but that leaves
+
+00:06:51.816 --> 00:06:53.146 A:middle
+the onus of identifying the
+
+00:06:53.146 --> 00:06:55.296 A:middle
+stale playlist on the AVPlayer
+
+00:06:55.806 --> 00:06:56.926 A:middle
+which it does eventually.
+
+00:06:57.696 --> 00:07:00.176 A:middle
+And on identifying that AVPlayer
+
+00:07:00.176 --> 00:07:01.986 A:middle
+will try to recover by means of
+
+00:07:02.106 --> 00:07:03.946 A:middle
+switching to other available
+
+00:07:03.946 --> 00:07:04.666 A:middle
+[inaudible] or retries.
+
+00:07:06.016 --> 00:07:07.526 A:middle
+This may be too late in some
+
+00:07:07.526 --> 00:07:09.286 A:middle
+cases leading to stalls.
+
+00:07:10.616 --> 00:07:12.576 A:middle
+Sending 404 instead will
+
+00:07:12.576 --> 00:07:14.146 A:middle
+communicate the stale playlist
+
+00:07:14.146 --> 00:07:16.156 A:middle
+to AVPlayer much more quickly.
+
+00:07:17.226 --> 00:07:19.436 A:middle
+There is another advantage here,
+
+00:07:19.666 --> 00:07:21.316 A:middle
+it would also give immediate
+
+00:07:21.316 --> 00:07:23.026 A:middle
+notification of stale playlist
+
+00:07:23.336 --> 00:07:26.426 A:middle
+to any new AVPlayer joining the
+
+00:07:28.456 --> 00:07:28.616 A:middle
+stream.
+
+00:07:28.786 --> 00:07:30.516 A:middle
+For unsupported features for
+
+00:07:30.516 --> 00:07:32.076 A:middle
+example, BYTE-RANGE not
+
+00:07:32.076 --> 00:07:34.146 A:middle
+supported, send 501.
+
+00:07:35.576 --> 00:07:37.246 A:middle
+For all authentication failures,
+
+00:07:38.106 --> 00:07:38.926 A:middle
+send 401.
+
+00:07:40.446 --> 00:07:45.686 A:middle
+Next, an example going through a
+
+00:07:45.746 --> 00:07:47.356 A:middle
+typical live playback scenario.
+
+00:07:48.016 --> 00:07:49.436 A:middle
+Let's say we have two video
+
+00:07:49.436 --> 00:07:51.876 A:middle
+variants, one of 6 megabit and
+
+00:07:51.876 --> 00:07:52.836 A:middle
+one of 2 megabit.
+
+00:07:53.626 --> 00:07:55.226 A:middle
+We also have the responding
+
+00:07:55.226 --> 00:07:57.276 A:middle
+encoder packagers one providing
+
+00:07:57.276 --> 00:07:59.136 A:middle
+6-megabit content and another
+
+00:07:59.136 --> 00:08:00.736 A:middle
+providing 2-megabit content to
+
+00:08:00.736 --> 00:08:01.326 A:middle
+our server.
+
+00:08:01.916 --> 00:08:03.636 A:middle
+And the server is distributing
+
+00:08:03.636 --> 00:08:05.566 A:middle
+this content to the HLS client
+
+00:08:05.746 --> 00:08:06.586 A:middle
+requesting it.
+
+00:08:07.256 --> 00:08:08.246 A:middle
+Let's say the [inaudible]
+
+00:08:08.246 --> 00:08:09.926 A:middle
+bandwidth of the app is good
+
+00:08:09.926 --> 00:08:11.906 A:middle
+enough to handle the 6-megabit
+
+00:08:11.906 --> 00:08:14.126 A:middle
+variant it goes ahead and
+
+00:08:14.166 --> 00:08:15.696 A:middle
+fetches the 6 megabit media
+
+00:08:15.696 --> 00:08:16.166 A:middle
+playlist.
+
+00:08:16.726 --> 00:08:19.076 A:middle
+Gets the response back and moves
+
+00:08:19.076 --> 00:08:20.636 A:middle
+on to fetch the first segment,
+
+00:08:20.916 --> 00:08:21.486 A:middle
+segment one.
+
+00:08:22.316 --> 00:08:23.646 A:middle
+Everything seems to be good
+
+00:08:23.646 --> 00:08:24.796 A:middle
+until now.
+
+00:08:25.396 --> 00:08:27.796 A:middle
+Then suddenly the 6-megabit
+
+00:08:27.796 --> 00:08:30.016 A:middle
+encoder or packager is down with
+
+00:08:30.106 --> 00:08:31.446 A:middle
+substantial downtime for
+
+00:08:31.446 --> 00:08:31.946 A:middle
+example.
+
+00:08:33.126 --> 00:08:34.826 A:middle
+The next time AVPlayer
+
+00:08:34.826 --> 00:08:36.636 A:middle
+re-fetches the playlist the
+
+00:08:36.726 --> 00:08:38.316 A:middle
+server now has a way to
+
+00:08:38.316 --> 00:08:39.846 A:middle
+communicate the failure to it,
+
+00:08:40.586 --> 00:08:41.166 A:middle
+GAP tag.
+
+00:08:41.916 --> 00:08:44.016 A:middle
+For this re-fetch request, we
+
+00:08:44.016 --> 00:08:45.876 A:middle
+recommend that server should now
+
+00:08:45.956 --> 00:08:48.906 A:middle
+send 200 okay and the subsequent
+
+00:08:48.906 --> 00:08:50.366 A:middle
+segments in the media playlist
+
+00:08:50.736 --> 00:08:51.906 A:middle
+should be marked as GAP.
+
+00:08:53.296 --> 00:08:55.806 A:middle
+AVPlayer on seeing this GAP tag
+
+00:08:56.146 --> 00:08:57.596 A:middle
+switches down to 2-megabit
+
+00:08:57.596 --> 00:09:01.446 A:middle
+variant media playlist and moves
+
+00:09:01.496 --> 00:09:03.096 A:middle
+on to fetch the next segment,
+
+00:09:03.426 --> 00:09:05.286 A:middle
+segment two, from the 2-megabit
+
+00:09:05.286 --> 00:09:05.696 A:middle
+variant.
+
+00:09:07.386 --> 00:09:09.436 A:middle
+With this we have switched down
+
+00:09:09.436 --> 00:09:12.706 A:middle
+smoothly and in time to avoid a
+
+00:09:13.656 --> 00:09:13.776 A:middle
+stall.
+
+00:09:14.356 --> 00:09:16.356 A:middle
+For backward compatibility for
+
+00:09:16.356 --> 00:09:18.376 A:middle
+any segment request marked as
+
+00:09:18.466 --> 00:09:20.666 A:middle
+GAP the server should still send
+
+00:09:20.666 --> 00:09:21.316 A:middle
+404.
+
+00:09:26.046 --> 00:09:27.876 A:middle
+Next, let's move on to failover.
+
+00:09:28.736 --> 00:09:29.776 A:middle
+What is a failover?
+
+00:09:30.736 --> 00:09:32.366 A:middle
+It is a method of protecting the
+
+00:09:32.416 --> 00:09:34.656 A:middle
+system from failure in which a
+
+00:09:34.966 --> 00:09:37.476 A:middle
+standby or backup system takes
+
+00:09:37.476 --> 00:09:39.306 A:middle
+over when the main system fails.
+
+00:09:40.006 --> 00:09:43.206 A:middle
+So, what failover can our server
+
+00:09:43.896 --> 00:09:43.986 A:middle
+have?
+
+00:09:44.406 --> 00:09:46.566 A:middle
+One viable approach is to have
+
+00:09:46.566 --> 00:09:48.616 A:middle
+redundant variants on backup
+
+00:09:48.656 --> 00:09:51.546 A:middle
+servers, have variants on
+
+00:09:51.546 --> 00:09:53.266 A:middle
+different servers with same bit
+
+00:09:53.266 --> 00:09:55.086 A:middle
+rate an include them in the
+
+00:09:55.086 --> 00:09:55.926 A:middle
+master playlist.
+
+00:09:56.726 --> 00:09:58.686 A:middle
+This will give the AVPlayer the
+
+00:09:58.686 --> 00:10:00.436 A:middle
+ability to smoothly switch over
+
+00:10:00.716 --> 00:10:01.576 A:middle
+in case of error.
+
+00:10:02.976 --> 00:10:04.896 A:middle
+Backup alternates will be tried
+
+00:10:04.896 --> 00:10:06.546 A:middle
+first before switching down.
+
+00:10:07.056 --> 00:10:10.576 A:middle
+If the server wants to
+
+00:10:10.576 --> 00:10:12.916 A:middle
+explicitly trigger a failover it
+
+00:10:12.916 --> 00:10:15.176 A:middle
+should send 404 to okay list
+
+00:10:15.176 --> 00:10:15.636 A:middle
+request.
+
+00:10:19.276 --> 00:10:22.356 A:middle
+To summarize, always notify the
+
+00:10:22.356 --> 00:10:24.546 A:middle
+HLS client of error with correct
+
+00:10:24.546 --> 00:10:25.256 A:middle
+error code.
+
+00:10:26.446 --> 00:10:28.186 A:middle
+Have backup playlists on
+
+00:10:28.186 --> 00:10:30.206 A:middle
+different servers to failover in
+
+00:10:30.206 --> 00:10:32.216 A:middle
+case of server failures, having
+
+00:10:32.216 --> 00:10:33.446 A:middle
+some redundancy is good.
+
+00:10:33.936 --> 00:10:37.356 A:middle
+Send 501 for unsupported
+
+00:10:37.356 --> 00:10:37.926 A:middle
+features.
+
+00:10:38.466 --> 00:10:42.336 A:middle
+And in the case of live, update
+
+00:10:42.336 --> 00:10:43.826 A:middle
+the playlist in time as
+
+00:10:43.826 --> 00:10:46.866 A:middle
+specified by HLS Spec. Prefer
+
+00:10:47.246 --> 00:10:49.516 A:middle
+GAP tag in case of temporary
+
+00:10:49.516 --> 00:10:50.086 A:middle
+failures.
+
+00:10:51.786 --> 00:10:54.586 A:middle
+And send 404 to indicate stale
+
+00:10:54.636 --> 00:10:54.976 A:middle
+playlist.
+
+00:11:00.156 --> 00:11:03.236 A:middle
+Next, let's move on to how to
+
+00:11:03.236 --> 00:11:04.596 A:middle
+handle AVFoundation errors.
+
+00:11:05.556 --> 00:11:07.396 A:middle
+When an error occurs, the user
+
+00:11:07.396 --> 00:11:09.326 A:middle
+viewing the actual stream wants
+
+00:11:09.326 --> 00:11:10.116 A:middle
+to know two things.
+
+00:11:10.796 --> 00:11:12.656 A:middle
+First, that the error happened
+
+00:11:12.916 --> 00:11:14.646 A:middle
+and second, what caused the
+
+00:11:14.646 --> 00:11:15.396 A:middle
+error to happen.
+
+00:11:16.596 --> 00:11:18.266 A:middle
+And not all errors can be
+
+00:11:18.266 --> 00:11:19.536 A:middle
+anticipated on the server.
+
+00:11:20.676 --> 00:11:22.836 A:middle
+The AVFoundation client or app
+
+00:11:23.436 --> 00:11:25.006 A:middle
+should be returned to respond
+
+00:11:25.006 --> 00:11:27.176 A:middle
+appropriately to various error
+
+00:11:27.176 --> 00:11:29.106 A:middle
+conditions originating from the
+
+00:11:29.106 --> 00:11:29.786 A:middle
+AVPlayer.
+
+00:11:31.016 --> 00:11:32.396 A:middle
+So, how can we identify the
+
+00:11:32.396 --> 00:11:32.696 A:middle
+error?
+
+00:11:32.806 --> 00:11:36.556 A:middle
+The error can be identified by
+
+00:11:36.556 --> 00:11:39.036 A:middle
+looking at AVPlayer.status and
+
+00:11:39.036 --> 00:11:40.896 A:middle
+AVPlayerItem.status.
+
+00:11:42.346 --> 00:11:43.696 A:middle
+This will change to
+
+00:11:43.816 --> 00:11:45.936 A:middle
+AVPlayerStatsFailed and
+
+00:11:45.936 --> 00:11:48.126 A:middle
+AVPlayerItemStatusFailed
+
+00:11:48.126 --> 00:11:49.716 A:middle
+respectively on error.
+
+00:11:50.226 --> 00:11:54.446 A:middle
+For the exact error that caused
+
+00:11:54.446 --> 00:11:55.806 A:middle
+the status to change to fail
+
+00:11:56.346 --> 00:11:58.386 A:middle
+look at AVPlayerItem.error.
+
+00:11:59.726 --> 00:12:01.826 A:middle
+This describes what caused the
+
+00:12:01.826 --> 00:12:03.626 A:middle
+item to be no longer playable.
+
+00:12:04.056 --> 00:12:09.986 A:middle
+Listen to AVPLayerItemFailedTo
+
+00:12:09.986 --> 00:12:12.426 A:middle
+PlayToEndTimeNotification to get
+
+00:12:12.426 --> 00:12:14.566 A:middle
+notified that the item did not
+
+00:12:14.566 --> 00:12:15.526 A:middle
+play to end.
+
+00:12:16.596 --> 00:12:19.076 A:middle
+The user info dictionary of this
+
+00:12:19.076 --> 00:12:21.236 A:middle
+notification contains an error
+
+00:12:21.236 --> 00:12:22.636 A:middle
+object that describes the
+
+00:12:22.636 --> 00:12:24.856 A:middle
+problem and can be retrieved by
+
+00:12:24.856 --> 00:12:26.986 A:middle
+AVPlayerItemFailedTo
+
+00:12:26.986 --> 00:12:28.846 A:middle
+PlayToEndTimeErrorKey.
+
+00:12:29.426 --> 00:12:34.356 A:middle
+Dig deeper, look at
+
+00:12:34.396 --> 00:12:36.306 A:middle
+AVPlayerItem.errorLog.
+
+00:12:37.456 --> 00:12:39.526 A:middle
+This gives the snapshot of all
+
+00:12:39.526 --> 00:12:41.366 A:middle
+the error events that happened
+
+00:12:41.366 --> 00:12:43.166 A:middle
+during the playback session.
+
+00:12:45.136 --> 00:12:47.496 A:middle
+So, what do these errors mean?
+
+00:12:49.136 --> 00:12:51.036 A:middle
+They can mean one of these four
+
+00:12:51.106 --> 00:12:52.946 A:middle
+things, network errors,
+
+00:12:53.386 --> 00:12:55.996 A:middle
+timeouts, format errors, and
+
+00:12:56.196 --> 00:12:57.726 A:middle
+live playlist update errors.
+
+00:12:58.996 --> 00:13:01.426 A:middle
+Network errors are all the 4xx
+
+00:13:01.426 --> 00:13:03.596 A:middle
+and 5xx errors that server sends
+
+00:13:04.046 --> 00:13:07.306 A:middle
+and TCP/IP, DNS errors.
+
+00:13:08.486 --> 00:13:10.396 A:middle
+After requesting a resource
+
+00:13:10.686 --> 00:13:12.366 A:middle
+there are timeouts for each
+
+00:13:12.366 --> 00:13:14.516 A:middle
+master playlist, media playlist,
+
+00:13:14.776 --> 00:13:16.376 A:middle
+medial files, and keys.
+
+00:13:17.086 --> 00:13:18.756 A:middle
+And failure to get a response
+
+00:13:18.756 --> 00:13:20.646 A:middle
+within this timeout will cause
+
+00:13:20.846 --> 00:13:22.286 A:middle
+timeout errors.
+
+00:13:25.196 --> 00:13:27.356 A:middle
+Any incorrect format of playlist
+
+00:13:27.446 --> 00:13:29.926 A:middle
+key and the session data will
+
+00:13:29.926 --> 00:13:31.286 A:middle
+result in format errors.
+
+00:13:31.876 --> 00:13:35.796 A:middle
+And in case of live, playlist
+
+00:13:35.796 --> 00:13:37.496 A:middle
+needs to be updated according to
+
+00:13:37.496 --> 00:13:39.146 A:middle
+published target duration and
+
+00:13:39.146 --> 00:13:41.366 A:middle
+the failure to do so will cause
+
+00:13:41.496 --> 00:13:42.976 A:middle
+live playlist update errors.
+
+00:13:48.136 --> 00:13:48.946 A:middle
+What are the corresponding
+
+00:13:48.946 --> 00:13:50.606 A:middle
+AVFoundationDomain error codes?
+
+00:13:51.876 --> 00:13:54.036 A:middle
+For network errors and timeouts,
+
+00:13:54.416 --> 00:13:56.386 A:middle
+it will be AVErrorContent
+
+00:13:56.386 --> 00:13:59.226 A:middle
+IsUnavailable or AVErrorNo
+
+00:13:59.226 --> 00:14:00.066 A:middle
+LongerPlayable.
+
+00:14:01.526 --> 00:14:02.746 A:middle
+AVErrorContent
+
+00:14:02.746 --> 00:14:04.826 A:middle
+IsUnavailable indicates that the
+
+00:14:04.826 --> 00:14:06.416 A:middle
+content was never playable.
+
+00:14:06.876 --> 00:14:08.626 A:middle
+This could mean authentication
+
+00:14:08.626 --> 00:14:10.506 A:middle
+failures or authorization
+
+00:14:10.506 --> 00:14:11.026 A:middle
+failures.
+
+00:14:12.306 --> 00:14:13.286 A:middle
+AVErrorNo
+
+00:14:13.286 --> 00:14:15.296 A:middle
+LongerPlayable indicates that
+
+00:14:15.356 --> 00:14:17.376 A:middle
+the content was playable, but
+
+00:14:17.376 --> 00:14:19.156 A:middle
+over the course of time one or
+
+00:14:19.156 --> 00:14:21.266 A:middle
+more errors happened resulting
+
+00:14:21.446 --> 00:14:26.056 A:middle
+in being no longer playable.
+
+00:14:26.056 --> 00:14:26.866 A:middle
+AVErrorFailed
+
+00:14:26.866 --> 00:14:29.756 A:middle
+ToParse indicates parsing
+
+00:14:30.956 --> 00:14:31.576 A:middle
+failures.
+
+00:14:31.576 --> 00:14:32.366 A:middle
+AVErrorContent
+
+00:14:32.366 --> 00:14:35.016 A:middle
+NotUpdated means the playlist
+
+00:14:35.096 --> 00:14:40.146 A:middle
+was not updated in time.
+
+00:14:40.346 --> 00:14:42.326 A:middle
+Always look at the user info of
+
+00:14:42.326 --> 00:14:44.036 A:middle
+the error to get the underlying
+
+00:14:44.036 --> 00:14:44.306 A:middle
+error.
+
+00:14:45.296 --> 00:14:47.166 A:middle
+Keep in mind, this can be nested
+
+00:14:47.166 --> 00:14:49.006 A:middle
+if more than one error caused
+
+00:14:49.006 --> 00:14:52.096 A:middle
+the item to fail.
+
+00:14:52.326 --> 00:14:54.126 A:middle
+When a new error log entry is
+
+00:14:54.126 --> 00:14:55.156 A:middle
+added to error log
+
+00:14:55.646 --> 00:14:56.916 A:middle
+AVPlayerItemNewError
+
+00:14:57.056 --> 00:14:59.676 A:middle
+LogEntryNotification is sent.
+
+00:15:00.316 --> 00:15:01.896 A:middle
+So, listen to this for immediate
+
+00:15:01.896 --> 00:15:03.106 A:middle
+notification of error.
+
+00:15:03.316 --> 00:15:06.536 A:middle
+I would like to stress on one
+
+00:15:06.536 --> 00:15:09.626 A:middle
+point here, AVPlayer will try
+
+00:15:09.626 --> 00:15:11.926 A:middle
+its best to continue playback by
+
+00:15:11.926 --> 00:15:14.086 A:middle
+means of retries and switching
+
+00:15:14.256 --> 00:15:15.706 A:middle
+to different available variants.
+
+00:15:15.806 --> 00:15:18.466 A:middle
+The AVPlayerItem.status will
+
+00:15:18.466 --> 00:15:20.636 A:middle
+change to fail only when there
+
+00:15:20.636 --> 00:15:22.796 A:middle
+is no viable variant to use to
+
+00:15:22.796 --> 00:15:24.976 A:middle
+continue playback and we have
+
+00:15:25.056 --> 00:15:26.646 A:middle
+played out whatever buffer we
+
+00:15:27.326 --> 00:15:27.426 A:middle
+have.
+
+00:15:28.916 --> 00:15:30.676 A:middle
+For all temporary errors,
+
+00:15:31.256 --> 00:15:33.376 A:middle
+AVPlayer will attempt switching
+
+00:15:33.586 --> 00:15:35.086 A:middle
+and/or retry.
+
+00:15:35.916 --> 00:15:37.676 A:middle
+If there is nothing to switch to
+
+00:15:38.096 --> 00:15:40.096 A:middle
+AVPlayer will retry for a
+
+00:15:40.096 --> 00:15:41.936 A:middle
+reasonable amount of time before
+
+00:15:41.936 --> 00:15:42.366 A:middle
+giving up.
+
+00:15:43.136 --> 00:15:45.776 A:middle
+After a given amount of time it
+
+00:15:45.776 --> 00:15:47.656 A:middle
+will attempt to switch back up
+
+00:15:47.656 --> 00:15:49.326 A:middle
+to failed variant if the network
+
+00:15:49.326 --> 00:15:50.596 A:middle
+conditions are suitable.
+
+00:15:51.986 --> 00:15:54.896 A:middle
+For permanent errors like 410 no
+
+00:15:54.896 --> 00:15:56.566 A:middle
+retries will be attempted and
+
+00:15:56.566 --> 00:15:58.996 A:middle
+AVPlayer only tries switching to
+
+00:15:58.996 --> 00:15:59.956 A:middle
+a different variant.
+
+00:16:01.486 --> 00:16:03.326 A:middle
+The permanent and temporary
+
+00:16:03.326 --> 00:16:05.246 A:middle
+error codes are in compliance
+
+00:16:05.246 --> 00:16:06.866 A:middle
+with the standard HTTP error
+
+00:16:06.866 --> 00:16:10.456 A:middle
+codes specified in RFC7231.
+
+00:16:13.506 --> 00:16:15.746 A:middle
+All session data errors are not
+
+00:16:15.746 --> 00:16:16.966 A:middle
+fatal and not ignored.
+
+00:16:22.236 --> 00:16:23.646 A:middle
+Next, let's go to a code
+
+00:16:23.646 --> 00:16:24.146 A:middle
+snippet.
+
+00:16:25.216 --> 00:16:27.106 A:middle
+To view the error, once you have
+
+00:16:27.106 --> 00:16:28.566 A:middle
+done the usual things, create
+
+00:16:28.566 --> 00:16:30.326 A:middle
+your asset, create your player
+
+00:16:30.326 --> 00:16:32.266 A:middle
+item, create a player with that
+
+00:16:32.266 --> 00:16:34.266 A:middle
+item the first thing you should
+
+00:16:34.266 --> 00:16:37.216 A:middle
+do is add observer to track the
+
+00:16:37.276 --> 00:16:40.956 A:middle
+status of the player.
+
+00:16:41.176 --> 00:16:44.526 A:middle
+Then add observer to track the
+
+00:16:44.726 --> 00:16:47.786 A:middle
+status of player item.
+
+00:16:48.426 --> 00:16:51.496 A:middle
+And here you register to listen
+
+00:16:51.706 --> 00:16:53.566 A:middle
+to AVPlayerItemFailed
+
+00:16:53.566 --> 00:16:55.256 A:middle
+ToPlayToEndTimeNotification.
+
+00:16:55.766 --> 00:17:00.526 A:middle
+Once you have that and the
+
+00:17:00.526 --> 00:17:01.966 A:middle
+status of the item changes to
+
+00:17:01.966 --> 00:17:03.746 A:middle
+failed look at
+
+00:17:03.746 --> 00:17:05.536 A:middle
+AVPlayerItem.error to print out
+
+00:17:05.606 --> 00:17:06.486 A:middle
+what the error is.
+
+00:17:07.566 --> 00:17:08.826 A:middle
+This is the place where you
+
+00:17:08.826 --> 00:17:10.416 A:middle
+should add code to display
+
+00:17:10.416 --> 00:17:11.636 A:middle
+relevant messages about the
+
+00:17:11.636 --> 00:17:12.896 A:middle
+error to the user.
+
+00:17:13.496 --> 00:17:18.146 A:middle
+On getting AVPlayerItemFailedTo
+
+00:17:18.146 --> 00:17:19.886 A:middle
+PlayToEndTimeNotification
+
+00:17:20.386 --> 00:17:22.406 A:middle
+extract the error as the value
+
+00:17:22.406 --> 00:17:24.756 A:middle
+of AVPlayerItemFailedTo
+
+00:17:24.756 --> 00:17:27.266 A:middle
+PlayToEndTimeErrorKey and again,
+
+00:17:27.626 --> 00:17:28.826 A:middle
+take appropriate action.
+
+00:17:28.966 --> 00:17:30.846 A:middle
+For instance, print the error or
+
+00:17:30.846 --> 00:17:32.406 A:middle
+display relevant error messages
+
+00:17:32.406 --> 00:17:32.966 A:middle
+to the user.
+
+00:17:38.356 --> 00:17:40.466 A:middle
+To summarize, always monitor
+
+00:17:40.466 --> 00:17:41.626 A:middle
+AVPlayer and
+
+00:17:41.626 --> 00:17:43.216 A:middle
+AVPlayerItem.status.
+
+00:17:44.586 --> 00:17:45.936 A:middle
+Listen to notifications,
+
+00:17:46.036 --> 00:17:47.846 A:middle
+AVPlayerItemFailedTo
+
+00:17:47.846 --> 00:17:49.936 A:middle
+PlayToEndTimeNotification tells
+
+00:17:49.936 --> 00:17:51.396 A:middle
+you when the item did not play
+
+00:17:51.396 --> 00:17:51.776 A:middle
+to end.
+
+00:17:52.596 --> 00:17:53.946 A:middle
+If you want to more actively
+
+00:17:53.946 --> 00:17:55.916 A:middle
+monitor the errors for example,
+
+00:17:55.996 --> 00:17:57.596 A:middle
+for the purpose of sending debug
+
+00:17:57.596 --> 00:17:59.836 A:middle
+info to server for analytics
+
+00:18:00.196 --> 00:18:02.956 A:middle
+listen to AVPlayerItemNewError
+
+00:18:02.956 --> 00:18:05.016 A:middle
+LogEntryNotification to know
+
+00:18:05.016 --> 00:18:06.446 A:middle
+when a new error log entry is
+
+00:18:06.446 --> 00:18:06.786 A:middle
+added.
+
+00:18:07.706 --> 00:18:09.746 A:middle
+In conclusion, when an error
+
+00:18:09.746 --> 00:18:12.356 A:middle
+occurs always take appropriate
+
+00:18:12.356 --> 00:18:14.246 A:middle
+action, don't ignore it.
+
+00:18:14.676 --> 00:18:17.156 A:middle
+Notify the user of the error and
+
+00:18:17.156 --> 00:18:18.626 A:middle
+always, always display
+
+00:18:18.626 --> 00:18:20.636 A:middle
+meaningful messages or pop-ups
+
+00:18:21.176 --> 00:18:21.946 A:middle
+when suitable.
+
+00:18:24.456 --> 00:18:26.726 A:middle
+For more information, go to the
+
+00:18:26.726 --> 00:18:28.846 A:middle
+WWDC site and use the session
+
+00:18:28.906 --> 00:18:30.996 A:middle
+number 514.
+
+00:18:31.816 --> 00:18:33.396 A:middle
+Thank you and have a great
+
+00:18:33.536 --> 00:18:33.946 A:middle
+conference.
