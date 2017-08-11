@@ -1,0 +1,2908 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:16.500 A:middle
+[ Background Conversations ]
+
+00:00:21.516 --> 00:00:25.586 A:middle
+[ Applause ]
+
+00:00:26.086 --> 00:00:28.446 A:middle
+&gt;&gt; Hello. Welcome to What's New
+
+00:00:28.446 --> 00:00:29.016 A:middle
+in LLVM.
+
+00:00:29.736 --> 00:00:31.396 A:middle
+I'm Devin, an engineer on the
+
+00:00:31.396 --> 00:00:32.646 A:middle
+Program Analysis Team.
+
+00:00:33.636 --> 00:00:35.656 A:middle
+We've got a lot of great, new
+
+00:00:35.656 --> 00:00:36.766 A:middle
+features to tell you about
+
+00:00:36.766 --> 00:00:37.076 A:middle
+today.
+
+00:00:38.266 --> 00:00:39.616 A:middle
+We'll start by introducing you
+
+00:00:39.846 --> 00:00:41.306 A:middle
+to availability checking for
+
+00:00:41.306 --> 00:00:41.976 A:middle
+Objective-C.
+
+00:00:41.976 --> 00:00:44.086 A:middle
+This will help you safely deploy
+
+00:00:44.086 --> 00:00:46.136 A:middle
+your apps back to older OS's.
+
+00:00:47.186 --> 00:00:48.246 A:middle
+Then, we'll describe new static
+
+00:00:48.246 --> 00:00:49.626 A:middle
+analyzer checks and compiler
+
+00:00:49.626 --> 00:00:51.506 A:middle
+warnings to help you find bugs.
+
+00:00:52.676 --> 00:00:54.336 A:middle
+We'll dive into some fantastic,
+
+00:00:54.336 --> 00:00:56.196 A:middle
+new features for C++ developers,
+
+00:00:56.646 --> 00:00:58.366 A:middle
+including a tour of refactoring
+
+00:00:58.366 --> 00:01:01.056 A:middle
+support for C++ in Xcode, and
+
+00:01:01.056 --> 00:01:02.866 A:middle
+wrap up with an update on
+
+00:01:02.866 --> 00:01:03.996 A:middle
+link-time optimization.
+
+00:01:04.506 --> 00:01:07.786 A:middle
+Let's start with availability
+
+00:01:07.786 --> 00:01:08.000 A:middle
+checking.
+
+00:01:10.556 --> 00:01:12.316 A:middle
+Every major OS release comes
+
+00:01:12.606 --> 00:01:14.556 A:middle
+with great, new features, and
+
+00:01:14.556 --> 00:01:16.096 A:middle
+your customers expect you to
+
+00:01:16.096 --> 00:01:18.046 A:middle
+adopt these APIs in your apps.
+
+00:01:19.086 --> 00:01:20.256 A:middle
+But you still have to support
+
+00:01:20.256 --> 00:01:22.626 A:middle
+your users on older OS's where
+
+00:01:22.626 --> 00:01:24.136 A:middle
+those APIs aren't available.
+
+00:01:24.136 --> 00:01:29.246 A:middle
+On our platforms, we support
+
+00:01:29.246 --> 00:01:30.766 A:middle
+backwards deployment by
+
+00:01:30.766 --> 00:01:32.686 A:middle
+separating the Base SDK version
+
+00:01:32.946 --> 00:01:34.026 A:middle
+from the deployment target
+
+00:01:34.026 --> 00:01:34.456 A:middle
+version.
+
+00:01:35.296 --> 00:01:36.716 A:middle
+What this means is that you will
+
+00:01:36.716 --> 00:01:38.586 A:middle
+always compile against the
+
+00:01:38.586 --> 00:01:41.286 A:middle
+newest SDK, even when deploying
+
+00:01:41.286 --> 00:01:42.496 A:middle
+back to older OS's.
+
+00:01:43.266 --> 00:01:45.736 A:middle
+So for example, in Xcode 9, you
+
+00:01:45.736 --> 00:01:49.326 A:middle
+use the iOS 11 SDK, and if your
+
+00:01:49.326 --> 00:01:52.086 A:middle
+app only targets iOS 11, you'll
+
+00:01:52.086 --> 00:01:53.716 A:middle
+use that as the deployment
+
+00:01:53.716 --> 00:01:54.596 A:middle
+target as well.
+
+00:01:55.146 --> 00:01:57.666 A:middle
+But I know a lot of you will
+
+00:01:57.666 --> 00:01:59.466 A:middle
+want to support your users on
+
+00:01:59.546 --> 00:02:01.606 A:middle
+iOS 10 to give them a chance to
+
+00:02:01.606 --> 00:02:02.216 A:middle
+upgrade.
+
+00:02:03.416 --> 00:02:04.406 A:middle
+To do that, you can go to your
+
+00:02:04.406 --> 00:02:07.126 A:middle
+Build settings and select 10.0
+
+00:02:07.516 --> 00:02:08.656 A:middle
+for your deployment target.
+
+00:02:09.756 --> 00:02:11.346 A:middle
+This is a promise on the part of
+
+00:02:11.346 --> 00:02:12.886 A:middle
+your app that it will support
+
+00:02:12.886 --> 00:02:15.296 A:middle
+all versions of iOS 10 and
+
+00:02:15.296 --> 00:02:15.746 A:middle
+greater.
+
+00:02:15.746 --> 00:02:20.976 A:middle
+Now, this can be tricky because
+
+00:02:21.136 --> 00:02:23.416 A:middle
+it's only safe to call APIs that
+
+00:02:23.486 --> 00:02:25.656 A:middle
+are actually available on the
+
+00:02:25.656 --> 00:02:26.496 A:middle
+running OS.
+
+00:02:27.236 --> 00:02:29.476 A:middle
+If you call in newer API on an
+
+00:02:29.476 --> 00:02:31.486 A:middle
+older OS, then your app could
+
+00:02:31.486 --> 00:02:33.146 A:middle
+crash or have other unexpected
+
+00:02:33.146 --> 00:02:33.646 A:middle
+behavior.
+
+00:02:33.646 --> 00:02:37.766 A:middle
+In the past, we've recommended
+
+00:02:37.766 --> 00:02:39.676 A:middle
+querying the Objective-C runtime
+
+00:02:40.106 --> 00:02:41.896 A:middle
+to determine whether an API is
+
+00:02:41.896 --> 00:02:42.386 A:middle
+available.
+
+00:02:43.496 --> 00:02:45.236 A:middle
+But this was easy to get wrong
+
+00:02:45.236 --> 00:02:47.346 A:middle
+or even forget, and it was hard
+
+00:02:47.346 --> 00:02:47.836 A:middle
+to test.
+
+00:02:49.286 --> 00:02:51.336 A:middle
+Further, it required a different
+
+00:02:51.436 --> 00:02:54.586 A:middle
+syntax for checking each of
+
+00:02:55.136 --> 00:02:58.066 A:middle
+globals, functions, classes,
+
+00:02:58.576 --> 00:03:00.296 A:middle
+instance methods, and class
+
+00:03:00.296 --> 00:03:00.666 A:middle
+methods.
+
+00:03:01.286 --> 00:03:04.956 A:middle
+Now, those of you using Swift
+
+00:03:04.956 --> 00:03:06.896 A:middle
+may be wondering, what's the big
+
+00:03:06.896 --> 00:03:07.696 A:middle
+deal here?
+
+00:03:07.956 --> 00:03:09.426 A:middle
+Swift has a unified syntax,
+
+00:03:09.476 --> 00:03:11.516 A:middle
+#available, for querying API
+
+00:03:11.516 --> 00:03:13.466 A:middle
+availability at runtime, and the
+
+00:03:13.466 --> 00:03:16.176 A:middle
+compiler can even catch missing
+
+00:03:16.176 --> 00:03:18.346 A:middle
+availability checks at compile
+
+00:03:18.786 --> 00:03:18.876 A:middle
+time.
+
+00:03:20.656 --> 00:03:21.936 A:middle
+For more information on
+
+00:03:21.936 --> 00:03:22.996 A:middle
+availability in Swift, you
+
+00:03:22.996 --> 00:03:24.406 A:middle
+should check out the Swift in
+
+00:03:24.406 --> 00:03:29.276 A:middle
+Practice talk from WWDC 2015.
+
+00:03:29.376 --> 00:03:31.396 A:middle
+Today we brought Swift-style
+
+00:03:31.396 --> 00:03:32.816 A:middle
+availability checking to
+
+00:03:32.816 --> 00:03:33.516 A:middle
+Objective-C.
+
+00:03:34.516 --> 00:03:39.406 A:middle
+[ Applause ]
+
+00:03:39.906 --> 00:03:41.096 A:middle
+I would love to tell you about
+
+00:03:41.946 --> 00:03:42.000 A:middle
+it.
+
+00:03:43.046 --> 00:03:44.726 A:middle
+So suppose you have an app that
+
+00:03:44.896 --> 00:03:46.796 A:middle
+you're deploying back to iOS 10
+
+00:03:47.726 --> 00:03:49.536 A:middle
+and you decide to take advantage
+
+00:03:49.716 --> 00:03:51.956 A:middle
+of the fantastic, new face
+
+00:03:51.956 --> 00:03:53.806 A:middle
+detection APIs from the Vision
+
+00:03:53.806 --> 00:03:55.426 A:middle
+framework in iOS 11.
+
+00:03:56.626 --> 00:03:57.886 A:middle
+When you add these APIs to your
+
+00:03:57.886 --> 00:04:00.606 A:middle
+app and then build, you will now
+
+00:04:00.606 --> 00:04:02.706 A:middle
+get a compiler warning telling
+
+00:04:02.706 --> 00:04:04.736 A:middle
+you that these APIs are only
+
+00:04:04.736 --> 00:04:07.046 A:middle
+available in iOS 11 or newer.
+
+00:04:07.576 --> 00:04:10.336 A:middle
+You can address these warnings
+
+00:04:10.696 --> 00:04:12.866 A:middle
+by using the new @available
+
+00:04:12.866 --> 00:04:14.826 A:middle
+construct to query for API
+
+00:04:14.826 --> 00:04:15.486 A:middle
+availability.
+
+00:04:16.566 --> 00:04:18.656 A:middle
+This will return true when iOS
+
+00:04:18.656 --> 00:04:20.466 A:middle
+11 APIs are available.
+
+00:04:20.916 --> 00:04:23.076 A:middle
+It's safe to call them.
+
+00:04:23.266 --> 00:04:24.266 A:middle
+And if they're not, you can
+
+00:04:24.266 --> 00:04:25.236 A:middle
+provide a fallback.
+
+00:04:26.516 --> 00:04:28.636 A:middle
+Let's take a closer look at the
+
+00:04:28.856 --> 00:04:29.000 A:middle
+query.
+
+00:04:31.046 --> 00:04:35.046 A:middle
+As I mentioned, on iOS 11 or
+
+00:04:35.046 --> 00:04:37.176 A:middle
+greater, this will return true.
+
+00:04:37.736 --> 00:04:40.026 A:middle
+The star is required.
+
+00:04:40.996 --> 00:04:42.676 A:middle
+It indicates that on all other
+
+00:04:42.676 --> 00:04:44.976 A:middle
+platforms, the query always
+
+00:04:44.976 --> 00:04:45.796 A:middle
+returns true.
+
+00:04:47.166 --> 00:04:48.316 A:middle
+What this means is that if you
+
+00:04:48.316 --> 00:04:49.906 A:middle
+decide to port your app to
+
+00:04:49.906 --> 00:04:51.806 A:middle
+another platform -- say, macOS
+
+00:04:52.486 --> 00:04:54.286 A:middle
+-- then by default it will take
+
+00:04:54.286 --> 00:04:55.626 A:middle
+advantage of the new face
+
+00:04:55.626 --> 00:04:56.676 A:middle
+detection APIs.
+
+00:04:57.736 --> 00:04:58.656 A:middle
+Of course, the compiler will
+
+00:04:58.656 --> 00:05:00.276 A:middle
+still warn you if your port to
+
+00:05:00.276 --> 00:05:02.146 A:middle
+macOS supports an earlier
+
+00:05:02.146 --> 00:05:03.406 A:middle
+deployment target where those
+
+00:05:03.406 --> 00:05:04.696 A:middle
+APIs aren't available.
+
+00:05:04.986 --> 00:05:08.786 A:middle
+So you'll need to add a check.
+
+00:05:10.066 --> 00:05:11.166 A:middle
+Once you've been working with
+
+00:05:11.166 --> 00:05:12.756 A:middle
+availability for a while, you
+
+00:05:12.756 --> 00:05:14.476 A:middle
+will find that it's really
+
+00:05:14.476 --> 00:05:16.536 A:middle
+useful to write entire methods
+
+00:05:16.846 --> 00:05:18.956 A:middle
+that will only be called on iOS
+
+00:05:18.956 --> 00:05:19.726 A:middle
+11 or greater.
+
+00:05:19.786 --> 00:05:23.236 A:middle
+You can annotate these methods
+
+00:05:23.236 --> 00:05:25.056 A:middle
+with the new API availability
+
+00:05:25.056 --> 00:05:25.516 A:middle
+macro.
+
+00:05:26.936 --> 00:05:29.316 A:middle
+Then, inside that method, you
+
+00:05:29.316 --> 00:05:31.216 A:middle
+don't need to use @available to
+
+00:05:31.216 --> 00:05:33.356 A:middle
+check for availability, but
+
+00:05:33.356 --> 00:05:35.386 A:middle
+anyone who calls the method will
+
+00:05:35.386 --> 00:05:36.166 A:middle
+need to do so.
+
+00:05:36.526 --> 00:05:37.366 A:middle
+Otherwise, they'll get a
+
+00:05:37.366 --> 00:05:37.776 A:middle
+warning.
+
+00:05:38.136 --> 00:05:42.026 A:middle
+You can similarly apply this to
+
+00:05:42.026 --> 00:05:42.886 A:middle
+entire classes.
+
+00:05:43.476 --> 00:05:44.216 A:middle
+Then, you don't need to use
+
+00:05:44.216 --> 00:05:46.266 A:middle
+@available inside the class, but
+
+00:05:46.266 --> 00:05:48.046 A:middle
+anyone who instantiates it will
+
+00:05:48.046 --> 00:05:48.766 A:middle
+need to do so.
+
+00:05:52.756 --> 00:05:54.446 A:middle
+Now, availability checking is
+
+00:05:54.446 --> 00:05:55.946 A:middle
+not just for Objective-C.
+
+00:05:56.706 --> 00:05:59.286 A:middle
+We also support C and C++ with
+
+00:05:59.286 --> 00:06:00.916 A:middle
+the builtin available query.
+
+00:06:01.856 --> 00:06:03.456 A:middle
+This acts exactly like
+
+00:06:03.456 --> 00:06:04.346 A:middle
+@available.
+
+00:06:04.656 --> 00:06:05.786 A:middle
+It has the same syntax.
+
+00:06:06.356 --> 00:06:07.576 A:middle
+It just has a different name
+
+00:06:07.746 --> 00:06:08.926 A:middle
+that's compatible with C and
+
+00:06:08.926 --> 00:06:09.626 A:middle
+C++.
+
+00:06:10.156 --> 00:06:13.176 A:middle
+You can also use the API
+
+00:06:13.176 --> 00:06:15.196 A:middle
+availability macro in C, but you
+
+00:06:15.196 --> 00:06:16.366 A:middle
+will need to include the os
+
+00:06:16.366 --> 00:06:18.836 A:middle
+availability.h header to get
+
+00:06:18.836 --> 00:06:19.646 A:middle
+access to it.
+
+00:06:20.096 --> 00:06:23.186 A:middle
+And you can even annotate your
+
+00:06:23.186 --> 00:06:24.756 A:middle
+C++ class definitions.
+
+00:06:24.756 --> 00:06:28.396 A:middle
+All right, so how's this going
+
+00:06:28.716 --> 00:06:31.716 A:middle
+to work in practice?
+
+00:06:31.716 --> 00:06:33.736 A:middle
+For existing projects, we will
+
+00:06:33.736 --> 00:06:35.566 A:middle
+warn starting with APIs
+
+00:06:35.566 --> 00:06:38.816 A:middle
+introduced in iOS 11, tvOS 11,
+
+00:06:38.816 --> 00:06:41.396 A:middle
+macOS 10.13, and watchOS 4.
+
+00:06:42.496 --> 00:06:45.226 A:middle
+APIs from older SDKs will not be
+
+00:06:45.226 --> 00:06:46.406 A:middle
+checked at compile time.
+
+00:06:47.676 --> 00:06:48.866 A:middle
+This means that you won't need
+
+00:06:48.866 --> 00:06:51.576 A:middle
+to change any existing code, but
+
+00:06:51.576 --> 00:06:53.596 A:middle
+if you do decide to adopt the
+
+00:06:53.596 --> 00:06:55.856 A:middle
+new APIs, you'll need to use
+
+00:06:55.856 --> 00:06:57.466 A:middle
+@available to check for them.
+
+00:06:58.656 --> 00:06:59.726 A:middle
+We think this is the best and
+
+00:06:59.726 --> 00:07:00.726 A:middle
+safest way to check for
+
+00:07:00.726 --> 00:07:02.386 A:middle
+availability, and so we highly
+
+00:07:02.386 --> 00:07:03.966 A:middle
+encourage you to use it.
+
+00:07:05.726 --> 00:07:08.896 A:middle
+For new projects, all APIs will
+
+00:07:08.896 --> 00:07:10.196 A:middle
+be checked at compile time.
+
+00:07:11.026 --> 00:07:12.376 A:middle
+This means you'll need to use
+
+00:07:12.376 --> 00:07:13.986 A:middle
+@available for all APIs
+
+00:07:13.986 --> 00:07:15.976 A:middle
+introduced after your deployment
+
+00:07:16.376 --> 00:07:16.566 A:middle
+target.
+
+00:07:17.736 --> 00:07:20.036 A:middle
+Existing projects can opt in to
+
+00:07:20.036 --> 00:07:22.316 A:middle
+this all-API behavior by going
+
+00:07:22.316 --> 00:07:23.686 A:middle
+to the Build settings and
+
+00:07:23.686 --> 00:07:25.926 A:middle
+selecting Yes (All Versions) for
+
+00:07:25.926 --> 00:07:27.036 A:middle
+the Unguarded availability
+
+00:07:27.036 --> 00:07:27.386 A:middle
+setting.
+
+00:07:28.186 --> 00:07:30.006 A:middle
+This is going to make it a lot
+
+00:07:30.006 --> 00:07:31.846 A:middle
+easier to safely deploy your
+
+00:07:31.846 --> 00:07:33.326 A:middle
+apps back to older OS's.
+
+00:07:33.886 --> 00:07:36.376 A:middle
+So that's availability checking.
+
+00:07:36.726 --> 00:07:37.606 A:middle
+You could say it's now
+
+00:07:37.606 --> 00:07:40.506 A:middle
+@available for C, C++, and
+
+00:07:40.506 --> 00:07:41.156 A:middle
+Objective-C.
+
+00:07:42.516 --> 00:07:47.686 A:middle
+[ Applause ]
+
+00:07:48.186 --> 00:07:49.896 A:middle
+All right, let's move on to the
+
+00:07:49.896 --> 00:07:50.716 A:middle
+static analyzer.
+
+00:07:52.096 --> 00:07:54.976 A:middle
+The analyzer is great at
+
+00:07:54.976 --> 00:07:56.426 A:middle
+catching hard-to-reproduce
+
+00:07:56.526 --> 00:07:58.706 A:middle
+edge-case bugs, and it can even
+
+00:07:58.706 --> 00:07:59.876 A:middle
+show you the sequence of
+
+00:07:59.876 --> 00:08:01.936 A:middle
+corner-case events that led to
+
+00:08:02.016 --> 00:08:03.276 A:middle
+those bugs.
+
+00:08:03.556 --> 00:08:04.406 A:middle
+Today I'm going to tell you
+
+00:08:04.406 --> 00:08:05.656 A:middle
+about three new checks that
+
+00:08:05.656 --> 00:08:07.926 A:middle
+we've added to the analyzer: a
+
+00:08:07.926 --> 00:08:09.426 A:middle
+check for suspicious comparison
+
+00:08:09.426 --> 00:08:11.466 A:middle
+of NSNumber, a check for use of
+
+00:08:11.466 --> 00:08:12.756 A:middle
+dispatch once on instance
+
+00:08:12.756 --> 00:08:14.546 A:middle
+variables, and a check for
+
+00:08:14.546 --> 00:08:16.346 A:middle
+auto-synthesized copy properties
+
+00:08:16.636 --> 00:08:18.346 A:middle
+of NSMutable type.
+
+00:08:20.756 --> 00:08:24.596 A:middle
+A particularly pernicious bug is
+
+00:08:24.596 --> 00:08:26.506 A:middle
+to mistakenly compare an
+
+00:08:26.506 --> 00:08:28.396 A:middle
+NSNumber pointer value to the
+
+00:08:28.396 --> 00:08:30.836 A:middle
+scalar zero because this
+
+00:08:31.036 --> 00:08:33.486 A:middle
+actually compares to nil and not
+
+00:08:33.486 --> 00:08:34.976 A:middle
+the zero NSNumber instance.
+
+00:08:36.026 --> 00:08:37.006 A:middle
+Here's an example of how this
+
+00:08:37.006 --> 00:08:37.936 A:middle
+can be a problem.
+
+00:08:39.116 --> 00:08:40.886 A:middle
+In the hasPhotos method, the
+
+00:08:40.886 --> 00:08:43.706 A:middle
+programmer intends to return no
+
+00:08:43.856 --> 00:08:45.156 A:middle
+when the photo album is empty,
+
+00:08:46.136 --> 00:08:47.236 A:middle
+but because they're comparing
+
+00:08:47.236 --> 00:08:49.866 A:middle
+the photo count to nil, this
+
+00:08:49.866 --> 00:08:52.216 A:middle
+will actually return yes, even
+
+00:08:52.216 --> 00:08:54.266 A:middle
+when photo count holds the zero
+
+00:08:54.316 --> 00:08:55.356 A:middle
+NSNumber instance.
+
+00:08:56.036 --> 00:08:57.206 A:middle
+And so the analyzer will now
+
+00:08:57.206 --> 00:08:59.876 A:middle
+warn about this.
+
+00:09:00.106 --> 00:09:02.336 A:middle
+You can fix this error by
+
+00:09:02.336 --> 00:09:03.986 A:middle
+instead calling the integerValue
+
+00:09:03.986 --> 00:09:06.196 A:middle
+property to compare integers to
+
+00:09:06.196 --> 00:09:06.756 A:middle
+integers.
+
+00:09:07.106 --> 00:09:07.686 A:middle
+This is safe.
+
+00:09:08.236 --> 00:09:11.626 A:middle
+There's a similar problem with
+
+00:09:11.626 --> 00:09:14.056 A:middle
+implicit conversions to Booleans
+
+00:09:14.446 --> 00:09:16.466 A:middle
+because these also check for nil
+
+00:09:16.496 --> 00:09:17.746 A:middle
+and not the zero number.
+
+00:09:18.276 --> 00:09:20.956 A:middle
+This method counts the number of
+
+00:09:21.046 --> 00:09:23.286 A:middle
+faces in a photo, and since this
+
+00:09:23.286 --> 00:09:24.966 A:middle
+is an expensive operation, it
+
+00:09:24.966 --> 00:09:26.576 A:middle
+returns early if they've already
+
+00:09:26.576 --> 00:09:27.216 A:middle
+been counted.
+
+00:09:28.276 --> 00:09:29.776 A:middle
+But someone reading this code
+
+00:09:30.066 --> 00:09:31.436 A:middle
+might find it ambiguous.
+
+00:09:32.356 --> 00:09:33.546 A:middle
+Did the programmer intend to
+
+00:09:33.546 --> 00:09:35.656 A:middle
+return early if face count was
+
+00:09:35.656 --> 00:09:37.806 A:middle
+non-nil or non-zero?
+
+00:09:38.806 --> 00:09:40.396 A:middle
+The analyzer will now warn about
+
+00:09:40.396 --> 00:09:41.546 A:middle
+this kind of ambiguity.
+
+00:09:41.976 --> 00:09:44.446 A:middle
+In this case, the programmer
+
+00:09:44.446 --> 00:09:47.386 A:middle
+meant non-nil, and so she can
+
+00:09:47.476 --> 00:09:49.136 A:middle
+express her intent directly in
+
+00:09:49.136 --> 00:09:51.126 A:middle
+the code and silence the
+
+00:09:51.126 --> 00:09:53.476 A:middle
+analyzer warning by adding the
+
+00:09:53.476 --> 00:09:54.896 A:middle
+comparison explicitly.
+
+00:09:55.456 --> 00:09:59.106 A:middle
+You can control the level of
+
+00:09:59.106 --> 00:10:00.316 A:middle
+this check in your Build
+
+00:10:00.316 --> 00:10:00.656 A:middle
+setting.
+
+00:10:01.486 --> 00:10:02.956 A:middle
+If you choose Yes (Aggressive),
+
+00:10:03.606 --> 00:10:05.566 A:middle
+then the analyzer will warn when
+
+00:10:05.566 --> 00:10:06.786 A:middle
+it's not sure that you've made a
+
+00:10:06.786 --> 00:10:08.486 A:middle
+mistake, but it does think your
+
+00:10:08.486 --> 00:10:09.326 A:middle
+code is ambiguous.
+
+00:10:09.946 --> 00:10:13.696 A:middle
+Let's move on to dispatch once.
+
+00:10:16.076 --> 00:10:17.776 A:middle
+Grand Central Dispatch provides
+
+00:10:17.866 --> 00:10:20.896 A:middle
+a fantastic API, dispatch once,
+
+00:10:21.096 --> 00:10:22.306 A:middle
+that guarantees that a block is
+
+00:10:22.306 --> 00:10:24.256 A:middle
+called once and only once.
+
+00:10:24.896 --> 00:10:27.276 A:middle
+It is really useful for safely
+
+00:10:27.276 --> 00:10:28.436 A:middle
+initializing shared global
+
+00:10:28.436 --> 00:10:28.836 A:middle
+state.
+
+00:10:29.946 --> 00:10:31.576 A:middle
+In this example, the programmer
+
+00:10:32.186 --> 00:10:34.186 A:middle
+uses it to load and initialize a
+
+00:10:34.186 --> 00:10:36.136 A:middle
+shared array of photos.
+
+00:10:37.616 --> 00:10:39.516 A:middle
+The first argument to dispatch
+
+00:10:39.516 --> 00:10:41.336 A:middle
+once is the address of a
+
+00:10:41.336 --> 00:10:43.176 A:middle
+variable of a special type,
+
+00:10:43.506 --> 00:10:44.696 A:middle
+dispatch once t.
+
+00:10:45.546 --> 00:10:46.846 A:middle
+Grand Central Dispatch uses this
+
+00:10:47.156 --> 00:10:48.926 A:middle
+to make sure that the block is
+
+00:10:48.926 --> 00:10:51.606 A:middle
+only called once.
+
+00:10:51.686 --> 00:10:53.846 A:middle
+Now, it's really important that
+
+00:10:53.846 --> 00:10:56.046 A:middle
+this variable be either a static
+
+00:10:56.266 --> 00:10:57.276 A:middle
+or a global variable.
+
+00:10:58.276 --> 00:10:59.756 A:middle
+That's because if it's ever been
+
+00:10:59.756 --> 00:11:01.556 A:middle
+the case that the variable held
+
+00:11:01.556 --> 00:11:03.266 A:middle
+a non-zero value in the past,
+
+00:11:04.086 --> 00:11:05.206 A:middle
+then Grand Central Dispatch
+
+00:11:05.426 --> 00:11:06.916 A:middle
+might not be able to make the
+
+00:11:06.916 --> 00:11:09.006 A:middle
+once and only once guarantee in
+
+00:11:09.006 --> 00:11:09.986 A:middle
+multithreaded code.
+
+00:11:10.506 --> 00:11:14.356 A:middle
+What this means is that it's not
+
+00:11:14.576 --> 00:11:17.306 A:middle
+safe to use dispatch once t in
+
+00:11:17.306 --> 00:11:19.146 A:middle
+instance variables or, indeed,
+
+00:11:19.146 --> 00:11:21.696 A:middle
+in any other memory on the heap
+
+00:11:22.156 --> 00:11:23.316 A:middle
+that might have been reused.
+
+00:11:23.986 --> 00:11:25.056 A:middle
+And so the analyzer will now
+
+00:11:25.056 --> 00:11:26.486 A:middle
+warn about this.
+
+00:11:27.296 --> 00:11:29.686 A:middle
+To fix this, you can use your
+
+00:11:29.786 --> 00:11:31.496 A:middle
+favorite non-recursive lock.
+
+00:11:32.306 --> 00:11:34.076 A:middle
+Here I'll use NSLock, but you
+
+00:11:34.076 --> 00:11:35.916 A:middle
+could use OSUnfairLock or a
+
+00:11:35.916 --> 00:11:37.016 A:middle
+pthread mutex as well.
+
+00:11:38.416 --> 00:11:41.316 A:middle
+After acquiring the lock, check
+
+00:11:41.316 --> 00:11:42.346 A:middle
+to see whether the data's
+
+00:11:42.346 --> 00:11:43.506 A:middle
+initialized, and if not,
+
+00:11:43.506 --> 00:11:46.336 A:middle
+initialize it, and then don't
+
+00:11:46.406 --> 00:11:48.346 A:middle
+forget to release the lock.
+
+00:11:49.236 --> 00:11:50.706 A:middle
+This will guarantee that the
+
+00:11:50.706 --> 00:11:52.376 A:middle
+data's initialized once and only
+
+00:11:52.376 --> 00:11:54.056 A:middle
+once, exactly like you expect.
+
+00:11:54.416 --> 00:12:00.026 A:middle
+Finally, I'm going to tell you
+
+00:12:00.026 --> 00:12:01.576 A:middle
+about a check that we've added
+
+00:12:01.876 --> 00:12:03.786 A:middle
+for auto-synthesized copy
+
+00:12:03.786 --> 00:12:05.766 A:middle
+properties of NSMutable types.
+
+00:12:07.236 --> 00:12:09.066 A:middle
+Copy properties call the copy
+
+00:12:09.066 --> 00:12:11.096 A:middle
+method in their setter on the
+
+00:12:11.096 --> 00:12:12.976 A:middle
+passed-in value to story a copy.
+
+00:12:14.006 --> 00:12:16.736 A:middle
+But calling copy on a mutable
+
+00:12:16.736 --> 00:12:18.916 A:middle
+array results in an immutable
+
+00:12:18.916 --> 00:12:19.346 A:middle
+copy.
+
+00:12:20.416 --> 00:12:21.166 A:middle
+Here's how this can be a
+
+00:12:21.166 --> 00:12:21.676 A:middle
+problem.
+
+00:12:22.606 --> 00:12:25.296 A:middle
+It, this method tries to reset
+
+00:12:25.296 --> 00:12:27.306 A:middle
+the photos property by setting
+
+00:12:27.306 --> 00:12:29.406 A:middle
+it to an empty mutable array and
+
+00:12:29.406 --> 00:12:31.896 A:middle
+then adding in a single photo.
+
+00:12:33.196 --> 00:12:34.866 A:middle
+Unfortunately, this will lead to
+
+00:12:34.866 --> 00:12:37.236 A:middle
+a really nasty surprise at
+
+00:12:37.236 --> 00:12:39.856 A:middle
+runtime because you can't add an
+
+00:12:39.856 --> 00:12:41.766 A:middle
+object to an immutable array.
+
+00:12:42.596 --> 00:12:43.496 A:middle
+You'll get an exception.
+
+00:12:44.056 --> 00:12:46.826 A:middle
+The analyzer will now warn you
+
+00:12:46.826 --> 00:12:48.166 A:middle
+about these kinds of properties
+
+00:12:48.216 --> 00:12:50.156 A:middle
+to help you prevent this runtime
+
+00:12:50.156 --> 00:12:50.666 A:middle
+exception.
+
+00:12:51.216 --> 00:12:53.666 A:middle
+The fix here is simple.
+
+00:12:54.116 --> 00:12:55.716 A:middle
+All you need to do is write the
+
+00:12:55.716 --> 00:12:57.516 A:middle
+setter explicitly to have it
+
+00:12:57.516 --> 00:12:58.626 A:middle
+call mutableCopy.
+
+00:12:59.426 --> 00:13:00.326 A:middle
+This guarantees that your
+
+00:13:00.326 --> 00:13:02.946 A:middle
+property always holds a mutable
+
+00:13:02.946 --> 00:13:03.000 A:middle
+array.
+
+00:13:06.236 --> 00:13:07.706 A:middle
+So those are just three of the
+
+00:13:07.706 --> 00:13:08.736 A:middle
+new checks that we've added to
+
+00:13:08.736 --> 00:13:09.746 A:middle
+the analyzer this year.
+
+00:13:10.606 --> 00:13:11.776 A:middle
+You should run it on your code.
+
+00:13:11.776 --> 00:13:13.186 A:middle
+It will help you find bugs.
+
+00:13:14.556 --> 00:13:16.656 A:middle
+To do that, choose Analyze from
+
+00:13:16.656 --> 00:13:17.626 A:middle
+Xcode's Product menu.
+
+00:13:19.086 --> 00:13:20.606 A:middle
+You could even have Xcode run
+
+00:13:20.606 --> 00:13:23.566 A:middle
+the analyzer on every compile by
+
+00:13:23.566 --> 00:13:25.186 A:middle
+going to your Build settings and
+
+00:13:25.186 --> 00:13:27.096 A:middle
+enabling Analyze During 'Build.'
+
+00:13:27.096 --> 00:13:29.086 A:middle
+This will help you catch your
+
+00:13:29.086 --> 00:13:30.336 A:middle
+bugs early and often.
+
+00:13:30.976 --> 00:13:33.136 A:middle
+If you're interested in other
+
+00:13:33.136 --> 00:13:34.626 A:middle
+tools to help you find bugs, I
+
+00:13:34.956 --> 00:13:36.496 A:middle
+highly encourage you to check
+
+00:13:36.496 --> 00:13:38.266 A:middle
+out finding bugs using Xcode
+
+00:13:38.266 --> 00:13:39.566 A:middle
+runtime tools online.
+
+00:13:39.566 --> 00:13:41.916 A:middle
+So that's what's new in the
+
+00:13:41.916 --> 00:13:42.466 A:middle
+analyzer.
+
+00:13:42.916 --> 00:13:44.616 A:middle
+I'm not going to hand it over to
+
+00:13:44.616 --> 00:13:46.266 A:middle
+Duncan, who will tell us about
+
+00:13:46.266 --> 00:13:47.316 A:middle
+new compiler warnings.
+
+00:13:48.516 --> 00:13:54.046 A:middle
+[ Applause ]
+
+00:13:54.546 --> 00:13:57.766 A:middle
+&gt;&gt; Thanks, Devin.
+
+00:13:58.576 --> 00:14:00.986 A:middle
+Xcode 9 comes with over 100 new
+
+00:14:00.986 --> 00:14:02.526 A:middle
+errors and warnings to help find
+
+00:14:02.526 --> 00:14:03.426 A:middle
+bugs in your code.
+
+00:14:03.746 --> 00:14:05.626 A:middle
+Let's talk about two warnings
+
+00:14:05.626 --> 00:14:06.466 A:middle
+that are important for
+
+00:14:06.466 --> 00:14:07.166 A:middle
+Objective-C.
+
+00:14:09.686 --> 00:14:11.896 A:middle
+Under ARC, most parameters are
+
+00:14:11.896 --> 00:14:13.346 A:middle
+safe to capture in blocks.
+
+00:14:13.876 --> 00:14:16.356 A:middle
+In this example, the
+
+00:14:16.356 --> 00:14:18.256 A:middle
+validateDictionary usingChecker
+
+00:14:18.256 --> 00:14:21.036 A:middle
+method takes an NSDictionary and
+
+00:14:21.036 --> 00:14:22.716 A:middle
+visits every entry by calling
+
+00:14:22.716 --> 00:14:24.256 A:middle
+enumerateKeysAndObjects
+
+00:14:24.256 --> 00:14:24.886 A:middle
+UsingBlock.
+
+00:14:26.336 --> 00:14:28.216 A:middle
+Block captures the checker
+
+00:14:28.216 --> 00:14:28.746 A:middle
+parameter.
+
+00:14:29.466 --> 00:14:30.846 A:middle
+This is safe and works really
+
+00:14:30.846 --> 00:14:31.096 A:middle
+well.
+
+00:14:32.906 --> 00:14:34.796 A:middle
+Notice the checkObject forKey
+
+00:14:35.066 --> 00:14:35.536 A:middle
+can fail.
+
+00:14:36.376 --> 00:14:38.856 A:middle
+The block sets stop to yes to
+
+00:14:38.856 --> 00:14:40.226 A:middle
+abort the enumeration early.
+
+00:14:41.576 --> 00:14:43.546 A:middle
+Since this is a validation
+
+00:14:43.546 --> 00:14:45.016 A:middle
+method, it should also return
+
+00:14:45.016 --> 00:14:46.546 A:middle
+BOOL and create an NS error.
+
+00:14:47.116 --> 00:14:48.066 A:middle
+Let's make that change.
+
+00:14:49.636 --> 00:14:52.006 A:middle
+OK. Let's walk through the code.
+
+00:14:52.356 --> 00:14:54.196 A:middle
+Before enumerating, isValid is
+
+00:14:54.196 --> 00:14:54.896 A:middle
+set to yes.
+
+00:14:55.586 --> 00:14:57.716 A:middle
+The block runs the checker and
+
+00:14:57.716 --> 00:14:58.856 A:middle
+returns on success.
+
+00:14:59.906 --> 00:15:02.326 A:middle
+If the checker fails, isValid is
+
+00:15:02.326 --> 00:15:04.356 A:middle
+set to no and an NS error is
+
+00:15:04.356 --> 00:15:04.796 A:middle
+created.
+
+00:15:06.236 --> 00:15:08.616 A:middle
+After enumerating, isValid is
+
+00:15:08.616 --> 00:15:10.916 A:middle
+returned, but there's a bug
+
+00:15:10.916 --> 00:15:11.156 A:middle
+here.
+
+00:15:12.596 --> 00:15:14.626 A:middle
+Out parameters like error are
+
+00:15:14.626 --> 00:15:16.066 A:middle
+implicitly autoreleasing.
+
+00:15:16.676 --> 00:15:18.826 A:middle
+Assigning to them is not safe in
+
+00:15:19.566 --> 00:15:20.316 A:middle
+a block.
+
+00:15:20.926 --> 00:15:22.266 A:middle
+enumerateKeysAndObjects
+
+00:15:22.266 --> 00:15:24.236 A:middle
+UsingBlock calls the block
+
+00:15:24.236 --> 00:15:25.586 A:middle
+inside an autorelease pool.
+
+00:15:26.536 --> 00:15:28.476 A:middle
+When it returns, the NS error
+
+00:15:28.476 --> 00:15:29.696 A:middle
+will get destroyed as well.
+
+00:15:30.416 --> 00:15:31.796 A:middle
+It isn't safe to use.
+
+00:15:32.316 --> 00:15:36.336 A:middle
+In Xcode 9, this unsafe capture
+
+00:15:36.336 --> 00:15:37.266 A:middle
+will trigger a warning.
+
+00:15:38.496 --> 00:15:40.696 A:middle
+The easiest fix is to make the
+
+00:15:40.696 --> 00:15:41.866 A:middle
+out parameter a strong
+
+00:15:41.866 --> 00:15:42.496 A:middle
+reference.
+
+00:15:43.156 --> 00:15:44.576 A:middle
+This will keep the value alive
+
+00:15:44.816 --> 00:15:46.606 A:middle
+across any autorelease pools.
+
+00:15:47.856 --> 00:15:49.286 A:middle
+This works as long as all
+
+00:15:49.286 --> 00:15:50.876 A:middle
+callers of validateDictionary
+
+00:15:50.876 --> 00:15:52.496 A:middle
+usingChecker are using ARC.
+
+00:15:54.026 --> 00:15:55.556 A:middle
+The other option is to use a
+
+00:15:55.556 --> 00:15:56.756 A:middle
+local block variable.
+
+00:15:57.836 --> 00:16:00.036 A:middle
+Here strongError is initialized
+
+00:16:00.036 --> 00:16:00.406 A:middle
+to nil.
+
+00:16:01.126 --> 00:16:03.316 A:middle
+If the enumeration stops early,
+
+00:16:03.566 --> 00:16:05.886 A:middle
+strongError safely stores the NS
+
+00:16:05.886 --> 00:16:06.226 A:middle
+error.
+
+00:16:07.466 --> 00:16:09.186 A:middle
+Then, the out parameter is
+
+00:16:09.186 --> 00:16:11.056 A:middle
+updated after the enumeration is
+
+00:16:11.056 --> 00:16:11.516 A:middle
+complete.
+
+00:16:12.006 --> 00:16:14.816 A:middle
+That's the first warning.
+
+00:16:15.656 --> 00:16:16.676 A:middle
+Let's move on to the second.
+
+00:16:17.976 --> 00:16:19.786 A:middle
+In this example, the function
+
+00:16:19.786 --> 00:16:21.476 A:middle
+foo is declared without any
+
+00:16:21.476 --> 00:16:22.106 A:middle
+parameters.
+
+00:16:23.686 --> 00:16:25.876 A:middle
+In C and Objective-C, that means
+
+00:16:25.876 --> 00:16:27.296 A:middle
+that foo can be called with any
+
+00:16:27.296 --> 00:16:28.976 A:middle
+number or type of argument.
+
+00:16:30.026 --> 00:16:31.236 A:middle
+A function with an empty
+
+00:16:31.236 --> 00:16:32.696 A:middle
+parameter list is called a
+
+00:16:32.696 --> 00:16:34.366 A:middle
+non-prototype declaration.
+
+00:16:35.646 --> 00:16:36.926 A:middle
+This behavior dates from the
+
+00:16:36.996 --> 00:16:38.886 A:middle
+early days of C where parameters
+
+00:16:38.886 --> 00:16:40.256 A:middle
+were only listed at function
+
+00:16:40.256 --> 00:16:41.716 A:middle
+definitions, but this
+
+00:16:41.716 --> 00:16:43.496 A:middle
+declaration is not type safe.
+
+00:16:44.026 --> 00:16:45.416 A:middle
+This is never really what you
+
+00:16:45.416 --> 00:16:45.766 A:middle
+want.
+
+00:16:46.446 --> 00:16:47.406 A:middle
+Calls that don't match the
+
+00:16:47.406 --> 00:16:49.826 A:middle
+definition can crash at runtime.
+
+00:16:50.796 --> 00:16:52.866 A:middle
+In Xcode 9, the compiler has a
+
+00:16:52.866 --> 00:16:54.416 A:middle
+new warning that enforces strict
+
+00:16:54.416 --> 00:16:55.026 A:middle
+prototypes.
+
+00:16:57.696 --> 00:17:00.126 A:middle
+Usually, the fix is to add void.
+
+00:17:00.806 --> 00:17:02.656 A:middle
+This specifies exactly zero
+
+00:17:02.656 --> 00:17:03.366 A:middle
+parameters.
+
+00:17:03.766 --> 00:17:05.496 A:middle
+Any calls with arguments will
+
+00:17:05.496 --> 00:17:06.116 A:middle
+give an error.
+
+00:17:07.656 --> 00:17:08.966 A:middle
+Since function pointers and
+
+00:17:08.966 --> 00:17:10.756 A:middle
+blocks have a common declaration
+
+00:17:10.756 --> 00:17:12.796 A:middle
+syntax with functions, you'll
+
+00:17:12.796 --> 00:17:14.086 A:middle
+also see this if you have a
+
+00:17:14.086 --> 00:17:15.896 A:middle
+function or method that takes a
+
+00:17:15.896 --> 00:17:16.976 A:middle
+block as an argument.
+
+00:17:18.236 --> 00:17:19.836 A:middle
+The fix is the same as with
+
+00:17:19.836 --> 00:17:20.956 A:middle
+function declarations.
+
+00:17:21.446 --> 00:17:23.716 A:middle
+Add void to specify exactly zero
+
+00:17:23.716 --> 00:17:24.496 A:middle
+parameters.
+
+00:17:25.346 --> 00:17:26.846 A:middle
+Then, you'll get an error if you
+
+00:17:26.846 --> 00:17:28.566 A:middle
+pass in a block with the wrong
+
+00:17:29.456 --> 00:17:29.566 A:middle
+type.
+
+00:17:30.256 --> 00:17:32.286 A:middle
+Xcode's project modernization
+
+00:17:32.366 --> 00:17:33.826 A:middle
+will turn these warnings on in
+
+00:17:33.826 --> 00:17:35.816 A:middle
+your Build settings, or you can
+
+00:17:35.846 --> 00:17:37.356 A:middle
+upgrade later by selecting your
+
+00:17:37.356 --> 00:17:39.026 A:middle
+project and choosing Validate
+
+00:17:39.026 --> 00:17:40.346 A:middle
+Settings from the Editor menu.
+
+00:17:40.916 --> 00:17:43.816 A:middle
+You can also upgrade new
+
+00:17:43.816 --> 00:17:45.486 A:middle
+warnings to errors by selecting
+
+00:17:45.676 --> 00:17:47.266 A:middle
+Yes (Error) in the Build
+
+00:17:47.266 --> 00:17:47.716 A:middle
+settings.
+
+00:17:49.196 --> 00:17:50.146 A:middle
+That's it today for new
+
+00:17:50.146 --> 00:17:50.706 A:middle
+warnings.
+
+00:17:52.146 --> 00:17:53.516 A:middle
+Let's move on to C++.
+
+00:17:55.036 --> 00:17:57.466 A:middle
+This year, we've put a lot of
+
+00:17:57.466 --> 00:17:59.286 A:middle
+effort into improving the C++
+
+00:17:59.286 --> 00:18:00.426 A:middle
+experience in Xcode.
+
+00:18:01.856 --> 00:18:02.996 A:middle
+That includes refactoring
+
+00:18:02.996 --> 00:18:03.426 A:middle
+support.
+
+00:18:04.106 --> 00:18:05.866 A:middle
+We support a lot of operations.
+
+00:18:06.406 --> 00:18:08.286 A:middle
+I'd like to give a short tour of
+
+00:18:08.286 --> 00:18:10.536 A:middle
+using Xcode to refactor LLVM.
+
+00:18:10.536 --> 00:18:13.976 A:middle
+This is a large C++ code base
+
+00:18:13.976 --> 00:18:15.076 A:middle
+that shows off the engine.
+
+00:18:16.336 --> 00:18:18.316 A:middle
+But even if you're not a C++
+
+00:18:18.316 --> 00:18:19.796 A:middle
+developer, you could still get
+
+00:18:19.796 --> 00:18:21.596 A:middle
+an idea of how refactoring in
+
+00:18:21.626 --> 00:18:23.096 A:middle
+Xcode can improve your work
+
+00:18:23.096 --> 00:18:23.336 A:middle
+flow.
+
+00:18:23.906 --> 00:18:27.136 A:middle
+I started at a member function
+
+00:18:27.136 --> 00:18:28.646 A:middle
+definition from the InstCombiner
+
+00:18:28.646 --> 00:18:29.146 A:middle
+class.
+
+00:18:30.276 --> 00:18:31.746 A:middle
+This is a utility for combining
+
+00:18:31.746 --> 00:18:32.466 A:middle
+instructions.
+
+00:18:33.766 --> 00:18:35.546 A:middle
+I never liked the Inst short
+
+00:18:35.546 --> 00:18:37.376 A:middle
+form for instruction, so I
+
+00:18:37.376 --> 00:18:39.026 A:middle
+Command-clicked in Xcode and
+
+00:18:39.026 --> 00:18:39.796 A:middle
+selected Rename.
+
+00:18:41.686 --> 00:18:43.576 A:middle
+This worked even though I wasn't
+
+00:18:43.576 --> 00:18:44.746 A:middle
+at the class declaration.
+
+00:18:46.446 --> 00:18:48.026 A:middle
+InstructionCombiner is more
+
+00:18:48.026 --> 00:18:48.516 A:middle
+clear to me.
+
+00:18:50.416 --> 00:18:52.406 A:middle
+Xcode updated the name in place.
+
+00:18:52.406 --> 00:18:53.856 A:middle
+This saved me a lot of hunting
+
+00:18:53.856 --> 00:18:54.096 A:middle
+around.
+
+00:18:54.726 --> 00:18:57.096 A:middle
+I double-checked the class
+
+00:18:57.096 --> 00:18:57.736 A:middle
+declaration.
+
+00:18:58.266 --> 00:18:59.266 A:middle
+It was updated too.
+
+00:19:00.346 --> 00:19:02.846 A:middle
+So was its use in the CRTP base
+
+00:19:02.846 --> 00:19:04.216 A:middle
+class, InstVisitor.
+
+00:19:05.556 --> 00:19:07.496 A:middle
+InstVisitor uses the same short
+
+00:19:07.496 --> 00:19:08.746 A:middle
+form, and so does
+
+00:19:08.806 --> 00:19:10.036 A:middle
+InstCombineWorklist.
+
+00:19:10.636 --> 00:19:11.726 A:middle
+But I had better leave those for
+
+00:19:11.726 --> 00:19:12.336 A:middle
+a separate commit.
+
+00:19:14.216 --> 00:19:15.796 A:middle
+Since changing a class name from
+
+00:19:15.796 --> 00:19:17.046 A:middle
+one of its member functions
+
+00:19:17.046 --> 00:19:18.766 A:middle
+worked, I moved on to something
+
+00:19:18.796 --> 00:19:19.856 A:middle
+even more complicated.
+
+00:19:20.596 --> 00:19:21.556 A:middle
+I went to a template
+
+00:19:21.556 --> 00:19:23.176 A:middle
+specialization for simplified
+
+00:19:23.176 --> 00:19:26.026 A:middle
+type, a utility we use on smart
+
+00:19:26.026 --> 00:19:27.646 A:middle
+pointers and custom iterators.
+
+00:19:28.156 --> 00:19:30.746 A:middle
+I think the function
+
+00:19:30.816 --> 00:19:32.956 A:middle
+getSimplifiedValue is named
+
+00:19:32.956 --> 00:19:33.406 A:middle
+wrong.
+
+00:19:34.066 --> 00:19:35.626 A:middle
+It should use STL naming
+
+00:19:35.626 --> 00:19:37.396 A:middle
+conventions like its class name.
+
+00:19:38.416 --> 00:19:39.526 A:middle
+I selected Rename again.
+
+00:19:40.886 --> 00:19:42.056 A:middle
+Tying together template
+
+00:19:42.056 --> 00:19:43.826 A:middle
+specializations from across the
+
+00:19:43.826 --> 00:19:46.146 A:middle
+project is complicated, but
+
+00:19:46.146 --> 00:19:47.586 A:middle
+Xcode can handle it.
+
+00:19:48.256 --> 00:19:50.466 A:middle
+The specialization I was looking
+
+00:19:50.466 --> 00:19:52.656 A:middle
+at was updated and so was the
+
+00:19:52.656 --> 00:19:53.846 A:middle
+main template declaration.
+
+00:19:54.996 --> 00:19:56.326 A:middle
+There's another specialization
+
+00:19:56.326 --> 00:19:58.246 A:middle
+right below, and it was fixed
+
+00:19:58.926 --> 00:19:59.000 A:middle
+too.
+
+00:20:01.396 --> 00:20:03.386 A:middle
+Next, I moved to Constants.h,
+
+00:20:03.676 --> 00:20:04.856 A:middle
+where we have a class called
+
+00:20:04.896 --> 00:20:06.556 A:middle
+ConstantInt for representing
+
+00:20:06.736 --> 00:20:07.616 A:middle
+constant integers.
+
+00:20:08.736 --> 00:20:09.816 A:middle
+It has nice convenience
+
+00:20:09.816 --> 00:20:11.476 A:middle
+functions for getting true and
+
+00:20:11.476 --> 00:20:12.466 A:middle
+false values.
+
+00:20:13.666 --> 00:20:15.516 A:middle
+I added declarations for a
+
+00:20:15.516 --> 00:20:17.406 A:middle
+getMax function to get the
+
+00:20:17.406 --> 00:20:18.816 A:middle
+maximum integer value.
+
+00:20:20.296 --> 00:20:21.976 A:middle
+Then, I Command-clicked and
+
+00:20:21.976 --> 00:20:23.146 A:middle
+generated the missing function
+
+00:20:23.146 --> 00:20:26.086 A:middle
+definitions for each of them.
+
+00:20:26.686 --> 00:20:28.476 A:middle
+Here they are in Constants.cpp.
+
+00:20:29.576 --> 00:20:31.486 A:middle
+What I like about this is where
+
+00:20:31.486 --> 00:20:32.666 A:middle
+the functions showed up in the
+
+00:20:32.666 --> 00:20:33.076 A:middle
+file.
+
+00:20:34.276 --> 00:20:35.556 A:middle
+My new definitions were
+
+00:20:35.556 --> 00:20:37.356 A:middle
+generated after the last member
+
+00:20:37.356 --> 00:20:38.926 A:middle
+functions defined for the same
+
+00:20:38.926 --> 00:20:42.186 A:middle
+class, ConstantInt, but before
+
+00:20:42.186 --> 00:20:43.476 A:middle
+the member functions for the
+
+00:20:43.476 --> 00:20:44.196 A:middle
+next class.
+
+00:20:45.496 --> 00:20:46.996 A:middle
+This is exactly where I want
+
+00:20:46.996 --> 00:20:47.196 A:middle
+them.
+
+00:20:48.516 --> 00:20:53.826 A:middle
+[ Applause ]
+
+00:20:54.326 --> 00:20:56.006 A:middle
+LVM has lots of code for
+
+00:20:56.006 --> 00:20:57.076 A:middle
+representing integers.
+
+00:20:57.626 --> 00:20:58.896 A:middle
+I had a look at this greatest
+
+00:20:58.896 --> 00:21:00.636 A:middle
+common divisor function, and I
+
+00:21:00.636 --> 00:21:02.996 A:middle
+noticed a local variable, Pow2,
+
+00:21:02.996 --> 00:21:03.916 A:middle
+that is complicated to
+
+00:21:03.916 --> 00:21:04.466 A:middle
+calculate.
+
+00:21:05.836 --> 00:21:07.686 A:middle
+Its computation really belongs
+
+00:21:07.686 --> 00:21:08.546 A:middle
+in its own function.
+
+00:21:10.346 --> 00:21:11.856 A:middle
+I selected the code and opened
+
+00:21:11.856 --> 00:21:13.566 A:middle
+the contextual menu, where I
+
+00:21:13.566 --> 00:21:15.276 A:middle
+clicked on Extract Function.
+
+00:21:15.276 --> 00:21:17.156 A:middle
+I was a little sloppy with my
+
+00:21:17.156 --> 00:21:19.016 A:middle
+selection, but Xcode is smart
+
+00:21:19.016 --> 00:21:20.136 A:middle
+enough that it worked anyway.
+
+00:21:21.466 --> 00:21:23.116 A:middle
+That entered me straight into
+
+00:21:23.116 --> 00:21:24.266 A:middle
+rename at the bottom of the
+
+00:21:24.266 --> 00:21:24.656 A:middle
+screen.
+
+00:21:25.466 --> 00:21:27.976 A:middle
+I chose countCommonPowersOf2.
+
+00:21:29.276 --> 00:21:30.496 A:middle
+Let's scroll up and look at the
+
+00:21:30.496 --> 00:21:31.036 A:middle
+definition.
+
+00:21:31.776 --> 00:21:33.886 A:middle
+The key thing here is that the
+
+00:21:33.886 --> 00:21:35.626 A:middle
+arguments A and B were
+
+00:21:35.656 --> 00:21:36.926 A:middle
+automatically captured by
+
+00:21:36.926 --> 00:21:37.626 A:middle
+reference.
+
+00:21:38.696 --> 00:21:40.286 A:middle
+That's important because they're
+
+00:21:40.286 --> 00:21:41.046 A:middle
+being modified.
+
+00:21:41.826 --> 00:21:45.206 A:middle
+Extract Function got it right.
+
+00:21:45.856 --> 00:21:47.336 A:middle
+Extracting the function was a
+
+00:21:47.336 --> 00:21:49.336 A:middle
+nice opportunity to clean up the
+
+00:21:49.336 --> 00:21:50.996 A:middle
+code to use early returns.
+
+00:21:53.496 --> 00:21:55.466 A:middle
+That got me bouncing around a
+
+00:21:55.466 --> 00:21:56.996 A:middle
+little, and I found this code in
+
+00:21:56.996 --> 00:21:58.386 A:middle
+the optimizer for unrolling
+
+00:21:58.386 --> 00:21:58.866 A:middle
+loops.
+
+00:21:59.976 --> 00:22:02.666 A:middle
+I noticed a call to getLoopFor
+
+00:22:02.736 --> 00:22:03.686 A:middle
+and an if statement.
+
+00:22:05.066 --> 00:22:06.586 A:middle
+The same function is called with
+
+00:22:06.586 --> 00:22:08.696 A:middle
+the same argument again right
+
+00:22:08.696 --> 00:22:11.206 A:middle
+below in a while loop.
+
+00:22:11.776 --> 00:22:13.446 A:middle
+getLoopFor does a hash table
+
+00:22:13.446 --> 00:22:14.786 A:middle
+lookup, which isn't free.
+
+00:22:15.596 --> 00:22:17.146 A:middle
+Since the while loop doesn't
+
+00:22:17.146 --> 00:22:18.816 A:middle
+change the hash table, I
+
+00:22:18.816 --> 00:22:20.446 A:middle
+Command-clicked and selected
+
+00:22:20.546 --> 00:22:22.356 A:middle
+Extract Repeated Expression.
+
+00:22:24.286 --> 00:22:25.526 A:middle
+This stored the result of the
+
+00:22:25.526 --> 00:22:27.056 A:middle
+function call in a local
+
+00:22:27.056 --> 00:22:28.896 A:middle
+variable, so it was only called
+
+00:22:28.896 --> 00:22:30.636 A:middle
+once, and then I immediately
+
+00:22:30.636 --> 00:22:31.676 A:middle
+used Rename.
+
+00:22:32.286 --> 00:22:35.036 A:middle
+I chose the name LoopLatch.
+
+00:22:35.606 --> 00:22:37.566 A:middle
+That was easy.
+
+00:22:38.066 --> 00:22:39.856 A:middle
+Extract and Rename work cleanly
+
+00:22:39.856 --> 00:22:40.256 A:middle
+together.
+
+00:22:42.676 --> 00:22:44.706 A:middle
+After all that refactoring, I
+
+00:22:44.706 --> 00:22:45.846 A:middle
+thought I'd write some new code.
+
+00:22:47.266 --> 00:22:48.856 A:middle
+ArrayRef is a generalized
+
+00:22:48.856 --> 00:22:50.526 A:middle
+reference to contiguous values,
+
+00:22:50.996 --> 00:22:52.776 A:middle
+whether they're in an STL vector
+
+00:22:52.886 --> 00:22:54.806 A:middle
+or in one of LVM's custom data
+
+00:22:54.806 --> 00:22:55.466 A:middle
+structures.
+
+00:22:56.466 --> 00:22:58.016 A:middle
+Notice that ArrayRef is
+
+00:22:58.016 --> 00:22:59.886 A:middle
+templated on the value type in
+
+00:22:59.886 --> 00:23:00.286 A:middle
+the array.
+
+00:23:01.356 --> 00:23:03.116 A:middle
+I thought it might be useful to
+
+00:23:03.116 --> 00:23:04.626 A:middle
+compare two ArrayRefs.
+
+00:23:05.486 --> 00:23:06.886 A:middle
+Why not implement a string like
+
+00:23:06.886 --> 00:23:07.476 A:middle
+comparison?
+
+00:23:08.466 --> 00:23:09.896 A:middle
+I need to loop from zero to the
+
+00:23:09.896 --> 00:23:11.416 A:middle
+minimum size between left-hand
+
+00:23:11.416 --> 00:23:12.766 A:middle
+side and right-hand side.
+
+00:23:13.586 --> 00:23:14.756 A:middle
+When I hit the dot after
+
+00:23:14.756 --> 00:23:16.796 A:middle
+left-hand side, code completion
+
+00:23:16.796 --> 00:23:17.276 A:middle
+kicked in.
+
+00:23:18.286 --> 00:23:20.666 A:middle
+Remember, left-hand side is
+
+00:23:20.706 --> 00:23:21.886 A:middle
+templated on T here.
+
+00:23:22.366 --> 00:23:24.866 A:middle
+That's pretty cool.
+
+00:23:25.626 --> 00:23:27.676 A:middle
+Code completion works with
+
+00:23:27.676 --> 00:23:29.716 A:middle
+templates, new in Xcode 9.
+
+00:23:30.516 --> 00:23:36.226 A:middle
+[ Applause ]
+
+00:23:36.726 --> 00:23:38.526 A:middle
+And that's C++ refactoring and
+
+00:23:38.526 --> 00:23:39.966 A:middle
+code completion in Xcode.
+
+00:23:40.316 --> 00:23:43.226 A:middle
+Let's talk about a few features
+
+00:23:43.226 --> 00:23:44.926 A:middle
+from the C++17 standard.
+
+00:23:45.436 --> 00:23:49.056 A:middle
+I'll start with STL's tuple, a
+
+00:23:49.056 --> 00:23:51.476 A:middle
+useful type from C++11 that
+
+00:23:51.476 --> 00:23:53.166 A:middle
+enables multiple return values.
+
+00:23:54.126 --> 00:23:55.536 A:middle
+But decomposing it is awkward.
+
+00:23:56.386 --> 00:23:58.176 A:middle
+Decomposition requires a tie
+
+00:23:58.176 --> 00:24:00.706 A:middle
+around the variables, the types
+
+00:24:00.706 --> 00:24:02.716 A:middle
+can't be inferred, and the
+
+00:24:02.716 --> 00:24:03.856 A:middle
+variable names need to be
+
+00:24:03.856 --> 00:24:04.486 A:middle
+duplicated.
+
+00:24:05.746 --> 00:24:07.906 A:middle
+C++17 solves this with
+
+00:24:07.906 --> 00:24:10.136 A:middle
+structured binding, which binds
+
+00:24:10.136 --> 00:24:11.676 A:middle
+names directly to the returned
+
+00:24:11.836 --> 00:24:12.886 A:middle
+tuple elements.
+
+00:24:14.666 --> 00:24:16.066 A:middle
+This is a great feature.
+
+00:24:16.226 --> 00:24:17.436 A:middle
+Now, it's much easier to work
+
+00:24:17.436 --> 00:24:18.126 A:middle
+with tuples.
+
+00:24:18.706 --> 00:24:20.016 A:middle
+Structured binding can be used
+
+00:24:20.016 --> 00:24:21.526 A:middle
+anywhere get can be used.
+
+00:24:22.246 --> 00:24:23.976 A:middle
+It also works out of the box
+
+00:24:24.016 --> 00:24:25.316 A:middle
+with plain-old data types like
+
+00:24:25.416 --> 00:24:25.676 A:middle
+Point.
+
+00:24:26.726 --> 00:24:28.476 A:middle
+The syntax is exactly the same
+
+00:24:28.476 --> 00:24:29.316 A:middle
+as with tuples.
+
+00:24:29.596 --> 00:24:32.486 A:middle
+That's structured binding.
+
+00:24:33.136 --> 00:24:35.656 A:middle
+The next feature is initializers
+
+00:24:35.656 --> 00:24:36.586 A:middle
+in if statements.
+
+00:24:38.216 --> 00:24:39.006 A:middle
+Here's an example.
+
+00:24:39.806 --> 00:24:41.656 A:middle
+The initializer finds the last
+
+00:24:41.656 --> 00:24:43.176 A:middle
+slash in a path string.
+
+00:24:43.876 --> 00:24:45.616 A:middle
+The slash variable scope is
+
+00:24:45.616 --> 00:24:46.906 A:middle
+limited to the if statement.
+
+00:24:48.626 --> 00:24:50.016 A:middle
+Then, the condition checks
+
+00:24:50.176 --> 00:24:51.456 A:middle
+whether slash was found.
+
+00:24:52.926 --> 00:24:55.296 A:middle
+If so, then slash is used to
+
+00:24:55.296 --> 00:24:57.556 A:middle
+split the path.
+
+00:24:58.036 --> 00:24:59.086 A:middle
+The same feature works for
+
+00:24:59.086 --> 00:24:59.906 A:middle
+switch statements.
+
+00:25:01.406 --> 00:25:02.786 A:middle
+Minimizing the scope of the
+
+00:25:02.786 --> 00:25:04.946 A:middle
+slash variable helps to prevent
+
+00:25:04.946 --> 00:25:05.406 A:middle
+bugs.
+
+00:25:06.136 --> 00:25:07.656 A:middle
+If this function continues,
+
+00:25:07.896 --> 00:25:09.606 A:middle
+we'll get an error if we try to
+
+00:25:09.666 --> 00:25:11.086 A:middle
+reuse the slash variable.
+
+00:25:11.926 --> 00:25:13.866 A:middle
+This is good because the logic
+
+00:25:13.866 --> 00:25:14.506 A:middle
+is unrelated.
+
+00:25:15.026 --> 00:25:18.756 A:middle
+Let's move on to a feature for
+
+00:25:18.756 --> 00:25:19.806 A:middle
+templated functions.
+
+00:25:21.556 --> 00:25:23.356 A:middle
+Advance is a simple template
+
+00:25:23.356 --> 00:25:24.736 A:middle
+algorithm for in advancing an
+
+00:25:24.736 --> 00:25:25.226 A:middle
+iterator.
+
+00:25:26.006 --> 00:25:27.446 A:middle
+It has been in the STL for a
+
+00:25:27.446 --> 00:25:29.546 A:middle
+long time, but let's use it as
+
+00:25:29.546 --> 00:25:30.076 A:middle
+an example.
+
+00:25:31.166 --> 00:25:32.616 A:middle
+For n greater than 0, it moves
+
+00:25:32.616 --> 00:25:35.086 A:middle
+the iterator forward, and for n
+
+00:25:35.086 --> 00:25:36.076 A:middle
+less than 0, it moves the
+
+00:25:36.076 --> 00:25:37.566 A:middle
+iterator backward.
+
+00:25:38.776 --> 00:25:40.536 A:middle
+For example, you might want to
+
+00:25:40.536 --> 00:25:42.376 A:middle
+look ahead five nodes in a
+
+00:25:42.376 --> 00:25:43.036 A:middle
+linked list.
+
+00:25:43.766 --> 00:25:45.546 A:middle
+Advance will count forward one
+
+00:25:45.546 --> 00:25:46.026 A:middle
+by one.
+
+00:25:47.936 --> 00:25:50.406 A:middle
+The same code works for getting
+
+00:25:50.406 --> 00:25:51.706 A:middle
+the fifth character in a string.
+
+00:25:52.346 --> 00:25:53.826 A:middle
+It's powerful to have the same
+
+00:25:53.826 --> 00:25:55.496 A:middle
+interface for advancing in both
+
+00:25:55.496 --> 00:25:56.276 A:middle
+data structures.
+
+00:25:57.486 --> 00:25:59.656 A:middle
+But this code is really slow for
+
+00:25:59.656 --> 00:26:00.236 A:middle
+strings.
+
+00:26:00.676 --> 00:26:02.156 A:middle
+For strings in arrays, which
+
+00:26:02.156 --> 00:26:03.976 A:middle
+have random access iterators, we
+
+00:26:03.976 --> 00:26:04.616 A:middle
+don't need a loop.
+
+00:26:05.416 --> 00:26:06.946 A:middle
+Operator + will jump ahead in
+
+00:26:06.946 --> 00:26:07.636 A:middle
+concept time.
+
+00:26:08.186 --> 00:26:11.516 A:middle
+But adding a simple if statement
+
+00:26:11.516 --> 00:26:13.116 A:middle
+won't work because it's just a
+
+00:26:13.156 --> 00:26:14.076 A:middle
+runtime check.
+
+00:26:15.196 --> 00:26:17.146 A:middle
+Its body is required to compile
+
+00:26:17.146 --> 00:26:19.166 A:middle
+for all template instantiations,
+
+00:26:19.506 --> 00:26:21.016 A:middle
+but linked list iterators don't
+
+00:26:21.016 --> 00:26:22.516 A:middle
+have operator +.
+
+00:26:23.016 --> 00:26:25.766 A:middle
+We have a problem.
+
+00:26:27.246 --> 00:26:29.246 A:middle
+Advance needs a common interface
+
+00:26:29.246 --> 00:26:30.906 A:middle
+that compiles for linked lists
+
+00:26:31.696 --> 00:26:34.386 A:middle
+and a fast path for strings and
+
+00:26:34.566 --> 00:26:34.666 A:middle
+arrays.
+
+00:26:34.966 --> 00:26:36.206 A:middle
+The classic solution is a
+
+00:26:36.206 --> 00:26:37.666 A:middle
+technique called compile time
+
+00:26:37.666 --> 00:26:39.366 A:middle
+dispatch, where the logic is
+
+00:26:39.366 --> 00:26:40.686 A:middle
+split into overloaded helper
+
+00:26:40.686 --> 00:26:42.436 A:middle
+functions and advance calls the
+
+00:26:42.436 --> 00:26:44.146 A:middle
+right overload based on a
+
+00:26:44.146 --> 00:26:45.426 A:middle
+compile time type trait.
+
+00:26:45.946 --> 00:26:48.496 A:middle
+And compile time dispatch works.
+
+00:26:48.866 --> 00:26:50.566 A:middle
+It's what C++ Library authors
+
+00:26:50.566 --> 00:26:51.656 A:middle
+have been doing for decades.
+
+00:26:52.816 --> 00:26:54.236 A:middle
+But it's an advanced technique,
+
+00:26:54.536 --> 00:26:55.986 A:middle
+and what we're trying to do is
+
+00:26:56.036 --> 00:26:56.566 A:middle
+pretty simple.
+
+00:26:58.276 --> 00:27:00.376 A:middle
+The original not working code
+
+00:27:00.586 --> 00:27:01.746 A:middle
+was easy to understand.
+
+00:27:03.016 --> 00:27:06.876 A:middle
+In C++17, constexpr if allows
+
+00:27:06.876 --> 00:27:08.076 A:middle
+you to express this logic
+
+00:27:08.316 --> 00:27:08.906 A:middle
+naturally.
+
+00:27:10.826 --> 00:27:12.796 A:middle
+constexpr if discards the not
+
+00:27:12.796 --> 00:27:14.276 A:middle
+taken paths when instantiating
+
+00:27:14.276 --> 00:27:16.256 A:middle
+temples, so the linked list code
+
+00:27:16.256 --> 00:27:18.896 A:middle
+will still compile, but advance
+
+00:27:18.896 --> 00:27:20.276 A:middle
+will use the fast path for
+
+00:27:20.276 --> 00:27:22.586 A:middle
+strings and arrays.
+
+00:27:23.266 --> 00:27:25.616 A:middle
+constexpr if makes reading and
+
+00:27:25.616 --> 00:27:27.636 A:middle
+writing generic code much
+
+00:27:27.636 --> 00:27:28.006 A:middle
+simpler.
+
+00:27:30.956 --> 00:27:32.726 A:middle
+Let's finish with a new library
+
+00:27:32.726 --> 00:27:34.016 A:middle
+facility for strings.
+
+00:27:35.276 --> 00:27:38.146 A:middle
+The STL string class has a rich
+
+00:27:38.146 --> 00:27:40.136 A:middle
+API, but it's not always the
+
+00:27:40.136 --> 00:27:40.656 A:middle
+right tool.
+
+00:27:41.716 --> 00:27:43.136 A:middle
+This example might look
+
+00:27:43.136 --> 00:27:43.636 A:middle
+familiar.
+
+00:27:44.486 --> 00:27:46.456 A:middle
+The function split searches for
+
+00:27:46.456 --> 00:27:48.036 A:middle
+the last slash in the path
+
+00:27:48.036 --> 00:27:48.456 A:middle
+argument.
+
+00:27:48.996 --> 00:27:51.816 A:middle
+If it finds a slash, it splits
+
+00:27:51.816 --> 00:27:53.686 A:middle
+the path into directory and
+
+00:27:53.686 --> 00:27:54.236 A:middle
+filename.
+
+00:27:55.556 --> 00:27:57.116 A:middle
+Without a slash, it returns the
+
+00:27:57.116 --> 00:27:58.466 A:middle
+full path as the filename.
+
+00:27:59.996 --> 00:28:02.436 A:middle
+Because of string's API, this
+
+00:28:02.436 --> 00:28:04.386 A:middle
+code was easy to write, but
+
+00:28:04.866 --> 00:28:06.126 A:middle
+there's a performance problem
+
+00:28:06.126 --> 00:28:06.436 A:middle
+lurking.
+
+00:28:07.836 --> 00:28:09.986 A:middle
+Split is returning copies of the
+
+00:28:09.986 --> 00:28:10.386 A:middle
+string.
+
+00:28:11.586 --> 00:28:12.986 A:middle
+Heavy use of functions like
+
+00:28:12.986 --> 00:28:15.046 A:middle
+split can introduce expensive
+
+00:28:15.046 --> 00:28:15.776 A:middle
+allocations.
+
+00:28:17.686 --> 00:28:20.206 A:middle
+C++17 has a new facility for
+
+00:28:20.206 --> 00:28:21.266 A:middle
+referencing strings.
+
+00:28:22.206 --> 00:28:23.106 A:middle
+It's called string view.
+
+00:28:24.396 --> 00:28:26.076 A:middle
+A string view encapsulates a raw
+
+00:28:26.076 --> 00:28:27.266 A:middle
+const char [inaudible] and a
+
+00:28:27.266 --> 00:28:27.876 A:middle
+size.
+
+00:28:29.066 --> 00:28:30.666 A:middle
+It has a rich API, just like
+
+00:28:30.666 --> 00:28:32.486 A:middle
+string, so it's convenient for
+
+00:28:32.486 --> 00:28:33.426 A:middle
+string manipulation.
+
+00:28:34.856 --> 00:28:36.476 A:middle
+And as the name suggests, it's
+
+00:28:36.506 --> 00:28:37.046 A:middle
+just a view.
+
+00:28:37.936 --> 00:28:40.106 A:middle
+It doesn't own any storage, and
+
+00:28:40.106 --> 00:28:43.036 A:middle
+so it never makes a copy.
+
+00:28:43.486 --> 00:28:44.706 A:middle
+String view is great for
+
+00:28:44.706 --> 00:28:46.286 A:middle
+performance, but there is a
+
+00:28:46.286 --> 00:28:48.866 A:middle
+caveat: String view isn't always
+
+00:28:48.866 --> 00:28:49.406 A:middle
+safe.
+
+00:28:51.156 --> 00:28:52.306 A:middle
+Because it doesn't own its
+
+00:28:52.306 --> 00:28:54.426 A:middle
+storage, using a string view
+
+00:28:54.456 --> 00:28:56.036 A:middle
+after the original string is
+
+00:28:56.036 --> 00:28:58.206 A:middle
+destroyed or modified can cause
+
+00:28:58.206 --> 00:28:59.236 A:middle
+a use after free.
+
+00:29:01.336 --> 00:29:02.876 A:middle
+Referencing a raw string literal
+
+00:29:02.946 --> 00:29:05.936 A:middle
+like resources/images is always
+
+00:29:05.936 --> 00:29:08.396 A:middle
+safe because raw string literals
+
+00:29:08.426 --> 00:29:09.306 A:middle
+have the lifetime of the
+
+00:29:09.306 --> 00:29:09.826 A:middle
+program.
+
+00:29:12.036 --> 00:29:13.146 A:middle
+Taking a string view as an
+
+00:29:13.146 --> 00:29:15.556 A:middle
+argument is safe, but avoid
+
+00:29:15.556 --> 00:29:16.956 A:middle
+storing a string view argument
+
+00:29:17.086 --> 00:29:18.336 A:middle
+past the function return.
+
+00:29:21.056 --> 00:29:23.286 A:middle
+Be careful of return values.
+
+00:29:23.826 --> 00:29:25.466 A:middle
+If a string view is derived from
+
+00:29:25.466 --> 00:29:26.916 A:middle
+an argument, it will be safe to
+
+00:29:26.916 --> 00:29:28.406 A:middle
+use as long as the argument
+
+00:29:28.576 --> 00:29:30.046 A:middle
+isn't changed or destroyed.
+
+00:29:31.186 --> 00:29:32.956 A:middle
+In this example, directory and
+
+00:29:32.956 --> 00:29:35.446 A:middle
+filename are safe to use as long
+
+00:29:35.446 --> 00:29:38.236 A:middle
+as path remains constant and
+
+00:29:38.236 --> 00:29:38.616 A:middle
+valid.
+
+00:29:39.126 --> 00:29:42.546 A:middle
+But if we replace path with a
+
+00:29:42.546 --> 00:29:44.806 A:middle
+computed string, then accessing
+
+00:29:44.916 --> 00:29:46.666 A:middle
+either directory or filename
+
+00:29:46.746 --> 00:29:48.216 A:middle
+will cause a use after free.
+
+00:29:49.816 --> 00:29:52.226 A:middle
+The root cause is that split was
+
+00:29:52.226 --> 00:29:53.476 A:middle
+passed a temporary.
+
+00:29:54.136 --> 00:29:56.006 A:middle
+The temporary is destroyed after
+
+00:29:56.006 --> 00:29:57.566 A:middle
+the call to split, and its
+
+00:29:57.566 --> 00:29:59.116 A:middle
+references are invalidated.
+
+00:30:01.156 --> 00:30:03.276 A:middle
+Accessing the temporary invokes
+
+00:30:03.276 --> 00:30:04.316 A:middle
+undefined behavior.
+
+00:30:05.156 --> 00:30:06.696 A:middle
+AddressSanitizer can catch this
+
+00:30:06.746 --> 00:30:06.966 A:middle
+bug.
+
+00:30:08.176 --> 00:30:09.706 A:middle
+Watch Understanding Undefined
+
+00:30:09.706 --> 00:30:11.226 A:middle
+Behavior to learn more about
+
+00:30:11.226 --> 00:30:13.196 A:middle
+this kind of bug and Finding
+
+00:30:13.196 --> 00:30:15.236 A:middle
+Bugs Using Xcode Runtime Tools
+
+00:30:15.236 --> 00:30:16.656 A:middle
+to learn about tools to combat
+
+00:30:16.916 --> 00:30:17.000 A:middle
+them.
+
+00:30:18.476 --> 00:30:20.386 A:middle
+String view is the last C++17
+
+00:30:20.386 --> 00:30:21.526 A:middle
+feature I'll show you today.
+
+00:30:22.656 --> 00:30:26.426 A:middle
+To try out C++17, set the C++
+
+00:30:26.426 --> 00:30:27.996 A:middle
+language dialect in your Build
+
+00:30:27.996 --> 00:30:28.456 A:middle
+settings.
+
+00:30:29.236 --> 00:30:32.086 A:middle
+C++17 gives you the standardized
+
+00:30:32.086 --> 00:30:33.786 A:middle
+language without extensions.
+
+00:30:34.646 --> 00:30:37.056 A:middle
+GNU++17 adds the usual
+
+00:30:37.056 --> 00:30:37.716 A:middle
+extensions.
+
+00:30:38.216 --> 00:30:40.726 A:middle
+Now, I have a quick update on
+
+00:30:40.726 --> 00:30:41.766 A:middle
+link-time optimization.
+
+00:30:43.136 --> 00:30:45.196 A:middle
+Link-time optimization, or LTO,
+
+00:30:45.826 --> 00:30:47.576 A:middle
+optimizes the executable at link
+
+00:30:47.576 --> 00:30:49.386 A:middle
+time, blurring the line between
+
+00:30:49.386 --> 00:30:50.716 A:middle
+source files and enabling
+
+00:30:50.716 --> 00:30:52.106 A:middle
+powerful optimizations.
+
+00:30:53.076 --> 00:30:54.516 A:middle
+Incremental LTO, which we
+
+00:30:54.516 --> 00:30:55.996 A:middle
+introduced last year, is the
+
+00:30:55.996 --> 00:30:56.866 A:middle
+state of the art.
+
+00:30:57.766 --> 00:30:59.636 A:middle
+For more information, watch last
+
+00:30:59.636 --> 00:31:01.176 A:middle
+year's talk, What's New in LLVM.
+
+00:31:02.146 --> 00:31:06.036 A:middle
+In the past, when using LTO on
+
+00:31:06.036 --> 00:31:08.346 A:middle
+large C++ programs, we've
+
+00:31:08.346 --> 00:31:10.476 A:middle
+recommended changing the Debug
+
+00:31:10.476 --> 00:31:12.906 A:middle
+Info Level Build setting to Line
+
+00:31:12.906 --> 00:31:13.746 A:middle
+Tables Only.
+
+00:31:14.846 --> 00:31:16.306 A:middle
+But in Xcode 9, we took
+
+00:31:16.306 --> 00:31:17.946 A:middle
+incremental LTO to the next
+
+00:31:17.946 --> 00:31:18.356 A:middle
+level.
+
+00:31:19.666 --> 00:31:20.926 A:middle
+Let's look at the time to link
+
+00:31:20.996 --> 00:31:23.296 A:middle
+the Apple LLVM compiler itself.
+
+00:31:24.166 --> 00:31:26.716 A:middle
+In Xcode 8, a clean link with
+
+00:31:26.716 --> 00:31:28.596 A:middle
+full debug info took almost six
+
+00:31:28.596 --> 00:31:29.056 A:middle
+minutes.
+
+00:31:29.706 --> 00:31:30.796 A:middle
+Line Tables Only was
+
+00:31:30.796 --> 00:31:32.296 A:middle
+three-and-a-half minutes faster.
+
+00:31:33.706 --> 00:31:35.506 A:middle
+We sped up incremental LTO with
+
+00:31:35.506 --> 00:31:38.266 A:middle
+full debug info by 35% in Xcode
+
+00:31:38.266 --> 00:31:38.566 A:middle
+9.
+
+00:31:39.406 --> 00:31:40.616 A:middle
+Line Tables Only is still
+
+00:31:40.616 --> 00:31:42.756 A:middle
+faster, but the overhead is now
+
+00:31:42.756 --> 00:31:44.036 A:middle
+only 90 seconds.
+
+00:31:44.516 --> 00:31:46.906 A:middle
+That was a clean link.
+
+00:31:47.616 --> 00:31:50.006 A:middle
+The true power of incremental
+
+00:31:50.006 --> 00:31:52.236 A:middle
+LTO is its fast incremental
+
+00:31:52.236 --> 00:31:52.776 A:middle
+builds.
+
+00:31:53.356 --> 00:31:55.446 A:middle
+When only one file changes, the
+
+00:31:55.446 --> 00:31:56.346 A:middle
+link doesn't repeat
+
+00:31:56.346 --> 00:31:58.206 A:middle
+optimizations unnecessarily.
+
+00:31:59.456 --> 00:32:01.426 A:middle
+In Xcode 8, an incremental link
+
+00:32:01.426 --> 00:32:02.816 A:middle
+of the Apple LLVM compiler
+
+00:32:02.816 --> 00:32:05.716 A:middle
+itself took 21 seconds with full
+
+00:32:05.716 --> 00:32:08.126 A:middle
+debug info, more than two times
+
+00:32:08.126 --> 00:32:09.526 A:middle
+longer than Line Tables Only.
+
+00:32:10.376 --> 00:32:12.436 A:middle
+This is why we recommended
+
+00:32:12.436 --> 00:32:14.186 A:middle
+changing the debug info level in
+
+00:32:15.096 --> 00:32:16.746 A:middle
+the past.
+
+00:32:16.916 --> 00:32:18.236 A:middle
+But in Xcode 9, the same
+
+00:32:18.236 --> 00:32:19.456 A:middle
+incremental link is
+
+00:32:19.506 --> 00:32:21.046 A:middle
+two-and-a-half times faster.
+
+00:32:21.556 --> 00:32:23.186 A:middle
+At just over eight seconds, it's
+
+00:32:23.186 --> 00:32:24.816 A:middle
+even faster than Line Tables
+
+00:32:24.816 --> 00:32:26.116 A:middle
+Only mode was last year.
+
+00:32:26.986 --> 00:32:28.716 A:middle
+If you looked at incremental LTO
+
+00:32:28.716 --> 00:32:30.226 A:middle
+but didn't want to change your
+
+00:32:30.226 --> 00:32:32.236 A:middle
+debug info level, it's time to
+
+00:32:32.236 --> 00:32:32.746 A:middle
+look again.
+
+00:32:33.516 --> 00:32:39.156 A:middle
+[ Applause ]
+
+00:32:39.656 --> 00:32:40.876 A:middle
+We recommend turning on
+
+00:32:40.906 --> 00:32:43.806 A:middle
+incremental LTO today, even if
+
+00:32:43.806 --> 00:32:45.246 A:middle
+you're using full debug info.
+
+00:32:45.846 --> 00:32:49.366 A:middle
+So that's what's new in LLVM.
+
+00:32:50.596 --> 00:32:52.876 A:middle
+Use @available to safely use new
+
+00:32:52.876 --> 00:32:54.986 A:middle
+APIs when supporting older OS's.
+
+00:32:55.816 --> 00:32:57.146 A:middle
+Run the static analyzer while
+
+00:32:57.146 --> 00:32:57.616 A:middle
+you build.
+
+00:32:58.916 --> 00:33:00.846 A:middle
+Use Xcode to refactor your code.
+
+00:33:01.906 --> 00:33:03.326 A:middle
+Try out the new features in
+
+00:33:03.326 --> 00:33:04.556 A:middle
+C++17.
+
+00:33:05.336 --> 00:33:07.656 A:middle
+And turn on incremental LTO to
+
+00:33:07.656 --> 00:33:09.116 A:middle
+upgrade your performance without
+
+00:33:09.116 --> 00:33:10.766 A:middle
+sacrificing incremental build
+
+00:33:10.766 --> 00:33:11.046 A:middle
+time.
+
+00:33:12.126 --> 00:33:13.796 A:middle
+For more information, see the
+
+00:33:13.796 --> 00:33:14.296 A:middle
+website.
+
+00:33:15.406 --> 00:33:16.516 A:middle
+I recommend you watch the
+
+00:33:16.516 --> 00:33:17.446 A:middle
+related sessions.
+
+00:33:18.246 --> 00:33:18.576 A:middle
+Thank you.
+
+00:33:19.516 --> 00:33:22.500 A:middle
+[ Applause ]
