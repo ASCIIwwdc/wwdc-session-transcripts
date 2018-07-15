@@ -1,1 +1,391 @@
-WEBVTT
+  Good morning.
+ My name is Michael LeHew, and I worked on the collections for the foundations team at Apple.
+ And today, I want to talk about specific things that you should know about to ensure that your use of collections in Swift is as effective as possible.
+ I'm going to cover a lot of territory today about details and all aspects of collections available for use in Swift.
+ We're going to explore some common pitfalls and how to avoid them including performance issues, and I'm also going to offer very specific advice about when to choose to use specific collections.
+ So let's begin.
+ I want you to imagine a world, a world without collections.
+ And in this world, we may not have arrays, but it still has bears, but every time we need another bear, we're going to need to define another variable, and we want to do things with these bears.
+ We're going to need to repeat ourselves.
+ Pretty scary, right? It gets worse though.
+ This world also doesn't have dictionaries, but thankfully being clever developers, we can work around that with the function, where we painstakingly define each case that we care about, and using this function is very similar to using a dictionary, except none of those dynamic capabilities that we need.
+ But who likes a mutable state, right? Fortunately for us though, we don't live in this world.
+ Thankfully our world has bears and collections along with a rich first-class syntax for defining them.
+ And APIs that help us not repeat ourselves when we iterate or retrieve the elements that they may store.
+ Collections are so pervasive and share so many common features and algorithms that in Swift they all conform to a common protocol.
+ Not surprisingly, it's called collection.
+ And in Swift, collections are sequences whose elements can be traversed multiple times, nondestructively, and whose elements can be accessed via a subscript.
+ Let's see, look at how they do that but considering an abstract representation of a collection.
+ This could be an array defined contiguously in memory, a hash table, a red black tree, a link list or anything else that you can imagine.
+ What matters is that it supports the concept of an initial index called start index.
+ It can be used to access the initial element of the collection.
+ It has an end index, which identifies the end of the collection, and collections support the ability to iterate from their start index to their end index.
+ They can do this multiple times, and they also support a subscript to retrieve elements from the collection itself.
+ Let's see what this looks like in code.
+ Indeed, if we look at the definition of collection, it's declared as a sequence of elements.
+ It also has an additional associated type called index, which must be comparable.
+ It offers a subscript to retrieve elements from, or using that index, and we define a start and an end index identifying the bounds of our collection.
+ And finally, we have a function called index after, which lets us get from one index to another.
+ And this last function is so important because it allows the standard library to define many useful and powerful default behaviors with the incredible power of protocol extensions.
+ Let's look at some of these.
+ When you conform to collection, you gain access to an incredible range of functionality with properties that let you get the first and the last element or identify the count or check to see if a collection is empty.
+ You also gain API that lets you iterate through a Collection using 4N syntax.
+ And super useful functions like map, filter, and reduce.
+ Now let's go ahead and make Collection even more powerful by adding our own extension.
+ Collection already provides a way to iterate through every element, but I want a function that will let me iterate through every other element, skipping some of the values along the way and will do this by adding an extension to Collection.
+ Let's start with the methods signature.
+ We're going to call our function every other, and it's going to take a closure that will call on each element that we care about.
+ We'll get the bounds of our iteration, and to find another variable, that starts at the start, which will mutate along as we go.
+ We'll call the closure on the current element and advance our current index to the next one.
+ And we may have invalidated our index at this point, we may have reached the end of the collection, so we need to make sure that we did that, and if we did, we can then advance our index one more time and thus skip every other element.
+ And if we call this we see, if we call this on the close range from one to ten, we see that we skip the even elements.
+ And so we see that Collections let us describe some really powerful behavior, but it turns out collections aren't alone.
+ In fact, Collection is not the only protocol that we have.
+ In Swift, we have access to a rich hierarchy of collection protocols, each greatly improving on the kinds of assumptions that we can make about our types.
+ Let's go ahead and talk about a couple of these.
+ We've already established that Collection lets you go forward from a given index, but there are also bidirectional collections, which let you go in the other direction.
+ Now, of course, bidirectional collections are collections themselves, and so we can still iterate forward as well.
+ The next most flexible form of collection is what's known as a random access collection, and with these, these add the requirement that it would be constant time to compute, or compute another index from another or to compute the distance between two indexes.
+ The compiler cannot enforce this, and so when you conform to random acts as a collection, you're making a promise.
+ But if you satisfy this promise, if you can deliver on this promise, the protocol gives you the power to access any index in the collection in constant time.
+ And of course, random access collections remain collections, and so you can still iterate forward and backward.
+ Now as Swift developers, we have access to many useful collections that conform to these protocols, collections such as array, set, and dictionary.
+ But thanks to the general purpose utility of these protocols, many other types conform to these collection protocols as well, such as data, range, and string.
+ Or the index collections, and they all gain access to all of this rich functionality by simply conforming to Collection in their own fashion.
+ Indeed, once you know how any one of these types works, you can apply that knowledge to any of the others, and there are quite a few.
+ So I'm going to talk about the details about how a type conforms to Collection, and it all begins with describing how it is indexed.
+ Each collection has its own kind of index.
+ And that index must be comparable.
+ In some cases, the indices can look like integers, like arrays, but just because an index happens to look like an integer doesn't mean that you should use it like one.
+ Now I want to ask a few questions that might have surprising answers.
+ The first is how do we get the first element of an array, and instantly you probably all thought, well I'll just call array subzero.
+ An array's index happens to be it.
+ So you can sometimes say this and get exactly what you intend.
+ But it isn't the best way to do this.
+ I'm going to go ahead and ask the same question, but this time about a different collection.
+ What's the first element of a set? Now this might seem like a really weird question, right? Sets are unordered.
+ However, they are collections, and being collections, you can iterate through them, and when you iterate through a set, you're going to iterate through one element first, and so that's really the question we're asking here.
+ So can I say set subzero? Happily, the compiler will say no, and that's because set's index type is an int, the type system wants us to use the correct index type.
+ Lucky for us we already know how to do that.
+ We know the collection protocol tells us that all collections have a start index, so let's go ahead and use that, and if we do this, this will actually work with all collections.
+ Start index is always going to be the element of the first item that you would see when you iterate.
+ But there's a nuance to watch out for when using indices to directly subscript into any collection.
+ And that is, it can crash.
+ I haven't actually asserted that these collections have contents in them, and so when you're, I'm just using start index, and these collections could be empty.
+ It turns out though that accessing the first element in a collection is such a common task that there's an even better way.
+ Simply call first.
+ And if you call first, this is a lot safer, because the return time of this is optional, reflecting the fact that not all collections have a first element.
+ So I have another question.
+ It's the second element of a collection, and I want to emphasize collection here.
+ It could be any collection, an array, a set, or something that doesn't even exist yet.
+ Let's go ahead and add a new property to collection via protocol extension, and we'll call it second, and just like first, it's going to return optional, because not all collections have two elements.
+ So, let's try writing this by subscripting 1.
+ But here our zero-based indexing instincts are going to lead us astray, and then we'll be caught by the compiler again.
+ We want this code to work with every collection, and not all collections use integers to index.
+ So let's try a different approach.
+ What I really want is one greater than the start index.
+ But lucky here, the compiler will catch this as well.
+ You can't add 1 to an arbitrary index type.
+ Index types are supposed to be opaque or can be opaque.
+ And what we really need to be doing here is we need to be using the API provided by the collection protocol to do this.
+ So let's go ahead and do this.
+ I commented out a sketch of the things that we're going to need to do to find the second element.
+ The very first thing that we need to do is we need to check to see if the collection is empty.
+ Collections are empty when their start index is exactly equivalent to their end index.
+ So let's check for that and return nil, because such a collection doesn't have a second element.
+ Oh, and so now we can assume that our collection has one element in it.
+ We can use index after to get the second element or the second index, but we need to make sure that that index is valid, and let's see this visually.
+ We advance after, but if the collection only had one element in it, we have now actually produced an invalid index, and if we tried to subscript with that index, we'd get that fatal error that we saw just a moment ago.
+ So we check for it to be valid, and this is very similar to the empty [inaudible].
+ We just make sure that our index is not equal to the end index returning nil.
+ Again, because two-element collections don't have a, or one-element collections don't have a second element.
+ At this point, we have all the assumptions we need to know that our collection has at least two elements in it, and so we're safe to use the subscript operator with that index, retrieving the value that we desire.
+ Now, it turns out, or that looks like a lot of code, but it's worth pointing out that this general purpose index math will work with any collection, which is pretty awesome, and it turns out Swift has a better way to do this though.
+ There's something called slices, but before I show how to do it with slices, I want to talk about what slices are and how they work.
+ Slices are a type that describe only part of a collection.
+ And every slice has their own start and end index, and slices exist separately from the collections, from their originating collection.
+ And what makes slices so efficient is they occupy no extra storage.
+ They simply refer back to the original collection, and when slices are subscripted, they read out of the original buffer.
+ And they can do this because they share the same indices as their underlying collection.
+ And let's take a look at how that works.
+ We can prove this to ourselves.
+ We'll start with an array, and we'll ask that array to drop its first element, producing a slice that's one element shorter.
+ And because we care about proving about the indices, we'll actually get the second index of the array by asking to advance one after the start index, and then we'll compare those.
+ And indeed, they are the same.
+ Now this dropfirst function looks exactly like we need to succinctly get the second element of our collection.
+ So let's go back to our previous solution, and see how much more expressive we can be with slices.
+ Remember all that fancy index [inaudible] code we had to write earlier? Well, by using dropfirst, we're going to let slices take care of all that fancy index bounds checking for us.
+ And since first returns an optional, this will work as expected with empty and single element collections.
+ Let's visualize what's happening here.
+ We start with an array, and we form a slice by dropping the first element.
+ We then use the first property to subscript into the slice, retrieving the element from the original collection.
+ Now I don't know about you, but I'd much rather maintain this code.
+ Now every type is free to describe its own slice type, and many do.
+ For instance, arrays define array slices that are especially attuned to the most common use cases that arrays work with.
+ Similarly, string defines a substring slice type, and substrings, again, are tuned to the special cases that are most common with strings.
+ Some types, like set, will make use of the generalized slice type defined in the standard library.
+ That's because sets are unordered.
+ There's not very much else that they can do.
+ They just basically need to maintain a start and an end index [inaudible] to the original collection.
+ Data and range on the other hand are their own slice types, and so there's a lot of options that you have here.
+ And there's one more thing about slices that I want to talk about before we move on.
+ Let's suppose that we had a really large collection, like thousands and thousands and thousands of elements.
+ And we add a couple of small slices to parts of that collection.
+ It's important to remember that the slice keeps the entirety of the originating collection alive as long as the slice is around.
+ And this can lead to surprising problems.
+ Let see how this works in code.
+ Let's suppose I have an extension on an array that allows me to return the first half, and I'm using the droplast function here to do so.
+ And we have an array of eight numbers, and we call our extension, producing the slice, and then to try to get rid of that original storage of eight numbers, I go ahead and assign that array to an empty array.
+ Our first clue that something interesting is happening occurs when we ask our slice for its first element.
+ We're somehow able to return one, even though we threw away the storage for the original array.
+ Either there was a copy or something magical is going on.
+ And so if we wanted to eliminate that buffer though, and oh the magic that's actually going on is that we're holding onto the buffer.
+ And so if we wanted to eliminate that, what we could do is we could form an actual copy of the array from the slice, and then if we set that slice to an empty array itself, that copy would still be valid.
+ Let's visualize what just happened.
+ We started with an array.
+ We then formed a slice on the first half of that array.
+ We then created a copy of that, setting the array to be empty and setting that slice to be empty.
+ And only after we did that did the underlying storage go away.
+ So in this matter, slices sort of work like lazy copies.
+ You get to choose when you make a copy of the elements yourself, and it turns out that this concept of being lazy and doing something later is really useful in other contexts too.
+ One such context is function calls.
+ Now function calls in Swift are eager by default.
+ That is, they consume their input and return their output as demanded.
+ Consider this example.
+ We start with a range from one to 4000, and ranges are a really succinct way of representing a lot of numbers.
+ It's just a start and an end, and it knows how to produce them.
+ We then map this though multiplying each value by two, and so we've now actually allocated an array of 4000 elements and performed our mapping function on each of them.
+ We then filter that down to four elements.
+ And so at this point, we've actually gone ahead and allocated 4004, you know, space for 4004 elements, but we only really needed the final four.
+ And that's an awful lot of intermediate computation that maybe we don't always desire.
+ It would be great if there was a way just to not do any of it, unless it was absolutely needed.
+ And Swift's answer for that is called being lazy, just like in real life.
+ We'll start as we did before with the range, and then we'll tell that range to be lazy.
+ And when we do this, what happens is we wrap the original collection with a lazy collection, and when we perform operations on this lazy collection, what's going to happen is we're going to wrap it again.
+ And so when we wrap the, when we call map on it, we actually aren't mapping.
+ We're not doing anything with that closure other than storing it for later should we ever need to use it.
+ Further, if I filter that lazy map collection, the filter simply wraps the map collection, noting that it's going to filter later on demand, but not right now.
+ Now let's go ahead and ask our lazy filter collection for it's first element.
+ When we do this, we'll start by asking the lazy filter collection for it's first element, but the lazy filter collection doesn't know.
+ It wraps something that might know.
+ And so it'll defer to the map collection.
+ And the map collection also doesn't know it's first element, but it wraps a collection that might, and indeed, the range knows it's first element.
+ The first element of the range is the value one, which it returns to the lazy map collection where now the lazy map collection can actually perform it's closure, computing the value 2, which it returns to the lazy filter collection as a candidatefirst element.
+ Now lucky for us in this case, 2 happens to be less than 10, and so the lazy filter collection finds it first element on the first try, which it returns back to its caller.
+ Now that's a lot of different computation.
+ And I mentioned that lazy aims to only do calculation as needed on demand, but another thing that it avoids is creating intermediate storage.
+ So I want to show an example of that.
+ Let's suppose we had an array of different kind of bears.
+ However, I want to point out that some of these bears are redundant.
+ We already know that they're bears.
+ They don't need to tell us again.
+ So let's write some code to find those silly, redundant bears, and we'll do this using a lazy filter, as before.
+ And in this case, producing a lazy filter is going to be a lazy filter collection that wraps an array of strings.
+ In our closer here, were going to print out which bear we're currently iterating on before we do our predicate check.
+ And we're doing this because I want to understand how filter works a little better, and then we'll call first, and when we do this, we'll defer to the lazy filter collection, and then the lazy filter collection will in turn defer to the original storage where we'll print out Grizzly, check the predicate, which in this case is false, Grizzly does not contain the word bear, and advance on to panda.
+ When we get to panda, when we get to panda, we'll again print out panda, check to see if it contains the word bear, and advance on to spectacle.
+ Spectacle gets printed, also doesn't contain the word bear, and we advance finally to gummy bears, which mercifully has the word bear in it, and which the lazy filter collection can now return to its caller.
+ Now what would happen if we called first again? Well, it's the same story.
+ We ask the lazy filter collection, which defers to the underlying collection, which repeats that calculation, returning it to its caller.
+ Now this might not typically be what you want, and so if you find yourself needing to repeatedly ask the lazy collection to calculate its result, there's a way to make sure that that happens just once.
+ We can ensure that the lazy collection is iterated exactly once by creating a new nonlazy collection from the lazy, and when you do this, it will still defer to the lazy collection, but now the iteration will proceed through the entirety of your underlying collection, producing essentially, you know, the nonlazy version of that lazy calculation.
+ And so in this case, we get an array containing the string gummy bears.
+ And if we print the first element of that ray, we don't need to consult the closure at all or the lazy collection at all.
+ We basically stamped out the laziness and now have an eager array.
+ So when should we be lazy? Well, lazy collections are a really great way to eliminate the overhead of chained maps and filters.
+ They excel when you find yourself only needing part of the result of a collection calculation, or we should avoid using lazy if your closures have side effects, and your closures should rarely have side effects.
+ And be sure to reify back, or I should say, be sure to consider reifying back into a regular collection when you cross API boundaries.
+ Lazy should often be an implementation detail.
+ Now up until now, we've been able to do a lot of cool things with just mutable collections, but of course Swift lets us mutate our collections as well.
+ Let's talk about the two kinds of collections that we haven't talked about yet.
+ The first of these is mutable collection.
+ This adds a setter to the subscript so that you can change the contents of a collection but not its length.
+ And you have to be able to do this in constant time.
+ The next is called a Range Replaceable Collection, and this is the kind of collection that you get when you can remove elements from a collection or insert them.
+ And now I want to talk about one of the questions I get asked all the time.
+ Why does my perfectly reasonable collection code crash? And like all good question answers, I almost always follow up with a few questions of my own.
+ Sometimes I start with the classic, well what are you trying to do? And I usually quickly follow up with, well how are you using your collections? Are you mutating them? Are you sure you aren't accessing your collections for multiple threads? And I ask these questions because their answers often lead to the root cause of the problem.
+ Well, let's begin with the assumption that threads aren't involved.
+ I'm not ready to think about threads yet.
+ It's not even 9:30.
+ Suppose we had an array, and we get the index of an element that we know is there, in this case the value e.
+ And then we mutate the collection, say by removing its first element, and we go ahead and print the element associated with that index.
+ Well when we do this, unfortunately this will produce a fatal error.
+ The index is no longer valid.
+ In fact, the index became invalid the moment we mutated our collection.
+ A far safer approach would be to mutate our collection first and then calculate the index.
+ It's worth pointing out that mutation always invalidates indices.
+ This doesn't just apply to arrays.
+ Let's take a look at how this problem could manifest with dictionaries.
+ Let's suppose that we have a dictionary showing a few of a bear's favorite things.
+ We'll grab the index of our bear's favorite food and print it out, confirming that, indeed, it's salmon.
+ Next, we'll add a couple more favorite things that this bear has, and then we'll make sure that our favorite food is still salmon.
+ And we'll see that, wait a minute, our favorite good isn't hibernation, it's salmon.
+ And just like arrays, we invalidated our index the moment we mutated the dictionary.
+ It's also worth pointing out that this code can crash.
+ So how do we go about fixing this? Well, it turns out it's the same exact fix that we used with the array.
+ We just simply recompute the index after we mutate.
+ Well, one thing to keep in mind that when you're recomputing indices this is something that can sometimes be expensive.
+ Some index search methods take linear time.
+ And so you want to take care to only find the indices that you need.
+ So here's my advice if you want to avoid finding yourself in these kinds of situations.
+ Remember that mutation almost always invalidates your indices.
+ You might get away with it sometimes, but it's really best to just treat this as a hard rule.
+ You'll be much happier for it.
+ Also remember that slices hold on to the underlying original state of the collection even after it was mutated, and because of that, really think twice about holding onto indices or slices when the underlying collection is mutable.
+ And keep in mind that index computation can sometimes take a nontrivial amount of time.
+ So take care to only calculate indices as needed.
+ So a little bit later, let's bring threads into the discussion.
+ I mentioned that one of the questions that I ask is are your threads accessible for multiple threads? And the reason why I ask this is because our collections assume that you will access them from a single thread.
+ And this is a really good thing for reasons of performance.
+ It makes it so that all single-threaded use cases don't have to pay the tax of locks or any of those other primitives that you could use to ensure mutual exclusion.
+ And when threads are involved, only developers using the collections will have all the information needed to restrict access with the appropriate lock or a serial queue at a much higher level abstraction than us lowly framework developers could ever offer.
+ So let's see what these kinds of problems could look like.
+ Let's suppose we have an array that we aim to fill up with sleeping bears, and to simulate each bear being their own bear and in charge of themselves, we're going to get access to a concurrent dispatch queue that we'll use to tell each bear to go to sleep.
+ And because this is a concurrent dispatch queue, it's some time helpful to like imagine the code running at the same time, which I'll simulate by putting them on the same line.
+ And later in our application, let's go ahead and check in on those sleeping bears, and sometimes we'll see grandpa and cubs snoozing happily.
+ Other times, cub will go to sleep first, and then it'll be grandpa.
+ Sometimes, quite mysteriously, only grandpa is sleeping in.
+ And other times, it'll be the cub, and sometimes our program just up and crashes, and nobody bear's getting any sleep.
+ All of these possibilities suggest that there's a possible race condition, and indeed, it seems likely given all the potential threads involved in this example.
+ And we can prove this to ourselves using the thread sanitizer or TSAN that's included within Xcode.
+ And if we were to do so, we'd get output that kind of looks like this, and indeed, TSAN would catch the race.
+ It would tell us there's a Swift access race.
+ It would tell us which threads are involved and give us a summary at the end telling us which line to actually go start looking for our problem.
+ And all that evidence is actually going to be really helpful to find the bug.
+ So we've proven that there's a bug here.
+ TSAN has never lied in my experience with them.
+ So we can fix this by eliminating the bears' ability to go to sleep at the same time, and we'll do that with a serial dispatch queue.
+ And now only one bear can go to sleep at a time.
+ And so if we peek in on our sleeping bears again now, taking care to do so on the appropriate queue, we see that sure enough grandpa and cub are snoozing away peacefully like we expected.
+ So my advice for working with collections for multiple threads is try to isolate your data so that it can only be seen from a single thread, and when you can't do that, make sure that you have an appropriate form in mutual exclusion, such as a serial dispatch queue or locks.
+ And always use the thread sanitizer to double check your work.
+ It's far better to catch bugs before they ship in your app than after.
+ And I have a little bit more advice for working with mutable collections.
+ The first of which is if you can avoid it, don't use mutable state at all.
+ So far all the difficulties that I've described have come about because we've been working with mutable state.
+ You can avoid all the potential for this complexity by avoiding mutable collections in the first place.
+ Many times you can actually emulate the mutations that you want to perform by using a slice or using a lazy wrapper, and it's almost always easier to understand data that cannot change.
+ And thanks to mutability being built into Swift, the compiler will help you if you're leaving a state mutable when you're not actually mutating it.
+ Now I have one more piece of advice that actually concerns how best to use mutable state when you have to.
+ And that's when you're forming new collections.
+ You can help performance if you're lucky enough to know an exact count or a really good approximation of how many elements you're actually going to need.
+ Most collection APIs have a way of being able to provide this hint, and when you do this, you get exactly the size you need with no overhead.
+ If you don't, our collections are general purpose tools.
+ They're meant to work on a wide variety of cases, and as you incrementally add elements, you may actually end up over allocating the amount of storage that you need, but taking care that you don't over estimate when providing such hints, because otherwise you'll find yourself in the same exactly situation where you're using up more storage than you actually need.
+ And now, I want to move on to my final topic for today.
+ And that's the wide range of collections that become available for you when you import Foundation and when you should consider using them.
+ In addition to the standard library collections, when you import Foundation, you gain access to the great reference-type collections that objective C developers have been using for decades.
+ And many of these also gain conformance in Swift and thus behave just the collections that we've been talking about.
+ That said, there are a couple important things to keep in mind.
+ First thing to keep in mind is that these NS [inaudible] collections are reference types.
+ And this is best examined by considering an example.
+ We're going to define value types and reference types and do the same things with them on two sides.
+ So with our value type, we'll call it x.
+ It will be an array of strings.
+ We get an empty array called x.
+ With a reference type, we get an empty array, but x is pointing to it.
+ We then mutate that array with the value type.
+ That array is mutated in line.
+ With the reference type, that array is, the reference, the array that is being referenced is mutated in line.
+ We add another variable.
+ With the value type, something really special happens.
+ We actually don't copy the storage at this point.
+ Why is an array that knows that its storage is actually owned by x? And why is that actually going to perform that copy until either of those collections is mutated.
+ The reference type is a little bit different.
+ Y is just another pointer to the same underlying array.
+ So let's go ahead and mutate y.
+ We'll put another bear in that array.
+ With the value type what happens is first we invoke that copy on write machinery.
+ We're writing to a y, so we need to copy it, and then we can insert the next bear.
+ With the reference, it's a little bit simpler.
+ There's only one array.
+ We simply put the panda in the array.
+ There's a second thing that you need to keep in mind when working with the foundation collections in Swift.
+ And that is, all objective-C APIs in Swift appear as Swift native value types.
+ And this is actually really wonderful because it let's code in each language speak naturally with the types that they work with best.
+ But how can this work? The two languages have completely different implementations for these collections.
+ And the reason why it works is something known as bridging.
+ Bridging is how we convert between the two different runtime representations, and this is something that's necessary because Swift and objective-C, I'm sure you've noticed, are very different languages with very different compile and runtime features.
+ And while we've optimized bridging to be as fast as it can be, it's not free.
+ There will always be a cost when bridging between the two languages.
+ So what happens when we bridge? Well, when we bridge between the language, we have dispersed set up new storage, equivalent storage, so if you're taking n things in one language, you'll take up n space in the next one.
+ Then we need to go element by element and convert potentially between them, and this per-element bridging can sometimes be recursive.
+ For instance, if I have an array of strings, first we'll bridge the array, and then we'll bridge each individual string.
+ And when this happens at the boundary between the two languages, we call it eager bridging.
+ And collections will always be bridged eagerly when the elements of the collection need bridging as well.
+ And this arises most often with dictionaries keyed by strings.
+ When collection bridging is not eager, we call it lazy.
+ And this happens when the element types of the collection aren't bridged themselves, such as NSViews.
+ In this case, bridging will be deferred until the collection is actually first used.
+ Let's make this concrete with some examples.
+ We'll first consider an objective-C API describing an NSArray of NSDatas.
+ Now NSArray is bridged to array, and NSData is bridged to value-type data.
+ And so such a collection would be bridged eagerly.
+ I mentioned a moment ago that NSViews are not bridged in Swift.
+ They remain reference types in Swift.
+ And so an NSArray of NSViews will be lazily bridged.
+ The bridging won't happen until you first access or try to use that array.
+ And finally, an NSDictionary with keys that are NS strings will be bridged eagerly because the strings need to come across in Swift as value-type strings.
+ So now that we know what bridging is, how it works, and when it happens, we can move on to the most important question of all, which is when should you care about it.
+ And the answer is really straightforward.
+ When you measure it negatively impacting your app.
+ Specifically, when you take a time profile or trace an instrument, pay special attention to where your code crosses between the languages, especially when this happens inside a loop.
+ Some bridging is going to happen, and that's totally okay.
+ What you're looking for though is a disproportionate amount of time or a surprising amount of time spent in code that you didn't write that has the word bridge in it.
+ Let's look at a concrete example.
+ Suppose I have a manuscript for a great children's story that I'm working on, but it's really long, so I'm only going to show a little bit here, but to really make it pop, I want to make every word or every instance of the word brown actually be the color brown, and in the interest of space, I'm only going to show highlighting the first word.
+ To do this, I'm going to use an NS mutable attributed string.
+ I'll pass my story in there.
+ And then using the attributed strings string property, I'll ask for the range of the Swift string brown, which will produce a range of strings native index type.
+ And as mutable string works with NS ranges, and so I'll use the convenience initializer that we introduced last year to convert to an NS range, and this, I'm calling again attributed strings string property to do the conversion.
+ And then we'll color the first instance of the word brown.
+ And when I go to run this code, I notice it's a little slow.
+ So I profile it.
+ And I see that, to my surprise, I thought all the time would be spent coloring the word brown, but indeed, it's actually computing the indices, and why is that? And the reason for that is that we're actually bridging our string multiple times across languages.
+ Mutable attributed string is an objective-C reference type, and so when we're asking for the string property, we're actually having to convert from an NSString to a string.
+ And we're doing it once here when we calculated the first range, and we're doing it a second time when we convert for the NSRange.
+ You can imagine how expensive this would be if we did this in a loop looking for all the text to color.
+ Now let's look into why this is happening.
+ Every time I call text.
+string, we start in a Swift execution context.
+ However, the implementation of NSMutableAttributedString is objective-C, and so in order to provide the result, we actually have to consult the original implementation.
+ The original implementation returns an NSString, which is the reference type, and so when return to string, it needs to be bridged, graphing cluster by graphing cluster, character by character.
+ And bridging happens whether it's a return type or a parameter.
+ So now that we know those details, we can make, now we can actually make this a little bit better.
+ Let's just bridge once.
+ And let's remeasure our code and see that indeed we've improved our performance by half.
+ But it turns out this year we can do a little better.
+ Oh, and also, now we're not bridging where we do that.
+ But this year we can do a little bit better.
+ This year, if we actually [inaudible] to an NSString when we ask for the text.
+string's property, when we get the variable out, no bridging is actually going to occur.
+ And further, by doing so, now that string is an NSString, when we call the range of property, we're actually going to get an NSRange out of it automatically.
+ We won't need to do any of the range conversion between Swift native types and the NS ranges, which is pretty excellent.
+ So let's measure this code and see how it is, and sure enough, this looks pretty good.
+ Much, much faster than the, you know, almost 800 milliseconds that we were consuming previously.
+ However, I do want to point out that we're still bridging here.
+ And it's a teeny, tiny bridge, but we're still bridging.
+ Brown here is a Swift value type string.
+ And every time we call into the objective-C API range of [inaudible] NSString, we're actually going to bridge that teeny, tiny string back to an NSString.
+ This is inexpensive in this case.
+ I'm only doing it once, but you can imagine, if this was in a loop, that small amount would add up over time.
+ And so you want to take care to avoid bridging the same small strings repeatedly.
+ However, before you do such optimizations, always measure.
+ And so now that we've seen the details of bridging, I want to offer a little bit of advice about when to use Foundation collections.
+ You should consider using them explicitly when you need a collection with reference semantics.
+ Don't need to write one of those for yourself, we already have many great ones.
+ You should also use it when you're working with types that you know to be reference types.
+ Things like NS proxies or core data managed objects.
+ And the final time to consider using them is when you're round tripping with objective-C code, but I'd recommend strongly doing this only after you've measured and identified that bridging is indeed the culprit for whatever performance problems you may be seeing.
+ And now, we've reached the end of today's dive into the incredible power of our world's collections in Swift.
+ I want you to use this new-found understanding to review your existing use of collections.
+ Look for places where you can improve your code through more effective use of indices and slices.
+ Measure your code.
+ And look for places where you could benefit by being lazy or by tuning how you bridge.
+ Use the thread sanitizer to help audit your mutable state, and further hone your mastery of collections by apply all the concepts discussed today in Playgrounds and you own apps.
+ Be sure to visit our last few labs today if you have any questions about collections.
+ We're here to help.
+ Thank you so much for you time.
+ Now go out and be effective.
+ 

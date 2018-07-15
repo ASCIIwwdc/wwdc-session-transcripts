@@ -1,1 +1,434 @@
-WEBVTT
+  Well, good afternoon and welcome to a tour of UICollectionView.
+ My name is Steve Breen-- I'll set this over here-- and I'm a frameworks engineer on the UIKit team.
+ And I'm joined on stage today with my colleague, Mohammed Jisrawi, also on the UIKit team.
+ So today we're going to do something a little bit different.
+ We're going to build an app from some specs we receive from our designer, Breanka [phonetic], and this is going to leverage many of the capabilities of UICollectionView.
+ Now, while we work through all the tasks required to build our app, we're going to touch on a wide range of topics regarding UICollectionView including layouts, updates, and animations.
+ So we've got a ton of ground to cover, so let's jump right in.
+ All right, so here's the first spec we got from our designer.
+ It looks like a friends feed, imagine that.
+ A great little columnar layout.
+ It looks pretty straightforward, okay.
+ Okay, this looks great.
+ So here we've got this really fancy looking mosaic layout, which is the contents of our friends feed.
+ Okay, so Mohammed, since you're going to be writing all the code for us and walking us through how to use these features, what are your thoughts on these designs?  Well, you know, I'm seeing these for the first time, but they seem like great candidates for collection view.
+ I think we can have a lot of fun with this one, especially.
+ Yeah, this one looks great.
+ All right.
+ So before we dive into code, and Mohammed starts walking us through this, we need to cover three core concepts we need to understand about CollectionView before we dive right into that code.
+ So let's do these now, and we're going to talk about the layout, data source, and the delegate.
+ Okay.
+ So, first of all, let's chat a little bit about the layout.
+ So if you open up the definition for UICollectionView for the very first time, and you're familiar with UITableView, you notice right away that there's a lot of familiarity in the API.
+ You got a delegate and a data source.
+ All these things look pretty familiar, but the layout concept, that's pretty unique and distinct to UICollectionView.
+ You can really think of it as UICollectionView's super power.
+ It allows CollectionView to abstract away the visual arrangement from your content separate from the content itself.
+ Layout is all about the where content is displayed.
+ Now, each individual item is specified by the UICollectionView layout attributes, for attributes like such as bound, center, and frame, things like that.
+ You can think of it as a set of properties you can use to define these items that are displayed.
+ You can even customize these by printing your own subclasses of UICollectionView layout attributes and include these in your designs.
+ Okay.
+ So as the user is scrolling through the content on screen, the layout is considered to be immutable.
+ Now if you need to change this, like for example you're going to change the appearance of the layout, you would use the invalidation mechanism, which Mohammed will walk us through in a little bit.
+ Okay.
+ Now, one great thing about layout being a separate abstraction is we can transition from one layout to another layout and get a great animated effect when you move between layouts, and layout A doesn't need to know anything about layout B.
+ They just declare what the layout is going to be, and the transitions occur.
+ Okay.
+ So CollectionViewLayout is an abstract class, and as such, it's not meant to be used directly, but rather subclasses of CollectionViewLayout are meant to be used.
+ Fortunately, we provide one.
+ UICollectionViewFlowLayout, and you're probably familiar with this class if you used CollectionView before.
+ Now there's a lot of customization points on CollectionViewLayout including some properties that we'll talk about in a little bit, but you can also customize it using a delegate, and we'll talk about the CollectionViewDelegate in a moment, but CollectionViewFlowLayout will specify additional things that extend that CollectionViewDelegate.
+ Okay, so what's Flow all about? Well it's a line-based layout system, and because of this, it can cover a wide range of different designs that you might receive.
+ All right, so what does line base mean? Well let's go through this.
+ So the best way to explain what a line based system is like is to give an example, so let's do that.
+ Okay.
+ So here we see, we've got a vertical scrolling collection view, and we're going to mimic what flow layout does when it lays out this content.
+ All right.
+ So here's our first item, and we start at the top leading edge, and we start laying out our items along a line.
+ Now look at this line.
+ This line is orthogonal to the scroll axis.
+ We're scrolling vertically, so the line is horizontal.
+ Okay, now notice here, we filled up the available space for items on that line, so now we're going to drop to the next line and continue laying out our content.
+ And finally, we drop to that last line, and bingo, we got all our content.
+ Now if I dropped some guides on here to show highlight where those lines are horizontal, let's talk about some definitions that we have for ways to customize flow.
+ First up is the notion of line spacing.
+ And as you see the arrows here, the line spacing is going to be the space between these horizontal lines.
+ Similarly, inter-item spacing is the space between the items along the layout line.
+ And we have two properties on flow layout that let you specify the minimums for both of these.
+ Okay.
+ So let's cement our intuition a little bit and rotate the whole thing, pi over 2, and let's start over at the top leading edge.
+ Now, this one is scrolling horizontally, right, so we're going to have a vertical layout line, and when we get to the bottom of this area, we filled out that line, back up to the top.
+ Okay.
+ This pattern is pretty familiar now, right.
+ There we go.
+ There's all our content.
+ Now we have our vertical layout lines.
+ So now in this orientation, our line spacing is this.
+ And our inter-item spacing is this.
+ It's key to remember when you're working with flow layout.
+ Okay, so that's layout.
+ Let's talk a little bit about the data source, and if you work with TableView, this should look very familiar.
+ It's a very similar pattern.
+ They share very similar APIs.
+ Okay, so if the layout is all about the where content goes, the data source is the what.
+ The content itself.
+ Three core methods to think about here.
+ The first one is optional, number of sections in CollectionView, and this one if you don't provide it, we'll just assume you mean one.
+ Similarly, we have number of items in section, and this is going to tell you the number of items in each individual section, because they can all have different numbers of items.
+ And then the last one, sell for item index path is where you provide the actually content you're going to display to your users.
+ Okay.
+ So that's the data source.
+ Okay, the final of our three topics we're going to talk about before we dive into code with Mohammed is the Delegate.
+ Okay.
+ So use of the Delegate is optional.
+ Now, CollectionView is a subclass of UIScrollView.
+ So we use the same Delegate that's provided by the ScrollView superclass, but we extend it.
+ So if you need to modify scrolling behavior, you can do it also against this same Delegate and also work with some of the UICollectionViewDelegate methods that provide things like fine-grained control over highlighting and selection as the user interacts with your content.
+ And we also got an API that let's you know, hey, something came on screen.
+ WillDisplayItem and DidEndDisplayingItem.
+ Okay.
+ So those are the three core concepts we really need to talk about before we dive into code to get started with UICollectionView.
+ So let's switch over to the dev box with Mohammed and have him show us how it works.
+ Mohammed.
+ All right, so the first of our two screens that column layout is a great use case for using CollectionViewFlowLayout.
+ We can probably accomplish everything we need there, and it would be a great way to get us started using UICollectionView.
+ So now while we could accomplish the entire goal of our design with a flow layout, I'm actually going to subclass CollectionViewFlowLayout because we're going to do a little bit of extra customization.
+ So I'm going to start out by creating an instance of my ColumnFlowLayout class, which I've already prepared.
+ I'm going to use that instance to create my CollectionView.
+ I'm going to take that CollectionView, and I'm going to set some view properties, like auto resizing mask, background color, and since it's the ScrollView, I can set some of it's ScrollView properties as well.
+ This is all just to get it to look and feel the way I want it to look in our app.
+ After adding the CollectionView to my view hierarchy, I'm going to register my PersonCell class using its unique identifier with CollectionView so we can get our cell design to app.
+ And then I'm going to set the view controller as the CollectionView's data source so we can give it some information about how many cells it's going to display and what sort of data it's going to display in it's cells.
+ And then I'm going to set it as it's delegate as well, so we can handle cell selection.
+ So now that we've gotten set up, we need to actually conform to these two protocols.
+ So let's start out by conforming to the data source, and we have two required methods we need to implement here.
+ The first of these is number of items in section where we can just return the number of people or the number of items in our people array to get our data model objects displayed.
+ The second method we'll need to implement is CellForItemAtIndexPath where we'll dequeue a cell from the CollectionView using our unique identifier, pass a person and object that we get out of our people array, to the cell to actually display our data, and then return the cell.
+ And to wrap things up here, we'll just need to implement one optional method from the Delegate protocol, so we can handle selection.
+ So I'm just going to add DidSelectItemAtIndexPath where we'll just instantiate our FeedView controller, which is going to be our second screen if we don't already have an instance, and then we're going to pass it a person object so we know whose images to display, and then we'll push it onto our navigation controller.
+ Okay.
+ So let's build this and switch to the simulator to see.
+ All right.
+ [ Applause and Cheering ] Okay.
+ So we have our CollectionView on screen here, and we have some cells.
+ You can see them, though they're kind of squished.
+ They're not the right size, so we're going to have to do some of that customization we thought we might need to do.
+ So let's go back to Xcode, and let's pop open our column of class here, our ColumnFlowLayout class that we've put together, and let's take a look at what we need to do here.
+ So I already have a stub override of the layouts prepare method.
+ Now, UICollectionViewLayoutsPrepare method is called whenever the layout is invalidated, and in the case of UICollectionFlowLayout, our layout is invalidated whenever the CollectionView's bounds of size changes.
+ So if our app rotates on a phone or if our app is resized on an iPad.
+ So this is a great place to do any customization that takes the size of the CollectionView into account.
+ In our case, we want our cells to be some function of the CollectionView's width.
+ And we can let the CollectionView know how big we want our items to be by saying it's item sized properties.
+ So I'm going to go ahead and do that here.
+ So I'm just going to set my CollectionView's item size to a CG size with a width that is the width of the CollectionView's bounds, inset by its layout margins, and then we're going to give it a height of 70 points just to match our design.
+ And since we're already here, I'm going to do a couple of other little things here just to get things to look nice.
+ I'm going to apply a section inset with some padding at the top that matches our inter-item spacing, and I'm going to set the layout section inset reference property to from safe area so everything is neatly tucked within the CollectionView safe area insets.
+ Okay.
+ So let's go back to the simulator one more time and see what our properly constructed layout looks like.
+ All right.
+ That looks great.
+ That looks just like our spec.
+ I think our designer is going to be really happy.
+ And if we rotate to landscape, we see that our cell is a great size, and so we know that our invalidation code is getting called again in prepare.
+ Now while this is okay, you might be thinking, it's not the best that we can do here.
+ It doesn't look as great as it can.
+ We might want to do something more interesting here like display multiple columns since we have the space available to us.
+ Now flow layout makes it really easy to do this.
+ If you remember during Steve's explanation of how flow layout performs it's layout earlier, flow layout will automatically try to fit in as many items as it can within a line before it wraps to the next one.
+ So using that, we can kind of figure out that layout-- that we can get multiple columns if we change our item size.
+ So if we head back to Xcode, to our layout here, and if we just change how we're calculating our item size here.
+ So I'm just going to remove this fit here, and I'm going to replace it with something that does a little bit of extra math.
+ So I'm just starting out with the same available width that I had before.
+ This is the bounds inset by the margins, and some arbitrary definition of what a minimum column width is, it's 300 points.
+ And then taking both of those values and using them to calculate a maximum number of column that I think I can fit within the available space, and I'm taking that and dividing the available width by it to calculate an optimal cell width, which might be more than our 300 points.
+ I'm then passing that to the CT size that I'm using as my item size.
+ Okay.
+ So let's go back to our simulator again and see what our updated layout looks like.
+ Okay.
+ So everything is the same here.
+ We didn't break it.
+ It's a good start, and if we go to portrait, there are our multiple columns side by side, just what we want.
+ What do you think, Steve?  That looks great.
+ We got a great adaptable columnar base layout.
+ Not a lot of work.
+ No.
+ What's next in our design?  Well, now that we've eased ourselves in with our friends list, it's time to start thinking about that fancy mosaic layout for [inaudible].
+ Oh, yeah.
+ That's going to be great.
+ Yeah.
+ Let's switch back over slides, and let's chat a little bit about that.
+ Okay.
+ So let's take a look at this layout or design here and see what we can do.
+ So our first inclination, I don't know about yours, but mine would be can I use Flow.
+ I've got it.
+ It's ready to go.
+ Let's try to use it.
+ So let's zero in on this design a little bit and see if Flow is going to make sense for us.
+ And this particular region where these three photos are, I'm going to zoom in on that real quick.
+ All right.
+ So now in this instance we have a very large photo on the left and then a vertical stack on the right.
+ So in the flow universe, since it's line based, we're going to lay out that large left item, move over to the next item where it's got room, try to lay out another item, and then jump to the next line.
+ But we're not done.
+ We've got that vertical stack to contend with.
+ So this really is not going to work for Flow because it turns out it's not really a line-based layout, this fancy layout of ours.
+ But going through this exercise is useful, so, you know, let's start with flow first.
+ Okay.
+ So in this instance, we're going to create our own custom layout.
+ Oh, no, we're scared, right.
+ Nope, it's not complicated.
+ We've got four basic methods to deal with here, and I'm going to bring up one additional method that gets an honorable mention.
+ Okay.
+ So four methods.
+ Here we go.
+ Our first method I want to talk about is the CollectionView Content Size.
+ Now, recall before we mentioned CollectionView is a subclass of UIScrollView, and one of the features of UIScrollView is that you have a visible region with a large content area, and you get that great iOS experience of moving your content around inside that, and so CollectionView needs to know how to tell the ScrollView, hey, here's how big my content is.
+ Okay.
+ So how do we get this size? Well, if you imagine a rectangle that encompassed all the content that the layout is going to define for your CollectionView, we want the size of that.
+ Okay, so that's CollectionView Content Size.
+ Next up we have two methods that are in the business of providing layout attributes.
+ The first one is LayoutAttributesForElements (in Rect).
+ Now this is called periodically by CollectionView when it needs to know what is needed to display on screen as the user scrolls through your content or displays for the first time.
+ So this query is by a geometric region.
+ Okay.
+ It's companion API, LayoutAttributesForItem AtIndexPath, as you can imagine, it's just looking for a single item.
+ Give me the attributes for that.
+ Okay, so we're going to see more when Mohammed walks us through this, but for these two APIs, it's important to note that performance matters.
+ Okay, so the fourth of our four core custom layout subclass items is going to be the Prepare method.
+ Now Mohammed has already chatted about this a little bit.
+ This is called every time the layout is invalidated.
+ So this is a great time to compute anything, such as your layout attributes you might want to cache and also your content size, which is going to be asked for pretty soon afterwards.
+ Okay.
+ So our honorable mention APIs, so let's talk about this one.
+ This is a Should Invalidate Layout For Bounds Change.
+ So this is called every time the bounds in the CollectionView changes.
+ Okay, so again, it's a CollectionView is a UIScrollView subclass.
+ So what do we mean by a bounds change? Well, when a ScrollView bounds change, the origin can change during a scrolling, and also the size can change when the application size changes or the CollectionView size changes.
+ So this is going to be called during scrolling.
+ Hence the oh yeah emoji.
+ This is called very often.
+ So making the right decision here is important.
+ Okay, so the default implementation in UICollectionViewLayout returns false.
+ So if you need this to do something different, here's your chance.
+ And as a way of an example, UICollectionViewLayout will return false if the origin changes.
+ Okay, so if the user is just scrolling through your content, we won't invalidate.
+ Let it by default.
+ But if the iPad rotates, the phone rotates, and your app changes to a different size, it'll return true.
+ Now a slight exception to this is things like floating headers and footers, right.
+ We have to recompute those while you're scrolling your content.
+ That'll do a custom invalidation to take care of those things.
+ Okay.
+ So enough theory.
+ Let's switch back to our development machine and have Mohammed walk us through what this is going to look like in code building this fancy custom, UICollectionViewLayout.
+ All right, let's dive right in.
+ So I've already put together another layout subclass that we're going to use for this layout, and you might notice that it's a subclass of UICollectionViewLayout directly, not a subclass of CollectionViewLayout, and this is for the reasons that Steve explained to us earlier are UICollectionViewLayout doesn't really meet the needs of our custom mosaic design.
+ So the first thing I'm doing here is I'm setting up a couple of instance variables that I'm going to use to hold onto some key pieces of information that I can refer to later.
+ The first of these is a content bound CG rect, which I'm going to use to keep a representative bounds of all the items within my CollectionView.
+ And the second is a cached attributes array, which I'm going to use to hold onto my layout attributes so I can refer to them quickly when performance matters.
+ So we're going to start out by implementing our prepare method again for this layout.
+ Prepare is the ideal place to do the bulk of our layout work because it's getting called once per invalidation.
+ We can set up our layout here and then avoid having to do any heavy layout work or any heavy layout math in the methods that are called much more frequently.
+ So we're doing a couple of things here.
+ First, we're resetting our cached attributes and our content bounds just to clear out any stale information from previous invalidations.
+ Next, we're doing a few things for every item in our CollectionView.
+ The first of these is actually preparing the attributes, and now I'm not going to go too deeply into what that entails for our specific layout because this is going to be different for you.
+ This is where you are going to calculate the sizes and positions and transforms, etc.
+, for your cells to match your design needs.
+ But there are a couple of key things that we're going to do here after we are done with the attributes.
+ The first is, we're going to cache them.
+ We're going to put them in our cached attributes array so we can grab them quickly later on.
+ And the second is, we're going to union their frame with our content bounds rect so that our content bounds are kept up to date.
+ So now that our prepare is up and running, we need to implement the remaining methods in our layout that we need to get everything working.
+ So the first of these is CollectionView Content Size where if we had done our job right in Prepare, we can just return our Content Bounds as size.
+ Next is should invalidate layout for bounds change.
+ Now since our layout doesn't have any elements that require us to invalidate while we're scrolling, so no floating headers, no floating footers or anything like that.
+ We only really want to invalidate when our CollectionView's bounds of size changes.
+ So we'll just return true if our new bounds of size is not equal to our CollectionView's bounds of size, our current bounds of size.
+ After that, we'll implement LayoutAttributesForItem AtIndexPath where, again, since we've prepared all the attributes in our Prepare method, we can just grab the specific attributes that correspond to the RequestAtIndexPath from our array.
+ And finally, we're going to implement LayoutAttributesForElements InRect.
+ Now this method is called periodically by the CollectionView with different query rects, which may be bigger than our CollectionView.
+ Our CollectionView is just asking for a set of attributes that match a certain region.
+ It's our job to return an array that contains all the attributes that correspond to all the items that are going to appear within that rect in our CollectionView.
+ So we can answer that question here simply by filtering our cached attributes array on the frame of the attributes.
+ So if our attributes have a frame that intersects our query rect, we can return them.
+ Okay.
+ So let's switch back to the sim and see what our layout looks like.
+ So I'm going to select one of these feeds, and there you go.
+ We have our layout.
+ Our images are nicely loaded in this fancy mosaic configuration, and if we rotate to landscape, you can see that our cells have resized so we've updated everything correctly, we've invalidated, which is great.
+ So this looks like our spec, but that scrolling performance isn't great, is it?  No.
+ No, it's pretty bad, huh.
+ So you might already have an idea of what's going on here.
+ Let's switch back to the code and see what might be happening.
+ So if we take a look at our layout attributes or elements in rect here, remember that this method gets called frequently during scrolling.
+ So this function here, which is filtering our entire array, you might imagine can get really expensive as the number of items in our CollectionView increases.
+ So the more photos we have in our app, the slower our scrolling performance is going to be.
+ So if you find yourself in a situation like this, it helps to step back and think about the nature of your layout and think about whether you can find any optimization opportunities.
+ So our layout kind of demands that every cell apps next to or below it's preceding cell.
+ So this means that our attributes are already sorted within our cached attributes array by their frame's minimum y value.
+ So we have a sorted array, so we can speed up our search by doing something like a binary search as opposed to our linear filter that we're doing now.
+ So let's remove our slow implementation here, and let's replace it with something that should be much faster.
+ So I'm going to step through this bit by bit, don't worry.
+ So the first thing we're doing here is we're calling into binary search function that we've already prepared, which takes in a range of indices within our array and our query rect.
+ If it finds a set of attributes with a frame that sits within our rect, it'll return the attributes as index within our array.
+ Then starting from that index, we can build up the set of the rest of attributes for our query rect simply by looping up and down in our array and picking up attributes until we exit our query rect, until we find attributes that are outside our rect.
+ And this should be much faster.
+ You have thousands of items in your array.
+ You're not going to loop through the array thousands of items, thousands of times.
+ Okay, so let's go back to the sim again and let's see what our faster scrolling algorithm looks like.
+ Let's pop this open and give it a flick.
+ It's way faster.
+ What do you think, Steve?  Much better.
+ Okay, great.
+ So we've got these two great layouts.
+ What's next?  So we have our two screens.
+ That just leaves our update animations for our friends list here.
+ Oh, great.
+ All right.
+ Well let's switch back over to slides, and let's walk through that totally cool update animation I think our designer called it.
+ All right, so we've got a video here.
+ Let's run through this and see what this totally cool update animation looks like.
+ Okay.
+ So we have some elements here.
+ We see that last item is getting refreshed.
+ I guess somebody posted a picture, and then we got another item there, it looks like, yeah, that third item smears is not going to be here.
+ Okay.
+ So we've got three basic operations happening, right.
+ We've got a reload, a move, and a delete.
+ Why don't we switch back over to the dev machine, and Mohammed, why don't you show us how this works?  Sure thing.
+ Okay, so we're doing multiple animated updates at the same time.
+ So you might be aware of a great tool that UICollectionView and UITableView provide us, and it's the Perform Batch Updates API, which basically allows us to pass the collection view a set of updates that can be performed at the same time with animation.
+ So I'm going to add a call to CollectionView PerformBatchUpdates, and note that I'm doing both my data source updates and my CollectionView updates in the closure here.
+ This is really the best way that I have of coordinating my updates and keeping things neatly in sync and avoiding inconsistencies.
+ So, first I'm just updating my last item in my data source.
+ I'm removing the second to last item, picking up the last item, moving it to the top, and then I'm asking the CollectionView to perform the animations that I want.
+ Okay.
+ Let's go back to the sim again and see what our update looks like.
+ So I have wired our update code through this update button at the top right corner, and uh oh.
+ What's going on?  Oh, that's embarrassing.
+ What's going on here.
+ You know, I've been writing iOS for a long time.
+ I've seen this movie before.
+ Yeah, it sucks when it happens on stage though.
+ You know, we're running out of time here, so why don't we just call reload data, and we can come back and do the animations for V2.
+ Really?  You know, we could do that, but then we'd lose that totally cool update animation, and our users expect these lively interfaces, right?  Yeah, yeah, you're right.
+ You know what? They deserve better.
+ Ah, I like the way you think.
+ All right, let's switch back over to slides real quick, and let's see if we can save our totally cool update animation.
+ You've seen this before.
+ All right.
+ So first of all, let's dig into this debug exception and see what it's trying to tell us.
+ All right.
+ So it's saying here we're attempting to perform a delete and a move from the same index path, 0-3.
+ So if I remember right, that was the fourth item.
+ We did a reload and a move on that.
+ We didn't delete it, we deleted the third item, 0-2, right.
+ I don't remember deleting them.
+ So, yeah, what's up with that? All right, but before we do this, let's go back and take a peek at the PerformBatchUpdates API and talk about some high-level principles.
+ All right.
+ So as Mohammed mentioned earlier when he introduced this API, the purpose of this API is that we can commit multiple updates at the same time and have anything animate together and get that great experience.
+ And as he also mentioned, it's super important to perform your data source updates alongside your CollectionView updates inside that CollectionView update closure.
+ Now, what I'm saying for CollectionView also applies for TableView.
+ So if you got TableViews in your apps, all this information is going the same direction.
+ Okay.
+ So let's make some observations here.
+ The CollectionView updates, when you do inserts, moves, and deletes, the ordering of those do not matter in your update's closure.
+ Put them anywhere you want.
+ Now however your data source updates, when you're changing the structure offer your data source, which is backing that data source, or does matter.
+ Okay, so this is best served by showing an example, so I'm going to take a example of two arrays that have three elements in them, and we're going to strengthen our intuition on this and show a delete and an insert, but we're going to do the first run through with the delete first and the second delete second.
+ We're going to reverse the order, just to kind of strengthen our intuition.
+ I do this all the time, draw pictures, right.
+ All right.
+ So we deleted the first item, and now we're going to insert at index one.
+ Okay, on the second example, we reverse the order and do the insert first and then the delete.
+ So our intuition holds, indeed we get a different result.
+ This is probably not a good thing, right.
+ So let's contrast this with the CollectionView updates.
+ Now here I have two sets of CollectionView updates on a submit via batch updates, and I've left out the data source updates, just to keep the slide tidy.
+ But I've got an insert and a delete on the first one, and the second one has a delete and a insert, and the order is different.
+ This will give you the exact same result.
+ We're all engineers.
+ We want to know why, why is that? Well, let's talk about that.
+ How does this happen? Why is the ordering not important for the update sent to the CollectionView, and of course it is for your data source.
+ Okay.
+ So let's walk through these operation by operation.
+ So the first one to delete, this is process in descending index path order.
+ Now let's talk about the index paths.
+ So first of all, if you can think about what's happening on a PerformBatchUpdate, before the batch update starts, your data source is in a before state.
+ Now once everything is done in the batch updates, you'll be an after state.
+ Okay.
+ So for delete, the index paths always referred to the before stage.
+ So that's delete.
+ So insert is processed in ascending index path order paths.
+ So the index paths refer to in the insert are always referring to the final state or the after updates stage.
+ Okay, a move is this mixture of the two, right.
+ You have a from and a to index path, and the from is in the before state, right, and the to is in the after state.
+ Reload.
+ Now reload is a little bit of a super command if you will, right.
+ It actually decomposes down into a delete and an insert.
+ And the index path specified in a reload is speaking about the before state.
+ Okay.
+ So this insight now that we understand what reload is really doing can kind of tell us a little bit of what's going on with our error in our app because of the delete on the reload on the last one is conflicting internally with the notion of moving that item, okay.
+ So we can address this in a minute when we get back to code.
+ Okay, so I'm not going to go through these, but you can reason about these later.
+ Just put it up here as reference that these are the things that'll cause CollectionView to go bonkers.
+ Don't do it.
+ And how can we take all this knowledge and simplify it, distill it in such a way that we can always apply our data source updates from a given set of CollectionView or TableView updates and make sure everything is in sync.
+ All right.
+ So these four basic rules.
+ So first of all you want to decompose those moves and to delete and inserts.
+ Easy.
+ And then combine all your deletes and inserts into two separate lists, process the deletes first in descending order on the index paths, and then finally apply those inserts in the ascending index path order.
+ Do this, and you're good to go.
+ What about reload data? And I know Mohammed said we could just hit that and we're done, and everybody laughed so I'm pretty sure I yelled and that's the case, but the thing about reloaded data is you don't get those great animations, and this is really a sledge hammer approach.
+ So, and we really prefer the apps to be lively and animated and feel great for our customers.
+ So, and this is used in special cases.
+ Okay, Mohammed, let's switch back over real quick and see if we can get this fixed in code and save that totally cool update animation.
+ All right, time to redeem myself.
+ Yes.
+ So let's use the guidelines that Steve just shared with us to fix our update animation.
+ So let's remove our existing implementation here.
+ And if you recall, our update consisted of a reload, a delete and a move, and our reload and the move were at the same index path.
+ They started at the same one.
+ So that's really where our conflict is.
+ So we'll need to start out by separating those two.
+ So let's take our reload out into its own call to perform batch updates, and here I'm just updating my data source, again, same as before, and calling reload items on the CollectionView.
+ I'm just performing it in a UI view performed without animation closure because if you look closely at our spec, it's actually nonanimated, that initial reload.
+ Okay.
+ So next up, we have to take care of our remaining updates, that delete and the move.
+ And let's reason about them for a second.
+ We have a delete at index two, and then we're moving the item at index three to index zero.
+ So if we break down our move using the guidelines that we just learned about, that becomes a delete at index 2, a delete at index 3, and an insertion of the item from index 3 at index 0.
+ So now we have two sets of operations.
+ We have deletions and insertions.
+ We can process them accordingly.
+ First, we'll perform our deletions in descending order.
+ So we'll do our deletion at index 3 first, and will hold onto the person from there so we can insert them later on.
+ And then we'll delete the item at index 2.
+ Then we'll need to process our insertions in ascending order.
+ We just have one, so we can just go ahead and insert it.
+ And finally, we'll ask the CollectionView to perform the animations that we want.
+ Now, note, I'm still calling move here.
+ I didn't break it down into it's component actions because we still want the collection view to play the right animations, and if we've done the right thing with our data source, the CollectionView will do the right think in terms of animations.
+ All right.
+ Let's go back to the simulator and see what our update looks like when it works.
+ All right.
+ Here goes nothing.
+ Wow.
+ Great!  I'm going to reload and take a slow-mo victory lap just to-- there we go.
+ That looks exactly like our spec, doesn't it.
+ That's great, awesome.
+ All right.
+ Well let's wrap it up.
+ We covered a ton of content.
+ Can you switch it back to slides? And I'd like to issue a bit of a call to action.
+ So if you've been nervous or anxiety building that custom layout, take the stuff we just applied today and go back and dive in and create those custom layouts and build really great CollectionView solutions.
+ And if you got a lot of reload data sprinkled all throughout your apps and you're losing out on these gray animations.
+ They'll inspect those things and see maybe why you didn't understand or something wasn't quite jived about why it was happening and fix those spots.
+ Okay, so more information, you can see the link on the slide here.
+ And we also have a CollectionView lab tomorrow morning at 9.
+ If you have any questions or comments about your CollectionViews, please swing on by and chat.
+ Mohammed and I will both be there.
+ And thanks very much for coming out, and I hope you enjoy the rest of your conference.
+ 

@@ -1,1 +1,529 @@
-WEBVTT
+  Hey guys!  Good afternoon.
+ Welcome to Adding Delight to your iOS App.
+ My name's Ben.
+ And, my name is Peter.
+ And, we're going to show you six pro tips to make it magic.
+ We're going to start with external display support, bringing your app's experiences to the big screen.
+ Next, we're going to go through a brand-new programming pattern for you, called layout-driven UI.
+ Then, we're going to show you how to get your customers to your delightful experiences as fast as possible, with laser-fast launches.
+ We're going to focus hard on smooth scrolling, and keeping things feeling great.
+ Continuity is one of the most magical experiences on iOS.
+ And, we're going to show you just how easy it is to adopt Handoff in your applications.
+ And, finally, we're going to teach you some Matrix-level debugging skills, in debugging like a pro.
+ We have a lot to cover, so let's get started.
+ iOS devices are defined by their stunning, integrated displays.
+ And, you can bring your app's experience even further, by adding support for an external display.
+ We've built a demo app to help illustrate this.
+ Built right into iOS, is Display Mirroring, which replicates the entire system UI on the external connected display.
+ Here's our demo app.
+ As you can see, it's a simple photo viewer.
+ When you tap on a photo thumbnail, the photo slides in, and it's full screen.
+ And, this entire experience is replicated on the external display.
+ To take full advantage of the size of the external display, we can rotate the iPhone to landscape to fill it up.
+ And, this is great, with no work on our part, we were able to get this experience.
+ But, we can do better than this.
+ Built right into iOS, are APIs that allow you to create an entirely custom, second user interface on this externally connected display.
+ Let's take a look at a couple of examples of apps that have done this.
+ Keynote is a great example.
+ On the external display, you remain focused on the primary slide at hand.
+ But, on the integrated iPhone display, you can see presenter notes, and the next slide, tools essential to any presentation.
+ Or, maybe you have a game.
+ But, typically you'd have soft, overlaid controls.
+ Well, you could create an entirely custom interface to control your game, and put that on the iOS device's display, and have your full, unobstructed and immersive gaming experience on the external display.
+ When designing your applications for an external display, there are some key things that you should think about.
+ Aside from the obvious size differences, your iPhone is personal.
+ And so, you should consider the kind of information that you show on this display as private.
+ Whereas, the external display will typically be situated in an environment where many people can see it, such as a TV in a living room, or a projection system in a conference hall.
+ So, you should assume that the information shown on this display is public.
+ Additionally, while the displays built into iPhone and iPad are interactive, the external display is not.
+ So, you should avoid showing UI elements, or other interactable controls on the external display.
+ So, let's apply this kind of thinking to our demo app, and see what we can come up with.
+ Here's our optimized version for the external display.
+ As you can see, we're now showing the selected photo full size on the external display.
+ And, on the integrated display, we're showing just the thumbnails, and a new selection indicator to show the photo that is currently being shown full screen.
+ While simple, this is a really powerful use of this design.
+ To show you how we built this into our demo app, we're going to cover three topics.
+ Connectivity, behavior, and connection transitions.
+ Let's start with connectivity.
+ How do you know if you have an external display connected? UIScreen has a class variable, screens, which contains a list of all the connected displays, including the device, built into the iPhone.
+ So, if there's more than one element in this array, you know you have an external display connected.
+ Additionally, because the external display can be connected and disconnected at will, UIKit will post notifications to help you know when this happens.
+ So, you should listen for the UIScreen .
+didConnectNotification, and the UIScreen .
+didDisconnectNotifications.
+ And, bring up and tear down your UI accordingly.
+ Peter, can you show our developers just how easy it is to set up a second user interface?  Ben, I'd be happy to.
+ Let's jump into our code for our UIScreen connection callback.
+ Here, we'll set a local variable to the last screen in the screens array.
+ We know that this is the external screen, because we're inside of our didConnectNotification callback.
+ Next, we'll make a new UI window to show on this external display.
+ And, we'll assign its screen property to the screen.
+ Next, we're going to want to make sure we set up this window.
+ We factored this into a function, but all we're doing here is making a root view controller, and sticking it on the window, the same way we'd do for the onboard display.
+ And, finally, we're going to mark this window as not hidden to show it on the external screen.
+ So, that's connection.
+ Now, let's look at disconnection, which is even easier.
+ So, here we are inside of our UIScreen .
+didDisconnectNotification handler, and all we have to do here is hide the window, and nil out our local reference to it, to free up any resources.
+ And, that's it.
+ We've implemented screen connection and disconnection in our app.
+ Wow, Peter, that was really easy.
+ The next thing you're going to want to think about is changing your app's default behavior for when it has an external display connected.
+ Let's look at an example of some code from our demo app.
+ This is the code that's called when we tap on a photo in your collection view.
+ When we're in single display mode, we create our photoViewController and push it onto our navigation stack.
+ But, when we have an external display connected, we're already showing that photoViewController full screen in that second UI, so we just tell it to present that photo.
+ Really easy.
+ The third thing you should think about when designing for an external display is you should handle connection changes with graceful transitions.
+ Let's go back to our demo app to illustrate this.
+ Here you can see our demo app is currently showing a photo full size.
+ And, we haven't yet connected the external display yet.
+ Watch what happens when we plug it in.
+ What happened here, is we popped our viewController back to the thumbnail view while simultaneously showing that previously selected photo full size on the external display.
+ And, it's these graceful transitions that really help preserve the context, and help your customers understand where they are in your app's flow.
+ So, that's external display support.
+ It's really easy to set up.
+ Just consider the different display contexts when designing your application, and be sure to handle connection changes gracefully.
+ To learn more about this, check out this talk from WWDC 2011.
+ Thank you.
+  Layout-driven UI is a powerful way to write your app to make it easier to add features, and easier to debug.
+ Layout-driven UI helps us deal with the number one cause of issues in iOS apps, and that's managing UI complexity.
+ I'm sure you've been here before.
+ I know I have.
+ You add some code, and a gesture callback.
+ You add even more UI update code in a notification callback.
+ And, more when you get a value trigger from a UI control.
+ And, suddenly your app is in this weird, and hard to understand state.
+ And, you have to follow these strange orders to reproduce these unusual bugs.
+ And, as you add more features to your app, the problem gets worse and worse.
+ If we instead follow a simple recipe, and push these UI updates into layout, we can get rid of these bugs, and make it much easier to add features.
+ Let's walk through the recipe for adding layout-driven UI to your app.
+ The first thing you should do, is you need to identify and track all of the state that affects your UI.
+ Then, every time that states changes, you should dirty the layout system by calling setNeedsLayout.
+ Finally, you'll want to update your UI with this state in layoutSubviews.
+ And, that's it.
+ So, what I love about this recipe is just how easy it is to follow.
+ And, if we apply layout-driven UI to our app holistically, while considering the three core components of an iOS app, layout, animations, and gestures, you'll find that our implementation of all three of these works harmoniously, in a really awesome way.
+ Let's start with layout.
+ Layout is the process by which you position your application's content onscreen.
+ But, we're also recommending that you do all other UI updates in layout.
+ Let's look at a simple sample app that we wrote to highlight this.
+ Ben, can you take us through this app?  Sure, Peter.
+ So, there's a really simple sample app, with this cool guy in the middle.
+ He shows when we're feeling cool.
+ When we're not, he hides away.
+ But, we're feeling quite cool right now, Peter.
+ So, let's bring him back in.
+ Great.
+ So, while this is a simple example, it's really important to walk through, so we can understand how layout-driven UI works.
+ So, let's go through a skeleton of this app, and follow through the layout-driven UI recipe that Ben showed us earlier.
+ So, here we've got our managing view that hosts this cool guy view, in our coolView, which I wrote ahead of time.
+ So, Ben, what's the first step in our recipe?  Well, we need to identify and track that state that affects our UI.
+ So, remember what Ben said.
+ The cool guy is there when we're feeling cool.
+ And, he's not there when we're not.
+ So, I guess we'll have a variable called feelingCool.
+ OK.
+ Ben, what's the second step in the recipe?  Well, now, every time this state changes, we need to dirty the layout system by calling setNeedsLayout.
+ But, we need to make sure that every time this state changes this happens.
+ And, this state could change from various places in our application.
+ So, Peter, how can we ensure that we're always dirtying the layout system when there's changes?  I'm happy you asked, because I think I've got a good idea for this.
+ We can use a feature called Swift property observers.
+ These let us run code before or after a property is set.
+ So, we can use the didSet property observer to call setNeedsLayout.
+ This is a really excellent use of Swift property observers in your app.
+ OK.
+ So, we're almost done.
+ Ben, what's the last step in the recipe?  Well now, Peter, using this state, we need to update our UI in layoutSubviews.
+ OK, easy.
+ We'll override layoutSubviews, and we'll updated the isHidden property of our cool guy view based on the value of feelingCool.
+ And, that's it.
+ That's all you need to do to add layout-driven UI to your app.
+ Now, while this works really well for this simple example, it works well for some more complex ones earlier.
+ Ben and I were up really late last night playing this new macOS The Gathering trading card game, which is sweeping the Apple campus.
+ We built this fun little deck builder app to help us win the tournament next weekend, which we're really going to do.
+ It lets you pick up and drag these cards around, and you can fling them into this little deck area.
+ And, it's really fast, and fun, and fluid.
+ We can pick up two cards at the same time.
+ I think with this app we can really show you how layout-driven UI works, and importantly, we can beat Ben's officemate next weekend.
+ So, let's walk through the other two core aspects of an iOS app, and how we can apply layout-driven UI to them, starting with animations.
+ Animations are the hallmark of any great iOS experience.
+ The life-like motion of your user interface truly makes your apps feel alive.
+ UIKit has some great API available to help you create these delightful animations.
+ The UIViewPropertyAnimator API is a really powerful tool, and it was turbocharged last year with a bunch of new features.
+ To learn all about how to use it, check out Advanced Animations from UIKit from WWDC 2017.
+ In addition to this, the tried and true UIView closure API is also a great way to make these animations.
+ So, great.
+ We can use UIViewAnimations with our layout-driven UI-based app.
+ One thing to keep in mind, is we're always going to want to use the beginFromCurrentState animation option.
+ This tells UIKit to take the current onscreen position of your view, even if it's mid-animation, when doing animation.
+ And so, this lets us do these really wonderful, interruptible interactive animations.
+ Let's look at an example in our macOS The Gathering trading card game app.
+ So, here we've got a variable that tracks what cards are in our deck.
+ And, using those Swift property observers we talked about earlier, we're dirtying the layout system every time this changes by calling setNeedsLayout.
+ Next, when we want to put a card in the deck, all we have to do is add that card to this array, which will dirty our layout, and then inside of an animation block, using this beginFromCurrentState option, we call layoutIfNeeded.
+ This will trigger a call to our code in layoutSubviews, which will move all of our views around, play the appropriate animation state transitions.
+ And, what's really excellent about this, that I really want to highlight here, is notice how we didn't add any special case for these animations.
+ We just kind of got this animated layout for free by doing our layout inside of an animation block.
+ This is really, really awesome.
+ So, that's how we can add animations to our layout-driven UI app.
+ Finally, let's take about the third core aspect of an iOS app, and that's gestures.
+ And, of course, we can't talk about gestures without talking about UIGestureRecognizer, UIKit's awesome API for adding gestural interactions to your app.
+ UIKit provides a number of great concrete subclasses of UIgestureRecognizer.
+ Everything from pans to pinches to swipes to rotation.
+ You should be able to create the kind of interactions you want, using these.
+ And, they're highly customizable as well.
+ If you want something really crazy, you can always subclass UIGestureRecognizer yourself as well.
+ When looking between the built-in UIKitGestureRecognizers, it's important to understand the difference between discrete and continuous gestures.
+ Discrete gestures tell you that an event happened.
+ They start in the Possible state, and then they don't pass go, they don't collect $200.
+ They move immediately into the Recognized state.
+ These are really useful for fire and forget interactions in your app, but won't tell you at every phase during the interaction.
+ The other type of gestures are continuous gestures.
+ These provide a much greater level of fidelity to you.
+ Like discrete gestures, they start out in the Possible state, but as they begin to be recognized, they move to the Began state.
+ As they track, they enter the Changed state.
+ And, at this point you're receiving a continuous stream of events as the gesture moves around.
+ Finally, when the gesture is complete, it moves to the Ended state.
+ One of our favorite types of continuous gestures is the UIPanGestureRecognizer.
+ And, there are two great functions available to help you get the most out of it.
+ translationInView will tell you where the gesture is tracking, relative to your views.
+ And, velocityInView will tell you how fast your gesture is moving.
+ And, this is really powerful for handing off velocity between a gesture and a subsequent animation.
+ To learn all about how to build really great gesture interactions using these, check out Building Interruptible and Responsive Interactions from WWDC 2014.
+ So, I also love UIPanGestureRecognizer.
+ And, we used it to help build that card dragging behavior you saw earlier.
+ Let's look at how we did this using layout-driven UI.
+ Again, we have a local variable, which tracks the offsets for each of our cards that the gesture has applied.
+ And again notice every time this variable changes, we're triggering setNeedsLayout, using one of Swift's property observers.
+ Next, inside of our panGestureRecognizer callback function, we're just going to grab the current translation and view out of the gesture, and associate this gesture to one of our cards.
+ We'll then increment the offset for this card in this dictionary.
+ And finally, in layoutSubviews, we'll make sure to update the position of our card views based on their offsets from this dictionary.
+ Notice again how we're not really doing anything special, other than -- besides the traditional layout-driven UI case.
+ We just have this piece of state that happens to be driven by a gesture, and we're responding to it in layoutSubviews.
+ In fact, if you follow this pattern throughout your app, you'll find that it makes a lot of these types of interactions much easier to adopt.
+ So that's layout-driven UI.
+ Remember the recipe.
+ Find and track all of that state that affects your UI.
+ And, use Swift property observers to trigger setNeedsLayout whenever this state changes.
+ Finally, in your implementation of layoutSubviews, make sure to update your view state based on this state that you tracked.
+ Thank you.
+  The iOS experience is all about being responsive.
+ And, you want to get your customers to your delightful experiences as quickly as possible.
+ There is one step between them tapping on your icon, and being delighted.
+ And, that one step is your launch time.
+ To help you optimize this, we're going to take you through the five high-level components that make up the anatomy of a launch.
+ Starting with number one, process forking.
+ Peter, what can we do in this phase of the launch?  Well, for process forking, it's really complicated.
+ You're going to want to read the Man pages for fork and exec, and familiarize yourself with POSIX fundamentals.
+ No, no, I'm just kidding.
+ iOS will take care of process forking for you.
+ We'll deal with number one for you.
+ Let's look at number two.
+ [ Audience Laughter ] Dynamic linking.
+ At this phase, we're allocating memory to begin executing your application.
+ We're linking libraries and frameworks.
+ We're initializing Swift, Objective-C, and Foundation.
+ And, we're doing static object initialization as well.
+ And, typically we see this can take 40 to 50% of the typical launch time of an app.
+ And, one key thing to remember is at this point, none of your code has run.
+ So, it's vital that you understand how to optimize this.
+ Peter, do you have any great advice for our developers?  I'm happy you asked, Ben.
+ It's important that you take great care when optimizing the linking phase of your app's launch time.
+ Because it takes up such a large amount of your launch time.
+ My first piece of advice for you is to avoid code duplication wherever possible.
+ If you have redundant functions, objects, or structs, remove them from your app.
+ Don't repeat yourself.
+ Next, you're going to want to limit your use of third-party libraries.
+ iOS first-party libraries are cached, and may already be in active memory if another application is using them.
+ But, third-party libraries are not cached.
+ Even if another app is using the same version of a library as you, we'll still have to pull in the framework if your app uses it.
+ So, you should really limit your use of these third-party libraries as much as possible.
+ And, finally, you're going to want to avoid static initializers, and having any behavior in methods like plus initialize, and plus load.
+ Because these have to run before your app can do any meaningful work.
+ To learn more about this vital part of your launch time, check out App Start-up Time: Past, Present, and Future from WWDC 2017.
+ The next phase of your launch is your UI Construction.
+ At this point, you're preparing your UI, building up your viewControllers.
+ The system is doing state restoration, and loading in your preferences.
+ And, you're loading in the data that you need for your app to become responsive.
+ So, Peter, what can we do at this phase of the launch to optimize?  You'll want to optimize the UI construction phase to be as fast as possible for your app.
+ This means returning as quickly as possible from the UI application activation methods.
+ WillFinishLaunching, didFinishLaunching, and didBecomeActive.
+ Because UIKit waits for you to return from these functions before we can mark your app as active.
+ Next, you're going to want to avoid any file system writes during your application launch, as these are blocking, and require a sys call.
+ Hand in hand with these, you're going to want to avoid very large reads during app launch as well.
+ Instead, consider streaming in only the data you absolutely need right now.
+ And, finally I encourage you to check your database hygiene.
+ It's always a good idea to stay clean.
+ If you're using a library like CoreData, consider optimizing your schema, to make it as fast as possible.
+ And, if you're rolling your own solution with SQLite, or similar technology, consider vacuuming your database at a periodic interval.
+ For example, every time your app gets updated.
+ Thanks, Peter.
+ The next phase of the launch is when we create your very first frame.
+ At this point, core animation is doing all the rendering necessary to get that frame ready.
+ It's doing text drawing.
+ And, we're loading and decompressing any images that need to be shown in your UI.
+ So, Peter, do you have any more sage advice for this phase of the launch?  Oh, do I.
+ When preparing your first frame, it's really important that you take great care to only prepare the user interface that you absolutely need during launch time.
+ If your user hasn't navigated to a particular section of your app, avoid loading it.
+ And, instead, pull it in lazily when you absolutely need it.
+ Also, you should avoid hiding views and layers that should not be visible when we first navigate to your app.
+ Even when views and layers are hidden, they still have a cost.
+ So, only bring in the views and layers that you absolutely need for your first frame.
+ The final phase of your launch is what we call extended launch actions.
+ These are tasks that you have potentially deferred from your launch path to help you get responsive faster.
+ So, while your app may be responsive at this point, it may not be very usable yet.
+ This phase is really all about prioritizing what to do next.
+ Bring in the content that needs to be onscreen right now.
+ And also, if you're loading content from a remote server, be sure to consider that you may be in challenging network conditions.
+ And, have a placeholder UI ready to go if necessary.
+ So, those are the five high-level components that make up the anatomy of a launch.
+ We've one more thing for you today.
+ ABM.
+ A: Always.
+ B: Be.
+ M: Measuring.
+ Coffee is for quick apps.
+ It's essential that you understand where your launch time is going.
+ So, measure it regularly using the Time Profiler.
+ Any time you change code in the path -- in your launch path, you'll want to remeasure.
+ And, take statistical averages.
+ Don't depend on a single profile to check your launch time.
+ So, laser-fast launches.
+ Get responsive fast.
+ Use only what you need.
+ And, measure, measure, measure.
+ Thank you.
+  Scrolling is a key part of the iOS user experience, and a huge part of the experience inside your apps.
+ iPhone and iPad are magical sheets of glass that can transform into anything your app would like them to be.
+ So, it's important that you work to help preserve this illusion of your app's content sliding on this magic sheet of glass.
+ At Apple, we've got a phrase that we like to say, that your app should feel smooth like butter.
+ But, from time to time, you have some hitches and stutters that make it feel less like butter, and more like peanut butter.
+ And, you've seen this before.
+ Your app feels choppy or stuttery.
+ Ben, what are some causes of the slow behavior in apps?  Well, Peter, this slow behavior that you're describing is really that we're dropping frames.
+ And so, we need to understand why that might be happening.
+ And, there are two key areas where this can happen.
+ The first is you could be doing too much computation.
+ And, the second is you could be doing too much complex graphics compositing.
+ Let's look at each of these in turn, starting with computation.
+ How do you know if you're doing too much computation? Well, the Time Profiler, built into Instruments, is the ultimate tool for this.
+ It can give you down to the line measurements for just how much CPU time your code is using.
+ It's a really powerful tool, and we encourage you to go and check out Using the Time Profiler in Instruments from WWDC 2016.
+ So, once you've identified these hot spots, using the Time Profiler tool, we've got some great tips for you to optimize them.
+ The first is to use UICollectionView and UITableView prefetching.
+ These are pieces of API that will tell you while the user is scrolling towards particular cells, and can give you an opportunity to preload that data.
+ There was a wonderful talk given by two very handsome presenters on this in 2016 that I encourage you to watch.
+ The next tip that I have for you, is to push as much work as possible off of the main queue and onto background queues, freeing up the main queue to update your UI and handle user input.
+ Ben, what kind of work can we push off the main queue?  Well, there's some usual stuff that you might expect, like network and file system access.
+ These should never be running on the main thread.
+ But, maybe some other stuff that you might not expect, like image drawing and text sizing.
+ UIGraphicsImageRenderer, and its distributed string, both have functions available that are safe to use on a background thread, that might just help you move some of that complex computation off of your main queue.
+ Wow, Ben, those are great tips.
+ I never would have thought to do that off of the main queue.
+ So, let's say I've run the Time Profiler.
+ I've used prefetching, just like those guys told me to.
+ And, I've pushed as much work as possible off of the main queue, but my app is still slow.
+ Surely this isn't my problem, right Ben?  Well, Peter, we may not be out of the woods just yet.
+ While we may have optimized our computation, we could still be having problems with our graphics system.
+ Fortunately, there's another great tool available here.
+ The Core Animation instrument is a really powerful way to see exactly what your frame rate is doing.
+ And, also at the same time, looking at your GPU utilization.
+ It's another really powerful tool.
+ And, to learn all about how to use it, check out Advanced Graphics and Animations for iOS Apps from WWDC 2014.
+ Once you've identified that your app is graphics-bound, we've got some great low-hanging fruit for you to investigate.
+ Usually, you have a graphics-bound app due to overuse of one of two things: visual effects, or masking and clipping.
+ Visual effects, like blur and vibrancy, are expensive, and so you should use them tastefully within your apps.
+ You should also definitely avoid things like blurs on blurs on blurs, as this will cause the GPU to work in overdrive, slowing down your app.
+ Also, you should avoid masking and clipping wherever possible.
+ Instead, if you can achieve the same visual appearance by just placing opaque content on top of your views, then I would encourage you to too that, instead of using the masked view, or masked property of UIViewer CA Layer.
+ So, that's how we can optimize smooth scrolling performance.
+ Make sure to run the Time Profiler, and Core Animation instruments on your apps.
+ Use prefetching, and push as much work as possible off of the main queue.
+ And, try to use visual effects, and masking and clipping sparingly.
+ For even more information about profiling, check out this great talk from WWDC 2015.
+ Thank you.
+  Continuity is one of the most magical experiences across Apple platforms.
+ And, Handoff is a fantastic way to truly delight your customers.
+ The ability to take a task from one device, and seamlessly transition it to another device is an absolutely awesome experience.
+ Handoff works between iOS, macOS, and watchOS.
+ It doesn't require an internet connection because it uses peer-to-peer connectivity, and best of all for all of you, is it's really easy to set up.
+ So, how should you think about using Handoff in your applications? Well, let's go through a few examples of how we do it in some of our Apple apps.
+ Let's say I get a message from my handsome co-presenter, and I want to reply on my iPhone X with a humorous animoji.
+ Well, I can get right back into that conversation, right from the App Switcher on iOS.
+ Or, if I'm editing a document in Pages on my Mac, and I have to run, and I want to hand it off to my iPad, I can do so by tapping the icon in the Dock.
+ Or, again, if I'm casually browsing photos on my watch, and I find one from a previous WWDC, and I just want to go and look at all the photos in that album, I can get right back into my Photo library on my iPhone, without having to go search for that one photo.
+ Handoff is really powerful, and it can save your customers so much time when moving from device to device.
+ So, we're going to show you just how easy it is to adopt.
+ And, it's all built on top of the NSUserActivity API.
+ NSUserActivity represents a current state or activity that you're currently doing.
+ In this case, we're composing an email.
+ When this activity is created, all of the nearby devices that are signed into the same iCloud account all show that Handoff is available.
+ On the Mac, you'll see an icon down in the Dock.
+ When you click on this Mail icon, the activity will be transferred over to the Mac, and Mail can launch and continue exactly where you left off.
+ So, let's look at the code necessary to set this up.
+ On the originating device, you start by creating your NSUserActivity with a given type.
+ And, this type represents the kind of activity that your user is currently doing.
+ You then set a title, and set isEligibleForHandoff to true.
+ And you then want to populate your userInfo dictionary.
+ And, you need to fill this with all the information necessary to be able to continue the activity.
+ In this case, our example is a video, and we're including a video ID, and a current play time.
+ Finally, you'll want to set this activity to your viewController's userActivity property.
+ This will cause it to become the current activity, whenever that viewController is presented.
+ And, that's all you need to do on the originating device.
+ On the continuing device, first of all, your app needs to declare support for the type of activity that you created.
+ Then, you need to implement two UIApplicationDelegate callbacks.
+ The first is application willContinueUser ActivityWithType.
+ And, this is called as soon as you click or tap on the icon to initiate the handoff.
+ At this point, we don't have the NSUserActivity object ready yet, but you know the kind of activity that's going to be continued, so you can begin preparing your UI.
+ Very shortly after, you'll receive applicationContinueRestoration handler, which will contain the fully reconstructed NSUserActivity object.
+ From that point, you can set up and continue the experience right on that device.
+ If you've got more information than can fit in a userInfo dictionary, there's great feature of NSUserActivity that you can use, called continuation streams.
+ All you have to do is set the supportsContinuationStreams property to true.
+ Then, on the continuing device, you'll call the getContinuationStreams method on the NSUserActivity, which will provide you with an input and an output stream.
+ Back on the originating device, the NSUserActivity's delegate will receive a callback providing it with input and output streams as well.
+ And, through these channels, you can do bi-directional communication between the originating and the continuing device.
+ But, you're going to want to finish this as fast as possible, because the user may be moving the devices apart to leave.
+ For more about streams, check out the Stream Programming Guide on developer.
+apple.
+com.
+ Now, this is great for moving things that wouldn't be appropriate to put in the userInfo dictionary, like images or video content, such as in our email handoff example earlier.
+ But, for document-based apps, the handoff story is even easier.
+ Because you get much of this behavior for free.
+ UIDocument and NSDocument automatically create NSUserActivity objects to represent the document that is currently being edited.
+ And, this works great for all documents stored in iCloud.
+ All you have to do in your applications is configure your info.
+plist accordingly.
+ In addition to app-to-app handoff, we also support app-to-web browser handoff.
+ If you have a great web experience to go alongside your native app experience, and the continuing device doesn't have your native app installed, you can handoff to Safari, and continue the activity right in the web browser.
+ Handoff also supports web browser-to-app handoffs.
+ You need to configure a list of approved app IDs on your web server, and then you need to add an associated domain entitlement in your iOS app.
+ And then, the user can seamlessly continue from your web experience to your app on iOS.
+ For even more about this, check out this great Handoff talk from 2014.
+ So, that's Handoff.
+ Go out and implement it in your applications.
+ Truly delight your users, and as an added bonus, the NSUserActivity API is used all over the system experiences.
+ In things like Spotlight search, and the new Siri Shortcuts feature.
+ For more about these, check out these talks, from previous WWDCs.
+ Thank you.
+  You write amazing apps and experiences.
+ But, from time to time, you have problems that you need to investigate.
+ And, for that, we're going to teach you some Matrix-level debugging skills.
+ But first, a word of warning.
+ Before we give you this red pill, and show you just how deep the rabbit hole goes, I want to let you know that the methods that we're going to show you in this section are great for debugging, but must not be submitted to the App Store.
+ If you do, your application will be rejected, and you'll have a bad day.
+ So, with that warning, let's get started.
+ We're going to start with a detective mindset.
+ How you should approach problems that you find in your program.
+ Next, we're going to talk to you about how to debug issues with your views and view controllers.
+ We're going to teach you about LLDB, and how you can use it to identify state issues in your app.
+ And finally, we're going to look at some techniques for some great memory issues that you might run into that make you feel less than great.
+ So, let's start with a detective mindset.
+ When you're looking at a problem in your program, you want to make sure to verify your assumptions.
+ What do you expect your program to be doing? And then, verify that it's actually doing that.
+ This can be a great step, when you start to debug issues in your app.
+ Once you're pretty sure which of your assumptions is being violated, you can start by looking for clues.
+ You'll use the tools that we'll show you during this section to poke and prod at your objects and structs.
+ And then, you're going to want to test your hunches, by changing state in your app, and verifying that you found the issue.
+ Let's start with a sample bug that's a real bug.
+ One of the great things that I get the privilege of working on here at Apple, is the screenshot editor.
+ Recently, we were debugging an issue, where my screenshot pen tools were missing, which is pretty bad.
+ Ben, are there any tools we can use to help diagnose this issue?  Absolutely.
+ Built right into Xcode, is the View Debugger.
+ You can launch it by simply clicking on this icon in the bottom toolbar.
+ And, Xcode will show you a 3D representation of your entire view hierarchy.
+ As you can see here, our pencil controls are still there, but they're being occluded by this full screen view in front of it.
+ So, we need to go and look at where we're building this UI, and see what's happening with the ordering there, Peter, I think.
+ That's great.
+ The Xcode View Debugger is a wonderful tool for debugging view issues in your app.
+ There are even more tools that you can use to help out with this.
+ UIView recursiveDescription, UIView parentDescription, and the class method UIViewController printHierarchy are great tools for debugging view and view controller issues in your app.
+ Again, they're also great things to not include when you submit to the App Store.
+ It's important to note that these are Objective-C selectors.
+ So, before using them, you'll want to put your debugger into Objective-C mode, using this command.
+ We're going to walk through each of these debugging methods, step-by-step, and how they can help you, starting with UIView recursiveDescription.
+ So, UIView recursiveDescription will print the view hierarchy of the receiver -- the subview hierarchy.
+ And, some associated properties to help you understand the layout attributes.
+ Let's take a look at an example.
+ We have another bug in our screenshots UI with a missing view.
+ So, we're going to call recursiveDescription on our viewController's view.
+ Now, this might look like a wall of debug text, and that's because it is.
+ But, we know what we're looking for.
+ Our screenshots view is there.
+ We can see it.
+ And, on inspection, we can see that it is currently hidden.
+ So, we need to go and look at everywhere we're setting the hidden property on this view, and really understand why it's not showing.
+ In addition to recursiveDescription, UIView also has parentDescription, which will walk up the view hierarchy to the parent views, until it reaches no -- to a nil parent.
+ It'll print the same kind of debugging information.
+ RecursiveDescription and parentDescription are great for UIView issues.
+ But, sometimes you have a problem with UIViewControllers.
+ And, for that you can use the great class method, UIViewController printHierarchy.
+ Recently we had a bug in our screenshot editor, where one of our viewControllers had not yet received the viewDidAppear message.
+ And so, it hadn't set up its state appropriately.
+ By running UIViewController printHierarchy, we can get an output of all of our presenting viewControllers, our presented viewControllers, our parentViewControllers and childViewControllers, and even our presentationControllers.
+ It's Controllerpalooza.
+ So, let's run printHierarchy in our screenshot UI.
+ Here we can see our viewController hierarchy.
+ And, when we inspect the viewController that we're having the problem with, we can see that it's stuck in the appearing state.
+ So, we had missed a callback.
+ And so, we need to look into our app to where we're calling this callback, and then we found the issue.
+ So, great.
+ Using these methods, you can identify view and viewController issues.
+ But, sometimes you have a more fundamental issue with your app.
+ And, for that we can use some great state debugging tips that we have for you.
+ LLDB's expression command can let you run arbitrary code in the debugger.
+ Think about that.
+ Any code that you can run in the source editor, you can write right in the debugger, and run while your program is running.
+ This is so useful for debugging.
+ You can call functions on your structs, get properties on your objects, and better diagnose what your program is doing.
+ For even more about debugging, check out this great talk on how to debug with LLDB from 2012, and how to debug with Swift from 2014.
+ There's some great functions that you can run inside of LLDB with the expression command, that we're going to teach you.
+ And, the first one, is dump.
+  Dump will print all of your Swift objects and structs properties.
+ Let's go through another bug that we have in some of our custom UI.
+ We have a view with a number of subviews, including some labels, and an imageView.
+ And, right now one of our labels is missing.
+ So, we're going to run dump on our parent view, and take a look at what's going on here.
+ So, we've found our missing label.
+ It is here, but it's -- if we bring up and look at the imageView that's alongside it, we notice that the frame of these two things, they both have the same origin.
+ So, what's likely happening here, is that the label is obstructed by the imageView.
+ So, we need to go and look at our layout code again, I think.
+ In addition to dump for Swift objects, if you still have some Objective-C code lying around, NSObject also has the ivarDescription method.
+ This will print all of the instance variables of your Objective-C objects.
+ We have another bug in our screenshot's code, where our crop handles aren't working for some reason.
+ If we call ivarDescription on our screenshot's view, we can see by looking closely, that our cropEnabled ivar is currently set to no.
+ So, we have a good place to start investigating this bug.
+ That's great.
+ Using dump and ivarDescription are great ways to diagnose problems with your app.
+ Another wonderful debugging tip and trick that we have for you is breakpoints.
+ Breakpoints let you pause the program at arbitrary states of execution, and run commands.
+ And, using the LLDB command line, or the Xcode UI, you can even add conditions before these breakpoints are run, and commands to run every time the breakpoint is hit.
+ Breakpoints are an essential part of your debugging workflow.
+ And, you can use the expression command, and dump, and ivarDescription, with the breakpoints that you set up in Xcode.
+ I really encourage you to use breakpoints next time you're debugging an issue with your app.
+ But, sometimes we don't have an issue with views or viewControllers.
+ We don't have an issue with state, instead we have a really hairy memory management issue.
+ Ben, are there any tools we can use for this?  Well, I'm glad you asked Peter, because yes, there is another great tool built into Xcode.
+ The Xcode memory debugger.
+ This tool will help you visualize exactly how your application is using memory.
+ Peter and I were debugging an issue the other day, where we had a leaking viewController.
+ And, we could see that here that it's being held onto by a block.
+ By enabling Malloc stack logging, we were able to see the full backtrace of exactly when this block was allocated.
+ By zooming in, we can see that this block was actually created by that viewController.
+ And so, that block is holding onto that viewController.
+ But that viewController is also holding onto the block.
+ And, there's our retain cycle.
+ Wow.
+ Great! The Xcode memory graph debugger is such a great tool for diagnosing issues like this in your app.
+ For even more, check out the Debugging with Xcode 9 talk from 2017.
+ So, that's how you can debug your app like a pro.
+ Make sure to think like a detective whenever you encounter problems with your program.
+ Use the Xcode view debugger, and memory graph debugger to dive deep on view- and memory-related issues.
+ And, use LLDB's expression command with dump, and all the other great debugging methods we talked about here.
+ Thank you.
+  So, we've covered six really exciting topics this morning, this afternoon.
+ But, we've barely scratched the surface.
+ We encourage you to go out and check out the talks that we referenced throughout this presentation, and add even more delight to your applications.
+ For more information, check out our page on the developer portal, and thank you.
+ We hope you had a great conference.
+ Thank you.
