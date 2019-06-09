@@ -1,0 +1,872 @@
+WEBVTT
+
+00:00:17.050 --> 00:00:18.485 align:middle line:0
+（AVContentKeySession
+最佳实践）
+
+00:00:18.552 --> 00:00:20.187 align:middle line:0
+你好 感谢你的参与
+
+00:00:20.254 --> 00:00:24.224 align:middle line:0
+我是Anil Katti
+Apple AVFoundation的工程师
+
+00:00:25.292 --> 00:00:28.395 align:middle line:0
+今天 我们来谈谈
+AVContentKeySession API
+
+00:00:28.462 --> 00:00:32.366 align:middle line:0
+有关应用它的一些最佳实践
+及推荐模式
+
+00:00:34.067 --> 00:00:37.271 align:middle line:0
+AVContentKeySession是一个
+AVFoundation API
+
+00:00:37.671 --> 00:00:40.574 align:middle line:0
+用于Apple平台上
+
+00:00:40.641 --> 00:00:41.942 align:middle line:0
+传递FairPlay Streaming密钥
+
+00:00:43.110 --> 00:00:44.077 align:middle line:-1
+（议程）
+
+00:00:44.144 --> 00:00:46.213 align:middle line:-1
+下面是我们将要谈到的议题
+
+00:00:46.446 --> 00:00:50.551 align:middle line:-2
+首先概述FairPlay Streaming
+和AVContentKeySession
+
+00:00:50.918 --> 00:00:54.688 align:middle line:-2
+然后介绍一些用
+AVContentKeySession
+
+00:00:54.755 --> 00:00:56.223 align:middle line:-1
+优化回放的方法
+
+00:00:57.191 --> 00:01:01.261 align:middle line:-2
+最后谈谈FairPlay Streaming
+密钥传递的一些常见陷阱
+
+00:00:57.191 --> 00:01:01.261 align:middle line:-2
+最后谈谈FairPlay Streaming
+密钥传递的一些常见陷阱
+
+00:01:01.528 --> 00:01:05.065 align:middle line:-1
+并随时回答一些来自开发人员的
+
+00:01:05.132 --> 00:01:06.633 align:middle line:-1
+常见问题
+
+00:01:07.768 --> 00:01:09.469 align:middle line:-1
+我们开始吧
+
+00:01:09.536 --> 00:01:10.737 align:middle line:-1
+（FairPlay Streaming概述）
+
+00:01:10.804 --> 00:01:13.707 align:middle line:-2
+FairPlay Streaming
+于2015年推出
+
+00:01:13.774 --> 00:01:17.211 align:middle line:-2
+来帮助保护传送到
+我们平台的HLS流
+
+00:01:18.212 --> 00:01:21.882 align:middle line:-2
+FairPlay Streaming
+规范指定了一组步骤
+
+00:01:22.182 --> 00:01:26.887 align:middle line:-2
+app需要遵循这些步骤
+以安全传送内容解密密钥
+
+00:01:26.954 --> 00:01:30.657 align:middle line:-2
+从而使平台可以对加密的
+媒体解密和播放
+
+00:01:32.626 --> 00:01:34.962 align:middle line:-1
+在传递FairPlay Streaming密钥时
+
+00:01:35.028 --> 00:01:40.067 align:middle line:-2
+你的app充当平台
+与你的密钥服务器之间的联络人
+
+00:01:41.168 --> 00:01:44.104 align:middle line:-2
+当它收到来自AVFoundation的
+按需密钥加载请求时
+
+00:01:44.371 --> 00:01:49.476 align:middle line:-1
+它的响应是发出加密密钥请求
+
+00:01:49.810 --> 00:01:51.745 align:middle line:-1
+也被称为SPC
+
+00:01:52.145 --> 00:01:55.215 align:middle line:-1
+SPC然后被发送到密钥服务器
+
+00:01:55.816 --> 00:01:59.987 align:middle line:-2
+密钥服务器用加密密钥
+响应回应这一请求
+
+00:02:00.220 --> 00:02:01.588 align:middle line:-1
+也被称为CKC
+
+00:02:02.489 --> 00:02:06.426 align:middle line:-2
+最后 该app将CKC
+返回给AVFoundation
+
+00:02:06.593 --> 00:02:09.729 align:middle line:-1
+以便它可以开始解密和播放
+
+00:02:11.265 --> 00:02:15.569 align:middle line:-2
+直到最近 app还在使用通用的
+AVFoundation API
+
+00:02:15.636 --> 00:02:17.204 align:middle line:-1
+称为AVAssetResourceLoader
+
+00:02:17.571 --> 00:02:19.339 align:middle line:-1
+来提供内容解密密钥
+
+00:02:20.941 --> 00:02:24.711 align:middle line:-2
+去年我们推出了
+新的AVFoundation类
+
+00:02:24.912 --> 00:02:26.547 align:middle line:-1
+称为AVContentKeySession
+
+00:02:26.613 --> 00:02:29.983 align:middle line:-1
+它是专门针对内容解密密钥设计的
+
+00:02:31.785 --> 00:02:35.022 align:middle line:-2
+AVContentKeySession
+有两个目标
+
+00:02:35.822 --> 00:02:38.592 align:middle line:-1
+一是简化密钥加载过程
+
+00:02:38.926 --> 00:02:41.028 align:middle line:-1
+并在内容解密密钥的生命周期内
+
+00:02:41.094 --> 00:02:43.697 align:middle line:-1
+为app提供更好的控制
+
+00:02:44.498 --> 00:02:48.869 align:middle line:-1
+二是为新的内容保护功能建一个平台
+
+00:02:51.338 --> 00:02:54.208 align:middle line:-2
+AVContentKeySession
+至今非常出色
+
+00:02:54.541 --> 00:02:57.611 align:middle line:-2
+在我们的平台上传递的大部分
+FairPlay Streaming密钥
+
+00:02:57.978 --> 00:03:01.682 align:middle line:-1
+是通过AVContentKeySession传递的
+
+00:02:57.978 --> 00:03:01.682 align:middle line:-1
+是通过AVContentKeySession传递的
+
+00:03:03.417 --> 00:03:06.486 align:middle line:-2
+这个API帮助开发人员
+在他们的app中
+
+00:03:06.553 --> 00:03:07.754 align:middle line:-1
+优化了密钥传递
+
+00:03:08.889 --> 00:03:12.159 align:middle line:-2
+我将介绍一些你可以从这个API中
+获得更多收益的方法
+
+00:03:12.593 --> 00:03:15.929 align:middle line:-2
+但首先让我们看看
+AVContentKeySession的不同之处
+
+00:03:17.731 --> 00:03:22.135 align:middle line:-2
+使用AVAssetResourceLoader
+app只能
+
+00:03:22.202 --> 00:03:24.838 align:middle line:-2
+在AVFoundation
+提请求时加载密钥
+
+00:03:25.072 --> 00:03:27.674 align:middle line:-1
+并发送按需加载请求
+
+00:03:28.942 --> 00:03:33.113 align:middle line:-2
+这通常发生在AVFoundation
+下载播放列表并解析后
+
+00:03:33.180 --> 00:03:35.582 align:middle line:-1
+发现内容是加密的
+
+00:03:36.250 --> 00:03:39.586 align:middle line:-2
+此外 AVFoundation
+可以在回放过程中的任何时候
+
+00:03:39.786 --> 00:03:41.355 align:middle line:-1
+发送这些密钥的加载请求
+
+00:03:41.922 --> 00:03:45.459 align:middle line:-2
+例如 AVFoundation
+发送新的密钥加载请求
+
+00:03:45.526 --> 00:03:48.195 align:middle line:-1
+如果在回放过程中
+
+00:03:48.562 --> 00:03:51.331 align:middle line:-1
+切换到使用不同密钥的弧度
+
+00:03:52.466 --> 00:03:55.068 align:middle line:-2
+AVContentKeySession
+本质上就会改变模式
+
+00:03:56.236 --> 00:03:59.873 align:middle line:-2
+它将密钥加载与媒体加载
+或回放分离出来
+
+00:03:59.940 --> 00:04:03.810 align:middle line:-2
+并使app对密钥加载时间
+有更多控制
+
+00:03:59.940 --> 00:04:03.810 align:middle line:-2
+并使app对密钥加载时间
+有更多控制
+
+00:04:05.279 --> 00:04:09.183 align:middle line:-2
+AVContentKeySession
+允许app自主地
+
+00:04:09.249 --> 00:04:11.251 align:middle line:-1
+在任何时候启动密钥加载
+
+00:04:12.252 --> 00:04:13.987 align:middle line:-1
+这样就开辟了新的用途
+
+00:04:14.488 --> 00:04:17.124 align:middle line:-1
+允许app优化密钥传递
+
+00:04:17.190 --> 00:04:19.959 align:middle line:-1
+并改进回放体验的多个方面
+
+00:04:22.696 --> 00:04:27.034 align:middle line:-2
+AVContentKeySession
+可以帮助改进播放启动
+
+00:04:28.669 --> 00:04:33.473 align:middle line:-2
+不像过去等待AVFoundation
+按需发送密钥加载请求
+
+00:04:33.974 --> 00:04:38.579 align:middle line:-2
+你可以用AVContentKeySession
+在请求回放后
+
+00:04:38.645 --> 00:04:42.449 align:middle line:-1
+主动加载你基于用户操作
+
+00:04:42.516 --> 00:04:45.185 align:middle line:-1
+预测可能不久将需要的密钥
+
+00:04:46.720 --> 00:04:49.990 align:middle line:-2
+你甚至可以在用户选择
+要播放的内容之前加载
+
+00:04:51.191 --> 00:04:53.894 align:middle line:-1
+我们称其为密钥预载或预热
+
+00:04:55.729 --> 00:04:57.664 align:middle line:-1
+此外 如果你的内容
+
+00:04:57.731 --> 00:05:00.734 align:middle line:-1
+跨越不同弧度使用多个密钥
+
+00:04:57.731 --> 00:05:00.734 align:middle line:-1
+跨越不同弧度使用多个密钥
+
+00:05:00.801 --> 00:05:05.005 align:middle line:-2
+你可以在与密钥服务器交涉之前
+批量处理所有密钥请求
+
+00:05:06.073 --> 00:05:08.909 align:middle line:-1
+这可以减少密钥服务器上的一些负载
+
+00:05:08.976 --> 00:05:11.545 align:middle line:-1
+并且消除了每个密钥往返的延迟
+
+00:05:14.915 --> 00:05:18.919 align:middle line:0
+你可以通过
+在AVContentKeySession实例上
+
+00:05:18.986 --> 00:05:21.355 align:middle line:0
+调用processContentKeyRequest
+来启动密钥加载过程
+
+00:05:22.723 --> 00:05:24.124 align:middle line:0
+一旦你调用这个方法
+
+00:05:24.491 --> 00:05:28.529 align:middle line:0
+AVContentKeySession
+会通过调用委托回调
+
+00:05:28.695 --> 00:05:30.430 align:middle line:0
+向你发一个
+AVContentKeyRequest对象
+
+00:05:31.798 --> 00:05:36.637 align:middle line:0
+AVContentKeySession允许你
+执行FairPlay Streaming特定操作
+
+00:05:36.703 --> 00:05:39.206 align:middle line:0
+比如发加密的密钥请求
+
+00:05:39.273 --> 00:05:41.875 align:middle line:0
+和以加密的密钥响应
+
+00:05:44.778 --> 00:05:49.082 align:middle line:-2
+现在我们假设
+你已成功预装了一个特定的密钥
+
+00:05:49.349 --> 00:05:53.253 align:middle line:-2
+有没有可能在回放开始后
+再次请求密钥？
+
+00:05:54.154 --> 00:05:55.422 align:middle line:-1
+这是可能的
+
+00:05:56.323 --> 00:06:00.327 align:middle line:-1
+app可能会收到按需加载请求
+
+00:05:56.323 --> 00:06:00.327 align:middle line:-1
+app可能会收到按需加载请求
+
+00:06:00.394 --> 00:06:02.563 align:middle line:-1
+例如 如果回放路线改变
+
+00:06:03.697 --> 00:06:08.435 align:middle line:-2
+请注意 用户可以决定
+将内容隔空播放到Apple TV
+
+00:06:08.802 --> 00:06:11.872 align:middle line:-2
+或插入
+Lightning to Digital AV适配器
+
+00:06:12.339 --> 00:06:16.009 align:middle line:-2
+在这些情况下
+我们需要新的密钥来解密
+
+00:06:18.078 --> 00:06:23.784 align:middle line:-2
+因此 app应始终准备好
+回答按需加载的请求
+
+00:06:24.051 --> 00:06:25.619 align:middle line:-1
+即使它已预先加载密钥
+
+00:06:28.922 --> 00:06:31.725 align:middle line:-1
+另一个有关这个主题的常见问题是
+
+00:06:32.092 --> 00:06:37.030 align:middle line:-2
+app如何预先加载播放期间
+可能需要的所有密钥？
+
+00:06:38.632 --> 00:06:42.736 align:middle line:-2
+为了预加载密钥
+你需要相应的密钥标识符
+
+00:06:43.270 --> 00:06:47.674 align:middle line:-2
+也就是在HLS播放列表的
+EXT-X-KEY标签指定的那个
+
+00:06:49.243 --> 00:06:52.579 align:middle line:-1
+我们建议你以带外方式获取所有
+
+00:06:52.746 --> 00:06:56.850 align:middle line:-2
+你的内容
+从服务器发出宣传的密钥标识符
+
+00:06:58.185 --> 00:07:03.190 align:middle line:-2
+另一种办法是在创作内容时
+把所有密钥标识符
+
+00:06:58.185 --> 00:07:03.190 align:middle line:-2
+另一种办法是在创作内容时
+把所有密钥标识符
+
+00:07:03.457 --> 00:07:06.293 align:middle line:-1
+包括在主播放列表中作为会话密钥
+
+00:07:06.360 --> 00:07:10.964 align:middle line:-2
+并在AVAssetResourceLoader上使用
+preloadsEligibleContentKeys属性
+
+00:07:12.799 --> 00:07:14.735 align:middle line:-1
+说到这里我想指出
+
+00:07:14.801 --> 00:07:19.373 align:middle line:0
+我们有一个关于优化HLS性能的
+专门的一场演讲
+
+00:07:19.439 --> 00:07:20.574 align:middle line:0
+不只是密钥交付
+
+00:07:21.642 --> 00:07:23.377 align:middle line:0
+你一定要看看
+
+00:07:26.513 --> 00:07:28.081 align:middle line:-1
+预加载说完了 看下面
+
+00:07:28.148 --> 00:07:32.419 align:middle line:-2
+AVContentKeySession
+也可以帮助你扩展现场服务
+
+00:07:33.187 --> 00:07:34.421 align:middle line:-1
+大家知道怎么做？
+
+00:07:35.222 --> 00:07:39.593 align:middle line:-1
+你可以使用AVContentKeySession来分散
+
+00:07:39.993 --> 00:07:42.696 align:middle line:-2
+正在传输实时内容的客户的
+密钥加载请求
+
+00:07:44.031 --> 00:07:48.335 align:middle line:-1
+通常 直播流会定期轮换密钥
+
+00:07:48.402 --> 00:07:51.471 align:middle line:-1
+以为内容添加额外的保护层
+
+00:07:53.407 --> 00:07:57.144 align:middle line:-2
+可以想像
+在客户刷新实况播放列表时
+
+00:07:57.444 --> 00:07:59.313 align:middle line:-1
+这些密钥会同时出现
+
+00:07:59.546 --> 00:08:00.514 align:middle line:-1
+当发生这种情况时
+
+00:07:59.546 --> 00:08:00.514 align:middle line:-1
+当发生这种情况时
+
+00:08:00.581 --> 00:08:04.651 align:middle line:-1
+数百万用户同时请求密钥
+
+00:08:04.718 --> 00:08:07.588 align:middle line:-1
+导致密钥服务器上的巨大冲动负载
+
+00:08:08.856 --> 00:08:13.560 align:middle line:-2
+当你在请求出现前并在播放列表中
+出现EXT-X-KEY标签之前
+
+00:08:13.627 --> 00:08:15.028 align:middle line:-1
+在一个小时间窗口内
+
+00:08:15.095 --> 00:08:18.298 align:middle line:-1
+分散密钥请求事件
+
+00:08:18.599 --> 00:08:21.969 align:middle line:-2
+基本上 你在对到达
+你的密钥服务器的请求作负载平衡
+
+00:08:24.438 --> 00:08:26.573 align:middle line:0
+我们详细介绍了这个例子
+
+00:08:26.640 --> 00:08:30.677 align:middle line:0
+并在去年HLS演讲期间
+提供了示例代码
+
+00:08:30.744 --> 00:08:32.880 align:middle line:0
+因此 查看
+我们在developer.apple.com
+
+00:08:32.946 --> 00:08:36.517 align:middle line:0
+或WWDC app上录制的片段
+
+00:08:38.818 --> 00:08:43.023 align:middle line:0
+除了允许你管理和传送
+内容解密密钥之外
+
+00:08:43.490 --> 00:08:45.325 align:middle line:0
+另外AVContentKeySession也可以
+
+00:08:45.392 --> 00:08:49.630 align:middle line:0
+作为新的FairPlay Streaming
+内容保护功能的平台
+
+00:08:50.664 --> 00:08:52.900 align:middle line:0
+去年我们发布了一个这样的新功能
+
+00:08:53.967 --> 00:08:55.602 align:middle line:-1
+我们称之为离线出租
+
+00:08:55.669 --> 00:08:57.004 align:middle line:-1
+（什么是离线出租？）
+
+00:08:57.070 --> 00:08:59.573 align:middle line:-2
+离线租赁是一种
+FairPlay Streaming功能
+
+00:08:59.640 --> 00:09:03.177 align:middle line:-1
+它允许你指定两个到期持续时间
+
+00:08:59.640 --> 00:09:03.177 align:middle line:-1
+它允许你指定两个到期持续时间
+
+00:09:03.243 --> 00:09:07.114 align:middle line:-1
+永久性密钥上的存储和回放时间
+
+00:09:08.916 --> 00:09:13.720 align:middle line:0
+存储时间指定密钥在你的存储器中时
+
+00:09:14.154 --> 00:09:16.123 align:middle line:0
+在用于回放之前
+
+00:09:16.490 --> 00:09:19.026 align:middle line:0
+你希望它有效的时间
+
+00:09:20.594 --> 00:09:23.063 align:middle line:0
+这个数字通常很大 比如30天
+
+00:09:24.765 --> 00:09:26.600 align:middle line:0
+而回放时间
+
+00:09:27.367 --> 00:09:30.370 align:middle line:0
+指定回放后
+
+00:09:30.671 --> 00:09:32.339 align:middle line:0
+你希望密钥有效的时间
+
+00:09:32.906 --> 00:09:35.442 align:middle line:0
+它通常比存储时间短
+
+00:09:35.509 --> 00:09:36.777 align:middle line:0
+例如 24小时
+
+00:09:38.946 --> 00:09:42.716 align:middle line:0
+此功能让你在创建持久性密钥时
+
+00:09:42.950 --> 00:09:45.018 align:middle line:0
+指定此类到期持续时间
+
+00:09:45.085 --> 00:09:48.789 align:middle line:0
+平台确保遵守两次到期时间
+
+00:09:49.256 --> 00:09:50.858 align:middle line:0
+即使设备处于离线状态
+
+00:09:52.192 --> 00:09:53.427 align:middle line:0
+你可能想知道
+
+00:09:53.493 --> 00:09:56.730 align:middle line:0
+如何以及在哪里
+指定这两个到期持续时间
+
+00:09:58.131 --> 00:10:03.070 align:middle line:-2
+FairPlay为此推出了
+名为Offline Key TLLV的新TLLV
+
+00:09:58.131 --> 00:10:03.070 align:middle line:-2
+FairPlay为此推出了
+名为Offline Key TLLV的新TLLV
+
+00:10:04.037 --> 00:10:06.106 align:middle line:-1
+这必须在请求持久性密钥时
+
+00:10:06.340 --> 00:10:08.942 align:middle line:-1
+使用过的CKC中发出信号
+
+00:10:11.912 --> 00:10:15.048 align:middle line:-2
+就代码而言 通过在AVPersistableContent
+KeyRequest对象上调用此方法
+
+00:10:15.349 --> 00:10:19.186 align:middle line:-1
+你将生成一个持久性密钥
+
+00:10:20.387 --> 00:10:22.823 align:middle line:0
+这将返回一个
+持久性密钥数据blob
+
+00:10:23.156 --> 00:10:25.359 align:middle line:0
+你保存在你的app存储中
+
+00:10:25.759 --> 00:10:28.862 align:middle line:0
+并用它来回答未来的密钥加载请求
+
+00:10:30.597 --> 00:10:34.234 align:middle line:0
+请注意
+此密钥有效期至存储时间结束
+
+00:10:34.434 --> 00:10:35.936 align:middle line:0
+在我们的例子中是30天
+
+00:10:37.437 --> 00:10:41.542 align:middle line:0
+因此 当你使用
+此密钥首次开始回放时
+
+00:10:42.009 --> 00:10:44.912 align:middle line:0
+你可能会通过新的代理回调
+
+00:10:45.412 --> 00:10:47.614 align:middle line:0
+收到一个更新过的持久性密钥
+
+00:10:49.383 --> 00:10:51.218 align:middle line:0
+当涉及委托回调时
+
+00:10:51.285 --> 00:10:53.654 align:middle line:0
+你应该丢弃原始的持久密钥
+
+00:10:54.054 --> 00:10:57.257 align:middle line:0
+把此更新后的持久性密钥
+保存到你的app存储中
+
+00:10:58.926 --> 00:11:02.930 align:middle line:0
+并用它来回答未来的密钥加载请求
+
+00:10:58.926 --> 00:11:02.930 align:middle line:0
+并用它来回答未来的密钥加载请求
+
+00:11:04.765 --> 00:11:07.534 align:middle line:0
+请注意
+这个更新的持久性密钥的有效期
+
+00:11:07.601 --> 00:11:11.305 align:middle line:0
+到播放持续时间结束
+在我们的例子里是24小时
+
+00:11:13.841 --> 00:11:18.212 align:middle line:0
+现在 让我们换个角度
+来谈谈错误处理吧
+
+00:11:19.980 --> 00:11:22.749 align:middle line:-1
+从改善播放体验的角度来看
+
+00:11:23.016 --> 00:11:26.253 align:middle line:-1
+错误处理是最重要的主题之一
+
+00:11:27.988 --> 00:11:30.858 align:middle line:-1
+成功加载密钥涉及许多步骤
+
+00:11:31.158 --> 00:11:34.094 align:middle line:-1
+不时的失败在所难免
+
+00:11:35.128 --> 00:11:36.530 align:middle line:-1
+所以 当失败发生时
+
+00:11:36.597 --> 00:11:40.467 align:middle line:-2
+你该做的第一件事是
+用AVContentKeyRequest
+
+00:11:40.734 --> 00:11:44.204 align:middle line:-2
+或AVAssetResourceLoadingRequest
+将失败报告给AVFoundation
+
+00:11:45.539 --> 00:11:47.774 align:middle line:-1
+有些错误是致命的 有些则不是
+
+00:11:48.075 --> 00:11:50.244 align:middle line:-1
+你应该帮助平台做出决定
+
+00:11:51.645 --> 00:11:55.415 align:middle line:0
+你应该做的另一件事是
+监视错误日志和访问日志
+
+00:11:55.616 --> 00:11:58.485 align:middle line:0
+调查根本原因 并尝试减轻错误
+
+00:11:58.552 --> 00:12:02.422 align:middle line:0
+让你的用户在我们的平台上
+获得他们应得的最佳体验
+
+00:11:58.552 --> 00:12:02.422 align:middle line:0
+让你的用户在我们的平台上
+获得他们应得的最佳体验
+
+00:12:04.525 --> 00:12:06.894 align:middle line:0
+我还建议你看看
+
+00:12:06.960 --> 00:12:09.029 align:middle line:0
+我们去年录制的一段资料
+
+00:12:09.096 --> 00:12:11.431 align:middle line:0
+以了解更多关于错误处理的
+一般性的信息
+
+00:12:15.135 --> 00:12:18.238 align:middle line:-2
+多年来 我们看到
+FairPlay Streaming密钥传递上
+
+00:12:18.305 --> 00:12:20.440 align:middle line:-1
+开发者掉入了一些陷阱
+
+00:12:21.074 --> 00:12:24.711 align:middle line:-2
+我们看到过
+有的app保存密钥响应太久
+
+00:12:25.679 --> 00:12:28.682 align:middle line:-2
+AVFoundation
+向你发送密钥加载请求时
+
+00:12:28.749 --> 00:12:31.685 align:middle line:-1
+你应该尽快提供回复
+
+00:12:32.853 --> 00:12:36.156 align:middle line:-1
+密钥传送延迟可能导致回放超时
+
+00:12:37.391 --> 00:12:40.961 align:middle line:-2
+顺便说一下 通过调查你的
+playerItems访问日志
+
+00:12:41.228 --> 00:12:44.031 align:middle line:-1
+你应该能够识别和调试超时
+
+00:12:46.733 --> 00:12:49.269 align:middle line:-1
+另一个陷阱围绕着HDCP执法
+
+00:12:50.270 --> 00:12:54.708 align:middle line:-1
+请务必记住你的内容的HDCP要求
+
+00:12:55.042 --> 00:12:59.613 align:middle line:-2
+是在你的密钥服务器的
+加密密钥响应中发送
+
+00:13:01.348 --> 00:13:04.518 align:middle line:-1
+如果你希望针对不同的弧度
+
+00:13:04.585 --> 00:13:05.919 align:middle line:-1
+执行不同的HDCP级别
+
+00:13:05.986 --> 00:13:08.088 align:middle line:-1
+你应该用这些弧度
+
+00:13:08.155 --> 00:13:09.189 align:middle line:-1
+指定不同密钥标识符
+
+00:13:09.857 --> 00:13:12.826 align:middle line:-2
+并从你的密钥服务器
+提供适当的密钥响应
+
+00:13:15.562 --> 00:13:19.700 align:middle line:-2
+最后 你在以持久性密钥
+回应密钥加载请求时
+
+00:13:19.766 --> 00:13:20.968 align:middle line:-1
+应该小心
+
+00:13:21.768 --> 00:13:25.839 align:middle line:-1
+因为持久性密钥与生成它的设备绑定
+
+00:13:26.440 --> 00:13:27.474 align:middle line:-1
+例如
+
+00:13:27.708 --> 00:13:31.812 align:middle line:-2
+你不应该使用持久性密钥
+来响应来自隔空播放会话的
+
+00:13:31.879 --> 00:13:33.380 align:middle line:-1
+密钥加载请求
+
+00:13:34.848 --> 00:13:36.917 align:middle line:-1
+这样做会导致回放失败
+
+00:13:39.019 --> 00:13:42.189 align:middle line:-2
+我们在iOS 11.2中
+进行了一些API更改
+
+00:13:42.422 --> 00:13:46.360 align:middle line:-1
+帮助你尽早避免或解决这类问题
+
+00:13:47.227 --> 00:13:49.930 align:middle line:-1
+让我通过一些代码片段来解释
+
+00:13:52.199 --> 00:13:53.967 align:middle line:-2
+如果你正在使用
+AVContentKeySession来传递密钥
+
+00:13:54.034 --> 00:13:57.004 align:middle line:-1
+现在你甚至无法做到
+
+00:13:57.337 --> 00:13:59.873 align:middle line:-2
+RequestPersistableContentKey
+请求对象
+
+00:14:00.140 --> 00:14:04.878 align:middle line:-2
+如果AVContentKeyRequest
+无法接受持久性密钥作为响应
+
+00:14:07.047 --> 00:14:10.250 align:middle line:-2
+因此 请求 PersistableContent
+KeyRequest字段时
+
+00:14:10.317 --> 00:14:14.354 align:middle line:-2
+你的密钥服务器上的在线
+FairPlayStreaming进行响应
+
+00:14:16.890 --> 00:14:19.026 align:middle line:-1
+如果你使用AVAssetResourceLoader
+
+00:14:19.593 --> 00:14:21.995 align:middle line:-2
+然后用持久性密钥数据blob
+进行响应
+
+00:14:22.062 --> 00:14:23.030 align:middle line:-1
+你应该检查
+
+00:14:23.096 --> 00:14:27.167 align:middle line:-2
+新引入的
+allowedContentTypes属性中
+
+00:14:27.234 --> 00:14:30.137 align:middle line:-2
+持久性密钥是否被列
+为接受的内容类型之一
+
+00:14:31.738 --> 00:14:35.275 align:middle line:-2
+我希望我们提供了
+AVContentKeySession的一些概述
+
+00:14:35.342 --> 00:14:37.778 align:middle line:-1
+并澄清了几个你可能遇到的一些问题
+
+00:14:38.178 --> 00:14:42.216 align:middle line:-2
+总结一下 我们介绍了
+AVContentKeySession的不同之处
+
+00:14:42.683 --> 00:14:46.987 align:middle line:-2
+我们看到了如何使用
+此API来改善回放启动
+
+00:14:47.287 --> 00:14:48.856 align:middle line:-1
+并扩展直播
+
+00:14:50.023 --> 00:14:52.192 align:middle line:-1
+我们谈了一点离线租赁
+
+00:14:52.259 --> 00:14:55.128 align:middle line:-1
+它究竟是什么以及如何以正确地使用
+
+00:14:56.230 --> 00:15:00.033 align:middle line:-1
+我们最后强调了错误处理的最佳实践
+
+00:14:56.230 --> 00:15:00.033 align:middle line:-1
+我们最后强调了错误处理的最佳实践
+
+00:15:00.100 --> 00:15:02.135 align:middle line:-2
+同时提供
+FairPlay Streaming密钥
+
+00:15:02.703 --> 00:15:05.105 align:middle line:-1
+以及你应该注意的常见陷阱
+
+00:15:08.675 --> 00:15:09.910 align:middle line:-1
+谢谢你的收听
+
+00:15:09.977 --> 00:15:13.814 align:middle line:-2
+也请访问developer.apple.com
+以获取有关此演讲的更多信息
+
+00:15:13.881 --> 00:15:15.249 align:middle line:-1
+和其他相关演讲
+
+00:15:15.582 --> 00:15:16.483 align:middle line:-1
+谢谢

@@ -1,0 +1,2542 @@
+WEBVTT
+
+00:00:19.386 --> 00:00:21.455 align:middle
+<c.magenta>应用启动时间优化</c>
+
+00:00:22.523 --> 00:00:26.260 align:middle
+<c.magenta>早上好 欢迎来到406演讲</c>
+<c.magenta>“应用启动时间优化”</c>
+
+00:00:26.560 --> 00:00:29.363 align:middle
+<c.magenta>我叫Nick Kledzik</c>
+<c.magenta>我将和同事Louis</c>
+
+00:00:29.429 --> 00:00:32.598 align:middle
+<c.magenta>带大家一起讨论 如何启动进程</c>
+
+00:00:34.168 --> 00:00:36.937 align:middle
+<c.magenta>你们可能会想 这个主题适合我吗？</c>
+
+00:00:38.605 --> 00:00:41.508 align:middle
+<c.magenta>所以我们请了专业的开发营销团队</c>
+<c.magenta>做了一些调查</c>
+
+00:00:41.575 --> 00:00:45.145 align:middle
+<c.magenta>得出的结果是</c>
+<c.magenta>有三组人群将会从本演讲中收益</c>
+
+00:00:45.679 --> 00:00:50.951 align:middle
+<c.magenta>第一组 是应用开发者</c>
+<c.magenta>他们的应用启动很慢</c>
+
+00:00:52.352 --> 00:00:56.456 align:middle line:1
+<c.magenta>第二组 是不想在第一组的应用开发者</c>
+
+00:00:59.226 --> 00:01:03.530 align:middle line:1
+<c.magenta>最后一组</c>
+<c.magenta>是任何对操作系统的运作感到好奇的人</c>
+
+00:00:59.226 --> 00:01:03.530 align:middle line:1
+<c.magenta>最后一组</c>
+<c.magenta>是任何对操作系统的运作感到好奇的人</c>
+
+00:01:04.864 --> 00:01:06.834 align:middle
+<c.magenta>所以本次演讲分成两个部分</c>
+
+00:01:06.900 --> 00:01:10.437 align:middle
+<c.magenta>第一部分更注重理论</c>
+<c.magenta>第二部分更注重实际</c>
+
+00:01:10.504 --> 00:01:12.206 align:middle
+<c.magenta>我负责第一部分</c>
+
+00:01:13.874 --> 00:01:16.777 align:middle
+<c.magenta>我将会带你一起看看发生的步骤</c>
+
+00:01:16.877 --> 00:01:18.011 align:middle
+<c.magenta>一直到主函数</c>
+
+00:01:18.946 --> 00:01:21.181 align:middle
+<c.magenta>但是为了理解所有的步骤</c>
+
+00:01:21.248 --> 00:01:25.519 align:middle
+<c.magenta>首先需要上一个速成课</c>
+<c.magenta>关于Mach-O和虚拟内存</c>
+
+00:01:27.588 --> 00:01:29.690 align:middle
+<c.magenta>首先</c>
+<c.magenta>快速讲一下Mach-O的部分术语</c>
+
+00:01:29.990 --> 00:01:34.194 align:middle
+<c.magenta>Mach-0是运行时</c>
+<c.magenta>可执行文件的文件类型</c>
+
+00:01:34.261 --> 00:01:36.997 align:middle
+<c.magenta>第一个类型是可执行文件</c>
+<c.magenta>应用里最重要的二进制文件</c>
+
+00:01:37.064 --> 00:01:39.333 align:middle
+<c.magenta>也是应用扩展文件的主二进制文件</c>
+
+00:01:40.601 --> 00:01:44.571 align:middle
+<c.magenta>Dylib是一个动态库</c>
+<c.magenta>在其他平台上</c>
+
+00:01:44.638 --> 00:01:47.574 align:middle
+<c.magenta>用的是你可能会熟悉的名字：</c>
+<c.magenta>DSO和DLL</c>
+
+00:01:48.375 --> 00:01:51.044 align:middle
+<c.magenta>我们的平台上还有另一种类型叫捆绑包</c>
+
+00:01:51.178 --> 00:01:54.414 align:middle
+<c.magenta>捆绑包是一种特殊的Dylib</c>
+<c.magenta>是不能进行链接的</c>
+
+00:01:54.481 --> 00:01:57.251 align:middle
+<c.magenta>只能在运行时</c>
+<c.magenta>用dlopen()函数打开它</c>
+
+00:01:57.317 --> 00:01:59.152 align:middle
+<c.magenta>Mac OS的插件会用到</c>
+
+00:02:00.354 --> 00:02:03.757 align:middle
+<c.magenta>最后是图像</c>
+<c.magenta>图像指的是任意这三种类型</c>
+
+00:02:04.024 --> 00:02:05.492 align:middle
+<c.magenta>我会常常提到图像</c>
+
+00:02:06.093 --> 00:02:09.295 align:middle
+<c.magenta>最后 是框架</c>
+<c.magenta>该名词在我们的领域如雷贯耳</c>
+
+00:02:09.363 --> 00:02:11.331 align:middle
+<c.magenta>但就本主题而言</c>
+
+00:02:11.598 --> 00:02:14.168 align:middle
+<c.magenta>框架是一个Dylib</c>
+<c.magenta>周围有特别的目录结构</c>
+
+00:02:14.234 --> 00:02:16.036 align:middle
+<c.magenta>存储该Dylib需要的文件</c>
+
+00:02:17.538 --> 00:02:20.674 align:middle
+<c.magenta>我们来看看Mach-O图像格式</c>
+
+00:02:20.807 --> 00:02:23.043 align:middle
+<c.magenta>Mach-O图像分成数段</c>
+
+00:02:24.111 --> 00:02:27.381 align:middle
+<c.magenta>按照惯例</c>
+<c.magenta>所有的段名都是由大写字母组成</c>
+
+00:02:29.316 --> 00:02:33.554 align:middle
+<c.magenta>每一段都是页面大小的倍数</c>
+
+00:02:33.787 --> 00:02:37.691 align:middle
+<c.magenta>该例中 TEXT段大小是3页</c>
+<c.magenta>DATA和LINKEDIT段大小是1页</c>
+
+00:02:38.458 --> 00:02:40.494 align:middle
+<c.magenta>页面大小由硬件决定</c>
+
+00:02:40.561 --> 00:02:45.199 align:middle
+<c.magenta>arm64处理器的页面大小是16K</c>
+<c.magenta>其他都是4K</c>
+
+00:02:46.200 --> 00:02:49.436 align:middle
+<c.magenta>另一种查看方式是分区</c>
+
+00:02:49.503 --> 00:02:51.438 align:middle
+<c.magenta>编译器常常会忽略分区</c>
+
+00:02:51.505 --> 00:02:54.341 align:middle
+<c.magenta>分区是段的子范围</c>
+
+00:02:54.975 --> 00:02:57.411 align:middle
+<c.magenta>分区不用遵循页面的大小</c>
+
+00:02:57.644 --> 00:02:59.112 align:middle
+<c.magenta>但是它们是不重叠的</c>
+
+00:03:02.883 --> 00:03:06.486 align:middle
+<c.magenta>最常见的段名是</c>
+<c.magenta>TEXT DATA LINKEDIT</c>
+
+00:03:06.553 --> 00:03:09.756 align:middle
+<c.magenta>实际上几乎每一个二进制文件</c>
+<c.magenta>都包含这三段</c>
+
+00:03:09.823 --> 00:03:12.526 align:middle
+<c.magenta>你可以添加自定义段</c>
+<c.magenta>但一般不会给它赋值</c>
+
+00:03:13.427 --> 00:03:14.595 align:middle
+<c.magenta>这些是用来做什么的？</c>
+
+00:03:14.661 --> 00:03:17.030 align:middle
+<c.magenta>TEXT是文件的开头</c>
+
+00:03:17.097 --> 00:03:20.133 align:middle
+<c.magenta>它包含了Mach的头文件</c>
+<c.magenta>任何机器指令</c>
+
+00:03:20.200 --> 00:03:22.603 align:middle
+<c.magenta>以及任何只读常量 比如C字符串</c>
+
+00:03:23.937 --> 00:03:25.372 align:middle
+<c.magenta>DATA段是重写段</c>
+
+00:03:25.439 --> 00:03:27.808 align:middle
+<c.magenta>它包含了所有的全局变量</c>
+
+00:03:28.709 --> 00:03:30.110 align:middle
+<c.magenta>最后是LINKEDIT段</c>
+
+00:03:30.410 --> 00:03:33.213 align:middle
+<c.magenta>它不包含全局变量的函数</c>
+
+00:03:33.280 --> 00:03:35.916 align:middle
+<c.magenta>它包含变量函数信息</c>
+
+00:03:35.983 --> 00:03:37.584 align:middle
+<c.magenta>比如名称和地址</c>
+
+00:03:39.520 --> 00:03:42.456 align:middle
+<c.magenta>你可能还听说过通用文件</c>
+<c.magenta>什么是通用文件？</c>
+
+00:03:42.956 --> 00:03:45.893 align:middle
+<c.magenta>假设你生成一个64位的iOS应用</c>
+
+00:03:46.193 --> 00:03:48.095 align:middle
+<c.magenta>现在你有一个Mach-O文件</c>
+
+00:03:48.161 --> 00:03:49.530 align:middle
+<c.magenta>当你也想让它在32位的设备上运行</c>
+
+00:03:49.596 --> 00:03:52.366 align:middle
+<c.magenta>Xcode里会发生什么变化？</c>
+
+00:03:52.966 --> 00:03:57.638 align:middle
+<c.magenta>重新生成时 Xcode会生成</c>
+<c.magenta>另一个单独的Mach-O文件</c>
+
+00:03:57.704 --> 00:03:59.740 align:middle
+<c.magenta>这个是为32位生成的armv7</c>
+
+00:04:00.340 --> 00:04:03.810 align:middle
+<c.magenta>之后这两个文件合并成第三个文件</c>
+
+00:04:04.344 --> 00:04:07.481 align:middle
+<c.magenta>叫作 Mach-O通用文件</c>
+<c.magenta>它前端有一个头文件</c>
+
+00:04:07.548 --> 00:04:09.950 align:middle
+<c.magenta>所有的头文件都有一个</c>
+<c.magenta>所有体系结构的列表</c>
+
+00:04:10.017 --> 00:04:11.718 align:middle
+<c.magenta>它们的偏移值也在文件里</c>
+
+00:04:12.119 --> 00:04:14.855 align:middle
+<c.magenta>该头文件也是一个页面的大小</c>
+
+00:04:15.756 --> 00:04:18.926 align:middle
+<c.magenta>你也许想问</c>
+<c.magenta>为什么段都要是页面大小的倍数？</c>
+
+00:04:18.992 --> 00:04:21.962 align:middle
+<c.magenta>为什么头文件要一个页面的大小</c>
+<c.magenta>为什么要浪费那么多空间？</c>
+
+00:04:22.596 --> 00:04:26.567 align:middle
+<c.magenta>这就涉及到我们下个主题 虚拟内存</c>
+
+00:04:27.301 --> 00:04:28.936 align:middle
+<c.magenta>什么是虚拟内存？</c>
+
+00:04:30.470 --> 00:04:32.773 align:middle
+<c.magenta>你们当中可能有人知道</c>
+<c.magenta>软件工程里的格言</c>
+
+00:04:32.840 --> 00:04:35.409 align:middle
+<c.magenta>任何问题都可以</c>
+<c.magenta>通过添加一个间接层加以解决</c>
+
+00:04:35.843 --> 00:04:39.112 align:middle
+<c.magenta>所以虚拟内存解决的问题是</c>
+
+00:04:39.646 --> 00:04:43.150 align:middle
+<c.magenta>所有这些进程存在时</c>
+<c.magenta>该如何管理所有物理内存？</c>
+
+00:04:43.417 --> 00:04:45.219 align:middle
+<c.magenta>所以他们添加了一个小的间接层</c>
+
+00:04:45.352 --> 00:04:47.654 align:middle
+<c.magenta>每一个进程都是一个逻辑地址空间</c>
+
+00:04:48.121 --> 00:04:50.624 align:middle
+<c.magenta>映射到RAM的某个物理页面</c>
+
+00:04:53.627 --> 00:04:55.996 align:middle
+<c.magenta>这种映射不一定是一对一的</c>
+
+00:04:56.330 --> 00:05:00.000 align:middle
+<c.magenta>逻辑地址可以不对应任何物理RAM</c>
+
+00:05:00.067 --> 00:05:03.937 align:middle
+<c.magenta>也可以多个逻辑地址对应</c>
+<c.magenta>同一物理RAM</c>
+
+00:05:04.471 --> 00:05:06.740 align:middle
+<c.magenta>这样带来很多种可能</c>
+
+00:05:07.274 --> 00:05:08.709 align:middle
+<c.magenta>能利用虚拟内存做什么呢？</c>
+
+00:05:09.009 --> 00:05:12.779 align:middle
+<c.magenta>首先 如果有一个逻辑地址</c>
+<c.magenta>不映射任何物理RAM</c>
+
+00:05:13.213 --> 00:05:16.617 align:middle
+<c.magenta>当进程要访问该地址时</c>
+<c.magenta>就会产生页面错误</c>
+
+00:05:16.717 --> 00:05:18.352 align:middle
+<c.magenta>内核将停止该线程</c>
+
+00:05:18.418 --> 00:05:21.054 align:middle
+<c.magenta>并试图找出解决方案</c>
+
+00:05:22.856 --> 00:05:25.058 align:middle
+<c.magenta>下一点是 如果有两个进程</c>
+
+00:05:25.392 --> 00:05:28.195 align:middle
+<c.magenta>有两个物理地址 映射同一个物理页面</c>
+
+00:05:28.262 --> 00:05:31.031 align:middle
+<c.magenta>这两个进程共享一样比特的RAM</c>
+
+00:05:31.098 --> 00:05:32.933 align:middle
+<c.magenta>进程之间开始共享</c>
+
+00:05:34.401 --> 00:05:37.337 align:middle
+<c.magenta>另一个有意思的功能是</c>
+<c.magenta>基于文件的映射</c>
+
+00:05:38.105 --> 00:05:40.641 align:middle
+<c.magenta>不用把整个文件读入RAM</c>
+
+00:05:40.707 --> 00:05:43.310 align:middle
+<c.magenta>而是可以调用mmap()函数</c>
+<c.magenta>告诉虚拟内存系统</c>
+
+00:05:44.244 --> 00:05:49.316 align:middle
+<c.magenta>我想把这部分文件映射到</c>
+<c.magenta>进程里的这段地址</c>
+
+00:05:49.716 --> 00:05:50.784 align:middle
+<c.magenta>为什么要这么做？</c>
+
+00:05:51.318 --> 00:05:54.755 align:middle
+<c.magenta>不用读取整个文件 通过设置该映射</c>
+
+00:05:55.022 --> 00:05:57.524 align:middle
+<c.magenta>第一次访问这些不同的地址时</c>
+
+00:05:57.591 --> 00:05:59.026 align:middle
+<c.magenta>如同已经在内存里读过</c>
+
+00:05:59.726 --> 00:06:02.196 align:middle
+<c.magenta>每次访问未访问过的地址时</c>
+
+00:05:59.726 --> 00:06:02.196 align:middle
+<c.magenta>每次访问未访问过的地址时</c>
+
+00:06:02.262 --> 00:06:05.065 align:middle
+<c.magenta>都会导致页面错误</c>
+<c.magenta>内核会读该错误页面</c>
+
+00:06:05.132 --> 00:06:07.401 align:middle
+<c.magenta>将会造成读取文件迟缓</c>
+
+00:06:08.235 --> 00:06:10.337 align:middle
+<c.magenta>现在可以把所有功能集中</c>
+
+00:06:10.571 --> 00:06:13.774 align:middle
+<c.magenta>关于我告诉你的Mach-O可以发现</c>
+
+00:06:13.841 --> 00:06:17.678 align:middle
+<c.magenta>Dylib或图像的TEXT段</c>
+<c.magenta>可以映射到多个进程</c>
+
+00:06:18.145 --> 00:06:19.313 align:middle
+<c.magenta>将会造成读取迟缓</c>
+
+00:06:19.379 --> 00:06:22.115 align:middle
+<c.magenta>而所有这些页面可以在进程间共享</c>
+
+00:06:26.086 --> 00:06:28.789 align:middle
+<c.magenta>DATA段呢？DATA段用来读写</c>
+
+00:06:28.956 --> 00:06:31.225 align:middle
+<c.magenta>有一个策略叫写入时复制</c>
+
+00:06:31.692 --> 00:06:35.796 align:middle
+<c.magenta>这和Apple文件系统的克隆很相似</c>
+
+00:06:36.630 --> 00:06:39.466 align:middle
+<c.magenta>写入时复制所做的是它积极地</c>
+
+00:06:39.533 --> 00:06:41.368 align:middle
+<c.magenta>在所有进程里共享DATA页面</c>
+
+00:06:42.336 --> 00:06:46.940 align:middle
+<c.magenta>只要进程只读有共享内容的全局变量</c>
+
+00:06:47.007 --> 00:06:50.277 align:middle
+<c.magenta>但是一旦有进程想要</c>
+<c.magenta>写入其DATA页面</c>
+
+00:06:50.477 --> 00:06:51.812 align:middle
+<c.magenta>写入时复制开始</c>
+
+00:06:51.912 --> 00:06:54.481 align:middle
+<c.magenta>内核会把该页面复制</c>
+
+00:06:54.548 --> 00:06:57.985 align:middle
+<c.magenta>放入另一个物理RAM并重定向映射</c>
+
+00:06:58.051 --> 00:07:01.388 align:middle
+<c.magenta>所以该进程有了该页面的副本</c>
+
+00:06:58.051 --> 00:07:01.388 align:middle
+<c.magenta>所以该进程有了该页面的副本</c>
+
+00:07:02.589 --> 00:07:04.658 align:middle
+<c.magenta>这把我们带到了 脏vs干净页面</c>
+
+00:07:04.858 --> 00:07:06.994 align:middle
+<c.magenta>该副本被认为是脏页面</c>
+
+00:07:07.261 --> 00:07:11.431 align:middle
+<c.magenta>脏页面是指含有进程特定信息</c>
+
+00:07:11.865 --> 00:07:14.434 align:middle
+<c.magenta>干净页面是指内核可以按照需要</c>
+<c.magenta>重新建立的页面</c>
+
+00:07:14.501 --> 00:07:16.103 align:middle
+<c.magenta>比如重新读取磁盘</c>
+
+00:07:16.603 --> 00:07:19.506 align:middle
+<c.magenta>所以脏页面比干净页面要昂贵许多</c>
+
+00:07:20.807 --> 00:07:24.077 align:middle
+<c.magenta>最后一点是 页面也有权限界限</c>
+
+00:07:26.180 --> 00:07:28.415 align:middle
+<c.magenta>这指的是 可以标记一个页面</c>
+
+00:07:28.482 --> 00:07:31.685 align:middle
+<c.magenta>可读 可写 或可执行</c>
+<c.magenta>或它们的任何组合</c>
+
+00:07:33.520 --> 00:07:36.857 align:middle
+<c.magenta>所以我讲到了Mach-O格式</c>
+<c.magenta>关于虚拟内存的一些内容</c>
+
+00:07:36.924 --> 00:07:38.392 align:middle
+<c.magenta>看看它们是如何一起工作的</c>
+
+00:07:38.625 --> 00:07:42.129 align:middle
+<c.magenta>我先往前跳一步</c>
+<c.magenta>先简单讲讲Dylib是如何操作的</c>
+
+00:07:42.196 --> 00:07:44.731 align:middle
+<c.magenta>一会儿我会和你们一起来看 但现在</c>
+
+00:07:44.798 --> 00:07:47.768 align:middle
+<c.magenta>我想讲一下它在Mach-O</c>
+<c.magenta>和虚拟内存之间是如何映射的</c>
+
+00:07:48.101 --> 00:07:51.705 align:middle
+<c.magenta>这里有一个Dylib文件</c>
+<c.magenta>我们没有把它读到内存</c>
+
+00:07:51.772 --> 00:07:53.006 align:middle
+<c.magenta>而是把它映射到内存</c>
+
+00:07:53.440 --> 00:07:57.644 align:middle
+<c.magenta>所以 在内存里该Dylib文件</c>
+<c.magenta>本应该占用8个页面</c>
+
+00:07:59.479 --> 00:08:01.815 align:middle
+<c.magenta>看一下 不同是有这些“全零填充”</c>
+
+00:07:59.479 --> 00:08:01.815 align:middle
+<c.magenta>看一下 不同是有这些“全零填充”</c>
+
+00:08:01.882 --> 00:08:04.251 align:middle
+<c.magenta>大部分全局变量的初始值都是零</c>
+
+00:08:04.318 --> 00:08:05.953 align:middle
+<c.magenta>所以静态链接器进行了优化</c>
+
+00:08:06.019 --> 00:08:08.689 align:middle
+<c.magenta>把所有值为0的全局变量都移到了尾端</c>
+
+00:08:08.755 --> 00:08:10.190 align:middle
+<c.magenta>然后不占用任何磁盘空间</c>
+
+00:08:10.490 --> 00:08:12.192 align:middle
+<c.magenta>取而代之</c>
+<c.magenta>我们利用虚拟内存的特性</c>
+
+00:08:12.392 --> 00:08:15.562 align:middle
+<c.magenta>该页面第一次被访问时</c>
+<c.magenta>告诉虚拟内存 把它填满0</c>
+
+00:08:15.796 --> 00:08:17.364 align:middle
+<c.magenta>所以它不需要读取</c>
+
+00:08:19.066 --> 00:08:22.002 align:middle
+<c.magenta>Dylib必须要做的第一件事</c>
+<c.magenta>是查看Mach头文件</c>
+
+00:08:22.202 --> 00:08:23.704 align:middle
+<c.magenta>在内存里 在该进程里</c>
+
+00:08:23.804 --> 00:08:25.906 align:middle
+<c.magenta>它将查看内存的顶盒</c>
+
+00:08:26.073 --> 00:08:28.909 align:middle
+<c.magenta>此时 那里是空的</c>
+<c.magenta>没有内容映射到物理页面上</c>
+
+00:08:28.976 --> 00:08:30.210 align:middle
+<c.magenta>所以产生页面错误</c>
+
+00:08:30.277 --> 00:08:33.013 align:middle
+<c.magenta>到那时内核意识到</c>
+<c.magenta>它被映射到了一个文件</c>
+
+00:08:33.080 --> 00:08:35.015 align:middle
+<c.magenta>所以它将读取文件的第一页</c>
+
+00:08:35.616 --> 00:08:37.918 align:middle
+<c.magenta>放入物理RAM设置其映射</c>
+
+00:08:38.452 --> 00:08:41.421 align:middle
+<c.magenta>现在Dylib可以真正通过</c>
+<c.magenta>Mach头文件开始读取</c>
+
+00:08:41.488 --> 00:08:43.190 align:middle
+<c.magenta>它这么做了 Mach头文件说</c>
+
+00:08:43.256 --> 00:08:45.792 align:middle
+<c.magenta>“看看LINKEDIT段上的</c>
+<c.magenta>这条信息”</c>
+
+00:08:45.859 --> 00:08:49.897 align:middle
+<c.magenta>再一次 Dylib跳下去</c>
+<c.magenta>查看进程1的底盒</c>
+
+00:08:50.631 --> 00:08:52.199 align:middle
+<c.magenta>这又会产生页面错误</c>
+
+00:08:53.634 --> 00:08:56.436 align:middle
+<c.magenta>内核又读入RAM的另一个</c>
+
+00:08:56.503 --> 00:08:59.173 align:middle
+<c.magenta>LINKEDIT的物理页面</c>
+<c.magenta>Dylib现可期望一个LINKEDIT</c>
+
+00:08:59.506 --> 00:09:01.742 align:middle
+<c.magenta>进程 LINKEDIT</c>
+<c.magenta>将会告诉Dylib</c>
+
+00:08:59.506 --> 00:09:01.742 align:middle
+<c.magenta>进程 LINKEDIT</c>
+<c.magenta>将会告诉Dylib</c>
+
+00:09:01.808 --> 00:09:06.113 align:middle
+<c.magenta>对DATA页面做一些修正</c>
+<c.magenta>让dylib可运行</c>
+
+00:09:07.147 --> 00:09:08.782 align:middle
+<c.magenta>所以 同样的事又发生了</c>
+
+00:09:09.616 --> 00:09:12.219 align:middle
+<c.magenta>Dylib现从DATA页面读取数据</c>
+
+00:09:13.153 --> 00:09:14.254 align:middle
+<c.magenta>但是有一点不同</c>
+
+00:09:14.321 --> 00:09:17.591 align:middle
+<c.magenta>Dylib 想要写回一些内容</c>
+<c.magenta>修改DATA页面</c>
+
+00:09:17.658 --> 00:09:19.760 align:middle
+<c.magenta>此时 写入时复制出现了</c>
+
+00:09:20.260 --> 00:09:21.528 align:middle
+<c.magenta>这个页面变脏了</c>
+
+00:09:23.497 --> 00:09:25.966 align:middle
+<c.magenta>所以脏RAM的8个页面将会是什么？</c>
+
+00:09:26.033 --> 00:09:28.769 align:middle
+<c.magenta>若我只用malloc()函数</c>
+<c.magenta>分配8页内存 然后读了一些内容进去</c>
+
+00:09:28.836 --> 00:09:29.903 align:middle
+<c.magenta>我将会有8个页面</c>
+
+00:09:29.970 --> 00:09:32.406 align:middle
+<c.magenta>但是我只有1页的</c>
+<c.magenta>脏RAM和2页干净的</c>
+
+00:09:32.472 --> 00:09:35.542 align:middle
+<c.magenta>如果第二个进程加载</c>
+<c.magenta>同一个Dylib 会发生什么？</c>
+
+00:09:36.343 --> 00:09:38.779 align:middle
+<c.magenta>在第二个进程里</c>
+<c.magenta>Dylib经历相同的步骤</c>
+
+00:09:38.846 --> 00:09:40.347 align:middle
+<c.magenta>首先它查看Mach头文件</c>
+
+00:09:40.747 --> 00:09:42.382 align:middle
+<c.magenta>但这次内核说</c>
+
+00:09:42.449 --> 00:09:44.318 align:middle
+<c.magenta>“在RAM某处我已经有这页了”</c>
+
+00:09:44.384 --> 00:09:48.222 align:middle
+<c.magenta>所以内核只简单地把映射重定向</c>
+<c.magenta>重新使用该页面 没有任何IO操作</c>
+
+00:09:48.689 --> 00:09:50.858 align:middle
+<c.magenta>LINKEDIT也是如此 更加快速</c>
+
+00:09:51.258 --> 00:09:52.693 align:middle
+<c.magenta>我们来看DATA页面</c>
+
+00:09:53.293 --> 00:09:56.530 align:middle
+<c.magenta>此时 内核必须要看看在DATA页面</c>
+
+00:09:56.630 --> 00:09:59.132 align:middle
+<c.magenta>干净的副本是否还存在RAM某处</c>
+
+00:09:59.199 --> 00:10:02.002 align:middle
+<c.magenta>如果还在 就可以重复使用</c>
+<c.magenta>如果不再 就必须要重新读取</c>
+
+00:09:59.199 --> 00:10:02.002 align:middle
+<c.magenta>如果还在 就可以重复使用</c>
+<c.magenta>如果不再 就必须要重新读取</c>
+
+00:10:02.870 --> 00:10:05.172 align:middle
+<c.magenta>在该进程种</c>
+<c.magenta>Dylib会让RAM变脏</c>
+
+00:10:06.206 --> 00:10:09.042 align:middle
+<c.magenta>最后一步是LINKEDIT</c>
+
+00:10:09.109 --> 00:10:10.811 align:middle
+<c.magenta>只在Dylib进行操作时被需要</c>
+
+00:10:11.111 --> 00:10:13.447 align:middle
+<c.magenta>所以它可以提醒内核 当它完成时</c>
+
+00:10:13.747 --> 00:10:15.849 align:middle
+<c.magenta>它不再需要这些LINKEDIT页面</c>
+
+00:10:15.916 --> 00:10:18.185 align:middle
+<c.magenta>当有别人需要RAM时 可以回收它们</c>
+
+00:10:19.620 --> 00:10:22.189 align:middle
+<c.magenta>现在有两个进程在共享这些Dylib</c>
+
+00:10:22.256 --> 00:10:25.359 align:middle
+<c.magenta>每个进程都本应该有8个页面</c>
+<c.magenta>也就是一共有16个脏页面</c>
+
+00:10:25.559 --> 00:10:28.595 align:middle
+<c.magenta>但现在我们只有2个脏页面</c>
+<c.magenta>和1个干净的 共享页面</c>
+
+00:10:31.832 --> 00:10:34.701 align:middle
+<c.magenta>我还想补充说明两点</c>
+<c.magenta>安全如何影响Dyld</c>
+
+00:10:34.768 --> 00:10:36.837 align:middle
+<c.magenta>两点安全问题会影响Dyld</c>
+
+00:10:36.904 --> 00:10:39.940 align:middle
+<c.magenta>首先是ASLR 地址空间布局随机化</c>
+
+00:10:40.707 --> 00:10:42.609 align:middle
+<c.magenta>这是10年或20年前的旧技术</c>
+
+00:10:42.676 --> 00:10:45.012 align:middle
+<c.magenta>基本概念是把加载地址随机化</c>
+
+00:10:47.381 --> 00:10:48.582 align:middle
+<c.magenta>第二点是 代码签名</c>
+
+00:10:48.782 --> 00:10:53.687 align:middle
+<c.magenta>你们当中的很多人都有代码签名的经验</c>
+<c.magenta>在Xcode里 代码签名是指</c>
+
+00:10:53.754 --> 00:10:57.724 align:middle
+<c.magenta>对整个文件运行一个加密哈希算法</c>
+
+00:10:57.891 --> 00:10:59.526 align:middle
+<c.magenta>然后在文件上签名</c>
+
+00:10:59.960 --> 00:11:04.998 align:middle
+<c.magenta>为了在运行时进行验证</c>
+<c.magenta>整个文件都必须要重新读取</c>
+
+00:10:59.960 --> 00:11:04.998 align:middle
+<c.magenta>为了在运行时进行验证</c>
+<c.magenta>整个文件都必须要重新读取</c>
+
+00:11:05.332 --> 00:11:09.770 align:middle
+<c.magenta>所以在编译阶段</c>
+<c.magenta>我们让Mach-O文件的每一个页面</c>
+
+00:11:10.170 --> 00:11:13.106 align:middle
+<c.magenta>都进行自己的加密哈希算法</c>
+
+00:11:13.307 --> 00:11:15.509 align:middle
+<c.magenta>所有哈希都储存在LINKEDIT里</c>
+
+00:11:16.543 --> 00:11:19.446 align:middle
+<c.magenta>这使得你的每个未被修改的页面</c>
+
+00:11:19.513 --> 00:11:22.883 align:middle
+<c.magenta>在被读取的过程中</c>
+<c.magenta>都能得到及时验证</c>
+
+00:11:24.484 --> 00:11:26.186 align:middle
+<c.magenta>好的 速成课结束</c>
+
+00:11:26.253 --> 00:11:28.555 align:middle
+<c.magenta>现在我将带你们一起</c>
+<c.magenta>从exec()讲到main()</c>
+
+00:11:32.292 --> 00:11:34.695 align:middle
+<c.magenta>什么是exec()？</c>
+<c.magenta>exec()是一个系统调用</c>
+
+00:11:36.296 --> 00:11:37.965 align:middle
+<c.magenta>当你进入内核 说</c>
+
+00:11:38.031 --> 00:11:40.434 align:middle
+<c.magenta>我想把这个进程换成这个新程序</c>
+
+00:11:40.501 --> 00:11:44.805 align:middle
+<c.magenta>内核会抹去整个地址</c>
+<c.magenta>映射指定的可执行程序</c>
+
+00:11:45.072 --> 00:11:47.674 align:middle
+<c.magenta>ASLR把它映射到一个随机地址</c>
+
+00:11:48.408 --> 00:11:52.012 align:middle
+<c.magenta>下一步是从该随机地址 回溯到0地址</c>
+
+00:11:52.679 --> 00:11:54.581 align:middle
+<c.magenta>把整个区域标记为不可访问</c>
+
+00:11:54.648 --> 00:11:57.985 align:middle
+<c.magenta>意思是 不可读 不可写 不可执行</c>
+
+00:11:58.785 --> 00:12:01.522 align:middle
+<c.magenta>该区域在32位处理器下</c>
+<c.magenta>至少4KB大小</c>
+
+00:11:58.785 --> 00:12:01.522 align:middle
+<c.magenta>该区域在32位处理器下</c>
+<c.magenta>至少4KB大小</c>
+
+00:12:01.588 --> 00:12:04.625 align:middle
+<c.magenta>64位处理器下至少4GB大小</c>
+
+00:12:04.858 --> 00:12:08.328 align:middle
+<c.magenta>这样可以捕捉任何空指针引用</c>
+
+00:12:08.395 --> 00:12:11.698 align:middle
+<c.magenta>捕捉任何指针截断</c>
+
+00:12:14.601 --> 00:12:17.938 align:middle
+<c.magenta>Unix诞生的前几十年</c>
+<c.magenta>一切都很简单</c>
+
+00:12:18.005 --> 00:12:20.908 align:middle
+<c.magenta>我只需映射一个程序</c>
+<c.magenta>把指针引用指向它 开始运行它即可</c>
+
+00:12:20.974 --> 00:12:22.843 align:middle
+<c.magenta>然后共享库被发明出来</c>
+
+00:12:23.210 --> 00:12:24.845 align:middle
+<c.magenta>那么谁来加载Dylibs？</c>
+
+00:12:25.579 --> 00:12:27.514 align:middle
+<c.magenta>人们很快意识到情况太过复杂</c>
+
+00:12:27.581 --> 00:12:29.516 align:middle
+<c.magenta>不想让内核来做这件事</c>
+
+00:12:29.583 --> 00:12:34.288 align:middle
+<c.magenta>所以人们新建了帮助程序</c>
+<c.magenta>在我们的平台上 叫作Dyld</c>
+
+00:12:34.688 --> 00:12:37.191 align:middle
+<c.magenta>在别的Unix平台</c>
+<c.magenta>可能听说过它名字LD.SO</c>
+
+00:12:37.791 --> 00:12:40.961 align:middle
+<c.magenta>当内核完成进程的映射</c>
+<c.magenta>它现在映射另一个Mach-O文件</c>
+
+00:12:41.028 --> 00:12:44.431 align:middle
+<c.magenta>调用Dyld进入该进程</c>
+<c.magenta>到另一个随机地址</c>
+
+00:12:44.831 --> 00:12:48.902 align:middle
+<c.magenta>把指针引用指向</c>
+<c.magenta>Dyld 让Dyld完成进程启动</c>
+
+00:12:50.470 --> 00:12:52.239 align:middle
+<c.magenta>现在Dyld在运行进程</c>
+
+00:12:52.306 --> 00:12:55.843 align:middle
+<c.magenta>它的工作是加载所有依赖的Dylib</c>
+
+00:12:55.943 --> 00:12:57.377 align:middle
+<c.magenta>让它们全部准备好开始运行</c>
+
+00:12:58.111 --> 00:12:59.646 align:middle line:1
+<c.magenta>我们一起来浏览这些步骤</c>
+
+00:12:59.947 --> 00:13:02.883 align:middle line:1
+<c.magenta>底部有很多步骤和一个时间线</c>
+
+00:12:59.947 --> 00:13:02.883 align:middle line:1
+<c.magenta>底部有很多步骤和一个时间线</c>
+
+00:13:02.950 --> 00:13:05.552 align:middle line:1
+<c.magenta>我们浏览这些的时候 也会浏览时间线</c>
+
+00:13:06.253 --> 00:13:10.257 align:middle line:1
+<c.magenta>首先 Dyld是否需要</c>
+<c.magenta>映射所有的依赖Dylib？</c>
+
+00:13:10.657 --> 00:13:12.159 align:middle line:1
+<c.magenta>什么是依赖Dylib？</c>
+
+00:13:12.226 --> 00:13:15.062 align:middle
+<c.magenta>要找到它们 首先要读取主可执行文件</c>
+
+00:13:15.128 --> 00:13:17.297 align:middle
+<c.magenta>的头文件 内核已经映射好的</c>
+
+00:13:17.364 --> 00:13:19.833 align:middle
+<c.magenta>在该头文件里有一个所有依赖库的列表</c>
+
+00:13:19.967 --> 00:13:21.301 align:middle
+<c.magenta>都必须要进行分析</c>
+
+00:13:22.069 --> 00:13:24.037 align:middle
+<c.magenta>所以必须要找到每一个Dylib</c>
+
+00:13:25.439 --> 00:13:28.709 align:middle
+<c.magenta>如果每一个Dylib都找到了</c>
+<c.magenta>它就须打开和开始运行每一个文件</c>
+
+00:13:28.809 --> 00:13:30.911 align:middle
+<c.magenta>它需要确保是一个Mach-O文件</c>
+
+00:13:31.778 --> 00:13:35.449 align:middle
+<c.magenta>对它进行验证 找到它的编码签名</c>
+<c.magenta>在内核里对它进行注册</c>
+
+00:13:37.985 --> 00:13:41.121 align:middle
+<c.magenta>然后它可以在该Dylib里的每一段</c>
+<c.magenta>调用mmap()</c>
+
+00:13:42.456 --> 00:13:43.891 align:middle
+<c.magenta>好吧 这非常简单</c>
+
+00:13:44.458 --> 00:13:47.094 align:middle
+<c.magenta>你的应用知道内核Dyld</c>
+
+00:13:47.160 --> 00:13:49.997 align:middle
+<c.magenta>Dyld说 噢</c>
+<c.magenta>这个应用依赖A和B Dylib</c>
+
+00:13:50.063 --> 00:13:51.431 align:middle
+<c.magenta>加载它们两个 完成了</c>
+
+00:13:51.498 --> 00:13:55.035 align:middle
+<c.magenta>当然 实际情况要更为复杂</c>
+<c.magenta>因为A.dylib和B.dylib</c>
+
+00:13:55.102 --> 00:13:56.503 align:middle
+<c.magenta>自身也可能依赖dylib</c>
+
+00:13:57.371 --> 00:14:00.007 align:middle
+<c.magenta>所以dyld必须再做一次同样的事</c>
+
+00:13:57.371 --> 00:14:00.007 align:middle
+<c.magenta>所以dyld必须再做一次同样的事</c>
+
+00:14:00.073 --> 00:14:01.275 align:middle
+<c.magenta>为每一个dylib</c>
+
+00:14:01.341 --> 00:14:03.944 align:middle
+<c.magenta>而每个dylib可能依赖于</c>
+<c.magenta>某个已加载或新的东西</c>
+
+00:14:04.011 --> 00:14:07.147 align:middle
+<c.magenta>它决定是否已经加载</c>
+<c.magenta>如果否 则需要加载</c>
+
+00:14:07.781 --> 00:14:09.483 align:middle
+<c.magenta>所以 如此继续</c>
+
+00:14:11.818 --> 00:14:13.420 align:middle
+<c.magenta>最终所有的都加载了</c>
+
+00:14:13.487 --> 00:14:17.357 align:middle
+<c.magenta>如果你看一个进程</c>
+<c.magenta>系统里的一个普通进程</c>
+
+00:14:17.524 --> 00:14:22.563 align:middle
+<c.magenta>都会加载1到400个dylibs</c>
+<c.magenta>这个加载数量很大</c>
+
+00:14:23.130 --> 00:14:26.400 align:middle
+<c.magenta>还好大部分都是OS dylibs</c>
+<c.magenta>我们做了很多工作</c>
+
+00:14:26.466 --> 00:14:28.435 align:middle
+<c.magenta>在建立OS预计算时</c>
+
+00:14:28.502 --> 00:14:31.638 align:middle
+<c.magenta>和与缓存那些dyld要做的工作</c>
+<c.magenta>来加载这些内容</c>
+
+00:14:31.839 --> 00:14:34.208 align:middle
+<c.magenta>所以OS dylibs加载速度非常</c>
+<c.magenta>非常快</c>
+
+00:14:37.578 --> 00:14:39.613 align:middle line:1
+<c.magenta>现在所有dyibs都已经加载完成</c>
+
+00:14:39.680 --> 00:14:43.483 align:middle line:1
+<c.magenta>但它们都彼此独立</c>
+<c.magenta>我们必须要把它们绑在一起</c>
+
+00:14:43.851 --> 00:14:45.018 align:middle line:1
+<c.magenta>这就是修复</c>
+
+00:14:45.886 --> 00:14:48.255 align:middle line:1
+<c.magenta>关于修复有一点 我们已经知道</c>
+
+00:14:48.388 --> 00:14:50.924 align:middle line:1
+<c.magenta>因为编码签名的存在</c>
+<c.magenta>我们无法修改指令</c>
+
+00:14:51.358 --> 00:14:53.794 align:middle line:1
+<c.magenta>那么dylib该如何</c>
+<c.magenta>调用另一dylib？</c>
+
+00:14:53.861 --> 00:14:56.330 align:middle line:1
+<c.magenta>如果无法修改指令 怎么调用？</c>
+
+00:14:56.430 --> 00:14:59.433 align:middle line:1
+<c.magenta>我们把老朋友找回来</c>
+<c.magenta>加上许多旧的间接引用</c>
+
+00:15:00.100 --> 00:15:04.037 align:middle line:1
+<c.magenta>所以我们的code-gen</c>
+<c.magenta>即动态PIC 即地址无关代码</c>
+
+00:15:04.104 --> 00:15:06.240 align:middle line:1
+<c.magenta>代码可以加载到该地址 并且是动态的</c>
+
+00:15:06.306 --> 00:15:09.643 align:middle line:1
+<c.magenta>也就是说 地址间接地被分配</c>
+
+00:15:09.943 --> 00:15:12.279 align:middle line:1
+<c.magenta>也就是说为了让一个调用另一个</c>
+
+00:15:12.513 --> 00:15:15.415 align:middle line:1
+<c.magenta>code-gen实际上</c>
+<c.magenta>在DATA段里新建了一个指针</c>
+
+00:15:15.516 --> 00:15:17.618 align:middle line:1
+<c.magenta>该指针指向我们想要调用的位置</c>
+
+00:15:17.718 --> 00:15:20.153 align:middle line:1
+<c.magenta>代码加载该指针 跳向指针</c>
+
+00:15:22.356 --> 00:15:25.158 align:middle
+<c.magenta>所以所有的dyld</c>
+<c.magenta>都在修复指针和数据</c>
+
+00:15:26.894 --> 00:15:29.863 align:middle
+<c.magenta>修复有两种 重设基址和绑定</c>
+
+00:15:29.930 --> 00:15:31.198 align:middle
+<c.magenta>它们的区别是什么？</c>
+
+00:15:31.298 --> 00:15:35.068 align:middle
+<c.magenta>重设基址是指</c>
+<c.magenta>如果有一个指针指向图像范围内</c>
+
+00:15:35.369 --> 00:15:37.237 align:middle
+<c.magenta>需要做出的所有修改</c>
+
+00:15:37.504 --> 00:15:38.739 align:middle
+<c.magenta>第二种是绑定</c>
+
+00:15:38.906 --> 00:15:41.175 align:middle
+<c.magenta>绑定是指 如果指针指向图像范围外</c>
+
+00:15:41.241 --> 00:15:43.177 align:middle
+<c.magenta>它们必须进行不同的修复</c>
+
+00:15:43.243 --> 00:15:44.645 align:middle
+<c.magenta>我来带大家一起看看其步骤</c>
+
+00:15:45.312 --> 00:15:47.581 align:middle
+<c.magenta>但是首先 如果你觉得好奇</c>
+<c.magenta>有这么一个指令</c>
+
+00:15:47.648 --> 00:15:49.483 align:middle
+<c.magenta>dyldinfo还有很多选项参数</c>
+
+00:15:49.550 --> 00:15:52.753 align:middle
+<c.magenta>你可以在任何二进制文件上运行</c>
+<c.magenta>就可以看到所有的修复</c>
+
+00:15:52.819 --> 00:15:55.556 align:middle
+<c.magenta>该dyld将必须该二进制文件</c>
+<c.magenta>才能让他准备好</c>
+
+00:15:58.759 --> 00:15:59.726 align:middle
+<c.magenta>这就是重获基址</c>
+
+00:16:00.761 --> 00:16:04.798 align:middle
+<c.magenta>过去你可以为每一个dylib</c>
+<c.magenta>指定首选加载地址</c>
+
+00:16:05.399 --> 00:16:08.068 align:middle
+<c.magenta>该首选加载地址是一个静态指针</c>
+
+00:16:08.135 --> 00:16:10.070 align:middle
+<c.magenta>和dyld一起合作</c>
+<c.magenta>比如 若把它加载</c>
+
+00:16:10.137 --> 00:16:12.573 align:middle
+<c.magenta>到该首选加载地址 所有指针和数据</c>
+
+00:16:12.639 --> 00:16:14.374 align:middle
+<c.magenta>本应该内部编码的 都是正确的</c>
+
+00:16:14.441 --> 00:16:16.176 align:middle
+<c.magenta>那么dyld就不用做任何修复</c>
+
+00:16:16.643 --> 00:16:18.345 align:middle
+<c.magenta>但是现在 因为有了ASLR</c>
+
+00:16:19.713 --> 00:16:21.548 align:middle
+<c.magenta>dylib加载到随机地址上</c>
+
+00:16:21.982 --> 00:16:25.485 align:middle
+<c.magenta>它滑到了其他地址</c>
+<c.magenta>也就是说所有那些指针和数据</c>
+
+00:16:25.552 --> 00:16:27.487 align:middle
+<c.magenta>都还依然指向旧地址</c>
+
+00:16:27.855 --> 00:16:31.225 align:middle
+<c.magenta>所以为了修复它们</c>
+<c.magenta>我们需要计算滑动值</c>
+
+00:16:31.291 --> 00:16:34.995 align:middle
+<c.magenta>也就是移动距离</c>
+<c.magenta>并且对每一个内部指针</c>
+
+00:16:35.128 --> 00:16:37.130 align:middle
+<c.magenta>都添加该滑动值</c>
+
+00:16:37.764 --> 00:16:41.468 align:middle
+<c.magenta>所以重设基址是指遍历所有</c>
+
+00:16:41.568 --> 00:16:44.137 align:middle
+<c.magenta>内部数据指针</c>
+<c.magenta>然后为它们添加一个滑动值</c>
+
+00:16:44.204 --> 00:16:47.107 align:middle
+<c.magenta>概念非常简单 读 添加 写</c>
+<c.magenta>读 添加 写</c>
+
+00:16:47.741 --> 00:16:49.409 align:middle
+<c.magenta>但是这些数据指针在哪里？</c>
+
+00:16:49.576 --> 00:16:53.280 align:middle
+<c.magenta>这些指针在段里的位置</c>
+<c.magenta>都编码在LINKEDIT段里</c>
+
+00:16:54.014 --> 00:16:57.084 align:middle
+<c.magenta>此时 所有映射都已经结束</c>
+
+00:16:57.184 --> 00:16:58.352 align:middle
+<c.magenta>当我们开始重设基址时</c>
+
+00:16:58.418 --> 00:17:01.555 align:middle
+<c.magenta>实际上在所有DATA页面上</c>
+<c.magenta>都产生了错误</c>
+
+00:16:58.418 --> 00:17:01.555 align:middle
+<c.magenta>实际上在所有DATA页面上</c>
+<c.magenta>都产生了错误</c>
+
+00:17:01.855 --> 00:17:03.991 align:middle
+<c.magenta>然后对页面进行修改 产生写入时复制</c>
+
+00:17:04.525 --> 00:17:07.761 align:middle
+<c.magenta>所有重设基址有时会非常昂贵</c>
+<c.magenta>由于所有这些I/O</c>
+
+00:17:08.295 --> 00:17:10.263 align:middle
+<c.magenta>但是有一个技巧  就是按顺序操作</c>
+
+00:17:10.329 --> 00:17:14.268 align:middle
+<c.magenta>从内核的角度来看</c>
+<c.magenta>它认为数据错误按顺序产生</c>
+
+00:17:14.568 --> 00:17:17.436 align:middle
+<c.magenta>当它如此认为时 内核会进行预读</c>
+
+00:17:17.538 --> 00:17:19.339 align:middle
+<c.magenta>这样I/O成本将降低很多</c>
+
+00:17:21.775 --> 00:17:22.675 align:middle
+<c.magenta>下面来讲绑定</c>
+
+00:17:22.742 --> 00:17:25.479 align:middle
+<c.magenta>绑定针对那些指向dylib范围外的</c>
+<c.magenta>指针而言</c>
+
+00:17:26.213 --> 00:17:28.549 align:middle
+<c.magenta>这些指针通过名称进行绑定</c>
+<c.magenta>实际都是字符串</c>
+
+00:17:28.615 --> 00:17:30.884 align:middle
+<c.magenta>本例中</c>
+<c.magenta>LINKEDIT段里的malloc</c>
+
+00:17:30.951 --> 00:17:33.353 align:middle
+<c.magenta>也就是说该数据指针</c>
+<c.magenta>需要指向malloc</c>
+
+00:17:33.554 --> 00:17:37.357 align:middle
+<c.magenta>所以运行时</c>
+<c.magenta>dyld需要找到实现该符号的位置</c>
+
+00:17:38.792 --> 00:17:42.462 align:middle
+<c.magenta>这需要很多的计算 遍历查找符号表</c>
+
+00:17:42.629 --> 00:17:44.998 align:middle
+<c.magenta>一旦找到 就把值存到该数据指针里</c>
+
+00:17:45.299 --> 00:17:48.235 align:middle
+<c.magenta>计算复杂度比重设基址高得多</c>
+
+00:17:48.569 --> 00:17:49.970 align:middle
+<c.magenta>但是I/O很少</c>
+
+00:17:50.037 --> 00:17:52.206 align:middle
+<c.magenta>因为重设基址已经完成大部分I/O</c>
+
+00:17:56.376 --> 00:17:59.146 align:middle
+<c.magenta>下一步 ObjC有很多DATA结构</c>
+
+00:17:59.213 --> 00:18:01.548 align:middle
+<c.magenta>DATA结构类</c>
+<c.magenta>也就是指向方法的指针</c>
+
+00:17:59.213 --> 00:18:01.548 align:middle
+<c.magenta>DATA结构类</c>
+<c.magenta>也就是指向方法的指针</c>
+
+00:18:01.615 --> 00:18:03.383 align:middle
+<c.magenta>以及高光指针等等</c>
+
+00:18:03.450 --> 00:18:06.420 align:middle
+<c.magenta>几乎所有都已经被修复</c>
+<c.magenta>通过重设基址或者绑定</c>
+
+00:18:07.020 --> 00:18:10.791 align:middle
+<c.magenta>但在ObjC运行时</c>
+<c.magenta>还需要一些额外的操作</c>
+
+00:18:11.458 --> 00:18:13.594 align:middle
+<c.magenta>首先ObjC是一门动态语言</c>
+
+00:18:13.660 --> 00:18:16.964 align:middle
+<c.magenta>可以把一个类用名称实例化</c>
+
+00:18:17.064 --> 00:18:18.765 align:middle
+<c.magenta>即ObjC运行时 必须要维护</c>
+
+00:18:18.832 --> 00:18:21.301 align:middle
+<c.magenta>一张表格 包含所有名称及其映射的类</c>
+
+00:18:21.502 --> 00:18:23.637 align:middle
+<c.magenta>每次加载的名称 都将定义一个类</c>
+
+00:18:23.704 --> 00:18:25.772 align:middle
+<c.magenta>名称需要登记在一个全局表格里</c>
+
+00:18:26.807 --> 00:18:32.312 align:middle
+<c.magenta>接下来 在C++里你们可能听说过</c>
+<c.magenta>脆弱的ivar问题 抱歉</c>
+
+00:18:32.546 --> 00:18:34.248 align:middle
+<c.magenta>脆弱的基类问题</c>
+
+00:18:35.082 --> 00:18:38.051 align:middle
+<c.magenta>在ObjC里不存在该问题</c>
+<c.magenta>因为我们做的其中一种修复就是</c>
+
+00:18:38.118 --> 00:18:41.255 align:middle
+<c.magenta>动态改变所有ivar的偏移值</c>
+<c.magenta>在加载时</c>
+
+00:18:42.956 --> 00:18:46.493 align:middle
+<c.magenta>接下来 在ObjC里 可以定义类别</c>
+
+00:18:46.560 --> 00:18:49.263 align:middle
+<c.magenta>就是改变另一个类中的方法</c>
+
+00:18:49.496 --> 00:18:53.267 align:middle
+<c.magenta>有时候 它们在那些位于</c>
+<c.magenta>另一dylib且在图像范围外的类里</c>
+
+00:18:53.800 --> 00:18:56.870 align:middle
+<c.magenta>此时 那些方法修复必须已经完成</c>
+
+00:18:58.172 --> 00:19:01.542 align:middle
+<c.magenta>最后 ObjC基于选择器是唯一的</c>
+
+00:18:58.172 --> 00:19:01.542 align:middle
+<c.magenta>最后 ObjC基于选择器是唯一的</c>
+
+00:19:01.608 --> 00:19:03.010 align:middle
+<c.magenta>所以我们需要唯一选择器</c>
+
+00:19:04.945 --> 00:19:07.247 align:middle
+<c.magenta>现在我们完成了所有的DATA修复</c>
+
+00:19:07.347 --> 00:19:09.950 align:middle
+<c.magenta>现在我们可以进行所有</c>
+
+00:19:10.017 --> 00:19:12.119 align:middle
+<c.magenta>可以静态描述的DATA修复</c>
+
+00:19:12.186 --> 00:19:14.421 align:middle
+<c.magenta>现在是进行动态DATA修复的时机</c>
+
+00:19:14.721 --> 00:19:17.291 align:middle
+<c.magenta>在C++里 有一个初始化器</c>
+
+00:19:17.357 --> 00:19:19.726 align:middle
+<c.magenta>可以指定 等于你想要的任何表达式</c>
+
+00:19:20.093 --> 00:19:23.263 align:middle
+<c.magenta>该抽象表达式 此时需要运行</c>
+
+00:19:23.330 --> 00:19:24.631 align:middle
+<c.magenta>此时开始运行</c>
+
+00:19:24.698 --> 00:19:26.900 align:middle
+<c.magenta>所以C++编译器生成</c>
+
+00:19:27.768 --> 00:19:30.871 align:middle
+<c.magenta>初始化器来完成</c>
+<c.magenta>那些抽象DATA的初始化</c>
+
+00:19:31.638 --> 00:19:34.608 align:middle
+<c.magenta>在ObjC 有一种方法</c>
+<c.magenta>叫+load方法</c>
+
+00:19:34.942 --> 00:19:37.911 align:middle
+<c.magenta>现在+load方法已经被否决</c>
+<c.magenta>不建议使用</c>
+
+00:19:37.978 --> 00:19:39.713 align:middle
+<c.magenta>建议使用+initialize</c>
+
+00:19:39.813 --> 00:19:41.782 align:middle
+<c.magenta>若有+load方法 此时它开始运行</c>
+
+00:19:43.383 --> 00:19:45.352 align:middle
+<c.magenta>现在我有了这张大图</c>
+
+00:19:45.419 --> 00:19:49.223 align:middle
+<c.magenta>顶端是主可执行文件</c>
+<c.magenta>所有的dylibs依照这张大图</c>
+
+00:19:49.556 --> 00:19:50.991 align:middle
+<c.magenta>必须要运行初始化器</c>
+
+00:19:51.225 --> 00:19:54.161 align:middle
+<c.magenta>按什么顺序运行呢？我们选择从下往上</c>
+
+00:19:54.228 --> 00:19:55.095 align:middle
+<c.magenta>原因在于</c>
+
+00:19:57.231 --> 00:20:00.067 align:middle
+<c.magenta>当初始化器运行时</c>
+<c.magenta>可能会调用一些dylib</c>
+
+00:19:57.231 --> 00:20:00.067 align:middle
+<c.magenta>当初始化器运行时</c>
+<c.magenta>可能会调用一些dylib</c>
+
+00:20:00.133 --> 00:20:02.636 align:middle
+<c.magenta>你需要确保那些dylib</c>
+<c.magenta>已经准备好被调用</c>
+
+00:20:02.703 --> 00:20:04.438 align:middle
+<c.magenta>所以从下开始运行初始化器</c>
+
+00:20:04.505 --> 00:20:06.006 align:middle
+<c.magenta>一直往上到应用类</c>
+
+00:20:06.640 --> 00:20:08.876 align:middle
+<c.magenta>可以很安全地调用依赖的内容</c>
+
+00:20:11.345 --> 00:20:12.980 align:middle
+<c.magenta>但所有初始化器完成时</c>
+
+00:20:13.146 --> 00:20:15.883 align:middle
+<c.magenta>我们实际已经最终调用</c>
+<c.magenta>的主Dylib程序</c>
+
+00:20:17.451 --> 00:20:19.453 align:middle
+<c.magenta>理论部分熬过来了</c>
+
+00:20:19.553 --> 00:20:22.022 align:middle
+<c.magenta>你们现在都是了解</c>
+<c.magenta>进程如何启动的专家了</c>
+
+00:20:22.356 --> 00:20:24.458 align:middle
+<c.magenta>知道dyld是一个帮助程序</c>
+
+00:20:25.259 --> 00:20:27.294 align:middle
+<c.magenta>它加载所有的依赖库</c>
+
+00:20:28.028 --> 00:20:29.429 align:middle
+<c.magenta>修复所有DATA页面</c>
+
+00:20:30.063 --> 00:20:32.132 align:middle
+<c.magenta>运行初始化器 跳转到主函数</c>
+
+00:20:32.499 --> 00:20:35.836 align:middle
+<c.magenta>那么该如何把这些理论应用到实际中？</c>
+
+00:20:35.969 --> 00:20:37.471 align:middle
+<c.magenta>我把该主题交给Louis</c>
+
+00:20:38.539 --> 00:20:40.541 align:middle
+<c.magenta>他将会为你们讲解非常实用的技巧</c>
+
+00:20:48.315 --> 00:20:49.149 align:middle
+<c.magenta>谢谢你 Nick</c>
+
+00:20:50.851 --> 00:20:53.854 align:middle
+<c.magenta>我们都曾有过这样的经验</c>
+<c.magenta>把手机从口袋里拿出来</c>
+
+00:20:54.054 --> 00:20:55.088 align:middle
+<c.magenta>按下主屏幕按钮</c>
+
+00:20:56.123 --> 00:20:58.225 align:middle
+<c.magenta>轻轻点击想要运行的应用</c>
+
+00:20:58.525 --> 00:21:00.327 align:middle
+<c.magenta>点击 点击 再点击</c>
+
+00:20:58.525 --> 00:21:00.327 align:middle
+<c.magenta>点击 点击 再点击</c>
+
+00:21:00.394 --> 00:21:02.529 align:middle
+<c.magenta>不断点击 因为它停止响应了</c>
+
+00:21:03.197 --> 00:21:05.566 align:middle
+<c.magenta>当这种情况发生时 非常令人沮丧</c>
+
+00:21:05.632 --> 00:21:06.867 align:middle
+<c.magenta>我想把这个应用删了</c>
+
+00:21:08.602 --> 00:21:10.737 align:middle
+<c.magenta>我叫Louis Gerbarg</c>
+<c.magenta>研究Dyld</c>
+
+00:21:11.071 --> 00:21:13.740 align:middle
+<c.magenta>今天 我们讲讨论如何让应用立即启动</c>
+
+00:21:13.807 --> 00:21:15.475 align:middle
+<c.magenta>可以让用户满意</c>
+
+00:21:23.550 --> 00:21:25.219 align:middle
+<c.magenta>首先 我们来讨论</c>
+
+00:21:25.285 --> 00:21:27.221 align:middle
+<c.magenta>在这部分演讲中 要涉及的内容</c>
+
+00:21:29.022 --> 00:21:32.292 align:middle
+<c.magenta>我们将会讨论启动速度要多快</c>
+
+00:21:32.359 --> 00:21:34.695 align:middle
+<c.magenta>用户体验才足够良好</c>
+
+00:21:37.097 --> 00:21:40.234 align:middle
+<c.magenta>如何测量启动时间 因为会很难测量</c>
+
+00:21:40.601 --> 00:21:43.003 align:middle
+<c.magenta>标准的测量应用的方法</c>
+
+00:21:43.070 --> 00:21:44.438 align:middle
+<c.magenta>在代码运行前无法使用</c>
+
+00:21:45.873 --> 00:21:49.543 align:middle
+<c.magenta>我们将一起看一张列表</c>
+<c.magenta>代码的常见原因...</c>
+
+00:21:49.710 --> 00:21:51.845 align:middle
+<c.magenta>抱歉 我们将一起看一张列表</c>
+
+00:21:53.347 --> 00:21:55.649 align:middle
+<c.magenta>表上列有应用启动慢的常见原因</c>
+
+00:21:56.617 --> 00:22:00.721 align:middle
+<c.magenta>最后 我们将讨论一种</c>
+<c.magenta>解决所有缓慢问题的方法</c>
+
+00:21:56.617 --> 00:22:00.721 align:middle
+<c.magenta>最后 我们将讨论一种</c>
+<c.magenta>解决所有缓慢问题的方法</c>
+
+00:22:02.222 --> 00:22:04.258 align:middle
+<c.magenta>我将先剧透一部分演讲后面的内容</c>
+
+00:22:07.060 --> 00:22:08.328 align:middle
+<c.magenta>少做点事</c>
+
+00:22:09.730 --> 00:22:12.866 align:middle
+<c.magenta>我不是说应用应该减少功能</c>
+
+00:22:13.433 --> 00:22:16.637 align:middle
+<c.magenta>我是指你的应用在运行前应该减少操作</c>
+
+00:22:16.703 --> 00:22:20.841 align:middle
+<c.magenta>我们想让你搞清楚</c>
+<c.magenta>如何推迟一些启动行为</c>
+
+00:22:20.941 --> 00:22:23.977 align:middle
+<c.magenta>从而只在启动前一点点时间进行初始化</c>
+
+00:22:26.246 --> 00:22:29.216 align:middle
+<c.magenta>让我们讨论目标 想要多快启动</c>
+
+00:22:29.550 --> 00:22:33.654 align:middle
+<c.magenta>不同平台上的启动时间也有所不同</c>
+
+00:22:34.054 --> 00:22:39.159 align:middle
+<c.magenta>但是 一个好的经验法则是</c>
+
+00:22:39.793 --> 00:22:42.329 align:middle
+<c.magenta>400毫秒是一个不错的启动时间</c>
+
+00:22:43.397 --> 00:22:46.600 align:middle
+<c.magenta>原因在于</c>
+
+00:22:46.767 --> 00:22:50.204 align:middle
+<c.magenta>在手机上有启动动画显示</c>
+<c.magenta>给用户一种持续感</c>
+
+00:22:50.270 --> 00:22:53.106 align:middle
+<c.magenta>在主屏幕和应用之间</c>
+
+00:22:53.173 --> 00:22:54.508 align:middle
+<c.magenta>当你看着它在运行时</c>
+
+00:22:54.842 --> 00:22:58.078 align:middle
+<c.magenta>这些动画占用时间 并且动画</c>
+
+00:22:59.112 --> 00:23:01.582 align:middle
+<c.magenta>会给你一个机会隐藏启动时间</c>
+
+00:22:59.112 --> 00:23:01.582 align:middle
+<c.magenta>会给你一个机会隐藏启动时间</c>
+
+00:23:02.182 --> 00:23:03.717 align:middle
+<c.magenta>显然 根据情况会有所不同</c>
+
+00:23:03.784 --> 00:23:06.420 align:middle
+<c.magenta>应用扩展程序也是应用启动的一部分</c>
+
+00:23:06.486 --> 00:23:08.155 align:middle
+<c.magenta>它们启动的时间不同</c>
+
+00:23:08.522 --> 00:23:10.524 align:middle
+<c.magenta>手机 电视和手表是不同的设备</c>
+
+00:23:10.591 --> 00:23:12.526 align:middle
+<c.magenta>但是400毫秒是一个好目标</c>
+
+00:23:14.261 --> 00:23:16.430 align:middle
+<c.magenta>启动时间永远不要超过20秒</c>
+
+00:23:16.496 --> 00:23:19.700 align:middle
+<c.magenta>如果超过20秒 OS会终止应用</c>
+
+00:23:19.766 --> 00:23:21.435 align:middle
+<c.magenta>以为它进入了死循环</c>
+
+00:23:21.502 --> 00:23:22.436 align:middle
+<c.magenta>我们都曾有过这样的经验</c>
+
+00:23:22.503 --> 00:23:24.338 align:middle
+<c.magenta>点击一个应用 回到了主屏幕</c>
+
+00:23:24.404 --> 00:23:26.473 align:middle
+<c.magenta>它不响应 就这么消失了</c>
+
+00:23:26.874 --> 00:23:28.475 align:middle
+<c.magenta>这就是它被终止了</c>
+
+00:23:30.043 --> 00:23:34.715 align:middle
+<c.magenta>最后 在最慢的支持设备上进行测试</c>
+<c.magenta>这很重要</c>
+
+00:23:34.781 --> 00:23:36.850 align:middle
+<c.magenta>这些计时器都是常量值</c>
+
+00:23:36.917 --> 00:23:39.520 align:middle
+<c.magenta>在我们平台支持的所有设备上</c>
+
+00:23:39.853 --> 00:23:43.123 align:middle
+<c.magenta>如果在iPhone 6S上</c>
+<c.magenta>你达到400毫秒</c>
+
+00:23:43.190 --> 00:23:47.194 align:middle
+<c.magenta>现在测试的结果 也许刚好达到</c>
+
+00:23:47.261 --> 00:23:49.530 align:middle
+<c.magenta>很有可能在iPhone 5上达不到</c>
+
+00:23:51.532 --> 00:23:54.334 align:middle
+<c.magenta>我们回忆一下Nick的演讲中提到的</c>
+
+00:23:54.968 --> 00:23:56.937 align:middle
+<c.magenta>启动时需做什么</c>
+<c.magenta>要解析图像映射图像</c>
+
+00:23:57.004 --> 00:23:58.172 align:middle
+<c.magenta>重设基址图像</c>
+<c.magenta>绑定图像</c>
+
+00:23:58.238 --> 00:24:00.474 align:middle
+<c.magenta>启动图像初始化器 调用主函数</c>
+
+00:23:58.238 --> 00:24:00.474 align:middle
+<c.magenta>启动图像初始化器 调用主函数</c>
+
+00:24:00.874 --> 00:24:04.111 align:middle
+<c.magenta>如果听上去很多操作 没错</c>
+<c.magenta>我说说就觉得很累</c>
+
+00:24:05.712 --> 00:24:06.813 align:middle
+<c.magenta>而再之后</c>
+
+00:24:07.481 --> 00:24:11.752 align:middle
+<c.magenta>还必须调用UIApplicationMain()</c>
+<c.magenta>在ObjC应用里可找到这个函数</c>
+
+00:24:11.818 --> 00:24:13.854 align:middle
+<c.magenta>或在Swift语言写的应用里</c>
+<c.magenta>进行隐式处理</c>
+
+00:24:14.087 --> 00:24:15.489 align:middle
+<c.magenta>还有一些操作</c>
+
+00:24:15.556 --> 00:24:18.892 align:middle
+<c.magenta>包括运行框架初始化器</c>
+
+00:24:18.959 --> 00:24:20.194 align:middle
+<c.magenta>以及加载nibs</c>
+
+00:24:20.928 --> 00:24:23.997 align:middle
+<c.magenta>最终 在应用委托里收到回调</c>
+
+00:24:24.164 --> 00:24:26.066 align:middle
+<c.magenta>我之所以提最后这两个操作</c>
+<c.magenta>是因为它们都计算在</c>
+
+00:24:26.133 --> 00:24:28.602 align:middle
+<c.magenta>我之前说的那400毫秒的时间里</c>
+
+00:24:29.102 --> 00:24:31.071 align:middle
+<c.magenta>但本次演讲中我们不讨论它们</c>
+
+00:24:31.505 --> 00:24:33.440 align:middle
+<c.magenta>如果你想更好地了解它们</c>
+
+00:24:33.507 --> 00:24:36.977 align:middle
+<c.magenta>在2012年有一个演讲</c>
+<c.magenta>iOS应用性能响应</c>
+
+00:24:37.277 --> 00:24:39.446 align:middle
+<c.magenta>我强力推荐你们找出来看看</c>
+
+00:24:40.981 --> 00:24:43.217 align:middle
+<c.magenta>但是现在我们就不再提了</c>
+
+00:24:44.151 --> 00:24:46.486 align:middle
+<c.magenta>我们继续</c>
+
+00:24:46.720 --> 00:24:49.523 align:middle
+<c.magenta>还有一点 热启动和冷启动</c>
+
+00:24:49.990 --> 00:24:53.260 align:middle
+<c.magenta>启动应用时 分热启动和冷启动</c>
+
+00:24:53.493 --> 00:24:54.628 align:middle
+<c.magenta>热启动是指</c>
+
+00:24:55.162 --> 00:24:57.998 align:middle
+<c.magenta>启动时应用已经在内存里</c>
+
+00:24:58.298 --> 00:25:00.801 align:middle
+<c.magenta>或者因为已经启动过 之前退出了</c>
+
+00:24:58.298 --> 00:25:00.801 align:middle
+<c.magenta>或者因为已经启动过 之前退出了</c>
+
+00:25:01.268 --> 00:25:03.837 align:middle
+<c.magenta>但还在内核的磁盘缓存里</c>
+
+00:25:04.671 --> 00:25:06.406 align:middle
+<c.magenta>或者因为你刚把它复制过去</c>
+
+00:25:07.307 --> 00:25:10.477 align:middle
+<c.magenta>冷启动是指启动时应用不在磁盘缓存里</c>
+
+00:25:11.712 --> 00:25:15.415 align:middle
+<c.magenta>测量冷启动时间通常更为重要</c>
+
+00:25:16.683 --> 00:25:18.318 align:middle
+<c.magenta>冷启动时间更为重要的原因是</c>
+
+00:25:18.385 --> 00:25:23.123 align:middle
+<c.magenta>当用户重启手机后启动应用</c>
+
+00:25:23.190 --> 00:25:24.458 align:middle
+<c.magenta>或很长时间后启动应用</c>
+
+00:25:24.525 --> 00:25:26.159 align:middle
+<c.magenta>这时非常需要一个快速启动</c>
+
+00:25:27.261 --> 00:25:31.031 align:middle
+<c.magenta>为了测量冷启动时间</c>
+<c.magenta>必须在每次测量之间重启设备</c>
+
+00:25:32.199 --> 00:25:36.103 align:middle
+<c.magenta>说了这么多</c>
+<c.magenta>如果你正致力于加快热启动时间</c>
+
+00:25:36.170 --> 00:25:37.704 align:middle
+<c.magenta>冷启动时间应该也会随之加快</c>
+
+00:25:37.771 --> 00:25:40.274 align:middle
+<c.magenta>你可以通过快速开发周期加快热启动</c>
+
+00:25:40.374 --> 00:25:43.844 align:middle
+<c.magenta>但是请时不时地测试一下冷启动</c>
+
+00:25:47.981 --> 00:25:52.019 align:middle
+<c.magenta>在主函数启动之前该如何测量时间？</c>
+
+00:25:52.152 --> 00:25:55.689 align:middle
+<c.magenta>dyld里有内置的测量系统</c>
+
+00:25:56.089 --> 00:25:58.792 align:middle
+<c.magenta>可以通过设置环境变量访问</c>
+
+00:25:59.393 --> 00:26:01.128 align:middle
+<c.magenta>DYLD_PRINT_STATISTICS</c>
+
+00:25:59.393 --> 00:26:01.128 align:middle
+<c.magenta>DYLD_PRINT_STATISTICS</c>
+
+00:26:02.329 --> 00:26:04.932 align:middle
+<c.magenta>安装OSes时候就可用了</c>
+
+00:26:05.065 --> 00:26:08.202 align:middle
+<c.magenta>它打印了很多内部调试信息</c>
+
+00:26:08.268 --> 00:26:09.469 align:middle
+<c.magenta>并没有什么用</c>
+
+00:26:09.536 --> 00:26:12.172 align:middle
+<c.magenta>它缺少了某些你可能想知道的信息</c>
+
+00:26:13.640 --> 00:26:15.209 align:middle
+<c.magenta>今天我们就来改进</c>
+
+00:26:16.877 --> 00:26:19.813 align:middle
+<c.magenta>在新的OS里进步显著</c>
+
+00:26:24.218 --> 00:26:27.754 align:middle
+<c.magenta>它会为你提供更为相关的信息</c>
+
+00:26:27.821 --> 00:26:30.958 align:middle
+<c.magenta>应该会提供可操作的方法</c>
+<c.magenta>加快启动时间</c>
+
+00:26:32.059 --> 00:26:33.794 align:middle
+<c.magenta>将会在seed 2可用</c>
+
+00:26:35.963 --> 00:26:40.033 align:middle
+<c.magenta>对此我还想讲一点</c>
+
+00:26:40.501 --> 00:26:44.905 align:middle
+<c.magenta>加载每一个dylib</c>
+<c.magenta>调试程序都必须暂停启动</c>
+
+00:26:44.972 --> 00:26:47.474 align:middle
+<c.magenta>才能解析应用的符号</c>
+
+00:26:47.741 --> 00:26:49.009 align:middle
+<c.magenta>加载断点</c>
+
+00:26:49.209 --> 00:26:51.745 align:middle
+<c.magenta>通过USB线 将非常费时</c>
+
+00:26:52.813 --> 00:26:55.949 align:middle
+<c.magenta>但是dyld清楚这一点</c>
+<c.magenta>它把调试时间</c>
+
+00:26:56.016 --> 00:26:57.351 align:middle
+<c.magenta>从注册时间里减出去</c>
+
+00:26:57.417 --> 00:26:59.052 align:middle
+<c.magenta>所以不用为此担心</c>
+
+00:26:59.152 --> 00:27:02.289 align:middle
+<c.magenta>但是你会注意到它</c>
+<c.magenta>因为dyld会显示</c>
+
+00:26:59.152 --> 00:27:02.289 align:middle
+<c.magenta>但是你会注意到它</c>
+<c.magenta>因为dyld会显示</c>
+
+00:27:02.356 --> 00:27:04.658 align:middle
+<c.magenta>比你从墙上钟表中所观察到</c>
+<c.magenta>的数字精细得多</c>
+
+00:27:04.725 --> 00:27:06.827 align:middle
+<c.magenta>这是预期的和能够接受的</c>
+
+00:27:07.027 --> 00:27:09.096 align:middle
+<c.magenta>如果你看到了那个数字 一切都是对的</c>
+
+00:27:09.162 --> 00:27:10.430 align:middle
+<c.magenta>我只想让你们记下这一点</c>
+
+00:27:12.533 --> 00:27:14.868 align:middle
+<c.magenta>我们继续</c>
+
+00:27:17.404 --> 00:27:19.473 align:middle
+<c.magenta>在Xcode里设置环境变量</c>
+
+00:27:20.774 --> 00:27:24.244 align:middle
+<c.magenta>只需打开方案编辑器 如此填写</c>
+
+00:27:24.811 --> 00:27:27.347 align:middle
+<c.magenta>完成后</c>
+<c.magenta>会有一个新的控制台日志输出</c>
+
+00:27:27.648 --> 00:27:29.183 align:middle
+<c.magenta>控制台输出被记录</c>
+
+00:27:30.450 --> 00:27:31.818 align:middle
+<c.magenta>看上去是什么样？</c>
+
+00:27:32.653 --> 00:27:34.288 align:middle
+<c.magenta>这就是输出看上去的样子</c>
+
+00:27:34.354 --> 00:27:36.924 align:middle
+<c.magenta>底部的时间条代表它不同的部分</c>
+
+00:27:37.357 --> 00:27:38.659 align:middle
+<c.magenta>再添加一个内容</c>
+
+00:27:39.560 --> 00:27:42.296 align:middle
+<c.magenta>为那400毫秒的目标添加一个指示器</c>
+
+00:27:42.696 --> 00:27:44.998 align:middle
+<c.magenta>在这个应用上并没有达到</c>
+
+00:27:46.567 --> 00:27:50.637 align:middle
+<c.magenta>如果看顺序 这就是基本步骤的顺序</c>
+
+00:27:50.704 --> 00:27:52.372 align:middle
+<c.magenta>如Nick讲的</c>
+<c.magenta>启动应用的顺序</c>
+
+00:27:52.439 --> 00:27:53.941 align:middle
+<c.magenta>我们按照顺序来看</c>
+
+00:27:56.743 --> 00:27:57.911 align:middle
+<c.magenta>加载dylib</c>
+
+00:27:58.779 --> 00:28:00.581 align:middle
+<c.magenta>关于加载dylib</c>
+
+00:27:58.779 --> 00:28:00.581 align:middle
+<c.magenta>关于加载dylib</c>
+
+00:28:00.647 --> 00:28:04.418 align:middle
+<c.magenta>还有看到的速度缓慢 需特别了解的是</c>
+<c.magenta>嵌入式dylib 会非常昂贵</c>
+
+00:28:04.484 --> 00:28:07.721 align:middle
+<c.magenta>所以Nick说 平均每个应用</c>
+<c.magenta>包含100到400个dylib</c>
+
+00:28:08.488 --> 00:28:11.158 align:middle
+<c.magenta>但是OS dylibs很快</c>
+<c.magenta>因为构建OS时</c>
+
+00:28:11.425 --> 00:28:14.528 align:middle
+<c.magenta>我们预计算了大量dylib数据</c>
+
+00:28:15.062 --> 00:28:18.332 align:middle
+<c.magenta>但是我们开发OS时</c>
+<c.magenta>做不到每个应用里的每个dylib</c>
+
+00:28:18.432 --> 00:28:20.767 align:middle
+<c.magenta>我们无法预计算</c>
+<c.magenta>你要嵌入应用的dylib</c>
+
+00:28:20.834 --> 00:28:25.472 align:middle
+<c.magenta>所以加载时</c>
+<c.magenta>必须要经过一个慢得多的过程</c>
+
+00:28:27.341 --> 00:28:31.578 align:middle
+<c.magenta>其解决方案是 少用dylib</c>
+
+00:28:31.879 --> 00:28:33.580 align:middle
+<c.magenta>而这将非常困难</c>
+
+00:28:33.981 --> 00:28:35.582 align:middle
+<c.magenta>不是说完全不能用</c>
+
+00:28:36.083 --> 00:28:40.020 align:middle
+<c.magenta>但是 有很多方法</c>
+<c.magenta>可以合并已有dylib</c>
+
+00:28:41.522 --> 00:28:46.026 align:middle
+<c.magenta>可以使用静态存档</c>
+<c.magenta>把dylib用这种方法链接到应用</c>
+
+00:28:47.761 --> 00:28:50.898 align:middle
+<c.magenta>还可以使用延迟加载</c>
+<c.magenta>也就是使用dlopen()函数</c>
+
+00:28:51.231 --> 00:28:56.236 align:middle
+<c.magenta>dlopen()会带来细微的</c>
+<c.magenta>性能和正确性的问题</c>
+
+00:28:56.937 --> 00:28:59.606 align:middle
+<c.magenta>实际之后会带来更多的工作量</c>
+<c.magenta>但现在被延迟了</c>
+
+00:28:59.673 --> 00:29:01.842 align:middle
+<c.magenta>所以 这是个可行的选项</c>
+
+00:28:59.673 --> 00:29:01.842 align:middle
+<c.magenta>所以 这是个可行的选项</c>
+
+00:29:01.909 --> 00:29:03.577 align:middle
+<c.magenta>但是必须要仔细思考清楚</c>
+
+00:29:03.644 --> 00:29:06.880 align:middle
+<c.magenta>如果可能的话 我会反对这么做</c>
+
+00:29:07.581 --> 00:29:12.085 align:middle
+<c.magenta>这里有一个应用 有26个dylib</c>
+
+00:29:14.655 --> 00:29:17.624 align:middle
+<c.magenta>加载它们需要240毫秒</c>
+
+00:29:18.959 --> 00:29:22.229 align:middle
+<c.magenta>如果我把这些dylib合并成</c>
+<c.magenta>两个dylib</c>
+
+00:29:22.863 --> 00:29:25.966 align:middle
+<c.magenta>那只需要20毫秒就可以加载</c>
+
+00:29:26.300 --> 00:29:28.969 align:middle
+<c.magenta>所以这些dylib都在</c>
+<c.magenta>还可以使用它们</c>
+
+00:29:30.170 --> 00:29:32.406 align:middle
+<c.magenta>在应用和扩展程序间共享功能</c>
+
+00:29:33.373 --> 00:29:36.210 align:middle
+<c.magenta>但是 限制dylib数量将非常有用</c>
+
+00:29:36.276 --> 00:29:38.712 align:middle
+<c.magenta>我理解这是一个权衡</c>
+
+00:29:38.779 --> 00:29:40.414 align:middle
+<c.magenta>在开发舒适度</c>
+
+00:29:40.480 --> 00:29:42.716 align:middle
+<c.magenta>和面向用户的启动时间</c>
+<c.magenta>这两者中做选择</c>
+
+00:29:42.816 --> 00:29:45.152 align:middle
+<c.magenta>因为dylib越多</c>
+<c.magenta>你就可以越早开始生成</c>
+
+00:29:45.219 --> 00:29:47.588 align:middle
+<c.magenta>和重链接应用 开发周期就会越短</c>
+
+00:29:47.855 --> 00:29:50.224 align:middle
+<c.magenta>所以理所当然应该用它们</c>
+
+00:29:50.490 --> 00:29:52.960 align:middle
+<c.magenta>但是试试用有限的数量</c>
+<c.magenta>这个目标不错</c>
+
+00:29:53.026 --> 00:29:55.896 align:middle
+<c.magenta>我会大概建议 用半打应该不错</c>
+
+00:29:57.865 --> 00:30:00.367 align:middle
+<c.magenta>现在我们修复好了dylib数目</c>
+
+00:29:57.865 --> 00:30:00.367 align:middle
+<c.magenta>现在我们修复好了dylib数目</c>
+
+00:30:00.434 --> 00:30:03.370 align:middle
+<c.magenta>继续看看下一个速度缓慢的地方</c>
+
+00:30:03.637 --> 00:30:07.074 align:middle
+<c.magenta>绑定和重设基址要350毫秒的时间</c>
+
+00:30:07.474 --> 00:30:08.742 align:middle
+<c.magenta>如Nick所说的</c>
+
+00:30:10.711 --> 00:30:13.180 align:middle
+<c.magenta>重设基址由于I/O会更慢一些</c>
+
+00:30:13.247 --> 00:30:15.148 align:middle
+<c.magenta>而绑定会计算上昂贵</c>
+
+00:30:15.215 --> 00:30:16.583 align:middle
+<c.magenta>但它已经完成I/O</c>
+
+00:30:16.683 --> 00:30:19.186 align:middle
+<c.magenta>所以I/O是为了它们</c>
+<c.magenta>它们交加在一起</c>
+
+00:30:19.253 --> 00:30:20.587 align:middle
+<c.magenta>时间也交加在一起</c>
+
+00:30:22.389 --> 00:30:24.458 align:middle
+<c.magenta>如果我们深入看一下</c>
+
+00:30:25.893 --> 00:30:28.195 align:middle
+<c.magenta>时间都耗在修复DATA段里的指针</c>
+
+00:30:28.395 --> 00:30:32.199 align:middle
+<c.magenta>所以我们必须修复少一些指针</c>
+
+00:30:32.699 --> 00:30:34.902 align:middle
+<c.magenta>Nick介绍了一个可以运行的工具</c>
+
+00:30:34.968 --> 00:30:38.739 align:middle
+<c.magenta>可以看到在DATA分区</c>
+<c.magenta>修复指针的信息 dyldinfo</c>
+
+00:30:40.474 --> 00:30:42.976 align:middle
+<c.magenta>还能显示正在哪些段和分区操作</c>
+
+00:30:43.043 --> 00:30:44.878 align:middle
+<c.magenta>你会很清楚地了解到在修复什么</c>
+
+00:30:44.945 --> 00:30:49.616 align:middle
+<c.magenta>比如 如果看到一个符号</c>
+<c.magenta>在ObjC分区ObjC类</c>
+
+00:30:50.517 --> 00:30:53.420 align:middle
+<c.magenta>很可能你有很多ObjC类</c>
+
+00:30:54.388 --> 00:30:58.225 align:middle
+<c.magenta>你可以做的一件事是 减少</c>
+
+00:30:58.292 --> 00:31:01.128 align:middle
+<c.magenta>ObjC类对象和ivars的数量</c>
+
+00:30:58.292 --> 00:31:01.128 align:middle
+<c.magenta>ObjC类对象和ivars的数量</c>
+
+00:31:03.163 --> 00:31:06.400 align:middle
+<c.magenta>有很多编码样式都鼓励很小的类</c>
+
+00:31:06.466 --> 00:31:08.202 align:middle
+<c.magenta>只有一个或两个函数的</c>
+
+00:31:09.269 --> 00:31:15.509 align:middle
+<c.magenta>这些特殊的模式</c>
+<c.magenta>可能会导致速度逐渐变慢</c>
+
+00:31:15.576 --> 00:31:18.612 align:middle
+<c.magenta>当你越加越多时 更要格外小心</c>
+
+00:31:18.679 --> 00:31:22.082 align:middle
+<c.magenta>有100个或者1000个</c>
+<c.magenta>类不成问题</c>
+
+00:31:22.149 --> 00:31:25.752 align:middle
+<c.magenta>但我们见过有的应用有</c>
+<c.magenta>5000 1万 1万5 2万个类</c>
+
+00:31:26.119 --> 00:31:28.989 align:middle
+<c.magenta>这样将会增加700或800毫秒</c>
+
+00:31:29.056 --> 00:31:31.058 align:middle
+<c.magenta>的启动时间</c>
+<c.magenta>因为内核要把它们读入页面</c>
+
+00:31:33.193 --> 00:31:34.061 align:middle
+<c.magenta>还可以做一件事</c>
+
+00:31:34.127 --> 00:31:37.097 align:middle
+<c.magenta>可以试试减少使用C++虚拟函数</c>
+
+00:31:37.397 --> 00:31:40.033 align:middle
+<c.magenta>虚拟函数新建 我们称作 V表格</c>
+
+00:31:40.634 --> 00:31:42.903 align:middle
+<c.magenta>和ObjC元数据相同</c>
+
+00:31:42.970 --> 00:31:46.173 align:middle
+<c.magenta>因为它们都新建结构</c>
+
+00:31:46.240 --> 00:31:48.308 align:middle
+<c.magenta>在必须要被修复的DATA分区</c>
+
+00:31:48.609 --> 00:31:52.813 align:middle
+<c.magenta>它们比ObjC元数据小</c>
+
+00:31:52.880 --> 00:31:55.115 align:middle
+<c.magenta>但它们对于某些应用来说 作用显著</c>
+
+00:31:56.717 --> 00:32:00.420 align:middle
+<c.magenta>还可使用Swift structs</c>
+<c.magenta>Swift通常用的数据要少一些</c>
+
+00:31:56.717 --> 00:32:00.420 align:middle
+<c.magenta>还可使用Swift structs</c>
+<c.magenta>Swift通常用的数据要少一些</c>
+
+00:32:00.487 --> 00:32:02.756 align:middle
+<c.magenta>带有指针做相关修复</c>
+
+00:32:03.624 --> 00:32:07.528 align:middle
+<c.magenta>并且 Swift更为内联</c>
+
+00:32:07.594 --> 00:32:09.596 align:middle
+<c.magenta>可以更好的使用codegen</c>
+<c.magenta>减少消耗</c>
+
+00:32:09.663 --> 00:32:13.901 align:middle
+<c.magenta>所以 转为Swift语言</c>
+<c.magenta>也是一个好方法</c>
+
+00:32:14.801 --> 00:32:15.903 align:middle
+<c.magenta>还有一点</c>
+
+00:32:16.403 --> 00:32:18.105 align:middle
+<c.magenta>要小心机器生成的代码</c>
+
+00:32:18.172 --> 00:32:23.143 align:middle
+<c.magenta>曾经有过这样的例子</c>
+<c.magenta>你可能描述某个结构</c>
+
+00:32:23.210 --> 00:32:26.780 align:middle
+<c.magenta>用DSL或一些自定义语言</c>
+
+00:32:26.847 --> 00:32:29.950 align:middle
+<c.magenta>然后有一个程序从中生成其他代码</c>
+
+00:32:30.484 --> 00:32:33.587 align:middle
+<c.magenta>而如果这些程序中有很多指针</c>
+
+00:32:33.787 --> 00:32:36.223 align:middle
+<c.magenta>它们将变得非常昂贵 因为生成代码时</c>
+
+00:32:36.290 --> 00:32:37.624 align:middle
+<c.magenta>会生成非常非常大的结构</c>
+
+00:32:37.691 --> 00:32:41.828 align:middle
+<c.magenta>我们看过这样的情况</c>
+<c.magenta>生成了兆量级的数据</c>
+
+00:32:42.529 --> 00:32:44.531 align:middle
+<c.magenta>但好处是 比较容易进行控制</c>
+
+00:32:44.598 --> 00:32:46.233 align:middle
+<c.magenta>因为你只需改变代码生成器</c>
+
+00:32:46.300 --> 00:32:50.370 align:middle
+<c.magenta>不使用指针而用别的</c>
+<c.magenta>比如偏移基址 结构</c>
+
+00:32:50.704 --> 00:32:53.407 align:middle
+<c.magenta>将收益良多 来看看本例中</c>
+
+00:32:53.774 --> 00:32:56.677 align:middle
+<c.magenta>加载时间怎么样了</c>
+
+00:32:57.744 --> 00:33:01.181 align:middle
+<c.magenta>我至少有1万个类 实际上有2万个</c>
+
+00:32:57.744 --> 00:33:01.181 align:middle
+<c.magenta>我至少有1万个类 实际上有2万个</c>
+
+00:33:01.615 --> 00:33:03.083 align:middle
+<c.magenta>太多了都无法一次显示完整</c>
+
+00:33:04.218 --> 00:33:06.286 align:middle
+<c.magenta>如果减少到1万个类</c>
+
+00:33:06.620 --> 00:33:08.121 align:middle
+<c.magenta>启动时间也减少了</c>
+
+00:33:08.255 --> 00:33:12.159 align:middle
+<c.magenta>这部分的启动时间</c>
+<c.magenta>从350毫秒减少到20毫秒</c>
+
+00:33:13.760 --> 00:33:19.733 align:middle
+<c.magenta>现在 除了初始化器</c>
+
+00:33:19.800 --> 00:33:22.569 align:middle
+<c.magenta>其他都在400毫秒以内 做得很好</c>
+
+00:33:25.472 --> 00:33:27.407 align:middle
+<c.magenta>关于设置ObjC</c>
+
+00:33:27.808 --> 00:33:29.343 align:middle
+<c.magenta>Nick说过所有它做的工作</c>
+
+00:33:29.409 --> 00:33:34.648 align:middle
+<c.magenta>它要注册类 要处理非脆弱ivar</c>
+
+00:33:34.715 --> 00:33:37.918 align:middle
+<c.magenta>还要注册目录 还要让选择器变成唯一</c>
+
+00:33:38.685 --> 00:33:40.087 align:middle
+<c.magenta>我不想在此处多花时间</c>
+
+00:33:40.153 --> 00:33:41.488 align:middle
+<c.magenta>原因在于</c>
+
+00:33:42.222 --> 00:33:43.657 align:middle
+<c.magenta>这些问题我们都已经解决</c>
+
+00:33:44.124 --> 00:33:48.128 align:middle
+<c.magenta>通过之前对重设基址</c>
+<c.magenta>数据和绑定的修复</c>
+
+00:33:48.462 --> 00:33:51.331 align:middle
+<c.magenta>那里所做的所有减少</c>
+<c.magenta>和你想在这里做的完全相同</c>
+
+00:33:51.565 --> 00:33:53.300 align:middle
+<c.magenta>我们这里就坐享其成</c>
+
+00:33:53.367 --> 00:33:54.968 align:middle
+<c.magenta>很短的时间 8毫秒</c>
+
+00:33:55.068 --> 00:33:57.504 align:middle
+<c.magenta>但我们并没有特别对它进行操作</c>
+
+00:33:59.406 --> 00:34:02.843 align:middle
+<c.magenta>最后 来看一下初始化器</c>
+
+00:33:59.406 --> 00:34:02.843 align:middle
+<c.magenta>最后 来看一下初始化器</c>
+
+00:34:02.976 --> 00:34:04.845 align:middle
+<c.magenta>消耗时间长达10秒钟</c>
+
+00:34:05.712 --> 00:34:08.415 align:middle
+<c.magenta>这里我将讲得比Nick更深入一些</c>
+
+00:34:08.581 --> 00:34:10.350 align:middle
+<c.magenta>有两种类型的初始化器</c>
+
+00:34:11.885 --> 00:34:14.621 align:middle
+<c.magenta>显式初始化器 比如+load</c>
+
+00:34:14.688 --> 00:34:17.456 align:middle
+<c.magenta>Nick说我们建议用</c>
+<c.magenta>+initialize取代它</c>
+
+00:34:17.658 --> 00:34:21.661 align:middle
+<c.magenta>将导致ObjC在运行时初始化代码</c>
+
+00:34:21.929 --> 00:34:25.966 align:middle
+<c.magenta>当类被实例化时 而不是文件加载之后</c>
+
+00:34:27.967 --> 00:34:31.804 align:middle
+<c.magenta>或者在C/C++里</c>
+<c.magenta>函数可以带有一个属性</c>
+
+00:34:32.572 --> 00:34:36.677 align:middle
+<c.magenta>可以导致函数像初始化器一样生成代码</c>
+
+00:34:36.877 --> 00:34:40.880 align:middle
+<c.magenta>这是显式初始化器</c>
+
+00:34:40.947 --> 00:34:43.350 align:middle
+<c.magenta>我们宁愿用调用点初始化器取代</c>
+
+00:34:43.550 --> 00:34:46.453 align:middle
+<c.magenta>要调用它可以用</c>
+<c.magenta>dispatch_once()函数</c>
+
+00:34:47.987 --> 00:34:50.958 align:middle
+<c.magenta>或者跨平台代码里</c>
+<c.magenta>pthread_once()</c>
+
+00:34:51.592 --> 00:34:54.328 align:middle
+<c.magenta>若是C++ std::once()</c>
+
+00:34:54.728 --> 00:34:57.264 align:middle
+<c.magenta>所有这些函数基本上都有相同的功能</c>
+
+00:34:57.331 --> 00:34:59.566 align:middle
+<c.magenta>这些函数的代码</c>
+
+00:34:59.633 --> 00:35:01.869 align:middle
+<c.magenta>只会在第一次点击时运行 仅此一次</c>
+
+00:34:59.633 --> 00:35:01.869 align:middle
+<c.magenta>只会在第一次点击时运行 仅此一次</c>
+
+00:35:02.035 --> 00:35:04.438 align:middle
+<c.magenta>dispatch_once</c>
+<c.magenta>在系统里很优秀</c>
+
+00:35:04.605 --> 00:35:05.906 align:middle
+<c.magenta>第一次执行之后</c>
+
+00:35:05.973 --> 00:35:08.642 align:middle
+<c.magenta>几乎等同于无操作 直接跳过</c>
+
+00:35:08.809 --> 00:35:12.946 align:middle
+<c.magenta>所以我强烈建议</c>
+<c.magenta>不要使用显式初始化器</c>
+
+00:35:14.081 --> 00:35:16.049 align:middle
+<c.magenta>接下来是隐式初始化器</c>
+
+00:35:16.116 --> 00:35:18.051 align:middle
+<c.magenta>如Nick所描述的那样</c>
+<c.magenta>隐式初始化器</c>
+
+00:35:18.118 --> 00:35:21.522 align:middle
+<c.magenta>大部分来自C++的全局变量</c>
+<c.magenta>带有非默认初始化器…</c>
+
+00:35:21.588 --> 00:35:23.056 align:middle
+<c.magenta>非默认构造函数</c>
+
+00:35:24.525 --> 00:35:26.994 align:middle
+<c.magenta>你可以选择用之前提到的</c>
+
+00:35:27.160 --> 00:35:30.264 align:middle
+<c.magenta>调用点初始化器取代它</c>
+
+00:35:31.031 --> 00:35:32.766 align:middle
+<c.magenta>当然有很多地方可以把全局</c>
+
+00:35:32.833 --> 00:35:37.571 align:middle
+<c.magenta>换成非全局结构或指针</c>
+<c.magenta>指向想要初始化的对象</c>
+
+00:35:39.106 --> 00:35:43.477 align:middle
+<c.magenta>还有一个选项 你没有非默认初始化器</c>
+
+00:35:43.544 --> 00:35:46.813 align:middle
+<c.magenta>在C++里</c>
+<c.magenta>初始化器调用POD普通纯式数据</c>
+
+00:35:47.548 --> 00:35:49.716 align:middle
+<c.magenta>如果对象只是普通纯式数据</c>
+
+00:35:49.950 --> 00:35:52.119 align:middle
+<c.magenta>静态链接器</c>
+
+00:35:52.186 --> 00:35:55.389 align:middle
+<c.magenta>将会为DATA分区预计算所有数据</c>
+
+00:35:55.455 --> 00:35:56.924 align:middle
+<c.magenta>只把数据放在那里</c>
+
+00:35:56.990 --> 00:35:58.992 align:middle
+<c.magenta>不一定要运行 不一定要修复</c>
+
+00:36:01.361 --> 00:36:02.429 align:middle
+<c.magenta>最后一点</c>
+
+00:36:04.298 --> 00:36:07.835 align:middle
+<c.magenta>很难找到它们 因为它们是隐性的</c>
+
+00:36:08.068 --> 00:36:11.238 align:middle
+<c.magenta>但是编译器会收到警告</c>
+<c.magenta>——Wglobal-constructors</c>
+
+00:36:11.305 --> 00:36:12.439 align:middle
+<c.magenta>如果这么做 会有警告</c>
+
+00:36:12.506 --> 00:36:13.540 align:middle
+<c.magenta>只要产生其中一个</c>
+
+00:36:13.607 --> 00:36:16.743 align:middle
+<c.magenta>所以把它添加到编译器用的</c>
+<c.magenta>标志里是个好方法</c>
+
+00:36:18.412 --> 00:36:20.380 align:middle
+<c.magenta>还有一个选项</c>
+<c.magenta>即用Swift重新编写</c>
+
+00:36:22.216 --> 00:36:23.350 align:middle
+<c.magenta>理由是</c>
+
+00:36:23.884 --> 00:36:26.053 align:middle
+<c.magenta>Swift有全局变量</c>
+<c.magenta>并且会被初始化</c>
+
+00:36:26.119 --> 00:36:28.222 align:middle
+<c.magenta>它们确保在使用前被初始化</c>
+
+00:36:28.422 --> 00:36:31.992 align:middle
+<c.magenta>但是其方法不是用初始化器</c>
+
+00:36:32.226 --> 00:36:34.294 align:middle
+<c.magenta>在后台</c>
+<c.magenta>使用一次dispatch_once()</c>
+
+00:36:34.361 --> 00:36:36.129 align:middle
+<c.magenta>使用了一种调用点初始化器</c>
+
+00:36:36.563 --> 00:36:39.566 align:middle
+<c.magenta>所以转为Swift语言</c>
+<c.magenta>将会做到这一点</c>
+
+00:36:39.633 --> 00:36:41.502 align:middle
+<c.magenta>所以这个选项我强烈建议</c>
+
+00:36:42.903 --> 00:36:43.737 align:middle
+<c.magenta>最后</c>
+
+00:36:44.204 --> 00:36:46.406 align:middle
+<c.magenta>在初始化器里</c>
+<c.magenta>请不要调用dlopen()</c>
+
+00:36:46.773 --> 00:36:49.443 align:middle
+<c.magenta>它将带来巨大的性能问题 原因很多</c>
+
+00:36:49.743 --> 00:36:53.514 align:middle
+<c.magenta>dyld在运行时 是在应用启动之前</c>
+
+00:36:53.847 --> 00:36:55.782 align:middle
+<c.magenta>我们可以做一下诸如关闭锁定的操作</c>
+
+00:36:55.849 --> 00:36:56.950 align:middle
+<c.magenta>因为是单线程</c>
+
+00:36:57.117 --> 00:37:01.255 align:middle
+<c.magenta>当dlopen()出现</c>
+<c.magenta>在那种情况下</c>
+
+00:36:57.117 --> 00:37:01.255 align:middle
+<c.magenta>当dlopen()出现</c>
+<c.magenta>在那种情况下</c>
+
+00:37:01.522 --> 00:37:03.624 align:middle
+<c.magenta>初始化器的运行发生了改变</c>
+
+00:37:03.690 --> 00:37:05.526 align:middle
+<c.magenta>可能会有多线程 必须要打开锁定</c>
+
+00:37:05.592 --> 00:37:07.561 align:middle
+<c.magenta>将会带来巨大的性能下降</c>
+
+00:37:07.928 --> 00:37:11.098 align:middle
+<c.magenta>还会带来细微的死锁和未定义行为</c>
+
+00:37:13.467 --> 00:37:16.336 align:middle
+<c.magenta>还有 不要在初始化器上开始线程</c>
+
+00:37:17.004 --> 00:37:18.372 align:middle
+<c.magenta>也是出于同样的理由</c>
+
+00:37:18.472 --> 00:37:20.073 align:middle
+<c.magenta>若必要</c>
+<c.magenta>可以设立一个mutex</c>
+
+00:37:20.140 --> 00:37:22.843 align:middle
+<c.magenta>优先mutex甚至会有</c>
+
+00:37:23.076 --> 00:37:26.246 align:middle
+<c.magenta>预定义的静态值</c>
+<c.magenta>你可以用run no code设定</c>
+
+00:37:26.580 --> 00:37:28.549 align:middle
+<c.magenta>但是实际上在初始化器里开始线程</c>
+
+00:37:28.615 --> 00:37:31.251 align:middle
+<c.magenta>会带来潜在巨大的性能和正确性问题</c>
+
+00:37:32.786 --> 00:37:33.820 align:middle
+<c.magenta>这里有一些代码</c>
+
+00:37:33.887 --> 00:37:36.557 align:middle
+<c.magenta>有一个C++类</c>
+<c.magenta>有一个非默认初始化器</c>
+
+00:37:36.623 --> 00:37:38.525 align:middle
+<c.magenta>网络连接出现问题</c>
+
+00:37:38.725 --> 00:37:40.327 align:middle
+<c.magenta>请稍后再试</c>
+
+00:37:41.328 --> 00:37:42.429 align:middle
+<c.magenta>谢谢你 Siri</c>
+
+00:37:42.930 --> 00:37:46.633 align:middle
+<c.magenta>我有一个非默认初始化器</c>
+
+00:37:47.634 --> 00:37:52.439 align:middle
+<c.magenta>调试时还有 可能我注释掉了</c>
+
+00:37:52.506 --> 00:37:55.309 align:middle
+<c.magenta>好 已经缩短到50毫秒</c>
+
+00:37:55.742 --> 00:37:56.577 align:middle
+<c.magenta>总共</c>
+
+00:37:57.211 --> 00:37:59.813 align:middle
+<c.magenta>有足够的时间可以初始化nibs</c>
+
+00:37:59.880 --> 00:38:01.748 align:middle
+<c.magenta>还有其他的操作 状态不错</c>
+
+00:37:59.880 --> 00:38:01.748 align:middle
+<c.magenta>还有其他的操作 状态不错</c>
+
+00:38:03.350 --> 00:38:04.718 align:middle
+<c.magenta>我们已经浏览完毕</c>
+
+00:38:06.720 --> 00:38:10.991 align:middle
+<c.magenta>我们一起来讨论 我们应该了解什么</c>
+
+00:38:11.225 --> 00:38:13.060 align:middle
+<c.magenta>如果启动时间冗长</c>
+
+00:38:13.393 --> 00:38:16.597 align:middle
+<c.magenta>首先用DYLD_PRINT_STATISTICS测量时间</c>
+
+00:38:16.663 --> 00:38:19.032 align:middle
+<c.magenta>添加到检测性能的测试工具里</c>
+
+00:38:19.099 --> 00:38:22.436 align:middle
+<c.magenta>所以你可以追踪应用是如何超时的</c>
+
+00:38:22.503 --> 00:38:24.571 align:middle
+<c.magenta>这样可投入编写</c>
+<c.magenta>而不会在几个月后发现</c>
+
+00:38:24.638 --> 00:38:25.706 align:middle
+<c.magenta>调试出现问题</c>
+
+00:38:29.076 --> 00:38:31.678 align:middle
+<c.magenta>为了缩短启动时间 可以采用的方法有</c>
+
+00:38:32.646 --> 00:38:34.448 align:middle
+<c.magenta>减少已有dylib的数量</c>
+
+00:38:35.415 --> 00:38:38.418 align:middle
+<c.magenta>减少已有ObjC类的数量</c>
+
+00:38:38.852 --> 00:38:40.821 align:middle
+<c.magenta>以及删除静态初始化器</c>
+
+00:38:43.790 --> 00:38:45.993 align:middle
+<c.magenta>还有可用更多Swift语言加快速度</c>
+
+00:38:46.059 --> 00:38:47.828 align:middle
+<c.magenta>因为Swift真的很强大</c>
+
+00:38:48.762 --> 00:38:50.731 align:middle
+<c.magenta>最后 不鼓励使用dlopen()</c>
+
+00:38:50.797 --> 00:38:54.234 align:middle
+<c.magenta>它会带来细微的性能问题 很难诊断</c>
+
+00:38:55.102 --> 00:38:57.804 align:middle
+<c.magenta>可以通过屏幕上的URL获取更多信息</c>
+
+00:38:59.606 --> 00:39:01.508 align:middle
+<c.magenta>本周还将有很多相关演讲</c>
+
+00:38:59.606 --> 00:39:01.508 align:middle
+<c.magenta>本周还将有很多相关演讲</c>
+
+00:39:01.575 --> 00:39:05.179 align:middle
+<c.magenta>再说一次 2012年有一个</c>
+<c.magenta>关于应用性能的会话</c>
+
+00:39:05.245 --> 00:39:07.414 align:middle
+<c.magenta>涉及到应用启动的另一部分</c>
+
+00:39:07.481 --> 00:39:09.449 align:middle
+<c.magenta>如果感兴趣 强力推荐观看该演讲</c>
+
+00:39:09.850 --> 00:39:11.752 align:middle
+<c.magenta>感谢各位的到来</c>
+<c.magenta>希望你们这周过得愉快</c>
