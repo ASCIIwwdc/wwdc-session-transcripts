@@ -1,0 +1,3953 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:19.500 A:middle
+[ Music ]
+
+00:00:24.516 --> 00:00:29.376 A:middle
+[ Applause ]
+
+00:00:29.876 --> 00:00:30.256 A:middle
+&gt;&gt; Good morning.
+
+00:00:30.426 --> 00:00:31.636 A:middle
+And thanks for checking
+out our session.
+
+00:00:31.946 --> 00:00:33.046 A:middle
+My name is, Dave Browning.
+
+00:00:33.186 --> 00:00:34.636 A:middle
+And here with me today
+is, Nihar Sharma.
+
+00:00:34.636 --> 00:00:35.856 A:middle
+And we're going to be,
+
+00:00:36.036 --> 00:00:37.396 A:middle
+we're both engineers
+on the CloudKit team.
+
+00:00:37.396 --> 00:00:38.926 A:middle
+And we're going to be
+talking to you today
+
+00:00:38.926 --> 00:00:40.266 A:middle
+about some best practices
+
+00:00:40.316 --> 00:00:42.436 A:middle
+when building your
+applications with CloudKit.
+
+00:00:43.286 --> 00:00:47.876 A:middle
+So, what are we going
+to cover specifically?
+
+00:00:48.466 --> 00:00:50.676 A:middle
+Well, first I'm going to
+walk through how we here
+
+00:00:50.676 --> 00:00:52.276 A:middle
+at Apple use CloudKit.
+
+00:00:53.096 --> 00:00:56.056 A:middle
+We'll talk about the work
+flow and the API's that we use
+
+00:00:56.336 --> 00:00:58.716 A:middle
+in order to provide a seamless
+experience for our customers.
+
+00:00:58.766 --> 00:01:01.546 A:middle
+And by that I mean, allowing
+them to access the same data
+
+00:00:58.766 --> 00:01:01.546 A:middle
+And by that I mean, allowing
+them to access the same data
+
+00:01:01.736 --> 00:01:03.856 A:middle
+in their applications
+across all of their devices.
+
+00:01:05.096 --> 00:01:07.826 A:middle
+Next, Nihar is going to come
+up and talk about some details
+
+00:01:07.826 --> 00:01:09.436 A:middle
+when using the CKOperation API.
+
+00:01:09.436 --> 00:01:11.076 A:middle
+And the configurability
+
+00:01:11.076 --> 00:01:12.716 A:middle
+and flexibility you can
+get when you use it.
+
+00:01:13.886 --> 00:01:15.106 A:middle
+Then he's going to
+talk about some things
+
+00:01:15.106 --> 00:01:16.966 A:middle
+to consider when data modeling.
+
+00:01:17.536 --> 00:01:18.706 A:middle
+What you're going to
+store in CloudKit.
+
+00:01:18.746 --> 00:01:19.626 A:middle
+How you're going to store it.
+
+00:01:19.626 --> 00:01:20.776 A:middle
+How you're going to
+build your scheme up.
+
+00:01:21.326 --> 00:01:24.436 A:middle
+And then he'll talk
+about error handling,
+
+00:01:24.566 --> 00:01:25.786 A:middle
+which we've always
+said is very important
+
+00:01:25.786 --> 00:01:26.986 A:middle
+in CloudKit applications.
+
+00:01:27.376 --> 00:01:29.036 A:middle
+He's going to cover the
+different types of errors
+
+00:01:29.036 --> 00:01:30.996 A:middle
+that you'll encounter
+potentially when using the API
+
+00:01:30.996 --> 00:01:33.566 A:middle
+and how to consider
+responding to those depending
+
+00:01:33.566 --> 00:01:34.876 A:middle
+on your application's use case.
+
+00:01:36.356 --> 00:01:38.996 A:middle
+So, a quick reminder, we here
+at Apple have built CloudKit,
+
+00:01:39.116 --> 00:01:41.406 A:middle
+or built many applications
+on top of CloudKit.
+
+00:01:42.216 --> 00:01:44.506 A:middle
+And so you can be confident
+that yours will scale,
+
+00:01:44.566 --> 00:01:46.676 A:middle
+because we've scaled it to
+hundreds of millions of users.
+
+00:01:46.836 --> 00:01:49.176 A:middle
+I also want to do
+a quick refresher
+
+00:01:49.176 --> 00:01:50.256 A:middle
+about the conceptual model.
+
+00:01:50.786 --> 00:01:52.826 A:middle
+So, the highest level, we have
+what's called a container.
+
+00:01:53.156 --> 00:01:55.816 A:middle
+This is usually a one to one
+mapping to an application.
+
+00:01:56.226 --> 00:01:58.476 A:middle
+So, the photos application
+has a container in CloudKit,
+
+00:01:58.476 --> 00:02:00.326 A:middle
+the notes application,
+your application.
+
+00:01:58.476 --> 00:02:00.326 A:middle
+the notes application,
+your application.
+
+00:02:01.046 --> 00:02:03.846 A:middle
+Inside of the container
+you have a public database.
+
+00:02:04.256 --> 00:02:06.516 A:middle
+This is where you can store
+data that all users can see.
+
+00:02:07.126 --> 00:02:09.265 A:middle
+So, an example of
+this is the WWDC app,
+
+00:02:09.386 --> 00:02:10.806 A:middle
+or the news app in iOS.
+
+00:02:10.976 --> 00:02:12.016 A:middle
+They're built on CloudKit.
+
+00:02:12.016 --> 00:02:14.886 A:middle
+They use a public database
+for storing articles, news,
+
+00:02:14.886 --> 00:02:16.406 A:middle
+that kind of stuff
+that everyone can see.
+
+00:02:17.536 --> 00:02:19.056 A:middle
+Next there's the
+private database.
+
+00:02:19.396 --> 00:02:21.656 A:middle
+This is where you store data
+specific to a single user.
+
+00:02:22.246 --> 00:02:24.806 A:middle
+That user can see their data
+across all of their devices,
+
+00:02:24.886 --> 00:02:26.306 A:middle
+but no other users can see it.
+
+00:02:27.146 --> 00:02:29.616 A:middle
+And then new this year
+is the shared database.
+
+00:02:29.746 --> 00:02:31.836 A:middle
+If you want to learn more about
+this makes sure to go back
+
+00:02:31.836 --> 00:02:33.686 A:middle
+and check out the video
+for yesterday's session
+
+00:02:33.686 --> 00:02:34.686 A:middle
+on What's New in CloudKit.
+
+00:02:34.996 --> 00:02:36.626 A:middle
+And they do a deep dive
+on the sharing stuff.
+
+00:02:37.846 --> 00:02:40.416 A:middle
+Inside of the database
+you then have a zone.
+
+00:02:40.416 --> 00:02:43.466 A:middle
+And there's a default zone, and
+a public, and private database,
+
+00:02:43.786 --> 00:02:45.766 A:middle
+where if you throw records
+in there by default,
+
+00:02:45.766 --> 00:02:46.546 A:middle
+that's where they'll end up.
+
+00:02:47.026 --> 00:02:49.046 A:middle
+But, you can choose in
+the private database
+
+00:02:49.096 --> 00:02:51.096 A:middle
+to create 1 or more
+custom zones.
+
+00:02:51.536 --> 00:02:53.106 A:middle
+And you can store
+stuff in those zones.
+
+00:02:53.706 --> 00:02:56.816 A:middle
+And then when content is shared
+to a user from another user,
+
+00:02:57.196 --> 00:02:59.826 A:middle
+that shows up as a shared
+zone in their share database,
+
+00:03:00.226 --> 00:03:01.986 A:middle
+which you can think of
+as basically a proxy
+
+00:03:02.206 --> 00:03:04.816 A:middle
+to the custom zone and the
+private database of the owner.
+
+00:03:05.406 --> 00:03:07.896 A:middle
+And then of course if multiple
+users share stuff with you
+
+00:03:07.896 --> 00:03:09.536 A:middle
+in multiple custom zones
+you're going to end
+
+00:03:09.536 --> 00:03:11.896 A:middle
+up potentially seeing
+a lot of shared zones
+
+00:03:11.896 --> 00:03:12.746 A:middle
+in the shared database.
+
+00:03:13.316 --> 00:03:15.536 A:middle
+And now what I'm going to focus
+on with this work flow is mostly
+
+00:03:15.536 --> 00:03:17.706 A:middle
+in a custom and shared zones
+
+00:03:18.076 --> 00:03:18.846 A:middle
+that we're talking
+about right here.
+
+00:03:19.836 --> 00:03:21.806 A:middle
+Finally at the lowest
+level you have records.
+
+00:03:22.216 --> 00:03:24.556 A:middle
+This is your key value structure
+data where you store everything.
+
+00:03:24.626 --> 00:03:27.096 A:middle
+And a record always
+exists in a specific zone.
+
+00:03:27.826 --> 00:03:32.186 A:middle
+So, a quick reminder on the
+benefits of using CloudKit
+
+00:03:32.186 --> 00:03:34.936 A:middle
+at the high level, you focus
+on building your application
+
+00:03:35.046 --> 00:03:36.846 A:middle
+and not worried about
+building back in services.
+
+00:03:36.876 --> 00:03:37.536 A:middle
+We do that for you.
+
+00:03:38.486 --> 00:03:41.086 A:middle
+Your users get what we like to
+call automatic authentication.
+
+00:03:41.586 --> 00:03:44.246 A:middle
+That means, if they're signed
+into iCloud on a device,
+
+00:03:44.346 --> 00:03:46.696 A:middle
+you do not need to prompt them
+for signing up, or logging in,
+
+00:03:46.696 --> 00:03:49.316 A:middle
+or any of the stuff that can
+usually then be a barrier
+
+00:03:49.316 --> 00:03:50.396 A:middle
+to using your application.
+
+00:03:50.396 --> 00:03:52.866 A:middle
+If they're signed into
+iCloud with CloudKit,
+
+00:03:52.866 --> 00:03:56.116 A:middle
+you immediately have a uniquely
+identifier for that user.
+
+00:03:56.366 --> 00:03:57.786 A:middle
+And you can start storing
+data on their behalf.
+
+00:03:58.966 --> 00:04:01.836 A:middle
+And then finally, what the
+focus is today is you can get
+
+00:03:58.966 --> 00:04:01.836 A:middle
+And then finally, what the
+focus is today is you can get
+
+00:04:01.836 --> 00:04:04.746 A:middle
+that same data, your users can
+get the same data across all
+
+00:04:04.746 --> 00:04:06.556 A:middle
+of their devices when
+you store it in CloudKit.
+
+00:04:08.106 --> 00:04:08.396 A:middle
+All right.
+
+00:04:08.396 --> 00:04:10.906 A:middle
+So, let's talk about the
+common use case that we see
+
+00:04:11.096 --> 00:04:12.956 A:middle
+when we're building our
+apps on top of CloudKit.
+
+00:04:13.856 --> 00:04:16.286 A:middle
+And so what happens is, you have
+a user who runs an application,
+
+00:04:16.315 --> 00:04:18.076 A:middle
+in this example let's
+talk about Notes.
+
+00:04:18.146 --> 00:04:19.286 A:middle
+So, Notes is built on CloudKit.
+
+00:04:19.706 --> 00:04:21.505 A:middle
+They create a note on
+their iPhone, let's say,
+
+00:04:22.166 --> 00:04:23.416 A:middle
+that's stored over to the cloud.
+
+00:04:23.416 --> 00:04:25.926 A:middle
+And then when they open up
+Notes for the first time,
+
+00:04:25.926 --> 00:04:27.516 A:middle
+maybe on a second
+device, their iPad,
+
+00:04:28.146 --> 00:04:30.556 A:middle
+it feels like that data was
+sort of magically pushed.
+
+00:04:30.596 --> 00:04:31.876 A:middle
+And it's already
+there in their iPad.
+
+00:04:32.206 --> 00:04:33.686 A:middle
+And if they make
+edits in the iPad,
+
+00:04:34.006 --> 00:04:36.016 A:middle
+it feels like it's just
+magically pushed the other way.
+
+00:04:36.016 --> 00:04:37.806 A:middle
+So, that's sort of the use
+case that we're looking
+
+00:04:37.806 --> 00:04:38.916 A:middle
+at providing for our users.
+
+00:04:40.256 --> 00:04:43.136 A:middle
+So, the way to think
+about this is, iCloud,
+
+00:04:43.256 --> 00:04:44.746 A:middle
+the servers are the
+source of truth,
+
+00:04:45.436 --> 00:04:48.106 A:middle
+your devices have a local
+cache of that truth data.
+
+00:04:48.336 --> 00:04:53.306 A:middle
+And then CloudKit, the API is
+the glue in between the two.
+
+00:04:53.546 --> 00:04:53.956 A:middle
+All right.
+
+00:04:53.956 --> 00:04:56.476 A:middle
+So, how does this actually work?
+
+00:04:57.356 --> 00:04:59.906 A:middle
+Well, basically when
+your app launches,
+
+00:04:59.986 --> 00:05:01.546 A:middle
+the work flow we recommend is
+
+00:04:59.986 --> 00:05:01.546 A:middle
+the work flow we recommend is
+
+00:05:01.546 --> 00:05:04.056 A:middle
+that you fetch changes
+from the server.
+
+00:05:04.406 --> 00:05:06.016 A:middle
+Especially the first
+time your app launches,
+
+00:05:06.016 --> 00:05:08.356 A:middle
+because you don't know if
+something already exists
+
+00:05:08.356 --> 00:05:10.006 A:middle
+that the user wrote
+from another device.
+
+00:05:10.496 --> 00:05:10.726 A:middle
+All right.
+
+00:05:10.726 --> 00:05:11.546 A:middle
+So, you talked to the server.
+
+00:05:11.546 --> 00:05:13.596 A:middle
+You fetched down any data
+that you don't have yet.
+
+00:05:13.626 --> 00:05:17.716 A:middle
+And then you insure that you're
+subscribed to future changes.
+
+00:05:18.166 --> 00:05:20.776 A:middle
+By subscribing to future
+changes, it tells CloudKit,
+
+00:05:20.776 --> 00:05:23.026 A:middle
+the server, to send
+push notifications
+
+00:05:23.336 --> 00:05:25.536 A:middle
+to your applications
+on their other devices.
+
+00:05:26.086 --> 00:05:27.366 A:middle
+And then of course
+when you get a push,
+
+00:05:27.506 --> 00:05:28.896 A:middle
+you'll want to fetch
+changes again to pull
+
+00:05:28.896 --> 00:05:30.286 A:middle
+down the new changes
+that happened
+
+00:05:30.286 --> 00:05:31.806 A:middle
+from the users other device.
+
+00:05:33.376 --> 00:05:33.806 A:middle
+All right.
+
+00:05:33.806 --> 00:05:35.296 A:middle
+So, let's dig into these
+in a bit more detail,
+
+00:05:35.886 --> 00:05:37.076 A:middle
+so subscribing to changes.
+
+00:05:37.276 --> 00:05:39.426 A:middle
+The way this work is, when
+your application is launched
+
+00:05:39.426 --> 00:05:42.156 A:middle
+for the first time, and we'll
+talk about why in just a second,
+
+00:05:42.156 --> 00:05:43.306 A:middle
+but when it's launched
+for the first time,
+
+00:05:43.896 --> 00:05:46.276 A:middle
+you create a subscription
+telling the server,
+
+00:05:46.446 --> 00:05:48.976 A:middle
+here is the set of data I
+care about subscribing to.
+
+00:05:49.386 --> 00:05:51.256 A:middle
+And then when that data
+changes, it will let you know.
+
+00:05:51.966 --> 00:05:53.536 A:middle
+When your application
+launches for the first time
+
+00:05:53.536 --> 00:05:56.546 A:middle
+on another device the
+subscription might already exist
+
+00:05:56.546 --> 00:05:57.566 A:middle
+for the user on the server.
+
+00:05:57.816 --> 00:05:58.806 A:middle
+But, your app doesn't know that,
+
+00:05:58.806 --> 00:06:00.086 A:middle
+because it's launching
+for the first time.
+
+00:05:58.806 --> 00:06:00.086 A:middle
+because it's launching
+for the first time.
+
+00:06:00.436 --> 00:06:01.796 A:middle
+So, you need to make
+sure it exists.
+
+00:06:02.286 --> 00:06:03.296 A:middle
+So, you'll do the same thing
+
+00:06:03.416 --> 00:06:04.806 A:middle
+that you did before
+on the other device.
+
+00:06:05.496 --> 00:06:08.206 A:middle
+Now that you're subscribing
+to changes
+
+00:06:08.206 --> 00:06:10.326 A:middle
+and CloudKit is sending
+you push notifications,
+
+00:06:10.666 --> 00:06:12.196 A:middle
+you want to listen for
+those push notifications.
+
+00:06:12.196 --> 00:06:13.526 A:middle
+So, let's walk through
+an example.
+
+00:06:13.696 --> 00:06:15.486 A:middle
+The user writes a new note.
+
+00:06:15.926 --> 00:06:17.686 A:middle
+The application stores
+that down to the server.
+
+00:06:17.876 --> 00:06:20.786 A:middle
+The servers says, ah ha, there's
+a subscription for this user.
+
+00:06:20.786 --> 00:06:23.006 A:middle
+They wanted to know
+when new data showed up.
+
+00:06:23.906 --> 00:06:25.736 A:middle
+It says it came from the iPhone.
+
+00:06:25.736 --> 00:06:26.996 A:middle
+So, I don't need
+to bug the iPhone.
+
+00:06:27.156 --> 00:06:28.636 A:middle
+But, the user also had an iPad.
+
+00:06:29.016 --> 00:06:31.996 A:middle
+So, it looks up the proper Apple
+push notification service token.
+
+00:06:32.316 --> 00:06:35.326 A:middle
+Talks to APNS on your
+behalf, and tells them
+
+00:06:35.326 --> 00:06:36.696 A:middle
+to send a push to the iPad.
+
+00:06:36.946 --> 00:06:37.616 A:middle
+So, you don't have to deal
+
+00:06:37.616 --> 00:06:39.096 A:middle
+with sending pushes
+yourself in the back end.
+
+00:06:39.436 --> 00:06:41.316 A:middle
+So, then finally your
+iPad gets the push.
+
+00:06:41.426 --> 00:06:42.226 A:middle
+What does it do next?
+
+00:06:42.426 --> 00:06:44.036 A:middle
+Well, as we said, now it goes
+
+00:06:44.036 --> 00:06:45.876 A:middle
+and fetches the new
+changes from the server.
+
+00:06:46.356 --> 00:06:49.016 A:middle
+So, it talks to CloudKit,
+pulls down the new data,
+
+00:06:49.096 --> 00:06:51.916 A:middle
+updates its local cache, and
+then when user opens up notes,
+
+00:06:51.946 --> 00:06:55.756 A:middle
+bam, they see the same stuff
+they just wrote on their iPhone.
+
+00:06:56.166 --> 00:06:56.496 A:middle
+All right.
+
+00:06:56.496 --> 00:06:58.036 A:middle
+So, let's look at
+actually building this.
+
+00:06:58.036 --> 00:07:00.706 A:middle
+Let's walk through the code,
+the specific API that we use
+
+00:06:58.036 --> 00:07:00.706 A:middle
+Let's walk through the code,
+the specific API that we use
+
+00:07:00.706 --> 00:07:01.626 A:middle
+to make all of this happen.
+
+00:07:02.126 --> 00:07:04.666 A:middle
+So, first we'll talk about
+subscribing to changes.
+
+00:07:05.436 --> 00:07:06.926 A:middle
+So, remember what I said before.
+
+00:07:06.926 --> 00:07:08.606 A:middle
+This is one of those
+things that you only need
+
+00:07:08.606 --> 00:07:10.166 A:middle
+to do the first time
+your app launches.
+
+00:07:10.216 --> 00:07:12.206 A:middle
+So, you'll notice we have
+a check here at the top
+
+00:07:12.206 --> 00:07:16.146 A:middle
+of our code that says, have we
+locally cached on this device?
+
+00:07:16.246 --> 00:07:18.246 A:middle
+The fact that we've already
+created this subscription,
+
+00:07:18.506 --> 00:07:19.936 A:middle
+because if we've already
+created it, we don't need
+
+00:07:19.936 --> 00:07:21.356 A:middle
+to keep doing it
+every time we launch.
+
+00:07:21.636 --> 00:07:23.126 A:middle
+You save yourself
+network requests.
+
+00:07:23.126 --> 00:07:24.796 A:middle
+You save the user
+some network stuff.
+
+00:07:25.526 --> 00:07:25.876 A:middle
+All right.
+
+00:07:25.876 --> 00:07:27.526 A:middle
+So, if we haven't
+done this before,
+
+00:07:27.796 --> 00:07:29.396 A:middle
+let's look in the
+code to set it up.
+
+00:07:29.856 --> 00:07:31.166 A:middle
+So, new this year in iOS 10,
+
+00:07:31.496 --> 00:07:34.046 A:middle
+there's an API called
+CKDatabaseSubscription.
+
+00:07:34.396 --> 00:07:36.396 A:middle
+This allows you to
+subscribe to any change
+
+00:07:36.396 --> 00:07:38.246 A:middle
+across an entire
+database, and it works
+
+00:07:38.246 --> 00:07:40.136 A:middle
+in a private database,
+in a shared database.
+
+00:07:40.806 --> 00:07:43.206 A:middle
+So, in this example let's focus
+on the new shared database.
+
+00:07:43.726 --> 00:07:45.746 A:middle
+So, you can give a
+subscription an ID,
+
+00:07:46.176 --> 00:07:47.296 A:middle
+which allows you
+to check it later.
+
+00:07:47.296 --> 00:07:48.496 A:middle
+And we'll talk about
+that it just a minute.
+
+00:07:48.726 --> 00:07:50.176 A:middle
+But, in this case
+because we're dealing
+
+00:07:50.176 --> 00:07:52.626 A:middle
+with a shared database let's
+call it, shared changes.
+
+00:07:53.876 --> 00:07:57.816 A:middle
+Next you need tell CloudKit what
+type of push you want it to send
+
+00:07:58.146 --> 00:07:59.576 A:middle
+when this subscription triggers.
+
+00:07:59.886 --> 00:08:01.546 A:middle
+And so let's dig into the
+different types you can do.
+
+00:07:59.886 --> 00:08:01.546 A:middle
+And so let's dig into the
+different types you can do.
+
+00:08:02.706 --> 00:08:05.336 A:middle
+So, the first one that we
+actually use a lot and recommend
+
+00:08:05.336 --> 00:08:07.676 A:middle
+in most cases is a
+silent push notification.
+
+00:08:07.676 --> 00:08:12.196 A:middle
+And the way to do that in our
+API is on a subscription object.
+
+00:08:12.196 --> 00:08:15.446 A:middle
+You can set the notification
+using a CKNotification
+
+00:08:15.446 --> 00:08:16.106 A:middle
+info object.
+
+00:08:16.626 --> 00:08:19.276 A:middle
+And if you set the property,
+shouldSendContentAavailable
+
+00:08:19.276 --> 00:08:22.586 A:middle
+to true, and only that property,
+you'll get a silent push,
+
+00:08:22.586 --> 00:08:24.556 A:middle
+the back end will send a
+silent push on your behalf
+
+00:08:24.936 --> 00:08:25.716 A:middle
+for this subscription.
+
+00:08:26.126 --> 00:08:28.706 A:middle
+And the key to this is
+that you do not need
+
+00:08:28.706 --> 00:08:30.356 A:middle
+to prompt the user
+for acceptance.
+
+00:08:30.356 --> 00:08:33.046 A:middle
+So, we've had people
+ask in the past, hey,
+
+00:08:33.046 --> 00:08:34.986 A:middle
+we have this subscription,
+but it's popping up here.
+
+00:08:34.986 --> 00:08:37.385 A:middle
+You guys have seen it, allow
+push notifications for this app.
+
+00:08:37.385 --> 00:08:38.866 A:middle
+And a lot of people
+hit no to that.
+
+00:08:39.256 --> 00:08:41.135 A:middle
+You don't get pushed and
+then you rely on pulling.
+
+00:08:41.566 --> 00:08:43.395 A:middle
+If you do it this
+way, you're not going
+
+00:08:43.395 --> 00:08:44.736 A:middle
+to be alerting the
+user in any way.
+
+00:08:44.816 --> 00:08:46.476 A:middle
+So, you don't need to
+ask for acceptance.
+
+00:08:47.276 --> 00:08:48.956 A:middle
+And then finally you can listen
+
+00:08:49.126 --> 00:08:50.986 A:middle
+for these notifications
+in your app delegate.
+
+00:08:51.246 --> 00:08:52.576 A:middle
+RegisterForRemoteNotifications.
+
+00:08:53.436 --> 00:08:56.496 A:middle
+So, if you do want to send a UI
+push, you actually want a badge,
+
+00:08:56.496 --> 00:08:59.216 A:middle
+or banner, or make a sound,
+then you can set any one
+
+00:08:59.216 --> 00:09:00.416 A:middle
+of these 3 properties.
+
+00:08:59.216 --> 00:09:00.416 A:middle
+of these 3 properties.
+
+00:09:01.086 --> 00:09:04.106 A:middle
+And that will tell CloudKit to
+send a UI push to your user,
+
+00:09:04.966 --> 00:09:07.016 A:middle
+because you will be alerting
+them you do need to ask
+
+00:09:07.016 --> 00:09:08.406 A:middle
+for user acceptance
+in this case.
+
+00:09:08.406 --> 00:09:10.966 A:middle
+And then of course you
+register for remote notification
+
+00:09:11.016 --> 00:09:11.956 A:middle
+in the same way as before.
+
+00:09:12.816 --> 00:09:14.416 A:middle
+So, a little bit of fine print.
+
+00:09:14.776 --> 00:09:17.416 A:middle
+If you read the APNS
+documentation, they tell you
+
+00:09:17.416 --> 00:09:19.836 A:middle
+that pushes can be
+coalesced depending
+
+00:09:19.836 --> 00:09:21.126 A:middle
+on the conditions of the device.
+
+00:09:21.486 --> 00:09:24.466 A:middle
+So, that means if a subscription
+triggers and a push is sent
+
+00:09:24.466 --> 00:09:27.316 A:middle
+to your user's device, there
+are many cases low battery,
+
+00:09:27.316 --> 00:09:29.986 A:middle
+bad network, etcetera where
+they may not get that push.
+
+00:09:30.426 --> 00:09:32.656 A:middle
+But the coalescing piece
+means they promise to deliver
+
+00:09:32.656 --> 00:09:33.936 A:middle
+at least one of those.
+
+00:09:34.786 --> 00:09:37.346 A:middle
+So, what that means is, you
+should not think of push
+
+00:09:37.346 --> 00:09:39.436 A:middle
+as a way to tell your
+apps what changed,
+
+00:09:39.716 --> 00:09:41.656 A:middle
+because if 5 pushes were sent
+but you missed 4 of them,
+
+00:09:41.656 --> 00:09:43.416 A:middle
+you're going to miss
+4 of those what's.
+
+00:09:43.826 --> 00:09:46.176 A:middle
+Instead, think of push
+as a way to tell you
+
+00:09:46.176 --> 00:09:47.306 A:middle
+that something changed.
+
+00:09:47.306 --> 00:09:48.156 A:middle
+One or more things.
+
+00:09:48.456 --> 00:09:49.886 A:middle
+And that's why we need
+to go talk to the server,
+
+00:09:49.886 --> 00:09:51.046 A:middle
+to figure out what those were.
+
+00:09:51.046 --> 00:09:54.796 A:middle
+And the good news is the
+CloudKit API provides you a way
+
+00:09:54.796 --> 00:09:55.976 A:middle
+to ask for only what
+has changed.
+
+00:09:56.066 --> 00:09:58.986 A:middle
+So, you don't have to pull down
+all the stuff you already have.
+
+00:10:00.616 --> 00:10:00.856 A:middle
+All right.
+
+00:10:00.856 --> 00:10:01.926 A:middle
+Let's jump back into our code.
+
+00:10:01.926 --> 00:10:03.336 A:middle
+Remember we're creating
+a subscription.
+
+00:10:03.676 --> 00:10:06.086 A:middle
+And in this case we've set
+up a silent push notification
+
+00:10:06.516 --> 00:10:08.276 A:middle
+by doing
+shouldSendContentAvailable
+
+00:10:08.276 --> 00:10:08.736 A:middle
+to true.
+
+00:10:09.966 --> 00:10:11.566 A:middle
+Now, we need to take
+this subscription
+
+00:10:11.566 --> 00:10:13.956 A:middle
+and ask the CloudKit client
+to save if off to the server.
+
+00:10:13.956 --> 00:10:15.456 A:middle
+And you're probably
+familiar with this
+
+00:10:15.456 --> 00:10:16.276 A:middle
+if you've used CloudKit.
+
+00:10:16.276 --> 00:10:18.486 A:middle
+But, the way you do
+everything is with operations.
+
+00:10:18.836 --> 00:10:22.076 A:middle
+And in this example, we do a
+CKModifySubscriptionsOperation.
+
+00:10:22.456 --> 00:10:24.936 A:middle
+And we tell it about the
+subscription we've just created.
+
+00:10:25.066 --> 00:10:26.566 A:middle
+And this is the one
+we want to save.
+
+00:10:27.966 --> 00:10:30.436 A:middle
+With CloudKit because the
+client is going to be talking
+
+00:10:30.436 --> 00:10:32.686 A:middle
+to the server over the network,
+and that might take a bit
+
+00:10:32.686 --> 00:10:34.316 A:middle
+of time, everything
+is asynchronous.
+
+00:10:34.316 --> 00:10:36.316 A:middle
+So, that means all of
+your operations have
+
+00:10:36.356 --> 00:10:37.266 A:middle
+completion blocks.
+
+00:10:37.636 --> 00:10:40.346 A:middle
+They get called once
+a response comes back.
+
+00:10:40.606 --> 00:10:43.036 A:middle
+And so in this case, we
+have a modify subscriptions
+
+00:10:43.036 --> 00:10:43.716 A:middle
+completion block.
+
+00:10:44.366 --> 00:10:46.006 A:middle
+And the first thing
+you want to do in all
+
+00:10:46.006 --> 00:10:46.846 A:middle
+of your completion blocks,
+
+00:10:46.846 --> 00:10:48.796 A:middle
+I know we say this all the
+time, is check for errors.
+
+00:10:49.226 --> 00:10:50.876 A:middle
+And Nihar is going
+to talk to you
+
+00:10:50.876 --> 00:10:52.066 A:middle
+in a bit more detail about this.
+
+00:10:52.456 --> 00:10:54.596 A:middle
+But, in this case, let's just
+say if there not an error,
+
+00:10:55.036 --> 00:10:56.726 A:middle
+then we know that the
+subscription was saved.
+
+00:10:57.066 --> 00:10:59.406 A:middle
+Now we can locally cache the
+fact that we've done this,
+
+00:10:59.626 --> 00:11:00.746 A:middle
+so that we don't
+do it next time,
+
+00:10:59.626 --> 00:11:00.746 A:middle
+so that we don't
+do it next time,
+
+00:11:00.746 --> 00:11:03.746 A:middle
+because of that check
+up at the top.
+
+00:11:03.896 --> 00:11:05.716 A:middle
+Quick note, and Nihar is
+going to talk about this to.
+
+00:11:06.036 --> 00:11:09.006 A:middle
+CKOperations inherit from
+NSOperation, or Operation
+
+00:11:09.006 --> 00:11:11.206 A:middle
+in Swift 3, and so
+you have the ability
+
+00:11:11.206 --> 00:11:12.686 A:middle
+to set this quality
+of service property.
+
+00:11:12.686 --> 00:11:14.106 A:middle
+And the default is utility.
+
+00:11:14.106 --> 00:11:15.686 A:middle
+And he'll talk about some
+of the things to keep
+
+00:11:15.686 --> 00:11:16.636 A:middle
+in mind when setting this.
+
+00:11:17.216 --> 00:11:18.696 A:middle
+And then finally, the way
+
+00:11:18.696 --> 00:11:21.356 A:middle
+to actually finally take this
+operation and ask the client
+
+00:11:21.356 --> 00:11:25.176 A:middle
+to send it back, is to add it
+to a database's operation queue.
+
+00:11:25.336 --> 00:11:27.836 A:middle
+And again because we're doing
+a shared database subscription
+
+00:11:27.836 --> 00:11:29.066 A:middle
+in this case, we add it
+
+00:11:29.066 --> 00:11:30.806 A:middle
+to the shared database's
+operation queue.
+
+00:11:30.806 --> 00:11:33.596 A:middle
+And the client will now go off
+and send that to the server.
+
+00:11:34.436 --> 00:11:36.576 A:middle
+Okay. So, we're subscribed
+to changes now.
+
+00:11:37.326 --> 00:11:40.066 A:middle
+So, now the next step
+is to listen for pushes,
+
+00:11:40.516 --> 00:11:42.266 A:middle
+since CloudKit will
+send them to us
+
+00:11:42.266 --> 00:11:44.026 A:middle
+when data is changed
+on another device.
+
+00:11:44.206 --> 00:11:46.536 A:middle
+So, you want to make sure
+
+00:11:46.536 --> 00:11:48.416 A:middle
+that in Xcode you've
+turned on background modes.
+
+00:11:48.786 --> 00:11:51.506 A:middle
+And you want to check the
+box for remote notifications.
+
+00:11:51.556 --> 00:11:53.286 A:middle
+And potentially background
+fetch if you want
+
+00:11:53.286 --> 00:11:54.766 A:middle
+to do this while your
+app is in the background.
+
+00:11:56.126 --> 00:11:58.596 A:middle
+Once you've done that, there's
+a method in the app delegate
+
+00:11:58.646 --> 00:11:59.546 A:middle
+that you might be familiar with,
+
+00:11:59.716 --> 00:12:02.196 A:middle
+which is applicationDidReceive
+RemoteNotification,
+
+00:11:59.716 --> 00:12:02.196 A:middle
+which is applicationDidReceive
+RemoteNotification,
+
+00:12:02.196 --> 00:12:03.166 A:middle
+fetchCompletionHandler.
+
+00:12:04.606 --> 00:12:07.006 A:middle
+This method gets passed
+a user info dictionary.
+
+00:12:07.666 --> 00:12:10.016 A:middle
+And CloudKit provides
+you a handy way to see
+
+00:12:10.016 --> 00:12:13.346 A:middle
+if you can get a CKNotification
+out of that dictionary.
+
+00:12:14.916 --> 00:12:16.616 A:middle
+So, if you can, remember
+there might be pushes
+
+00:12:16.616 --> 00:12:17.426 A:middle
+for other reasons.
+
+00:12:17.486 --> 00:12:19.366 A:middle
+But if it's coming from
+a CloudKit subscription,
+
+00:12:19.666 --> 00:12:21.186 A:middle
+you'll be able to
+get a CKNotification.
+
+00:12:21.396 --> 00:12:23.666 A:middle
+And now we can check
+the subscription ID.
+
+00:12:24.426 --> 00:12:26.836 A:middle
+So, the reason this is important
+is because likely you're going
+
+00:12:26.836 --> 00:12:28.706 A:middle
+to end up having a
+database subscription
+
+00:12:28.706 --> 00:12:30.596 A:middle
+for the private database,
+and the shared database
+
+00:12:30.596 --> 00:12:31.596 A:middle
+and maybe for other things.
+
+00:12:31.956 --> 00:12:33.286 A:middle
+So, this is how you
+differentiate
+
+00:12:33.756 --> 00:12:35.386 A:middle
+which subscription
+triggered this push.
+
+00:12:35.766 --> 00:12:37.876 A:middle
+So, in this case let's say
+it was our shared changes.
+
+00:12:38.296 --> 00:12:40.546 A:middle
+Now we can go off and
+fetch that shared data.
+
+00:12:40.546 --> 00:12:42.216 A:middle
+And we'll talk about
+that in just a second.
+
+00:12:42.436 --> 00:12:44.706 A:middle
+And when that's done, we
+call it CompletionHandler
+
+00:12:44.706 --> 00:12:45.866 A:middle
+that was passed into
+this method.
+
+00:12:47.656 --> 00:12:50.556 A:middle
+Okay. So, now we are
+listening for pushes.
+
+00:12:51.006 --> 00:12:53.866 A:middle
+And let's say some time later
+your application gets a push.
+
+00:12:54.256 --> 00:12:54.846 A:middle
+So, what do we do?
+
+00:12:55.356 --> 00:12:56.066 A:middle
+Remember what we said.
+
+00:12:56.066 --> 00:12:57.576 A:middle
+You need to fetch new changes.
+
+00:12:57.956 --> 00:12:59.546 A:middle
+And so let's look at
+a graphical example
+
+00:12:59.546 --> 00:13:00.606 A:middle
+of sort of how this works.
+
+00:12:59.546 --> 00:13:00.606 A:middle
+of sort of how this works.
+
+00:13:01.206 --> 00:13:02.646 A:middle
+So, we got to push
+into our device.
+
+00:13:02.716 --> 00:13:04.466 A:middle
+And we said, okay, that's
+for the shared database.
+
+00:13:04.896 --> 00:13:06.456 A:middle
+There are sort of 2
+steps you need to take.
+
+00:13:07.186 --> 00:13:10.286 A:middle
+The first one is, you
+go and ask the server
+
+00:13:10.576 --> 00:13:13.566 A:middle
+for which zones changed
+in the shared database.
+
+00:13:13.876 --> 00:13:16.056 A:middle
+Remember we talked about
+zones before, right,
+
+00:13:16.056 --> 00:13:17.966 A:middle
+because there may be
+new zones that showed
+
+00:13:17.966 --> 00:13:19.046 A:middle
+up that you don't
+even know about,
+
+00:13:19.306 --> 00:13:20.676 A:middle
+because someone shared
+something with you.
+
+00:13:21.846 --> 00:13:23.986 A:middle
+And you pass along a
+server change token
+
+00:13:24.246 --> 00:13:26.076 A:middle
+that tells the server
+where in history you are.
+
+00:13:26.076 --> 00:13:27.356 A:middle
+And we'll dig into
+that in just a minute.
+
+00:13:28.346 --> 00:13:31.876 A:middle
+Step 2 is, now with the no
+zones, you go back to the server
+
+00:13:31.876 --> 00:13:33.586 A:middle
+and say, okay, please
+tell me what records
+
+00:13:33.586 --> 00:13:35.566 A:middle
+where changed inside of
+those specific zones.
+
+00:13:36.036 --> 00:13:38.816 A:middle
+And again you have change
+tokens for each zone marking
+
+00:13:38.816 --> 00:13:40.846 A:middle
+where in history your
+local device cache is.
+
+00:13:42.836 --> 00:13:43.166 A:middle
+All right.
+
+00:13:43.166 --> 00:13:44.586 A:middle
+So, let's talk about
+that change token thing
+
+00:13:44.586 --> 00:13:45.326 A:middle
+in a bit more detail.
+
+00:13:46.076 --> 00:13:47.876 A:middle
+So, imagine your
+user has a device,
+
+00:13:47.876 --> 00:13:49.266 A:middle
+the iPhone we were
+talking about before,
+
+00:13:49.766 --> 00:13:50.816 A:middle
+they're using your application,
+
+00:13:50.876 --> 00:13:52.526 A:middle
+and they send some
+changes down to the server.
+
+00:13:52.966 --> 00:13:55.206 A:middle
+Those changes are accepted,
+and the server wants to mark
+
+00:13:55.206 --> 00:13:56.126 A:middle
+that point in history.
+
+00:13:56.396 --> 00:13:58.006 A:middle
+It does that with the
+server change token.
+
+00:13:58.116 --> 00:14:01.346 A:middle
+And in this case for simplicity
+sake, let's save the letter A.
+
+00:13:58.116 --> 00:14:01.346 A:middle
+And in this case for simplicity
+sake, let's save the letter A.
+
+00:14:01.506 --> 00:14:03.846 A:middle
+That device sends down
+another set of changes
+
+00:14:03.846 --> 00:14:06.346 A:middle
+that are accepted, goes to
+B, etcetera, it goes to C.
+
+00:14:06.866 --> 00:14:10.016 A:middle
+Sometime later user runs
+your app on a second device.
+
+00:14:10.016 --> 00:14:11.786 A:middle
+Let's say that iPad we
+were talking about before.
+
+00:14:12.246 --> 00:14:13.766 A:middle
+And the first thing
+that iPad needs to do,
+
+00:14:13.766 --> 00:14:15.846 A:middle
+remember on app launch
+is go and ask
+
+00:14:15.846 --> 00:14:17.276 A:middle
+for any changes that
+it doesn't have.
+
+00:14:17.916 --> 00:14:19.486 A:middle
+So, it goes and says, I would
+
+00:14:19.486 --> 00:14:20.826 A:middle
+like to fetch the
+changes from the server.
+
+00:14:21.066 --> 00:14:22.376 A:middle
+The server says,
+okay, here you go.
+
+00:14:22.376 --> 00:14:23.146 A:middle
+Here's what exists.
+
+00:14:23.316 --> 00:14:24.876 A:middle
+And at the end of that it says,
+
+00:14:24.876 --> 00:14:26.826 A:middle
+you are now at server
+change token C.
+
+00:14:27.186 --> 00:14:29.516 A:middle
+So device 2 has now marked
+where in history it is.
+
+00:14:30.196 --> 00:14:32.616 A:middle
+Now let's say device 2 then
+later writes some data.
+
+00:14:32.846 --> 00:14:34.906 A:middle
+Somewhere along the way
+device 1 gets a push.
+
+00:14:35.326 --> 00:14:37.316 A:middle
+Device 1 fetches
+down the new changes.
+
+00:14:37.446 --> 00:14:39.216 A:middle
+And at the end of that
+the server says, okay,
+
+00:14:39.216 --> 00:14:40.386 A:middle
+you're now at change token E.
+
+00:14:40.736 --> 00:14:40.996 A:middle
+All right.
+
+00:14:41.396 --> 00:14:43.026 A:middle
+Device 2 makes another
+set of changes.
+
+00:14:43.086 --> 00:14:45.906 A:middle
+Device 1 gets a push,
+pulls that stuff down,
+
+00:14:46.126 --> 00:14:47.546 A:middle
+it's now at change token I.
+
+00:14:48.476 --> 00:14:51.576 A:middle
+Now you'll notice that device
+2 is still at change token C.
+
+00:14:51.986 --> 00:14:54.136 A:middle
+And that's because when you're
+writing data you're not getting
+
+00:14:54.136 --> 00:14:55.086 A:middle
+change tokens back.
+
+00:14:55.366 --> 00:14:57.026 A:middle
+You don't get those until
+you actually fetch it.
+
+00:14:57.466 --> 00:14:59.716 A:middle
+So, let's say device
+2, the app restarts,
+
+00:15:00.096 --> 00:15:01.596 A:middle
+or they restart their
+iPad or something.
+
+00:15:01.686 --> 00:15:02.696 A:middle
+Your app launches up.
+
+00:15:02.976 --> 00:15:04.086 A:middle
+You go and fetch changes.
+
+00:15:04.306 --> 00:15:06.086 A:middle
+The server will send you
+the stuff that you wrote
+
+00:15:06.086 --> 00:15:08.106 A:middle
+from that device, because
+it doesn't know if you had
+
+00:15:08.106 --> 00:15:10.066 A:middle
+that locally cached or
+not, for various reasons.
+
+00:15:10.136 --> 00:15:10.346 A:middle
+All right.
+
+00:15:10.856 --> 00:15:12.386 A:middle
+So, don't be surprised if
+you see some of the same.
+
+00:15:12.386 --> 00:15:15.926 A:middle
+This allows you to confirm
+that you have this stuff.
+
+00:15:15.956 --> 00:15:17.976 A:middle
+And now at the end of
+that, the server will send
+
+00:15:17.976 --> 00:15:19.086 A:middle
+out a change token, I.
+
+00:15:19.086 --> 00:15:21.986 A:middle
+And you notice that both devices
+are now at the same state.
+
+00:15:21.986 --> 00:15:23.406 A:middle
+They have same server
+change token.
+
+00:15:23.766 --> 00:15:25.876 A:middle
+So, that's sort of an
+example of how that works.
+
+00:15:27.366 --> 00:15:29.576 A:middle
+Okay. So, let's look at
+actually writing the code
+
+00:15:29.656 --> 00:15:30.806 A:middle
+for fetching these changes.
+
+00:15:31.326 --> 00:15:34.106 A:middle
+So, in this case we're going
+to talk about database.
+
+00:15:34.406 --> 00:15:38.856 A:middle
+So, a new API, iOS 10 is
+CKFetchDatabaseChangesOperation.
+
+00:15:39.386 --> 00:15:41.716 A:middle
+And again you pass in
+the server change token
+
+00:15:41.716 --> 00:15:42.606 A:middle
+that we just talked about.
+
+00:15:42.796 --> 00:15:45.136 A:middle
+And the first time you ever
+do that, that will be nil,
+
+00:15:45.136 --> 00:15:46.936 A:middle
+and it will tell the server
+that you have nothing.
+
+00:15:46.986 --> 00:15:48.796 A:middle
+And it will give you everything
+that exists on the server.
+
+00:15:50.466 --> 00:15:53.886 A:middle
+Next, in previous
+versions of the API,
+
+00:15:53.886 --> 00:15:57.676 A:middle
+at the end of this operation
+you had to actually check a flag
+
+00:15:57.986 --> 00:16:00.686 A:middle
+to see if the server said that
+there was more data coming.
+
+00:15:57.986 --> 00:16:00.686 A:middle
+to see if the server said that
+there was more data coming.
+
+00:16:00.686 --> 00:16:02.496 A:middle
+Now, we'll talk about
+it in just a second.
+
+00:16:03.066 --> 00:16:05.396 A:middle
+But, if that was set to
+true, it was your job
+
+00:16:05.396 --> 00:16:08.286 A:middle
+on the client's side to
+re-trigger this operation.
+
+00:16:08.286 --> 00:16:11.436 A:middle
+But, what we've done is,
+we've added a new property
+
+00:16:11.736 --> 00:16:13.786 A:middle
+on these operations
+called fetchAllChanges.
+
+00:16:14.026 --> 00:16:15.166 A:middle
+And it defaults to true.
+
+00:16:15.456 --> 00:16:18.426 A:middle
+And what it does is, it tells
+the CloudKit client to do
+
+00:16:18.426 --> 00:16:20.406 A:middle
+that on your behalf so that
+you don't have to fool with it.
+
+00:16:20.976 --> 00:16:23.126 A:middle
+So, if after running
+one of these operations,
+
+00:16:23.126 --> 00:16:25.266 A:middle
+if the client sees that
+the server has more data,
+
+00:16:25.536 --> 00:16:28.116 A:middle
+it will automatically enqueue
+your operation again for you.
+
+00:16:28.456 --> 00:16:30.106 A:middle
+And of course call your
+callbacks along the way
+
+00:16:30.636 --> 00:16:32.096 A:middle
+so that you don't have to
+worry about that anymore.
+
+00:16:33.536 --> 00:16:35.646 A:middle
+Next, you want to implement
+this completion block,
+
+00:16:35.866 --> 00:16:37.676 A:middle
+recordZoneWithIDChangeBlock.
+
+00:16:38.336 --> 00:16:40.716 A:middle
+And this is where you will
+be told about the zones
+
+00:16:40.716 --> 00:16:42.276 A:middle
+that changed in the
+shared database.
+
+00:16:42.776 --> 00:16:45.196 A:middle
+So, you'll want to collect
+these zone ID's, and we'll talk
+
+00:16:45.196 --> 00:16:46.466 A:middle
+about what to do with
+them in a second.
+
+00:16:47.186 --> 00:16:50.166 A:middle
+Next, there is,
+recordZoneWithIDWasDeletedBlock.
+
+00:16:50.586 --> 00:16:51.636 A:middle
+This tells you about the zones
+
+00:16:51.636 --> 00:16:53.086 A:middle
+that no longer exist
+on the server.
+
+00:16:53.266 --> 00:16:56.506 A:middle
+And allows you to clean up
+any local cache data that was
+
+00:16:56.506 --> 00:16:57.496 A:middle
+in those zones from before.
+
+00:16:58.416 --> 00:17:00.276 A:middle
+And you'll see this
+in cases potentially
+
+00:16:58.416 --> 00:17:00.276 A:middle
+And you'll see this
+in cases potentially
+
+00:17:00.276 --> 00:17:02.266 A:middle
+where something was
+unshared with your user,
+
+00:17:02.866 --> 00:17:04.906 A:middle
+because that zone no longer
+exists in their shared database.
+
+00:17:04.906 --> 00:17:07.896 A:middle
+And then new is, a
+changedTokenUpdatedBlock.
+
+00:17:07.896 --> 00:17:09.156 A:middle
+So, let's dig into this.
+
+00:17:09.836 --> 00:17:13.336 A:middle
+So, remember before we had
+device 1 had written some data
+
+00:17:13.336 --> 00:17:14.026 A:middle
+down in the server.
+
+00:17:14.496 --> 00:17:16.746 A:middle
+We had device 2 had
+written some data down.
+
+00:17:16.986 --> 00:17:18.195 A:middle
+And then sometime way later,
+
+00:17:18.276 --> 00:17:20.046 A:middle
+device 3 for this
+user comes along.
+
+00:17:20.046 --> 00:17:22.116 A:middle
+And remember the first
+thing it needs to do is,
+
+00:17:22.116 --> 00:17:24.076 A:middle
+go talk to the server
+and fetch any changes.
+
+00:17:24.496 --> 00:17:26.175 A:middle
+And because fetchAllChanges
+was true,
+
+00:17:26.175 --> 00:17:27.366 A:middle
+it's asking for everything.
+
+00:17:28.256 --> 00:17:30.476 A:middle
+But, there might be a lot of
+data there, like in this case.
+
+00:17:30.476 --> 00:17:32.416 A:middle
+Right. And the server might
+decide, it doesn't make sense
+
+00:17:32.416 --> 00:17:34.466 A:middle
+to send all of this back
+in a single response.
+
+00:17:34.636 --> 00:17:35.376 A:middle
+So, we're to chunk it up.
+
+00:17:36.986 --> 00:17:38.866 A:middle
+So, it's going to send
+you back a chunk of it.
+
+00:17:39.736 --> 00:17:41.186 A:middle
+The CloudKit client will see
+
+00:17:41.186 --> 00:17:42.446 A:middle
+that there's more
+coming from the server.
+
+00:17:42.806 --> 00:17:43.736 A:middle
+So, it needs to go back
+
+00:17:43.736 --> 00:17:45.676 A:middle
+and issue another
+operation on your behalf.
+
+00:17:45.936 --> 00:17:48.716 A:middle
+But, before it does that, it's
+going to call changeTokenUpdated
+
+00:17:48.956 --> 00:17:51.256 A:middle
+and tell you that you're
+now at change token C.
+
+00:17:52.236 --> 00:17:54.426 A:middle
+And this allows you to sort
+of move along with the client
+
+00:17:54.426 --> 00:17:55.676 A:middle
+as it's making its operations.
+
+00:17:55.676 --> 00:17:58.276 A:middle
+So, you update your local change
+token and don't repeat some
+
+00:17:58.276 --> 00:17:59.166 A:middle
+of the stuff you've
+already done.
+
+00:17:59.896 --> 00:18:02.466 A:middle
+So, let's say this client,
+on your behalf, says,
+
+00:17:59.896 --> 00:18:02.466 A:middle
+So, let's say this client,
+on your behalf, says,
+
+00:18:02.466 --> 00:18:03.826 A:middle
+there's more stuff
+coming from the server.
+
+00:18:04.046 --> 00:18:04.996 A:middle
+Let's go back and get it.
+
+00:18:05.516 --> 00:18:06.456 A:middle
+See some new data.
+
+00:18:06.456 --> 00:18:08.426 A:middle
+At the end of that calls
+changeTokenUpdated,
+
+00:18:08.596 --> 00:18:10.756 A:middle
+see if there's new data, goes
+back to the server again.
+
+00:18:10.756 --> 00:18:11.836 A:middle
+But, this time there's an error.
+
+00:18:12.666 --> 00:18:14.796 A:middle
+In your error handling, it's
+likely that you're going to end
+
+00:18:14.796 --> 00:18:16.356 A:middle
+up calling fetchChanges again.
+
+00:18:16.966 --> 00:18:18.846 A:middle
+But, instead of starting
+all the way back at A,
+
+00:18:19.096 --> 00:18:21.116 A:middle
+because you have a
+changeTokenUpdatedBlock,
+
+00:18:21.266 --> 00:18:22.806 A:middle
+your local change
+token is now at E.
+
+00:18:23.146 --> 00:18:25.256 A:middle
+So, when you call your next
+one, the server says, okay,
+
+00:18:25.256 --> 00:18:26.236 A:middle
+you only need F through I.
+
+00:18:26.346 --> 00:18:28.106 A:middle
+You don't need the old stuff
+that you've already processed.
+
+00:18:28.736 --> 00:18:30.296 A:middle
+So, that's why it's important
+
+00:18:30.296 --> 00:18:32.316 A:middle
+to implement the
+changeTokenUpdatedBlock.
+
+00:18:32.316 --> 00:18:34.236 A:middle
+And you just cache the
+server change token just
+
+00:18:34.236 --> 00:18:34.826 A:middle
+like you normally do.
+
+00:18:35.446 --> 00:18:38.446 A:middle
+And then finally we have
+our completion block,
+
+00:18:38.606 --> 00:18:39.476 A:middle
+which in this case is,
+
+00:18:39.476 --> 00:18:41.396 A:middle
+fetchDatabaseChanges
+CompletionBlock.
+
+00:18:42.076 --> 00:18:43.776 A:middle
+Again, the first thing
+you do, error handling.
+
+00:18:43.826 --> 00:18:45.156 A:middle
+Again, Nihar will
+walk about this.
+
+00:18:45.906 --> 00:18:47.546 A:middle
+And then you'll get
+a final change token,
+
+00:18:47.776 --> 00:18:49.896 A:middle
+which in that last example
+had we not received an error,
+
+00:18:49.896 --> 00:18:51.206 A:middle
+would have been the
+I at the end.
+
+00:18:51.626 --> 00:18:52.946 A:middle
+Cache that just like
+you normally do.
+
+00:18:53.436 --> 00:18:55.786 A:middle
+And so now we've
+collected a set of zones
+
+00:18:55.786 --> 00:18:57.086 A:middle
+that changed in that database.
+
+00:18:57.346 --> 00:18:59.476 A:middle
+Now we need to go fetch
+the records that changed.
+
+00:18:59.476 --> 00:19:01.116 A:middle
+That was step 2 in
+that diagram before.
+
+00:18:59.476 --> 00:19:01.116 A:middle
+That was step 2 in
+that diagram before.
+
+00:19:01.506 --> 00:19:03.066 A:middle
+And we do that via new API,
+
+00:19:03.566 --> 00:19:05.996 A:middle
+CKFetchRecordZone
+ChangesOperation.
+
+00:19:06.406 --> 00:19:08.856 A:middle
+And it allows you to pass
+in a set of zone ID's.
+
+00:19:08.996 --> 00:19:10.716 A:middle
+So, you don't have to worry
+about calling all these
+
+00:19:10.716 --> 00:19:11.966 A:middle
+for all the different
+zones that changed.
+
+00:19:11.966 --> 00:19:14.386 A:middle
+You call one, pass in all
+the zones that changed.
+
+00:19:14.796 --> 00:19:15.826 A:middle
+And we won't dig into the code,
+
+00:19:15.826 --> 00:19:17.106 A:middle
+but it looks very
+much like this.
+
+00:19:17.136 --> 00:19:18.526 A:middle
+You're going to have
+some completion blocks
+
+00:19:18.786 --> 00:19:20.556 A:middle
+where you're dealing with
+records instead of zones.
+
+00:19:20.866 --> 00:19:24.466 A:middle
+And you'll be getting
+change tokens along the way.
+
+00:19:24.776 --> 00:19:25.006 A:middle
+All right.
+
+00:19:25.006 --> 00:19:26.446 A:middle
+So, quick recap on
+what we talked about.
+
+00:19:27.636 --> 00:19:30.576 A:middle
+So, you subscribed to changes
+to tell CloudKit that you want
+
+00:19:30.576 --> 00:19:32.806 A:middle
+to receive pushes when
+a user changes the data
+
+00:19:32.806 --> 00:19:33.676 A:middle
+on another device.
+
+00:19:34.256 --> 00:19:36.136 A:middle
+You've listened to those
+push notifications.
+
+00:19:36.296 --> 00:19:38.796 A:middle
+And when you receive one, you've
+gone and talked to the server,
+
+00:19:38.796 --> 00:19:40.306 A:middle
+and fetched exactly
+what changed.
+
+00:19:40.536 --> 00:19:43.096 A:middle
+And by doing this, your
+application now provides
+
+00:19:43.096 --> 00:19:44.806 A:middle
+that seamless experience
+for your users
+
+00:19:44.806 --> 00:19:47.936 A:middle
+across all of their devices.
+
+00:19:48.156 --> 00:19:48.416 A:middle
+All right.
+
+00:19:48.416 --> 00:19:49.706 A:middle
+So, now Nihar's going
+to come up and dig
+
+00:19:49.706 --> 00:19:50.946 A:middle
+into some more specific
+best practices.
+
+00:19:51.516 --> 00:19:56.696 A:middle
+[ Applause ]
+
+00:19:57.196 --> 00:19:57.666 A:middle
+&gt;&gt; Thanks, Dave.
+
+00:19:58.206 --> 00:19:59.046 A:middle
+Good morning, everyone.
+
+00:19:59.046 --> 00:20:00.136 A:middle
+Thanks for coming out today.
+
+00:19:59.046 --> 00:20:00.136 A:middle
+Thanks for coming out today.
+
+00:20:00.486 --> 00:20:01.566 A:middle
+My name is, Nihar Sharma.
+
+00:20:01.566 --> 00:20:03.156 A:middle
+And I'm an engineer
+on the CloudKit team.
+
+00:20:03.566 --> 00:20:05.636 A:middle
+And today I'm very
+excited to share
+
+00:20:05.636 --> 00:20:07.856 A:middle
+with you some CloudKit
+best practices
+
+00:20:07.856 --> 00:20:10.516 A:middle
+that we've learned here at
+Apple over the past few years
+
+00:20:10.516 --> 00:20:12.976 A:middle
+that you can take advantage
+of in your apps today.
+
+00:20:13.516 --> 00:20:16.616 A:middle
+Let's take a look at what
+we're going to cover.
+
+00:20:16.716 --> 00:20:19.786 A:middle
+First, I'd like to talk about
+automatic authentication.
+
+00:20:20.206 --> 00:20:21.486 A:middle
+Dave touched on this briefly.
+
+00:20:21.486 --> 00:20:23.796 A:middle
+I'd like to go into a little bit
+more detail about what it is.
+
+00:20:24.026 --> 00:20:26.686 A:middle
+How you can take
+advantage of it.
+
+00:20:26.956 --> 00:20:29.556 A:middle
+Next, I'd like to talk
+about the CKOperation API,
+
+00:20:29.976 --> 00:20:32.336 A:middle
+which is the workhorse of our
+native talk at frameworks.
+
+00:20:32.846 --> 00:20:37.266 A:middle
+Then we'll dig into a couple of
+tips that you can keep in mind
+
+00:20:37.266 --> 00:20:39.036 A:middle
+when designing the
+schema for your apps,
+
+00:20:39.166 --> 00:20:40.336 A:middle
+that will help you
+take advantage
+
+00:20:40.336 --> 00:20:42.126 A:middle
+of the CloudKit API
+more effectively.
+
+00:20:43.456 --> 00:20:47.036 A:middle
+And finally, we've told you
+before just how critical great
+
+00:20:47.036 --> 00:20:49.056 A:middle
+error handling is to
+writing a CloudKit app.
+
+00:20:49.406 --> 00:20:51.906 A:middle
+And I'd like to reiterate
+that today.
+
+00:20:52.276 --> 00:20:54.576 A:middle
+And talk to you about a few
+different class of errors,
+
+00:20:54.836 --> 00:20:56.536 A:middle
+and how your application
+should handle them.
+
+00:20:57.196 --> 00:20:58.016 A:middle
+So, let's get started.
+
+00:20:58.646 --> 00:21:01.086 A:middle
+First up, automatic
+authentication.
+
+00:20:58.646 --> 00:21:01.086 A:middle
+First up, automatic
+authentication.
+
+00:21:02.136 --> 00:21:05.496 A:middle
+Now, you might be familiar
+with a UI like this,
+
+00:21:05.646 --> 00:21:08.566 A:middle
+where on first launch
+an app requests a lot
+
+00:21:08.566 --> 00:21:10.126 A:middle
+of private information
+from a user,
+
+00:21:10.736 --> 00:21:12.856 A:middle
+even before the user has
+started using their apps.
+
+00:21:13.946 --> 00:21:17.016 A:middle
+Well, we think in CloudKit
+we have a great way for you
+
+00:21:17.016 --> 00:21:19.566 A:middle
+to increase the chances of
+engaging with your users
+
+00:21:19.796 --> 00:21:22.176 A:middle
+without requiring any
+private information upfront.
+
+00:21:23.446 --> 00:21:26.546 A:middle
+The way we do this is via
+the CloudKit user record.
+
+00:21:27.116 --> 00:21:32.466 A:middle
+As a reminder, this user
+record is automatically created
+
+00:21:32.466 --> 00:21:35.646 A:middle
+for every user that when
+they first use your apps
+
+00:21:36.206 --> 00:21:38.346 A:middle
+that is logged into
+an iCloud account.
+
+00:21:39.486 --> 00:21:42.426 A:middle
+In this manner it is unique
+per CloudKit container.
+
+00:21:43.506 --> 00:21:46.556 A:middle
+And it offers you a stable
+identifier for that user
+
+00:21:47.266 --> 00:21:49.376 A:middle
+that is stable across
+app re-launchers,
+
+00:21:49.376 --> 00:21:50.756 A:middle
+OS upgrades, etcetera.
+
+00:21:50.756 --> 00:21:53.436 A:middle
+So, you can save this
+identifier to your servers
+
+00:21:53.566 --> 00:21:55.576 A:middle
+and start building a profile
+for that user right away.
+
+00:21:55.856 --> 00:21:57.686 A:middle
+And when you notice
+that they're engaged
+
+00:21:57.686 --> 00:22:00.926 A:middle
+with your apps a lot more, then
+go ahead and request information
+
+00:21:57.686 --> 00:22:00.926 A:middle
+with your apps a lot more, then
+go ahead and request information
+
+00:22:00.926 --> 00:22:02.046 A:middle
+to enrich their profiles.
+
+00:22:03.346 --> 00:22:05.056 A:middle
+The way you access
+the user record ID
+
+00:22:05.056 --> 00:22:07.846 A:middle
+for the current user is
+via the fetchUserRecordID
+
+00:22:07.846 --> 00:22:10.156 A:middle
+CompletionHandler
+API on CKContainer.
+
+00:22:11.206 --> 00:22:13.576 A:middle
+So, that was automatic
+authentication with CloudKit.
+
+00:22:15.536 --> 00:22:17.136 A:middle
+Now, let's talk about
+CKOperations.
+
+00:22:17.676 --> 00:22:20.806 A:middle
+As a recap, there
+are 2 main ways
+
+00:22:20.806 --> 00:22:24.236 A:middle
+in which the CloudKit framework
+exposes operations to your apps.
+
+00:22:24.956 --> 00:22:26.886 A:middle
+One is via convenience
+API calls,
+
+00:22:27.386 --> 00:22:29.456 A:middle
+which work on one
+item at a time.
+
+00:22:30.026 --> 00:22:33.846 A:middle
+And the other is via those
+CKOperation counterparts.
+
+00:22:33.846 --> 00:22:36.346 A:middle
+So, in this manner, every
+convenience API call
+
+00:22:36.346 --> 00:22:38.286 A:middle
+that we expose, that
+works on one item,
+
+00:22:38.656 --> 00:22:40.366 A:middle
+has a CKOperation counterpart.
+
+00:22:41.596 --> 00:22:43.556 A:middle
+And that works on a
+batch of those items.
+
+00:22:43.816 --> 00:22:47.426 A:middle
+So, for example, we have
+the fetchWithRecordID API
+
+00:22:47.626 --> 00:22:49.826 A:middle
+on CKDatabase to fetch
+1 record at a time.
+
+00:22:50.266 --> 00:22:52.986 A:middle
+And we have its corresponding
+CKFetchRecordsOperation
+
+00:22:52.986 --> 00:22:54.586 A:middle
+that takes an array
+of record ID's
+
+00:22:54.896 --> 00:22:57.866 A:middle
+and fetches them in a batch.
+
+00:22:58.066 --> 00:23:00.556 A:middle
+Now, there's certain advantages
+to using this CKOperation API
+
+00:22:58.066 --> 00:23:00.556 A:middle
+Now, there's certain advantages
+to using this CKOperation API
+
+00:23:00.556 --> 00:23:02.856 A:middle
+that you get over
+convenience API call.
+
+00:23:03.186 --> 00:23:04.846 A:middle
+I'd like to walk through
+a lot of those today.
+
+00:23:05.166 --> 00:23:06.906 A:middle
+So, first and foremost,
+
+00:23:07.686 --> 00:23:10.456 A:middle
+CKOperation is a
+subclass of NSOperation.
+
+00:23:11.206 --> 00:23:14.466 A:middle
+What this means is that,
+you get the full power
+
+00:23:14.466 --> 00:23:17.186 A:middle
+of the NSOperation API
+available to you for free.
+
+00:23:18.516 --> 00:23:20.456 A:middle
+You can do things like,
+set up dependencies
+
+00:23:20.456 --> 00:23:21.766 A:middle
+between your CKOperations.
+
+00:23:22.316 --> 00:23:25.276 A:middle
+You can assign the
+quality of service to them,
+
+00:23:25.316 --> 00:23:27.436 A:middle
+to let the system know how
+important that operation is
+
+00:23:27.436 --> 00:23:30.596 A:middle
+to you, or even manage queue
+priorities when scheduling them
+
+00:23:30.636 --> 00:23:32.136 A:middle
+on your own NSOperation queues.
+
+00:23:32.646 --> 00:23:35.996 A:middle
+And you even get
+cancellation for CKOperations
+
+00:23:35.996 --> 00:23:37.346 A:middle
+that have already
+started executing.
+
+00:23:39.786 --> 00:23:42.306 A:middle
+So, I'd like you
+to go up, go back,
+
+00:23:42.306 --> 00:23:44.676 A:middle
+and read up the documentation
+on NSOperations
+
+00:23:44.676 --> 00:23:46.836 A:middle
+to take full advantage
+of the CKOperation API.
+
+00:23:47.566 --> 00:23:50.836 A:middle
+A great reference for this is
+our advanced NSOperations talk
+
+00:23:50.836 --> 00:23:52.976 A:middle
+that we gave at WWDC last year.
+
+00:23:55.056 --> 00:23:57.386 A:middle
+So, now since we're talking
+about CloudKit operations,
+
+00:23:57.556 --> 00:23:59.426 A:middle
+there are a few more things
+that come along with the ride.
+
+00:23:59.906 --> 00:24:02.916 A:middle
+And I'd like to touch upon 3
+of those main things today.
+
+00:23:59.906 --> 00:24:02.916 A:middle
+And I'd like to touch upon 3
+of those main things today.
+
+00:24:03.796 --> 00:24:07.976 A:middle
+First, is the configurability
+that CKOperation gives you.
+
+00:24:08.426 --> 00:24:12.326 A:middle
+Next is, how it lets you
+optimize resources both
+
+00:24:12.326 --> 00:24:14.856 A:middle
+for the system, and
+you as a developer.
+
+00:24:15.396 --> 00:24:19.396 A:middle
+And last, I'd like to talk
+about lifetime management,
+
+00:24:19.396 --> 00:24:21.386 A:middle
+which is something new
+that we've enabled you
+
+00:24:21.386 --> 00:24:23.926 A:middle
+to be able to do in iOS 9.3.
+
+00:24:26.076 --> 00:24:27.966 A:middle
+So, first up, a quick recap
+
+00:24:27.966 --> 00:24:30.426 A:middle
+on just what you can
+configure on a CKOperation.
+
+00:24:31.426 --> 00:24:35.186 A:middle
+Operations let you have
+fine grain access to whether
+
+00:24:35.186 --> 00:24:37.866 A:middle
+or not you wish network
+activity for that operation
+
+00:24:38.196 --> 00:24:39.306 A:middle
+to go out over cellular.
+
+00:24:40.266 --> 00:24:44.216 A:middle
+You can also specify keys for
+operations that fetch items
+
+00:24:44.216 --> 00:24:45.606 A:middle
+from the server if you want
+
+00:24:45.606 --> 00:24:48.516 A:middle
+to download just partial records
+instead of the entire record,
+
+00:24:48.796 --> 00:24:52.776 A:middle
+which the community's
+API does not let you do.
+
+00:24:53.026 --> 00:24:54.756 A:middle
+You can even limit
+the number of results
+
+00:24:54.756 --> 00:24:55.976 A:middle
+that a particular
+operation returns to you.
+
+00:24:58.586 --> 00:25:01.216 A:middle
+And finally, long running
+operations also give you
+
+00:24:58.586 --> 00:25:01.216 A:middle
+And finally, long running
+operations also give you
+
+00:25:01.256 --> 00:25:02.786 A:middle
+progress updates
+that you can use
+
+00:25:02.786 --> 00:25:04.196 A:middle
+to drive certain UI elements.
+
+00:25:04.196 --> 00:25:07.726 A:middle
+Now, let's talk about
+resource optimization.
+
+00:25:09.336 --> 00:25:11.966 A:middle
+The number 1 resource
+used by your operations
+
+00:25:11.966 --> 00:25:14.376 A:middle
+on the system are
+network requests.
+
+00:25:15.276 --> 00:25:17.636 A:middle
+Now, every convenience
+API call turns
+
+00:25:17.636 --> 00:25:21.426 A:middle
+into at least 1 network
+request on the system.
+
+00:25:21.546 --> 00:25:25.836 A:middle
+So, when you use the CKOperation
+batch API, you allow the system
+
+00:25:25.836 --> 00:25:28.646 A:middle
+to minimize the number of
+requests needed to be able
+
+00:25:28.646 --> 00:25:30.106 A:middle
+to send your changes
+to the server.
+
+00:25:31.036 --> 00:25:33.346 A:middle
+So, for instance, if you want
+to save a batch of records
+
+00:25:33.546 --> 00:25:35.516 A:middle
+and you use a
+CKModifiedRecordsOperation,
+
+00:25:36.026 --> 00:25:38.786 A:middle
+the system will take
+that batch and be able
+
+00:25:38.786 --> 00:25:44.696 A:middle
+to optimize a request needed
+to send that to the server.
+
+00:25:44.876 --> 00:25:47.196 A:middle
+So, now in this manner
+it is not only good
+
+00:25:47.196 --> 00:25:48.496 A:middle
+for the system resources,
+
+00:25:48.566 --> 00:25:53.466 A:middle
+but it also helps you optimize
+your network request quota
+
+00:25:54.136 --> 00:25:57.166 A:middle
+as developers.
+
+00:25:57.166 --> 00:26:01.956 A:middle
+Additionally, by default
+CKOperation lets you opt your
+
+00:25:57.166 --> 00:26:01.956 A:middle
+Additionally, by default
+CKOperation lets you opt your
+
+00:26:01.956 --> 00:26:04.376 A:middle
+network activity into
+discretionary behavior.
+
+00:26:05.686 --> 00:26:07.216 A:middle
+What we mean by this is that,
+
+00:26:07.366 --> 00:26:09.876 A:middle
+you let the system
+decide an opportune time
+
+00:26:09.876 --> 00:26:11.276 A:middle
+for your request
+to be scheduled.
+
+00:26:12.516 --> 00:26:14.986 A:middle
+For more information I
+encourage you to check
+
+00:26:14.986 --> 00:26:18.186 A:middle
+out the discretionary property
+on NSURL session Configuration.
+
+00:26:19.106 --> 00:26:22.346 A:middle
+The way we expose this to you on
+CKOperation is via the quality
+
+00:26:22.346 --> 00:26:23.216 A:middle
+of service properties.
+
+00:26:23.776 --> 00:26:26.306 A:middle
+So, by default, CKOperations
+have a quality
+
+00:26:26.306 --> 00:26:27.156 A:middle
+of service utility.
+
+00:26:27.156 --> 00:26:31.396 A:middle
+Any QOS, which is utility
+or below will opt-in
+
+00:26:31.396 --> 00:26:32.796 A:middle
+to this discretionary behavior.
+
+00:26:32.866 --> 00:26:36.026 A:middle
+So, if you notice that your
+CKOperations are taking a much
+
+00:26:36.026 --> 00:26:39.276 A:middle
+longer time to execute than
+you expect, that might be
+
+00:26:39.276 --> 00:26:41.646 A:middle
+because the system does not
+think that it's a good time
+
+00:26:41.646 --> 00:26:44.956 A:middle
+for your request to go out yet.
+
+00:26:45.126 --> 00:26:46.806 A:middle
+Now, additionally there
+are a few other behaviors
+
+00:26:46.806 --> 00:26:47.766 A:middle
+that you should keep in mind.
+
+00:26:48.526 --> 00:26:50.316 A:middle
+When opting into
+discretionary behavior,
+
+00:26:50.976 --> 00:26:53.816 A:middle
+network failures will be
+automatically retried for you.
+
+00:26:55.156 --> 00:26:59.066 A:middle
+And along with that, by default
+you get a 7-day resource timeout
+
+00:26:59.316 --> 00:27:01.896 A:middle
+for every single request
+that your operation executes.
+
+00:26:59.316 --> 00:27:01.896 A:middle
+for every single request
+that your operation executes.
+
+00:27:02.466 --> 00:27:05.416 A:middle
+So, that was resource
+optimization.
+
+00:27:05.936 --> 00:27:08.566 A:middle
+Now, let's talk about
+CKOperation lifeline management.
+
+00:27:09.806 --> 00:27:12.526 A:middle
+On our platforms, there are
+various reasons why your
+
+00:27:12.526 --> 00:27:13.936 A:middle
+application may exit.
+
+00:27:14.826 --> 00:27:17.716 A:middle
+For instance, you might be
+suspended in the background
+
+00:27:17.856 --> 00:27:20.756 A:middle
+and be evicted, or a user
+might force quit your app.
+
+00:27:21.966 --> 00:27:25.236 A:middle
+Now, you might have certain
+updates running while this
+
+00:27:25.236 --> 00:27:27.706 A:middle
+happened, which were
+either user-initiated
+
+00:27:27.706 --> 00:27:30.516 A:middle
+and you really want to just
+save them to the server.
+
+00:27:30.516 --> 00:27:33.386 A:middle
+Regardless of whether
+your app may have exited,
+
+00:27:34.036 --> 00:27:36.176 A:middle
+or you might have a
+longer running update
+
+00:27:36.366 --> 00:27:39.076 A:middle
+at a lower priority that
+you wish to finish whether
+
+00:27:39.076 --> 00:27:40.366 A:middle
+or not your app sticks around.
+
+00:27:41.686 --> 00:27:46.206 A:middle
+So, to serve this purpose in iOS
+9.3 we introduced the concept
+
+00:27:46.206 --> 00:27:48.156 A:middle
+of CloudKit long-lived
+operations.
+
+00:27:48.706 --> 00:27:52.446 A:middle
+What these operations
+let you do is,
+
+00:27:52.446 --> 00:27:55.156 A:middle
+once you mark them long-lived,
+the system will execute
+
+00:27:55.156 --> 00:27:57.616 A:middle
+that operation on your
+apps behalf whether
+
+00:27:57.616 --> 00:27:58.856 A:middle
+or not your app sticks around.
+
+00:28:00.516 --> 00:28:03.506 A:middle
+We will cache any
+server responses we get
+
+00:28:03.506 --> 00:28:06.166 A:middle
+for that operation, and
+will provide you with an API
+
+00:28:06.386 --> 00:28:09.276 A:middle
+to be able to replay those
+responses once your app returns.
+
+00:28:11.546 --> 00:28:13.776 A:middle
+So, let's take a look at
+the API that we have exposed
+
+00:28:13.776 --> 00:28:14.566 A:middle
+to be able to do this.
+
+00:28:16.046 --> 00:28:18.146 A:middle
+Well, on CKOperation it's
+pretty straightforward.
+
+00:28:18.576 --> 00:28:20.056 A:middle
+You have an isLongLived flag.
+
+00:28:20.346 --> 00:28:22.466 A:middle
+So, you create a
+CKOperation like normal.
+
+00:28:22.616 --> 00:28:24.466 A:middle
+Once you've set this
+flag, you've turned it
+
+00:28:24.466 --> 00:28:25.606 A:middle
+into a long-lived operation.
+
+00:28:27.086 --> 00:28:29.356 A:middle
+Along with that you
+have an operation ID,
+
+00:28:30.066 --> 00:28:31.956 A:middle
+which is a system
+assigned string
+
+00:28:32.226 --> 00:28:34.696 A:middle
+that uniquely identifies
+every CKOperation.
+
+00:28:35.596 --> 00:28:36.316 A:middle
+And we will take a look
+
+00:28:36.316 --> 00:28:39.536 A:middle
+at why that's important
+in just a second.
+
+00:28:39.716 --> 00:28:41.146 A:middle
+So, here's the general
+architecture
+
+00:28:41.146 --> 00:28:43.196 A:middle
+of how you run a
+long-lived operation.
+
+00:28:43.686 --> 00:28:45.646 A:middle
+You initialize an operation
+like you would normally.
+
+00:28:45.646 --> 00:28:47.786 A:middle
+You just set the
+isLongLived flag on it,
+
+00:28:47.786 --> 00:28:49.406 A:middle
+along with your arguments
+and callbacks,
+
+00:28:49.406 --> 00:28:50.596 A:middle
+and you run the operation.
+
+00:28:51.406 --> 00:28:54.856 A:middle
+Now, when you wish to
+resume it, you will fetch
+
+00:28:54.856 --> 00:28:56.396 A:middle
+that long-lived operation
+
+00:28:56.396 --> 00:28:59.366 A:middle
+from the CKContainer class
+via the operation ID.
+
+00:28:59.366 --> 00:29:01.976 A:middle
+You will set the callbacks
+
+00:28:59.366 --> 00:29:01.976 A:middle
+You will set the callbacks
+
+00:29:01.976 --> 00:29:03.476 A:middle
+if you're interested
+in hearing about.
+
+00:29:03.946 --> 00:29:05.426 A:middle
+And you would run that
+operation once more.
+
+00:29:05.936 --> 00:29:07.986 A:middle
+Let's take a look at an example.
+
+00:29:08.726 --> 00:29:10.516 A:middle
+Let's say we wish
+to run a long-lived
+
+00:29:10.846 --> 00:29:11.996 A:middle
+fetchRecordsOperation.
+
+00:29:13.016 --> 00:29:14.306 A:middle
+So, we set up the operation
+
+00:29:14.306 --> 00:29:16.146 A:middle
+like we did normally
+with our arguments.
+
+00:29:16.496 --> 00:29:18.836 A:middle
+But, we remember to set
+the isLongLived flag.
+
+00:29:19.536 --> 00:29:22.666 A:middle
+And we save the operation ID
+property to our local cache
+
+00:29:22.886 --> 00:29:25.606 A:middle
+so that we'd remember what
+this operation represented.
+
+00:29:25.806 --> 00:29:29.686 A:middle
+We set up the callbacks, and
+then queue the operation.
+
+00:29:30.026 --> 00:29:31.606 A:middle
+Now, when you wish to resume it,
+
+00:29:32.056 --> 00:29:33.876 A:middle
+you can use the
+fetchLongLivedOperation
+
+00:29:33.876 --> 00:29:36.336 A:middle
+with ID API available
+on CKContainer
+
+00:29:36.636 --> 00:29:37.756 A:middle
+to fetch that operation.
+
+00:29:39.026 --> 00:29:41.056 A:middle
+And since you know what
+that operation represents
+
+00:29:41.056 --> 00:29:43.076 A:middle
+and from your cache,
+you can safely cast it
+
+00:29:43.766 --> 00:29:45.546 A:middle
+and set the appropriate
+callbacks on it.
+
+00:29:46.506 --> 00:29:49.096 A:middle
+You do not need to set the
+arguments again, or tweak any
+
+00:29:49.096 --> 00:29:50.296 A:middle
+of the other operation
+properties
+
+00:29:50.296 --> 00:29:51.506 A:middle
+that you might have previously,
+
+00:29:52.276 --> 00:29:53.446 A:middle
+and you've resumed
+that operation.
+
+00:29:55.206 --> 00:29:59.206 A:middle
+Now, CloudKit will then replay
+all the cache responses we have
+
+00:29:59.206 --> 00:29:59.976 A:middle
+back for that operation.
+
+00:30:00.516 --> 00:30:02.176 A:middle
+And either catch you
+up to the progress
+
+00:30:02.176 --> 00:30:04.336 A:middle
+that the operation has made
+why your app was not around,
+
+00:30:04.696 --> 00:30:07.976 A:middle
+or give you the entirety of
+the results of that operation.
+
+00:30:08.026 --> 00:30:11.946 A:middle
+And what this also means is that
+these operations are cleaned up.
+
+00:30:12.106 --> 00:30:12.876 A:middle
+That's important sign.
+
+00:30:13.326 --> 00:30:16.056 A:middle
+And normally this happens
+when the completion block
+
+00:30:16.056 --> 00:30:18.536 A:middle
+of that operation is called.
+
+00:30:18.706 --> 00:30:22.326 A:middle
+You must note that your apps
+will have at least 24 hours
+
+00:30:22.626 --> 00:30:24.446 A:middle
+to resume any long-lived
+operations
+
+00:30:24.446 --> 00:30:25.366 A:middle
+that they might have enqueued.
+
+00:30:30.136 --> 00:30:32.796 A:middle
+So, that was all
+about CKOperation API.
+
+00:30:33.796 --> 00:30:36.036 A:middle
+Now, let's switch gears and
+talk about data modeling.
+
+00:30:37.506 --> 00:30:39.706 A:middle
+There's 3 main tips that
+I'd like to give you today.
+
+00:30:40.236 --> 00:30:42.786 A:middle
+The first one is around
+schema redundancies.
+
+00:30:42.786 --> 00:30:45.306 A:middle
+How you can use them and how
+they help you leverage the
+
+00:30:45.306 --> 00:30:46.796 A:middle
+CloudKit API more effectively.
+
+00:30:47.746 --> 00:30:50.876 A:middle
+The second one is
+how to use references
+
+00:30:50.876 --> 00:30:53.476 A:middle
+to avoid a certain class of
+errors that you might encounter
+
+00:30:53.576 --> 00:30:54.546 A:middle
+in your CloudKit apps.
+
+00:30:55.636 --> 00:30:58.096 A:middle
+And lastly I'd like to talk
+about parent references,
+
+00:30:58.326 --> 00:31:00.686 A:middle
+which are a new type of
+reference that we've added
+
+00:30:58.326 --> 00:31:00.686 A:middle
+which are a new type of
+reference that we've added
+
+00:31:00.686 --> 00:31:02.926 A:middle
+in this release to
+support CloudKit sharing.
+
+00:31:03.506 --> 00:31:06.156 A:middle
+So, let's talk about
+schema redundancies.
+
+00:31:06.996 --> 00:31:11.116 A:middle
+Let's take an example of
+developing a photo sharing app.
+
+00:31:11.896 --> 00:31:13.306 A:middle
+Now, the first thing
+that you might have
+
+00:31:13.306 --> 00:31:16.966 A:middle
+on a server this app is
+a record type for photo,
+
+00:31:17.296 --> 00:31:20.886 A:middle
+where you store a user's
+high resolution photograph
+
+00:31:20.886 --> 00:31:27.826 A:middle
+that they've taken on one of
+our iOS devices as a CK asset.
+
+00:31:28.036 --> 00:31:30.286 A:middle
+Now, let's say when the
+user first launches the app,
+
+00:31:30.696 --> 00:31:33.366 A:middle
+while you're fetching changes
+like Dave recommended before,
+
+00:31:33.726 --> 00:31:36.256 A:middle
+you wish to display
+just a thumbnail view
+
+00:31:36.466 --> 00:31:38.476 A:middle
+of all the user's
+most recent photos.
+
+00:31:38.816 --> 00:31:41.126 A:middle
+Something like this,
+which the photos app does.
+
+00:31:42.326 --> 00:31:44.956 A:middle
+Then it seems like an awful
+waste of network bandwidth
+
+00:31:44.956 --> 00:31:46.446 A:middle
+to be able to download
+
+00:31:46.446 --> 00:31:49.316 A:middle
+that entire high resolution
+asset every single time you have
+
+00:31:49.346 --> 00:31:50.146 A:middle
+to load this page.
+
+00:31:51.306 --> 00:31:52.206 A:middle
+So, what can you do here?
+
+00:31:52.576 --> 00:31:54.096 A:middle
+Well, it's pretty
+straightforward.
+
+00:31:54.966 --> 00:31:58.156 A:middle
+You can think about adding a
+redundant field on that record,
+
+00:31:58.416 --> 00:32:00.476 A:middle
+which represents the
+downscaled asset.
+
+00:31:58.416 --> 00:32:00.476 A:middle
+which represents the
+downscaled asset.
+
+00:32:02.566 --> 00:32:06.396 A:middle
+And what this allows you to
+do is, coupled with the usage
+
+00:32:06.446 --> 00:32:10.146 A:middle
+of CKOperation and the
+desired keys property
+
+00:32:10.146 --> 00:32:11.816 A:middle
+that we talked about,
+that enables you
+
+00:32:11.816 --> 00:32:13.166 A:middle
+to fetch partial records.
+
+00:32:13.396 --> 00:32:16.986 A:middle
+You can now fetch just the key
+that you need to drive the UI
+
+00:32:16.986 --> 00:32:18.586 A:middle
+that your user's interested in.
+
+00:32:19.156 --> 00:32:22.326 A:middle
+You can even set the
+results limit property
+
+00:32:22.686 --> 00:32:24.806 A:middle
+to limit just the
+number of results
+
+00:32:24.806 --> 00:32:28.866 A:middle
+that you're showing
+on a single page.
+
+00:32:29.006 --> 00:32:31.796 A:middle
+So, in this manner, you can
+enqueue an optimized download
+
+00:32:32.276 --> 00:32:34.916 A:middle
+to be able to present a
+dynamic UI to your users.
+
+00:32:35.356 --> 00:32:38.136 A:middle
+You fetch only what is
+needed, when it is needed.
+
+00:32:38.726 --> 00:32:42.676 A:middle
+And the desired keys
+property is also available
+
+00:32:42.796 --> 00:32:45.316 A:middle
+on the new CKFetchRecordZone
+ChangesOperation,
+
+00:32:45.806 --> 00:32:47.566 A:middle
+as well as
+CKFetchRecordsOperation,
+
+00:32:47.836 --> 00:32:49.706 A:middle
+both of which fetch items
+from the Cloud for you.
+
+00:32:50.286 --> 00:32:54.566 A:middle
+Now, as a reminder, these
+API's are also available to you
+
+00:32:54.566 --> 00:32:57.126 A:middle
+on the web via CloudKit JS.
+
+00:32:58.436 --> 00:33:01.006 A:middle
+So, by using them,
+you enable your users
+
+00:32:58.436 --> 00:33:01.006 A:middle
+So, by using them,
+you enable your users
+
+00:33:01.006 --> 00:33:03.306 A:middle
+to have a more dynamic
+experience in your apps,
+
+00:33:03.306 --> 00:33:06.296 A:middle
+because they're not waiting
+for you to finish operations
+
+00:33:06.676 --> 00:33:10.716 A:middle
+that are downloading data
+that they're not going to use.
+
+00:33:11.006 --> 00:33:12.916 A:middle
+Next, let's talk
+about CKReferences.
+
+00:33:13.296 --> 00:33:15.636 A:middle
+As a quick reminder,
+what are these?
+
+00:33:16.766 --> 00:33:18.676 A:middle
+Well, they're CloudKit's
+way for you
+
+00:33:18.676 --> 00:33:21.026 A:middle
+to point records
+to other records.
+
+00:33:21.846 --> 00:33:23.516 A:middle
+So, for instance, if
+we have 2 records here.
+
+00:33:23.516 --> 00:33:27.476 A:middle
+Record A and record B, we
+store reference on record A,
+
+00:33:28.226 --> 00:33:29.626 A:middle
+initializing it with record B.
+
+00:33:30.426 --> 00:33:33.666 A:middle
+We've created a CKReference.
+
+00:33:33.666 --> 00:33:36.626 A:middle
+Now, let's say we wish to add
+albums to our photo sharing app,
+
+00:33:37.156 --> 00:33:39.136 A:middle
+which can contain
+multiple photographs.
+
+00:33:39.136 --> 00:33:40.096 A:middle
+So, how would we go
+
+00:33:40.096 --> 00:33:42.386 A:middle
+about modeling this
+one-to-many relationship?
+
+00:33:42.906 --> 00:33:47.476 A:middle
+Well, in a simple manner,
+and either you might think
+
+00:33:47.476 --> 00:33:49.656 A:middle
+that this might be a good
+day to model for this.
+
+00:33:50.356 --> 00:33:54.206 A:middle
+Storing the record ID's, the
+references to the photo records
+
+00:33:54.206 --> 00:33:55.726 A:middle
+that are part of
+that album right
+
+00:33:55.726 --> 00:33:57.726 A:middle
+on the album record
+itself as an array.
+
+00:33:59.116 --> 00:34:00.416 A:middle
+This is what that
+will look like.
+
+00:33:59.116 --> 00:34:00.416 A:middle
+This is what that
+will look like.
+
+00:34:00.416 --> 00:34:05.316 A:middle
+Now, let's take a look at what
+happens when multiple devices
+
+00:34:05.426 --> 00:34:07.736 A:middle
+for your user try to add albums,
+
+00:34:07.736 --> 00:34:09.936 A:middle
+try to add photographs
+to that same album.
+
+00:34:10.585 --> 00:34:14.246 A:middle
+So, let's say we have an
+album record up on the Cloud
+
+00:34:14.406 --> 00:34:16.286 A:middle
+that does not have
+any photos yet.
+
+00:34:17.196 --> 00:34:19.036 A:middle
+Now, remember that
+your users are going
+
+00:34:19.036 --> 00:34:20.176 A:middle
+to have multiple devices.
+
+00:34:21.536 --> 00:34:23.196 A:middle
+They all fetch this
+album record.
+
+00:34:24.286 --> 00:34:25.686 A:middle
+See that it has no photos.
+
+00:34:25.916 --> 00:34:27.346 A:middle
+They're happy with it.
+
+00:34:28.775 --> 00:34:30.106 A:middle
+Now they have photos.
+
+00:34:30.106 --> 00:34:32.476 A:middle
+They each have photos that they
+wish to add to the same album.
+
+00:34:33.956 --> 00:34:36.485 A:middle
+So, now they in-queue that
+update on that record.
+
+00:34:37.226 --> 00:34:38.815 A:middle
+Let's say our iPhone
+gets there first.
+
+00:34:39.016 --> 00:34:41.136 A:middle
+And now the server knows
+about one of the photographs,
+
+00:34:41.196 --> 00:34:43.056 A:middle
+the references to one
+of those photographs.
+
+00:34:44.255 --> 00:34:46.926 A:middle
+But, now when the other
+new devices come in and try
+
+00:34:46.926 --> 00:34:50.045 A:middle
+to make their updates, they're
+no longer updating the latest
+
+00:34:50.045 --> 00:34:51.255 A:middle
+version of the server record.
+
+00:34:52.315 --> 00:34:56.406 A:middle
+So, in this case, both of those
+devices will see the error,
+
+00:34:56.545 --> 00:34:57.976 A:middle
+CK error serverRecordChanged.
+
+00:34:59.466 --> 00:35:03.126 A:middle
+Now, I invite you to take a look
+at our advanced CloudKit talk
+
+00:34:59.466 --> 00:35:03.126 A:middle
+Now, I invite you to take a look
+at our advanced CloudKit talk
+
+00:35:03.126 --> 00:35:05.726 A:middle
+from WWDC '14 for more details
+
+00:35:05.726 --> 00:35:07.036 A:middle
+on how you can handle
+this error.
+
+00:35:07.726 --> 00:35:09.206 A:middle
+But, let's see if we
+can figure out a way
+
+00:35:09.206 --> 00:35:11.056 A:middle
+where we can avoid it entirely.
+
+00:35:13.806 --> 00:35:16.066 A:middle
+Well, in this case we know
+that our album record is going
+
+00:35:16.066 --> 00:35:17.476 A:middle
+to have frequent rights on it.
+
+00:35:18.086 --> 00:35:21.736 A:middle
+So, instead if we model our
+one-to-many relationship using a
+
+00:35:21.736 --> 00:35:25.936 A:middle
+back pointer by storing the
+reference on the photo record
+
+00:35:27.066 --> 00:35:28.296 A:middle
+that is part of that album,
+
+00:35:28.876 --> 00:35:31.056 A:middle
+we completely eliminate
+the right contention
+
+00:35:31.056 --> 00:35:33.086 A:middle
+that we had on our album record.
+
+00:35:34.056 --> 00:35:36.686 A:middle
+So, in this case whenever a
+new photo needs to be added,
+
+00:35:37.106 --> 00:35:39.726 A:middle
+you just set a reference
+on it to the album record
+
+00:35:39.726 --> 00:35:43.956 A:middle
+that it's a part of and
+save the photo record.
+
+00:35:44.046 --> 00:35:45.966 A:middle
+But, by doing this you've
+completely eliminated your
+
+00:35:45.966 --> 00:35:47.646 A:middle
+contention that you
+had previously.
+
+00:35:48.426 --> 00:35:51.146 A:middle
+And now you might wonder, well,
+how do I fetch all those photos,
+
+00:35:51.146 --> 00:35:52.586 A:middle
+which is part of my
+problem to begin with?
+
+00:35:53.316 --> 00:35:56.096 A:middle
+Well, you can use
+queries for this purpose.
+
+00:35:58.596 --> 00:36:00.256 A:middle
+Here's a query that
+you need to be able
+
+00:35:58.596 --> 00:36:00.256 A:middle
+Here's a query that
+you need to be able
+
+00:36:00.256 --> 00:36:02.696 A:middle
+to fetch all photo records
+that are part of this album.
+
+00:36:02.856 --> 00:36:03.886 A:middle
+It's pretty straight forward.
+
+00:36:04.156 --> 00:36:07.296 A:middle
+All you need to do is equate
+it to the album reference field
+
+00:36:07.296 --> 00:36:09.146 A:middle
+that you have on
+your photo records.
+
+00:36:12.116 --> 00:36:14.076 A:middle
+Next let's talk about
+parent references.
+
+00:36:15.586 --> 00:36:18.426 A:middle
+On CKRecord this year,
+we've added a new type
+
+00:36:18.426 --> 00:36:20.176 A:middle
+of reference called
+a parent reference
+
+00:36:20.356 --> 00:36:22.906 A:middle
+that will help you
+model your data in a way
+
+00:36:22.906 --> 00:36:24.466 A:middle
+that better supports
+CloudKit sharing.
+
+00:36:25.866 --> 00:36:27.656 A:middle
+What we'd like to
+recommend is that,
+
+00:36:27.656 --> 00:36:31.136 A:middle
+if your app supports sharing,
+you use the parent references
+
+00:36:31.436 --> 00:36:33.466 A:middle
+to set up a hierarchical
+data model.
+
+00:36:34.806 --> 00:36:37.536 A:middle
+Recognize the unit of
+sharing in your apps and set
+
+00:36:37.536 --> 00:36:38.976 A:middle
+up the parent references
+accordingly.
+
+00:36:38.976 --> 00:36:43.866 A:middle
+Let's take a look at an
+example of what I mean by that.
+
+00:36:44.076 --> 00:36:46.416 A:middle
+Our photo and album
+records are a great example
+
+00:36:46.416 --> 00:36:47.526 A:middle
+of using a parent reference.
+
+00:36:48.576 --> 00:36:51.576 A:middle
+An album is clearly a
+parent of a photo record.
+
+00:36:51.966 --> 00:36:54.156 A:middle
+So, all we need to do is
+set the parent property
+
+00:36:54.576 --> 00:36:57.026 A:middle
+on the photo record to
+our album record ID,
+
+00:36:58.166 --> 00:36:59.886 A:middle
+and save that photo record.
+
+00:37:02.886 --> 00:37:05.536 A:middle
+Now, let's say that we've used
+this model throughout our app,
+
+00:37:05.926 --> 00:37:07.996 A:middle
+and we end up with a
+hierarchy that looks like this.
+
+00:37:08.586 --> 00:37:10.446 A:middle
+And now a user comes
+along that wishes
+
+00:37:10.446 --> 00:37:11.716 A:middle
+to share this entire album.
+
+00:37:12.616 --> 00:37:14.296 A:middle
+Well, all you would need
+to do in this case is,
+
+00:37:14.296 --> 00:37:17.866 A:middle
+create a CKShare with that album
+record as the group record.
+
+00:37:18.246 --> 00:37:21.116 A:middle
+And in one fail swoop you will
+share the entire hierarchy
+
+00:37:21.116 --> 00:37:22.866 A:middle
+that you set up using
+parent references.
+
+00:37:23.406 --> 00:37:27.766 A:middle
+Now, CloudKit also supports
+partially shared hierarchies.
+
+00:37:28.656 --> 00:37:31.806 A:middle
+So, in this case, if a
+user might have only wanted
+
+00:37:31.806 --> 00:37:33.276 A:middle
+to share photo C, for example.
+
+00:37:34.306 --> 00:37:36.546 A:middle
+You could have created a
+share just with photo C.
+
+00:37:36.936 --> 00:37:43.236 A:middle
+And in this case, only the photo
+C and all its descendents set
+
+00:37:43.236 --> 00:37:45.416 A:middle
+up via parent references
+will be part of that share.
+
+00:37:47.466 --> 00:37:48.976 A:middle
+And that was data modeling.
+
+00:37:49.866 --> 00:37:52.056 A:middle
+Let's talk about error handling.
+
+00:37:52.946 --> 00:37:55.596 A:middle
+Now, there are a few
+different types of errors
+
+00:37:55.596 --> 00:37:57.786 A:middle
+and your application
+should handle these
+
+00:37:57.786 --> 00:38:00.296 A:middle
+in a few main different ways.
+
+00:37:57.786 --> 00:38:00.296 A:middle
+in a few main different ways.
+
+00:38:00.426 --> 00:38:01.776 A:middle
+And let's take a
+look at each of them.
+
+00:38:03.266 --> 00:38:04.816 A:middle
+So, let's say we
+have a simple example
+
+00:38:04.816 --> 00:38:06.666 A:middle
+where your device comes along
+
+00:38:06.806 --> 00:38:08.736 A:middle
+and you chose a
+CKModifyRecordsOperation
+
+00:38:08.856 --> 00:38:09.946 A:middle
+and tries to talk to the server.
+
+00:38:10.736 --> 00:38:13.756 A:middle
+There are 2 main things that
+the server might respond with.
+
+00:38:14.196 --> 00:38:18.166 A:middle
+It could either say that, I
+didn't like that request at all,
+
+00:38:18.266 --> 00:38:22.006 A:middle
+please don't try it
+again, or it could say
+
+00:38:22.006 --> 00:38:24.036 A:middle
+that everything was
+fine with your request,
+
+00:38:24.276 --> 00:38:26.046 A:middle
+but right now is
+not a good time.
+
+00:38:26.466 --> 00:38:28.206 A:middle
+Come back a little
+later and try it again.
+
+00:38:29.596 --> 00:38:32.566 A:middle
+Now, we need your apps to
+handle these 2 types of errors
+
+00:38:32.566 --> 00:38:33.656 A:middle
+in very different ways.
+
+00:38:33.806 --> 00:38:35.526 A:middle
+And let's take a
+look at what that is.
+
+00:38:36.976 --> 00:38:39.036 A:middle
+The first kind of error,
+which is a fatal error,
+
+00:38:39.496 --> 00:38:40.636 A:middle
+you really can't do much.
+
+00:38:42.006 --> 00:38:43.146 A:middle
+There are a couple
+of error codes
+
+00:38:43.146 --> 00:38:44.496 A:middle
+which indicate a fatal error.
+
+00:38:44.496 --> 00:38:48.976 A:middle
+For example, internalError,
+serverRejectedRequest,
+
+00:38:50.316 --> 00:38:53.196 A:middle
+invalidArguments, or
+permissionFailure.
+
+00:38:53.866 --> 00:38:57.896 A:middle
+In this case, we want you
+to show an appropriate UI
+
+00:38:57.896 --> 00:39:00.046 A:middle
+to your user in your
+apps and let them know
+
+00:38:57.896 --> 00:39:00.046 A:middle
+to your user in your
+apps and let them know
+
+00:39:00.046 --> 00:39:04.476 A:middle
+that something went wrong,
+which cannot be retried.
+
+00:39:04.626 --> 00:39:06.526 A:middle
+However, the other
+type of error,
+
+00:39:06.986 --> 00:39:09.466 A:middle
+where the server wants you
+to come back at a later point
+
+00:39:09.466 --> 00:39:12.246 A:middle
+and time, we will tell
+you the amount of time
+
+00:39:12.246 --> 00:39:13.756 A:middle
+that the server wishes
+for you to wait.
+
+00:39:15.076 --> 00:39:17.986 A:middle
+Here are a couple of error
+codes that will have that value
+
+00:39:17.986 --> 00:39:20.806 A:middle
+of time embedded in them.
+
+00:39:21.016 --> 00:39:26.056 A:middle
+ZoneBusy, serviceUnavailable,
+and requestRateLimited.
+
+00:39:27.426 --> 00:39:30.106 A:middle
+When you receive any of these
+error codes, you should check
+
+00:39:30.436 --> 00:39:32.426 A:middle
+for the CKError RetryAfterKey
+
+00:39:32.536 --> 00:39:34.246 A:middle
+in the errors users
+info dictionary.
+
+00:39:34.246 --> 00:39:36.596 A:middle
+You should wait for
+that period of time
+
+00:39:36.986 --> 00:39:39.426 A:middle
+and reinitialize
+the same CKOperation
+
+00:39:39.426 --> 00:39:43.066 A:middle
+with the same arguments,
+and retry that operation.
+
+00:39:44.206 --> 00:39:47.376 A:middle
+Here's all the code you need for
+a simple example of how to wait
+
+00:39:47.376 --> 00:39:48.996 A:middle
+for that period of
+time represented
+
+00:39:48.996 --> 00:39:50.876 A:middle
+by the CKErrorRetryAfterValue.
+
+00:39:51.616 --> 00:39:53.886 A:middle
+And reinitialize the
+same CKOperation.
+
+00:39:56.426 --> 00:39:58.656 A:middle
+Now, what happens in some cases
+
+00:39:58.656 --> 00:40:00.316 A:middle
+when your operations
+might be failing
+
+00:39:58.656 --> 00:40:00.316 A:middle
+when your operations
+might be failing
+
+00:40:00.316 --> 00:40:02.696 A:middle
+on the device before even
+talking to the server?
+
+00:40:03.836 --> 00:40:06.146 A:middle
+There are 2 main cases that
+I'd like to discuss today
+
+00:40:06.146 --> 00:40:08.216 A:middle
+where CloudKit may be
+completely unavailable to you.
+
+00:40:09.396 --> 00:40:11.726 A:middle
+The first one is when
+the device is off line.
+
+00:40:11.726 --> 00:40:16.206 A:middle
+Well, in this case,
+what we recommend is
+
+00:40:16.206 --> 00:40:18.726 A:middle
+that you monitor network
+reach-ability just
+
+00:40:18.726 --> 00:40:21.906 A:middle
+like you would for any
+other network based app.
+
+00:40:22.716 --> 00:40:25.746 A:middle
+If you're using a quality
+of service of user initiated
+
+00:40:25.746 --> 00:40:30.126 A:middle
+or above, such that a
+network failures are not being
+
+00:40:30.126 --> 00:40:31.516 A:middle
+automatically retried for you,
+
+00:40:31.766 --> 00:40:34.686 A:middle
+you will see this error code
+CKErrorNetworkUnavailable.
+
+00:40:35.996 --> 00:40:37.806 A:middle
+So, once you're monitoring
+network reachability,
+
+00:40:37.806 --> 00:40:40.716 A:middle
+which you can do via the
+SCNetworkReachability API,
+
+00:40:40.716 --> 00:40:42.796 A:middle
+for example, in system
+configuration framework,
+
+00:40:43.316 --> 00:40:46.946 A:middle
+you can then let the
+user know that, hey,
+
+00:40:47.326 --> 00:40:49.896 A:middle
+these changes are not going
+to make it to the server yet.
+
+00:40:50.546 --> 00:40:54.726 A:middle
+But, we recommend that you let
+your users keep interacting
+
+00:40:54.726 --> 00:40:56.386 A:middle
+with your app while
+the device is offline.
+
+00:40:56.896 --> 00:40:59.286 A:middle
+You should save these changes
+to where your local cache.
+
+00:41:00.036 --> 00:41:02.556 A:middle
+And when your reachability API
+tells you the device is back
+
+00:41:02.556 --> 00:41:05.596 A:middle
+online, then you enqueue
+your CloudKit operations
+
+00:41:05.596 --> 00:41:07.316 A:middle
+to save those records
+to the server.
+
+00:41:09.836 --> 00:41:11.986 A:middle
+The other main state
+is when you're trying
+
+00:41:11.986 --> 00:41:14.016 A:middle
+to use the private
+database for a user
+
+00:41:14.016 --> 00:41:16.256 A:middle
+and the user is not logged
+into an iCloud account.
+
+00:41:17.506 --> 00:41:19.196 A:middle
+In this case we will
+return the error
+
+00:41:19.196 --> 00:41:21.536 A:middle
+code CKErrorNotAuthenticatedTo.
+
+00:41:22.536 --> 00:41:25.306 A:middle
+And what we recommend
+is, for all of your apps,
+
+00:41:25.576 --> 00:41:28.176 A:middle
+on first launch always
+register to listen
+
+00:41:28.346 --> 00:41:30.126 A:middle
+to the CKAccount
+change notification.
+
+00:41:30.646 --> 00:41:34.656 A:middle
+When it fires use
+the account status
+
+00:41:34.656 --> 00:41:35.806 A:middle
+with CompletionHandler API
+
+00:41:36.486 --> 00:41:38.846 A:middle
+to research the account
+status for the current user.
+
+00:41:39.366 --> 00:41:42.606 A:middle
+And let them know that
+certain operations may fail,
+
+00:41:42.606 --> 00:41:46.636 A:middle
+because they don't have an
+iCloud account signed in.
+
+00:41:47.086 --> 00:41:51.056 A:middle
+So, in summary, let's take a
+look at what we've seen today.
+
+00:41:51.236 --> 00:41:54.096 A:middle
+We saw how to subscribe
+and fetch changes
+
+00:41:54.096 --> 00:41:56.186 A:middle
+to efficiently stay up
+to date with the server.
+
+00:41:56.736 --> 00:42:01.316 A:middle
+We saw the advantages of using
+the batch CKOperation API,
+
+00:41:56.736 --> 00:42:01.316 A:middle
+We saw the advantages of using
+the batch CKOperation API,
+
+00:42:02.106 --> 00:42:06.046 A:middle
+which we recommend all
+of your apps adopt.
+
+00:42:06.216 --> 00:42:08.846 A:middle
+We saw a couple of tips on
+how to design your schema
+
+00:42:08.846 --> 00:42:10.876 A:middle
+to completely avoid a
+certain class of errors,
+
+00:42:11.186 --> 00:42:13.306 A:middle
+or to use the CloudKit
+API more effectively.
+
+00:42:13.826 --> 00:42:18.646 A:middle
+And finally, we saw how to
+handle certain types of errors.
+
+00:42:18.736 --> 00:42:21.626 A:middle
+And how to differentiate
+between them.
+
+00:42:21.826 --> 00:42:24.356 A:middle
+And what the server
+means when it comes back
+
+00:42:24.356 --> 00:42:28.066 A:middle
+with certain error code
+as opposed to others.
+
+00:42:28.256 --> 00:42:29.936 A:middle
+Now, we had a related
+session yesterday.
+
+00:42:29.936 --> 00:42:32.126 A:middle
+If you could not check it
+out, I invite you to go back
+
+00:42:32.126 --> 00:42:33.466 A:middle
+and look at it online.
+
+00:42:34.296 --> 00:42:35.706 A:middle
+More information
+is available here.
+
+00:42:36.026 --> 00:42:36.866 A:middle
+Thank you and have a great day.
+
+00:42:37.516 --> 00:42:47.450 A:middle
+[ Applause ]

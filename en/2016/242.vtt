@@ -1,0 +1,3264 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:17.500 A:middle
+[ Music ]
+
+00:00:23.446 --> 00:00:24.676 A:middle
+&gt;&gt; So hi, everybody.
+
+00:00:25.516 --> 00:00:30.526 A:middle
+[ Applause ]
+
+00:00:31.026 --> 00:00:33.336 A:middle
+I'm Melissa, I'm one of
+the core data engineers
+
+00:00:33.796 --> 00:00:35.966 A:middle
+and this literally the first
+year that no one has told me
+
+00:00:35.966 --> 00:00:39.236 A:middle
+to break a leg before I go out
+on stage, because frankly I did
+
+00:00:39.236 --> 00:00:40.756 A:middle
+that a month ago and
+this my first day
+
+00:00:40.756 --> 00:00:41.986 A:middle
+without a cast [laughter].
+
+00:00:42.046 --> 00:00:43.966 A:middle
+So if I'm limping around
+you'll know what happened.
+
+00:00:45.516 --> 00:00:47.546 A:middle
+[ Applause ]
+
+00:00:48.046 --> 00:00:49.536 A:middle
+So one of the best
+parts of working
+
+00:00:49.536 --> 00:00:50.896 A:middle
+on core data is actually
+being able to get
+
+00:00:50.896 --> 00:00:53.926 A:middle
+up on stage here every year
+and tell you guys like what new
+
+00:00:53.926 --> 00:00:56.336 A:middle
+and interesting stuff
+we've been doing and boy,
+
+00:00:56.336 --> 00:00:58.726 A:middle
+this year we have a lot of it,
+and it's really useful and we,
+
+00:00:58.936 --> 00:01:00.216 A:middle
+we hope you're going to love it.
+
+00:00:58.936 --> 00:01:00.216 A:middle
+we hope you're going to love it.
+
+00:01:01.236 --> 00:01:03.386 A:middle
+So I'm going to talk about a
+new feature, query generations,
+
+00:01:03.386 --> 00:01:05.796 A:middle
+some changes in the core
+data concurrency world.
+
+00:01:05.916 --> 00:01:09.046 A:middle
+I'm going to talk about some
+new stuff we've done in the area
+
+00:01:09.046 --> 00:01:12.206 A:middle
+of core data stack configuration
+and some new APIs we've added.
+
+00:01:12.806 --> 00:01:15.606 A:middle
+And we're going to talk a
+bit about what we've done
+
+00:01:15.606 --> 00:01:18.826 A:middle
+to integrate more neatly and
+cleanly with Swift and some
+
+00:01:18.826 --> 00:01:19.896 A:middle
+of the improvements we've made
+
+00:01:19.896 --> 00:01:21.786 A:middle
+in the area of Xcode
+integration.
+
+00:01:22.666 --> 00:01:26.096 A:middle
+And that's a lot so, on with
+the first, query generations.
+
+00:01:27.566 --> 00:01:29.416 A:middle
+Query generations is a
+new feature we've added
+
+00:01:29.506 --> 00:01:31.276 A:middle
+but before I sort
+of get into talking
+
+00:01:31.276 --> 00:01:32.626 A:middle
+about query generations
+I need to talk
+
+00:01:32.626 --> 00:01:33.526 A:middle
+about faults a little bit.
+
+00:01:34.336 --> 00:01:37.266 A:middle
+Core data uses faults a lot,
+as some of you may know.
+
+00:01:37.946 --> 00:01:39.966 A:middle
+Manage objects can be faults,
+
+00:01:40.036 --> 00:01:41.556 A:middle
+their relationships
+can be faults,
+
+00:01:41.696 --> 00:01:43.196 A:middle
+and if you're using
+batch fetching,
+
+00:01:43.566 --> 00:01:44.876 A:middle
+then the array you get back
+
+00:01:44.996 --> 00:01:47.816 A:middle
+from NSManagedObjectContext
+execute fetch request,
+
+00:01:47.816 --> 00:01:49.276 A:middle
+is going to be a very
+specialized fault.
+
+00:01:49.936 --> 00:01:52.526 A:middle
+So that being said,
+what is a fault?
+
+00:01:53.026 --> 00:01:56.336 A:middle
+Well, up here on the
+screen I've got a picture
+
+00:01:56.336 --> 00:01:59.246 A:middle
+of an object graph, I've got
+a country, the United States.
+
+00:01:59.916 --> 00:02:01.816 A:middle
+State, California,
+couple of counties,
+
+00:01:59.916 --> 00:02:01.816 A:middle
+State, California,
+couple of counties,
+
+00:02:01.956 --> 00:02:03.296 A:middle
+Santa Clara and San Francisco.
+
+00:02:03.806 --> 00:02:07.726 A:middle
+And some cities in Santa
+Clara, San Jose and Cupertino.
+
+00:02:08.656 --> 00:02:09.726 A:middle
+And some of this is a piece
+
+00:02:09.726 --> 00:02:12.906 A:middle
+of like a tourist guide a
+guidebook, something you can go
+
+00:02:12.906 --> 00:02:15.536 A:middle
+in and navigate through
+to find points of interest
+
+00:02:15.586 --> 00:02:18.306 A:middle
+in a city you're planning
+on going and visiting.
+
+00:02:19.106 --> 00:02:22.376 A:middle
+But just based on what we
+know about the United States,
+
+00:02:22.606 --> 00:02:24.996 A:middle
+this isn't a full object
+graph, this is actually a piece
+
+00:02:24.996 --> 00:02:26.806 A:middle
+of an object graph, sub graph.
+
+00:02:26.876 --> 00:02:29.106 A:middle
+Because we know that the
+United States has other states,
+
+00:02:29.366 --> 00:02:31.286 A:middle
+and those states
+have other counties,
+
+00:02:31.616 --> 00:02:33.806 A:middle
+and those counties
+have other cities.
+
+00:02:34.476 --> 00:02:35.806 A:middle
+And you know, beyond
+that we know
+
+00:02:35.806 --> 00:02:38.516 A:middle
+that the United States is
+only one of many countries.
+
+00:02:40.426 --> 00:02:42.956 A:middle
+And even in a guidebook I'm only
+interested in sort of looking
+
+00:02:42.956 --> 00:02:44.526 A:middle
+at one set of data at a time.
+
+00:02:44.526 --> 00:02:47.036 A:middle
+If I'm planning a trip to
+San Jose, I don't really care
+
+00:02:47.036 --> 00:02:49.496 A:middle
+about Oregon or Washington,
+or anything like that.
+
+00:02:49.496 --> 00:02:51.356 A:middle
+I don't even really care
+about San Francisco.
+
+00:02:52.116 --> 00:02:54.036 A:middle
+I need to be able to
+get to those object,
+
+00:02:54.066 --> 00:02:56.756 A:middle
+to those destinations
+if I'm interested
+
+00:02:56.996 --> 00:02:59.236 A:middle
+and change my mind later about
+what I'm interested in browsing.
+
+00:02:59.236 --> 00:03:01.966 A:middle
+But for the immediate short
+term, while I'm looking
+
+00:02:59.236 --> 00:03:01.966 A:middle
+But for the immediate short
+term, while I'm looking
+
+00:03:01.966 --> 00:03:05.266 A:middle
+and planning my trip to Santa
+Clara County, I don't care.
+
+00:03:06.396 --> 00:03:09.716 A:middle
+And that not caring
+is represented by,
+
+00:03:09.716 --> 00:03:12.916 A:middle
+in memory a fault, it's an
+object that knows how to go off
+
+00:03:12.916 --> 00:03:16.146 A:middle
+and retrieve data
+later, at some point
+
+00:03:16.656 --> 00:03:17.756 A:middle
+if I decide I want to use it.
+
+00:03:18.156 --> 00:03:19.986 A:middle
+So say I find out my
+friend is getting married
+
+00:03:20.316 --> 00:03:22.456 A:middle
+and her wedding's in
+Seattle and I want to go,
+
+00:03:22.456 --> 00:03:23.606 A:middle
+you know plan a trip to Seattle.
+
+00:03:24.276 --> 00:03:26.466 A:middle
+So at this point I'm going to
+navigate back up to the U.S.
+
+00:03:26.466 --> 00:03:28.036 A:middle
+and come down, I want
+to look at Washington
+
+00:03:28.356 --> 00:03:31.426 A:middle
+and core data will automatically
+retrieve the information
+
+00:03:31.506 --> 00:03:34.896 A:middle
+for Washington even
+though it wasn't in memory
+
+00:03:35.286 --> 00:03:37.086 A:middle
+when I first loaded
+the sub graph.
+
+00:03:37.756 --> 00:03:40.986 A:middle
+And you know, I can navigate
+down from that and so on.
+
+00:03:40.986 --> 00:03:45.166 A:middle
+And that's what a fault is,
+it's that future or promise,
+
+00:03:45.166 --> 00:03:47.866 A:middle
+or lazy loading, these
+are all different names
+
+00:03:47.866 --> 00:03:50.156 A:middle
+for the same kind of
+thing, that core data does
+
+00:03:50.156 --> 00:03:52.086 A:middle
+to help minimize the
+amount of data you have
+
+00:03:52.086 --> 00:03:53.336 A:middle
+in memory at any given point.
+
+00:03:54.616 --> 00:03:55.676 A:middle
+Why do we use faults?
+
+00:03:55.676 --> 00:03:57.106 A:middle
+Well performance, performance,
+
+00:03:57.106 --> 00:03:58.506 A:middle
+performance, and
+also performance.
+
+00:04:00.006 --> 00:04:02.406 A:middle
+The best most performing
+application is one
+
+00:04:02.406 --> 00:04:03.866 A:middle
+that doesn't do any
+work you don't need.
+
+00:04:04.696 --> 00:04:07.916 A:middle
+You don't load objects over
+the iobus, that you don't need.
+
+00:04:08.016 --> 00:04:09.276 A:middle
+You don't spend any
+time [inaudible]
+
+00:04:09.276 --> 00:04:11.066 A:middle
+on objects that you don't need.
+
+00:04:11.546 --> 00:04:14.646 A:middle
+You don't want to have those
+objects sitting around pushing
+
+00:04:14.646 --> 00:04:16.505 A:middle
+up your heaps high water mark
+
+00:04:16.505 --> 00:04:18.916 A:middle
+if your user's never
+going to look at them.
+
+00:04:19.136 --> 00:04:21.326 A:middle
+But there is kind of
+one issue with faults,
+
+00:04:22.256 --> 00:04:23.336 A:middle
+and it's sort of this.
+
+00:04:23.796 --> 00:04:27.516 A:middle
+Here we have that object
+graph again, and in this case,
+
+00:04:27.566 --> 00:04:28.536 A:middle
+we've got a lot of faults.
+
+00:04:29.366 --> 00:04:31.936 A:middle
+And I'm navigating down my
+tree and I go to Santa Clara
+
+00:04:31.936 --> 00:04:34.036 A:middle
+and I want to fire
+the Cupertino fault.
+
+00:04:34.506 --> 00:04:38.176 A:middle
+But in the meantime, an external
+process has been importing data
+
+00:04:38.176 --> 00:04:40.756 A:middle
+from the web and for whatever
+reason it's deleted Cupertino.
+
+00:04:41.296 --> 00:04:42.786 A:middle
+Well, what happens?
+
+00:04:42.786 --> 00:04:44.586 A:middle
+I have a fault that's
+supposed to go off
+
+00:04:44.586 --> 00:04:47.266 A:middle
+and retrieve information
+about Cupertino
+
+00:04:47.266 --> 00:04:49.036 A:middle
+but there's no information
+there anymore.
+
+00:04:50.376 --> 00:04:53.186 A:middle
+I said, I talked a lot about
+not loading data you don't need,
+
+00:04:53.186 --> 00:04:55.136 A:middle
+but in this case, you
+find yourself wondering,
+
+00:04:55.246 --> 00:04:58.196 A:middle
+well did I actually need
+that data after all?
+
+00:04:59.516 --> 00:04:59.886 A:middle
+Oops.
+
+00:05:02.476 --> 00:05:04.696 A:middle
+In core data right
+now, you handle this
+
+00:05:04.696 --> 00:05:06.656 A:middle
+by using the
+shouldDeleteInaccessibleFaults
+
+00:05:06.656 --> 00:05:08.456 A:middle
+property on
+NSManagedObjectContext.
+
+00:05:09.136 --> 00:05:11.536 A:middle
+If you set that then
+when the context notices
+
+00:05:11.536 --> 00:05:13.866 A:middle
+that you're trying to fire a
+fault for a deleted object,
+
+00:05:14.176 --> 00:05:16.826 A:middle
+it will mark the fault as
+being deleted and populate all
+
+00:05:16.826 --> 00:05:18.716 A:middle
+of its properties with nils.
+
+00:05:19.216 --> 00:05:20.496 A:middle
+This is mostly what
+you're going to want
+
+00:05:20.896 --> 00:05:22.216 A:middle
+but sometimes it
+can be inconvenient
+
+00:05:22.216 --> 00:05:23.796 A:middle
+because your UI doesn't
+know how to deal
+
+00:05:23.796 --> 00:05:25.526 A:middle
+with you know, a nil identifier.
+
+00:05:26.346 --> 00:05:28.216 A:middle
+The other alternative is
+to prefetch everything,
+
+00:05:28.666 --> 00:05:31.056 A:middle
+use relationship keypads
+for prefetching to load all
+
+00:05:31.056 --> 00:05:33.706 A:middle
+of the objects you think
+your user might want.
+
+00:05:34.086 --> 00:05:35.676 A:middle
+That moves you into
+an escalating battle
+
+00:05:35.676 --> 00:05:37.946 A:middle
+with your user trying
+to figure out exactly,
+
+00:05:38.566 --> 00:05:40.996 A:middle
+predict what they're going
+to want, that can be tricky,
+
+00:05:40.996 --> 00:05:42.656 A:middle
+users are unpredictable,
+we all know that.
+
+00:05:43.266 --> 00:05:45.016 A:middle
+The other alternative,
+there is a third one,
+
+00:05:45.016 --> 00:05:47.096 A:middle
+there's always a third
+one, write lots of code,
+
+00:05:47.456 --> 00:05:49.416 A:middle
+starting with using
+existing object with ID
+
+00:05:49.416 --> 00:05:51.986 A:middle
+on the manage object context
+to make sure that the object is
+
+00:05:51.986 --> 00:05:53.726 A:middle
+in the database before
+you try the fault.
+
+00:05:54.476 --> 00:05:57.046 A:middle
+Write lots of try catch,
+exceptional handlers
+
+00:05:57.086 --> 00:05:58.656 A:middle
+around all your fault firing
+
+00:05:58.976 --> 00:06:01.076 A:middle
+and frankly that's not
+really fun code to write,
+
+00:05:58.976 --> 00:06:01.076 A:middle
+and frankly that's not
+really fun code to write,
+
+00:06:01.126 --> 00:06:03.576 A:middle
+you'd really rather be
+writing interesting features
+
+00:06:03.576 --> 00:06:05.766 A:middle
+for your users to use,
+because that's why they come
+
+00:06:05.766 --> 00:06:07.506 A:middle
+to your application,
+because it does neat stuff.
+
+00:06:08.646 --> 00:06:10.516 A:middle
+But let's step back
+for a second and think
+
+00:06:10.516 --> 00:06:13.006 A:middle
+about your user interacting
+with your application.
+
+00:06:13.416 --> 00:06:16.586 A:middle
+The user view and the
+UI often doesn't care
+
+00:06:16.586 --> 00:06:18.386 A:middle
+about seeing the
+absolute latest,
+
+00:06:18.386 --> 00:06:19.786 A:middle
+freshest, snappiest data.
+
+00:06:20.246 --> 00:06:21.116 A:middle
+How do we know this?
+
+00:06:22.496 --> 00:06:24.016 A:middle
+Let's think about gas
+pumps for a second.
+
+00:06:24.976 --> 00:06:27.306 A:middle
+Most of you are familiar
+with them, you've put gas
+
+00:06:27.306 --> 00:06:28.096 A:middle
+in a car at some point.
+
+00:06:28.816 --> 00:06:30.956 A:middle
+Gas pumps have a display that
+tells you how many gallons
+
+00:06:30.956 --> 00:06:33.616 A:middle
+or how many liters you've
+actually put in your car.
+
+00:06:34.116 --> 00:06:36.486 A:middle
+And that display has
+a thousandths field,
+
+00:06:37.136 --> 00:06:39.256 A:middle
+and I'd like a show of hands
+for everybody who's capable
+
+00:06:39.256 --> 00:06:42.076 A:middle
+of reading that field,
+in real time,
+
+00:06:42.076 --> 00:06:43.246 A:middle
+as they put gas in their car.
+
+00:06:44.086 --> 00:06:46.316 A:middle
+That's about what I expected,
+none of you can process it,
+
+00:06:46.316 --> 00:06:48.766 A:middle
+the human brain wants data
+sort of batched up neatly
+
+00:06:48.826 --> 00:06:50.396 A:middle
+in intervals that
+it can understand.
+
+00:06:51.096 --> 00:06:53.376 A:middle
+So the user doesn't really
+need latest, freshest data,
+
+00:06:53.376 --> 00:06:54.386 A:middle
+they just need it
+to be, you know,
+
+00:06:55.566 --> 00:06:56.636 A:middle
+reasonably, quickly updated.
+
+00:06:56.636 --> 00:07:00.326 A:middle
+And a user who's saving
+data, also doesn't care,
+
+00:06:56.636 --> 00:07:00.326 A:middle
+And a user who's saving
+data, also doesn't care,
+
+00:07:00.416 --> 00:07:02.076 A:middle
+this is why core data
+has merge policies,
+
+00:07:02.376 --> 00:07:03.796 A:middle
+they want to make a bunch
+of edits and they want
+
+00:07:03.796 --> 00:07:05.916 A:middle
+to have those edits saved
+and mingled with whatever's
+
+00:07:05.916 --> 00:07:07.916 A:middle
+in the database and have
+the right thing happen.
+
+00:07:08.536 --> 00:07:09.816 A:middle
+You pick the merge
+policy you want
+
+00:07:09.816 --> 00:07:12.856 A:middle
+because you know your
+users better than we do.
+
+00:07:13.106 --> 00:07:16.406 A:middle
+So what if we could take
+this insight and build on it?
+
+00:07:16.766 --> 00:07:20.086 A:middle
+What if we could provide a way
+to give your UI a stable view
+
+00:07:20.086 --> 00:07:21.276 A:middle
+of data in the database?
+
+00:07:22.466 --> 00:07:24.426 A:middle
+What if we could give you
+a way to handle changes,
+
+00:07:24.426 --> 00:07:25.786 A:middle
+update changes
+deterministically?
+
+00:07:25.786 --> 00:07:28.636 A:middle
+And what if we could
+do all of this
+
+00:07:28.696 --> 00:07:29.856 A:middle
+so that you would
+never see this again?
+
+00:07:32.516 --> 00:07:36.126 A:middle
+[ Applause ]
+
+00:07:36.626 --> 00:07:38.526 A:middle
+And now I can talk
+about query generations.
+
+00:07:39.666 --> 00:07:40.996 A:middle
+Query generations are a way
+
+00:07:40.996 --> 00:07:44.236 A:middle
+of giving your manage object
+context a basically a read
+
+00:07:44.236 --> 00:07:46.236 A:middle
+transaction on data
+in the database.
+
+00:07:46.836 --> 00:07:49.166 A:middle
+All reads into that manage
+object context are going
+
+00:07:49.166 --> 00:07:52.386 A:middle
+to see the same view of data
+until you choose to advance it,
+
+00:07:52.516 --> 00:07:55.266 A:middle
+and you'll never see could
+not fulfill a fault again.
+
+00:07:55.266 --> 00:07:57.666 A:middle
+And the important part is
+we do this efficiently,
+
+00:07:58.336 --> 00:07:59.816 A:middle
+that's always been
+the tricky bit.
+
+00:08:00.716 --> 00:08:01.946 A:middle
+How do they work?
+
+00:08:02.256 --> 00:08:04.026 A:middle
+Well, I've got a
+database, it has an object
+
+00:08:04.026 --> 00:08:05.916 A:middle
+in it, id 1, name fred.
+
+00:08:06.156 --> 00:08:09.106 A:middle
+And because these are
+slides, I'm going to cut those
+
+00:08:09.106 --> 00:08:11.226 A:middle
+down because I need all the real
+estate I can get for this built.
+
+00:08:12.846 --> 00:08:15.166 A:middle
+In a traditional database
+that's what you've got,
+
+00:08:15.316 --> 00:08:17.706 A:middle
+you have one file, it has one
+view of data in the world.
+
+00:08:18.146 --> 00:08:19.516 A:middle
+Using query generations though,
+
+00:08:20.356 --> 00:08:22.356 A:middle
+that becomes the
+first generation
+
+00:08:22.356 --> 00:08:23.576 A:middle
+of data in your database.
+
+00:08:25.056 --> 00:08:27.686 A:middle
+And processes come along,
+this can be your application,
+
+00:08:27.686 --> 00:08:30.896 A:middle
+it can be an importer, it can
+be an extension on a watch,
+
+00:08:31.036 --> 00:08:32.885 A:middle
+something modifies the database.
+
+00:08:34.596 --> 00:08:36.196 A:middle
+A new generation is created.
+
+00:08:37.645 --> 00:08:40.456 A:middle
+And, more data is
+created, new objects.
+
+00:08:40.996 --> 00:08:44.226 A:middle
+And at this point, the user
+launches your application,
+
+00:08:47.206 --> 00:08:49.496 A:middle
+creates manage object
+context and you load data.
+
+00:08:50.136 --> 00:08:52.656 A:middle
+And that context now
+knows what generation
+
+00:08:52.656 --> 00:08:54.396 A:middle
+in the database it
+loaded data from.
+
+00:08:54.956 --> 00:08:59.386 A:middle
+So as other processes or
+contexts or whatever come along
+
+00:08:59.386 --> 00:09:02.936 A:middle
+and modify the database
+some more,
+
+00:08:59.386 --> 00:09:02.936 A:middle
+and modify the database
+some more,
+
+00:09:03.166 --> 00:09:04.366 A:middle
+more generations are created,
+
+00:09:05.126 --> 00:09:06.726 A:middle
+that context still
+knows its generation.
+
+00:09:06.956 --> 00:09:11.376 A:middle
+Second context comes up, loads
+some data, makes some edits,
+
+00:09:12.636 --> 00:09:16.236 A:middle
+and saves and in saving it
+creates a new generation
+
+00:09:16.286 --> 00:09:19.256 A:middle
+and tracks that it's now
+representing generation,
+
+00:09:19.566 --> 00:09:21.186 A:middle
+in this case 6, in the database.
+
+00:09:21.826 --> 00:09:24.876 A:middle
+And at this point if we
+fire a fault, in context 1,
+
+00:09:25.396 --> 00:09:26.846 A:middle
+even though the object
+underlining
+
+00:09:26.846 --> 00:09:29.356 A:middle
+that fault may have been
+deleted in generation 6,
+
+00:09:29.646 --> 00:09:32.046 A:middle
+it's still visible to the
+context because it's still
+
+00:09:32.046 --> 00:09:34.146 A:middle
+in the database under
+the label generation 3.
+
+00:09:35.186 --> 00:09:39.336 A:middle
+And at this point the user can
+go make some edits in context 1,
+
+00:09:39.376 --> 00:09:43.286 A:middle
+delete some objects, change some
+objects, insert new objects.
+
+00:09:43.676 --> 00:09:46.286 A:middle
+And when they save that context
+core data will use the merge
+
+00:09:46.346 --> 00:09:49.086 A:middle
+policy to merge all of those
+changes with whatever's
+
+00:09:49.086 --> 00:09:53.146 A:middle
+in the database and
+create a new generation 7.
+
+00:09:53.726 --> 00:09:56.976 A:middle
+In the same way that context 1.
+
+00:09:57.516 --> 00:09:59.836 A:middle
+[ Applause ]
+
+00:10:00.336 --> 00:10:03.746 A:middle
+In the same way that context 1
+had visibility onto generation 3
+
+00:10:03.746 --> 00:10:05.626 A:middle
+when it was pinned
+to generation 3.
+
+00:10:06.226 --> 00:10:09.756 A:middle
+Context 2 can do whatever it
+would like with its objects,
+
+00:10:09.866 --> 00:10:11.996 A:middle
+turn them back into
+faults, refire those faults,
+
+00:10:12.306 --> 00:10:14.496 A:middle
+and it will still see
+the data as it existed
+
+00:10:14.496 --> 00:10:16.466 A:middle
+in generation 6 in the database.
+
+00:10:17.686 --> 00:10:20.466 A:middle
+So basically it's full
+read transactionality
+
+00:10:20.466 --> 00:10:21.906 A:middle
+at the manage object
+context level.
+
+00:10:22.306 --> 00:10:25.636 A:middle
+We've talked a lot
+about how context have,
+
+00:10:26.456 --> 00:10:27.986 A:middle
+are essentially right
+transactions
+
+00:10:27.986 --> 00:10:29.756 A:middle
+and now we've made them
+read transactions as well.
+
+00:10:30.076 --> 00:10:32.676 A:middle
+So allows you to immediately
+isolate your work on a context
+
+00:10:32.676 --> 00:10:35.086 A:middle
+by context level,
+and minimize stuff
+
+00:10:35.086 --> 00:10:37.076 A:middle
+like preventive prefetching
+which means,
+
+00:10:37.076 --> 00:10:39.786 A:middle
+you know, everybody wins.
+
+00:10:40.546 --> 00:10:43.386 A:middle
+Basics. An individual context
+can choose what behavior it
+
+00:10:43.386 --> 00:10:46.986 A:middle
+wants, it can decide that it
+wants the current behavior
+
+00:10:46.986 --> 00:10:51.166 A:middle
+that you're used to
+in iOS 9 and macOS 11.
+
+00:10:51.556 --> 00:10:55.306 A:middle
+We call unpinned, see top
+of tree when you load data.
+
+00:10:55.436 --> 00:10:57.736 A:middle
+You can also specify
+that a context should pin
+
+00:10:57.736 --> 00:10:59.756 A:middle
+to whatever generation is
+current in the database
+
+00:10:59.956 --> 00:11:02.136 A:middle
+when data is first
+loaded into that context.
+
+00:10:59.956 --> 00:11:02.136 A:middle
+when data is first
+loaded into that context.
+
+00:11:02.376 --> 00:11:04.376 A:middle
+Or you can specify
+that you want it to pin
+
+00:11:04.376 --> 00:11:05.606 A:middle
+to a specific generation
+
+00:11:05.916 --> 00:11:08.096 A:middle
+if you have another context
+pinned to that generation.
+
+00:11:09.616 --> 00:11:10.546 A:middle
+Nested contacts are going
+
+00:11:10.546 --> 00:11:12.446 A:middle
+to inherit their
+parents' generation,
+
+00:11:12.926 --> 00:11:15.726 A:middle
+they're implicitly unpinned
+but they'll see data as viewed
+
+00:11:15.726 --> 00:11:17.846 A:middle
+through the, the
+generation of their parent,
+
+00:11:18.206 --> 00:11:20.666 A:middle
+plus whatever pending changes
+their parent has sitting
+
+00:11:20.666 --> 00:11:21.726 A:middle
+around unsaved.
+
+00:11:24.536 --> 00:11:27.076 A:middle
+Updates are kind of important,
+we've all acknowledged that,
+
+00:11:27.246 --> 00:11:28.556 A:middle
+the user doesn't
+want to see updates,
+
+00:11:28.556 --> 00:11:30.636 A:middle
+eventually they don't want to
+see, you know 10 year-old data.
+
+00:11:32.536 --> 00:11:35.246 A:middle
+Generations are updated when
+you explicitly tell a context
+
+00:11:35.316 --> 00:11:37.386 A:middle
+to update by setting a
+new generation token.
+
+00:11:37.726 --> 00:11:39.966 A:middle
+They're updated on
+save, they're updated
+
+00:11:39.966 --> 00:11:42.206 A:middle
+if you call mergeChanges,
+will update to top of tree
+
+00:11:42.206 --> 00:11:44.066 A:middle
+at that point since you've
+told the context that,
+
+00:11:44.426 --> 00:11:46.576 A:middle
+you know it should be looking
+at a new set of changes
+
+00:11:46.576 --> 00:11:48.916 A:middle
+in the database,
+and it's updated
+
+00:11:49.236 --> 00:11:50.456 A:middle
+as a result of calling reset.
+
+00:11:51.046 --> 00:11:55.096 A:middle
+Thing to note though is that,
+
+00:11:56.016 --> 00:11:57.696 A:middle
+registered objects
+aren't refreshed
+
+00:11:57.696 --> 00:12:00.196 A:middle
+when you update the generation,
+you may not want that,
+
+00:11:57.696 --> 00:12:00.196 A:middle
+when you update the generation,
+you may not want that,
+
+00:12:00.656 --> 00:12:03.486 A:middle
+and it's easy for us to let
+you do it, it's a lot harder
+
+00:12:03.486 --> 00:12:05.526 A:middle
+to let you undo it if we
+choose to do it for you.
+
+00:12:05.786 --> 00:12:09.146 A:middle
+If you want to refresh the data
+you'll have to call a fetch
+
+00:12:09.146 --> 00:12:12.356 A:middle
+or refreshAllObjects, but it
+gives you control over when
+
+00:12:12.356 --> 00:12:14.116 A:middle
+that data actually gets updated.
+
+00:12:14.556 --> 00:12:18.386 A:middle
+If you want to use query
+generations you'll need
+
+00:12:18.386 --> 00:12:20.766 A:middle
+to be using and SQL store and
+it needs to be in wall mode.
+
+00:12:21.226 --> 00:12:22.916 A:middle
+Although if you try and
+use query generations
+
+00:12:22.916 --> 00:12:24.836 A:middle
+and you haven't met those
+two requirements it will sort
+
+00:12:24.836 --> 00:12:27.606 A:middle
+of fail gracefully and just
+revert to the unpinned behavior.
+
+00:12:27.606 --> 00:12:29.966 A:middle
+How did we do it?
+
+00:12:30.276 --> 00:12:33.486 A:middle
+Well, there's an now opaque
+token that you can use
+
+00:12:33.486 --> 00:12:34.766 A:middle
+to track a query generation.
+
+00:12:34.766 --> 00:12:37.076 A:middle
+This will tell the
+context, you know when
+
+00:12:37.076 --> 00:12:39.046 A:middle
+and what store it
+loaded data from.
+
+00:12:39.296 --> 00:12:43.336 A:middle
+The query generation token
+has a method current,
+
+00:12:43.516 --> 00:12:45.456 A:middle
+you can use to retrieve
+a token to indicate
+
+00:12:45.456 --> 00:12:47.676 A:middle
+that a context should
+pin when it loads data.
+
+00:12:50.076 --> 00:12:52.516 A:middle
+ManagedObjectContext, we
+have a few new methods,
+
+00:12:52.516 --> 00:12:54.886 A:middle
+there's a property,
+query generation token
+
+00:12:54.886 --> 00:12:58.076 A:middle
+that will tell you what query
+generation a context is using.
+
+00:12:58.466 --> 00:13:00.266 A:middle
+It'll be nil if the
+context is unpinned.
+
+00:12:58.466 --> 00:13:00.266 A:middle
+It'll be nil if the
+context is unpinned.
+
+00:13:00.976 --> 00:13:03.306 A:middle
+And you can set a query
+generation from a token,
+
+00:13:03.356 --> 00:13:06.696 A:middle
+either the current token
+from class property or,
+
+00:13:07.356 --> 00:13:09.196 A:middle
+the result of calling
+queryGenerationToken
+
+00:13:09.196 --> 00:13:11.326 A:middle
+on another manage
+object context.
+
+00:13:12.716 --> 00:13:15.276 A:middle
+A generation won't include
+stores that were added
+
+00:13:15.406 --> 00:13:18.076 A:middle
+to the store coordinator after
+the generation was created.
+
+00:13:18.496 --> 00:13:21.016 A:middle
+If you load data into a
+manage object context,
+
+00:13:21.186 --> 00:13:23.216 A:middle
+add a store to the
+coordinator and then do a fetch,
+
+00:13:23.466 --> 00:13:25.266 A:middle
+you will not see results
+from that new store.
+
+00:13:25.716 --> 00:13:28.066 A:middle
+But it does not prevent
+you from removing stores
+
+00:13:28.066 --> 00:13:29.876 A:middle
+from the coordinator, although
+you're going to see an error
+
+00:13:29.876 --> 00:13:34.836 A:middle
+if you try and load data into a
+context when you've removed all
+
+00:13:34.836 --> 00:13:36.566 A:middle
+of the stores that it was
+trying to load data from.
+
+00:13:37.126 --> 00:13:41.066 A:middle
+And now I'm going to talk
+about concurrency because,
+
+00:13:41.646 --> 00:13:43.236 A:middle
+well we always talk
+about concurrency.
+
+00:13:45.096 --> 00:13:47.326 A:middle
+This is the current state
+of affairs in core data,
+
+00:13:47.726 --> 00:13:50.916 A:middle
+and it's manage object
+context is an actor.
+
+00:13:50.916 --> 00:13:54.156 A:middle
+You use perform and
+performAndWait to interact
+
+00:13:54.156 --> 00:13:56.236 A:middle
+with it, do schedule
+blocks for execution
+
+00:13:56.276 --> 00:13:57.946 A:middle
+on the managed object
+context queue.
+
+00:13:57.946 --> 00:14:00.626 A:middle
+There is a third model,
+which, or another model,
+
+00:13:57.946 --> 00:14:00.626 A:middle
+There is a third model,
+which, or another model,
+
+00:14:00.626 --> 00:14:02.416 A:middle
+which is to use the
+confinementConcurrencyType
+
+00:14:02.726 --> 00:14:04.566 A:middle
+which allows you to
+message the context directly
+
+00:14:04.566 --> 00:14:06.836 A:middle
+but that's deprecated
+because it turns
+
+00:14:06.836 --> 00:14:08.116 A:middle
+out that that's really
+hard to get right
+
+00:14:08.536 --> 00:14:10.656 A:middle
+in any threading situation.
+
+00:14:11.586 --> 00:14:14.866 A:middle
+The persistent store
+coordinator is also an actor
+
+00:14:14.866 --> 00:14:17.206 A:middle
+and has the same API
+perform and performAndWait.
+
+00:14:17.206 --> 00:14:20.156 A:middle
+And the coordinator will
+serialize request coming
+
+00:14:20.156 --> 00:14:22.996 A:middle
+in from individual managed
+object context along
+
+00:14:22.996 --> 00:14:25.446 A:middle
+with whatever request you've
+directly scheduled using the
+
+00:14:25.446 --> 00:14:28.246 A:middle
+perform and performAndWait
+APIs on the coordinate.
+
+00:14:28.646 --> 00:14:32.626 A:middle
+And at this point I'd like to
+make an important announcement,
+
+00:14:33.216 --> 00:14:35.556 A:middle
+we have added, for those of
+you who are programming in ObjC
+
+00:14:35.556 --> 00:14:39.276 A:middle
+and using manual retain
+release, and auto release pool
+
+00:14:39.276 --> 00:14:40.566 A:middle
+around perform, block and wait.
+
+00:14:40.566 --> 00:14:43.216 A:middle
+This means that you're now
+going to be responsible
+
+00:14:43.216 --> 00:14:46.606 A:middle
+for extending the lifespan
+of any objects created
+
+00:14:46.606 --> 00:14:48.686 A:middle
+in the blocks you've
+scheduled if you want
+
+00:14:48.686 --> 00:14:50.406 A:middle
+to use those objects
+outside the block.
+
+00:14:50.406 --> 00:14:52.766 A:middle
+It's easy to remember to
+do that for the results of,
+
+00:14:52.766 --> 00:14:54.336 A:middle
+for example an execute fetch.
+
+00:14:54.746 --> 00:14:57.496 A:middle
+It's a little bit less
+immediately obvious
+
+00:14:57.496 --> 00:14:59.526 A:middle
+that you also need to
+do this for any NSErrors
+
+00:14:59.526 --> 00:15:00.546 A:middle
+that may be being returned.
+
+00:14:59.526 --> 00:15:00.546 A:middle
+that may be being returned.
+
+00:15:01.376 --> 00:15:03.906 A:middle
+This doesn't only affect people
+using manual retain release
+
+00:15:03.906 --> 00:15:06.366 A:middle
+and we have a link time check
+so you won't see this behavior
+
+00:15:06.366 --> 00:15:10.136 A:middle
+until you recompile
+for iOS X or macOS 12.
+
+00:15:10.866 --> 00:15:14.866 A:middle
+But let's talk about concurrency
+as it exists in the world today.
+
+00:15:15.736 --> 00:15:18.786 A:middle
+Or, as it exists in the
+world until yesterday.
+
+00:15:20.186 --> 00:15:24.596 A:middle
+Context 1 tries to do
+something that requires going
+
+00:15:24.596 --> 00:15:27.376 A:middle
+to the persistent store, so
+it messages the coordinator.
+
+00:15:28.236 --> 00:15:30.886 A:middle
+Which, because its sterilizing
+requests, takes a lock.
+
+00:15:30.886 --> 00:15:32.136 A:middle
+And at this point context 2,
+
+00:15:32.136 --> 00:15:35.536 A:middle
+which may be your UIContext
+wants to do something and tries
+
+00:15:35.536 --> 00:15:36.626 A:middle
+to message the coordinator.
+
+00:15:37.076 --> 00:15:40.296 A:middle
+But because the coordinator is
+locked, context 2 has to wait,
+
+00:15:40.826 --> 00:15:45.346 A:middle
+as the request from context 1 is
+passed down to persistent store
+
+00:15:45.726 --> 00:15:49.526 A:middle
+and whatever work is necessary
+to evaluate, evaluates.
+
+00:15:49.986 --> 00:15:52.436 A:middle
+And it's only when that
+work finishes and the thread
+
+00:15:52.436 --> 00:15:56.526 A:middle
+of execution returns that
+context 2 can take a lock
+
+00:15:56.526 --> 00:15:58.956 A:middle
+on the coordinator and
+have its work dispatched
+
+00:15:58.956 --> 00:15:59.646 A:middle
+down to the store.
+
+00:15:59.996 --> 00:16:02.266 A:middle
+And this means that context 2
+is basically going to be blocked
+
+00:15:59.996 --> 00:16:02.266 A:middle
+And this means that context 2
+is basically going to be blocked
+
+00:16:02.266 --> 00:16:04.516 A:middle
+on whatever work it is
+that context 1 is doing.
+
+00:16:05.126 --> 00:16:07.356 A:middle
+And eventually it will return
+
+00:16:07.356 --> 00:16:08.806 A:middle
+but in the meantime
+your IU might have,
+
+00:16:08.866 --> 00:16:10.136 A:middle
+you know been a little bit slow.
+
+00:16:11.976 --> 00:16:16.436 A:middle
+New stuff, the SQL store now has
+a connection pool and is capable
+
+00:16:16.436 --> 00:16:18.406 A:middle
+of handling multiple
+concurrent requests.
+
+00:16:18.736 --> 00:16:21.616 A:middle
+Specifically it can now
+handle multiple readers
+
+00:16:21.616 --> 00:16:24.786 A:middle
+and a single writer, size of
+the connection pool varies
+
+00:16:24.786 --> 00:16:25.926 A:middle
+from platform to platform.
+
+00:16:26.646 --> 00:16:28.576 A:middle
+We've adopted it and
+we'll show you how
+
+00:16:28.576 --> 00:16:30.466 A:middle
+to change it in a couple slides.
+
+00:16:30.936 --> 00:16:32.146 A:middle
+So how does this work now?
+
+00:16:33.026 --> 00:16:36.036 A:middle
+Well context 1 dispatches
+to the coordinator,
+
+00:16:37.076 --> 00:16:38.926 A:middle
+and well no lock is taken.
+
+00:16:39.776 --> 00:16:43.716 A:middle
+Context 2, which may still be
+your UIContext also dispatches
+
+00:16:43.746 --> 00:16:47.376 A:middle
+the coordinator and both
+of those messages are sent
+
+00:16:47.376 --> 00:16:49.596 A:middle
+down to the persistent
+store at the same time.
+
+00:16:50.566 --> 00:16:52.916 A:middle
+Persistent store then does
+whatever work it needs to figure
+
+00:16:52.916 --> 00:16:55.246 A:middle
+out what messages
+it needs to SQLite
+
+00:16:55.896 --> 00:16:57.496 A:middle
+and those are sent
+down to SQLite.
+
+00:16:57.496 --> 00:16:59.696 A:middle
+And it's only at that
+point that a lock is taken,
+
+00:16:59.696 --> 00:17:01.996 A:middle
+and this is the standard
+SQLite file block.
+
+00:16:59.696 --> 00:17:01.996 A:middle
+and this is the standard
+SQLite file block.
+
+00:17:03.076 --> 00:17:07.246 A:middle
+SQLite does whatever it needs
+to do, begin opens transaction,
+
+00:17:07.246 --> 00:17:09.726 A:middle
+right it's a bunch of SQL,
+closes the transaction,
+
+00:17:11.146 --> 00:17:14.526 A:middle
+ends at that point returns.
+
+00:17:15.146 --> 00:17:17.366 A:middle
+So you can see at this point
+that we've really, really,
+
+00:17:17.366 --> 00:17:19.756 A:middle
+really decreased the scope of
+the critical section there.
+
+00:17:20.236 --> 00:17:22.026 A:middle
+And why do you care?
+
+00:17:22.306 --> 00:17:24.406 A:middle
+This is going to make your
+UI a lot more responsive,
+
+00:17:24.786 --> 00:17:27.806 A:middle
+you can fault and
+fetch in, for example,
+
+00:17:27.986 --> 00:17:31.356 A:middle
+a main UI while background
+work is happening
+
+00:17:31.476 --> 00:17:32.776 A:middle
+on a separate context.
+
+00:17:33.536 --> 00:17:34.786 A:middle
+And the immediate fallout
+
+00:17:34.786 --> 00:17:36.746 A:middle
+from this is it really
+simplifies application
+
+00:17:36.746 --> 00:17:38.856 A:middle
+architecture, a fairly
+standard pattern,
+
+00:17:38.856 --> 00:17:43.186 A:middle
+has been that people will have
+an importer context that's
+
+00:17:43.186 --> 00:17:45.126 A:middle
+loading data for
+example, from the web.
+
+00:17:45.496 --> 00:17:49.186 A:middle
+And another, a main UIContext
+is vending data to the main UI.
+
+00:17:50.486 --> 00:17:52.686 A:middle
+And they end up having
+these on separate stacks
+
+00:17:52.826 --> 00:17:54.576 A:middle
+because the UI needs
+to be responsive
+
+00:17:54.576 --> 00:17:57.006 A:middle
+and they need the
+critical section locking
+
+00:17:57.006 --> 00:17:58.106 A:middle
+to be as small as possible.
+
+00:17:59.416 --> 00:18:01.626 A:middle
+And the only way to get
+that before when you had
+
+00:17:59.416 --> 00:18:01.626 A:middle
+And the only way to get
+that before when you had
+
+00:18:01.626 --> 00:18:04.896 A:middle
+to lock the entire stack, was
+to have two separate stacks.
+
+00:18:05.256 --> 00:18:07.736 A:middle
+And that introduced an issue
+with doing hand offs between,
+
+00:18:07.736 --> 00:18:10.166 A:middle
+okay there's a manage object
+context did save notification
+
+00:18:10.166 --> 00:18:12.176 A:middle
+but it's coming from an entirely
+separate persistent store
+
+00:18:12.176 --> 00:18:14.026 A:middle
+coordinator and I need
+to migrate that over.
+
+00:18:15.046 --> 00:18:18.436 A:middle
+That's no longer an issue there,
+you can now attach both context
+
+00:18:18.436 --> 00:18:21.866 A:middle
+to the same persistent store
+coordinator, they'll execute
+
+00:18:21.866 --> 00:18:25.716 A:middle
+in parallel and you can
+just do standard merging,
+
+00:18:25.716 --> 00:18:28.866 A:middle
+and as a huge bonus this means
+they're sharing the row cache
+
+00:18:29.146 --> 00:18:31.086 A:middle
+which is really going to
+decrease your memory footprint.
+
+00:18:31.086 --> 00:18:33.246 A:middle
+It's going to divide
+it by 2, since well,
+
+00:18:33.636 --> 00:18:41.296 A:middle
+we've only got one
+row cache nowadays.
+
+00:18:41.616 --> 00:18:47.216 A:middle
+It's on by default, it's for SQL
+stores only, and it only works
+
+00:18:47.216 --> 00:18:48.636 A:middle
+if all coordinated stores
+
+00:18:48.636 --> 00:18:50.936 A:middle
+on a persistent store
+coordinator are SQL stores.
+
+00:18:51.816 --> 00:18:53.266 A:middle
+You can configure the size
+
+00:18:53.266 --> 00:18:55.726 A:middle
+of the connection pool
+using the NSPersistentStore
+
+00:18:55.726 --> 00:18:58.206 A:middle
+ConnectionPoolMax
+SizeKey, that allows you
+
+00:18:58.346 --> 00:19:01.556 A:middle
+to specify the maximum
+size the connection pool.
+
+00:18:58.346 --> 00:19:01.556 A:middle
+to specify the maximum
+size the connection pool.
+
+00:19:01.856 --> 00:19:03.776 A:middle
+If you want serial
+request handling,
+
+00:19:03.776 --> 00:19:05.336 A:middle
+the old behavior,
+you can set it to 1.
+
+00:19:05.856 --> 00:19:08.266 A:middle
+We do reserve the right
+to say you tried to set it
+
+00:19:08.266 --> 00:19:10.566 A:middle
+to one million and that's
+kind of silly so we're going
+
+00:19:10.566 --> 00:19:11.626 A:middle
+to use a more reasonable number.
+
+00:19:12.056 --> 00:19:17.166 A:middle
+It should be transparent to
+most of you right off the bat,
+
+00:19:17.166 --> 00:19:19.416 A:middle
+your UIs will possibly get
+a little more responsive.
+
+00:19:20.346 --> 00:19:22.646 A:middle
+The big thing we noticed
+internally once we turned this
+
+00:19:22.646 --> 00:19:25.666 A:middle
+on, was a whole bunch of
+people said, hey, wow I can rip
+
+00:19:25.666 --> 00:19:28.776 A:middle
+out a couple hundred, couple
+thousand lines of code.
+
+00:19:29.246 --> 00:19:31.346 A:middle
+And you should do it because man
+is that satisfying [laughter].
+
+00:19:32.186 --> 00:19:34.976 A:middle
+A few of you.
+
+00:19:35.516 --> 00:19:38.846 A:middle
+[ Applause ]
+
+00:19:39.346 --> 00:19:43.786 A:middle
+A few of you may notice,
+some minor timing issues.
+
+00:19:43.786 --> 00:19:47.136 A:middle
+If you had a context, context
+1 that had a perform block
+
+00:19:47.136 --> 00:19:49.626 A:middle
+and wait and context 2 that also
+had a perform block and wait,
+
+00:19:49.876 --> 00:19:53.116 A:middle
+originally context 2 would
+not start executing its block
+
+00:19:53.436 --> 00:19:56.776 A:middle
+until context 1's block had
+returned, that's no longer true.
+
+00:19:56.776 --> 00:20:00.026 A:middle
+So for the like .1% of you
+who are in that situation,
+
+00:19:56.776 --> 00:20:00.026 A:middle
+So for the like .1% of you
+who are in that situation,
+
+00:20:00.336 --> 00:20:01.906 A:middle
+your timing's going to
+change and you may need
+
+00:20:01.906 --> 00:20:04.326 A:middle
+to decrease the bandwidth
+connection pool,
+
+00:20:04.326 --> 00:20:05.046 A:middle
+the rearchitect.
+
+00:20:05.436 --> 00:20:08.456 A:middle
+The rest of you, you'll
+just get to build new
+
+00:20:08.456 --> 00:20:09.646 A:middle
+and interesting and
+simpler code.
+
+00:20:10.496 --> 00:20:12.646 A:middle
+And at this point I'm
+going to drag my co-worker,
+
+00:20:12.646 --> 00:20:14.476 A:middle
+Scott up on stage and
+he's going to talk
+
+00:20:14.476 --> 00:20:15.566 A:middle
+about a bunch of other stuff.
+
+00:20:16.516 --> 00:20:22.336 A:middle
+[ Applause ]
+
+00:20:22.836 --> 00:20:23.386 A:middle
+&gt;&gt; Thanks Melissa.
+
+00:20:26.066 --> 00:20:31.006 A:middle
+Good morning, let's talk
+about setting up core data,
+
+00:20:32.656 --> 00:20:34.186 A:middle
+starting with adding
+a persistent store.
+
+00:20:34.186 --> 00:20:36.776 A:middle
+To add a persistent
+store to a coordinator,
+
+00:20:36.776 --> 00:20:38.946 A:middle
+you need four pieces
+of data and,
+
+00:20:39.226 --> 00:20:41.216 A:middle
+to do most operations
+you need at least two.
+
+00:20:42.166 --> 00:20:45.386 A:middle
+New this year, core data has
+introduced a new type called
+
+00:20:45.386 --> 00:20:48.266 A:middle
+NSPersistentStoreDescription
+that encapsulates all
+
+00:20:48.266 --> 00:20:49.816 A:middle
+of the data needed
+to describe a store
+
+00:20:50.206 --> 00:20:53.746 A:middle
+and also includes convenience
+API for common options
+
+00:20:53.746 --> 00:20:55.866 A:middle
+like whether the store
+should be opened read only,
+
+00:20:56.336 --> 00:20:59.866 A:middle
+the timeout that the coordinator
+should use, automatic migration
+
+00:20:59.866 --> 00:21:02.526 A:middle
+and mapping options which are
+both enabled by default now.
+
+00:20:59.866 --> 00:21:02.526 A:middle
+and mapping options which are
+both enabled by default now.
+
+00:21:02.926 --> 00:21:05.556 A:middle
+And a new option, for adding
+stores asynchronously,
+
+00:21:07.506 --> 00:21:09.316 A:middle
+this new type works
+with a new method
+
+00:21:09.316 --> 00:21:10.796 A:middle
+on the persistent
+store coordinator
+
+00:21:11.226 --> 00:21:13.976 A:middle
+that takes a trail
+enclosure with parameters
+
+00:21:13.976 --> 00:21:17.596 A:middle
+for the store description and an
+optional NSError that is non-nil
+
+00:21:17.596 --> 00:21:18.616 A:middle
+if the operation failed.
+
+00:21:19.736 --> 00:21:21.856 A:middle
+If you're adding a store
+asynchronously you can extend
+
+00:21:21.856 --> 00:21:24.226 A:middle
+the conditional in a
+call back for things
+
+00:21:24.226 --> 00:21:27.526 A:middle
+like posting a notification or
+pushing your application's UI
+
+00:21:27.526 --> 00:21:29.286 A:middle
+after the store has
+been successfully added.
+
+00:21:30.096 --> 00:21:33.636 A:middle
+This way your app's model setup
+can happen off the main thread
+
+00:21:33.826 --> 00:21:36.046 A:middle
+which is especially useful
+when your application launches
+
+00:21:36.046 --> 00:21:37.716 A:middle
+since a migration
+may cause a delay.
+
+00:21:38.316 --> 00:21:41.136 A:middle
+Remember, if iOS notices that
+your app hasn't been responsive
+
+00:21:41.136 --> 00:21:43.466 A:middle
+for a while after launch,
+then it will kill the app.
+
+00:21:44.166 --> 00:21:46.846 A:middle
+This can prevent a migration
+from ever finishing but,
+
+00:21:46.846 --> 00:21:48.326 A:middle
+it's not a problem anymore
+
+00:21:48.326 --> 00:21:49.766 A:middle
+if you're adding a
+store asynchronously.
+
+00:21:50.346 --> 00:21:54.226 A:middle
+So that's persistent
+store descriptions but,
+
+00:21:54.226 --> 00:21:56.706 A:middle
+there's a lot more involved
+in setting up core data stack.
+
+00:21:57.426 --> 00:21:59.716 A:middle
+To represent a core data stack
+you need at least three objects,
+
+00:22:00.056 --> 00:22:02.396 A:middle
+plus the boiler plate to
+associate them with each other.
+
+00:22:03.746 --> 00:22:06.106 A:middle
+New this year, core data
+has yet another type
+
+00:22:06.106 --> 00:22:08.136 A:middle
+that encapsulates
+those objects and most
+
+00:22:08.136 --> 00:22:10.446 A:middle
+of the boiler plate called
+NSPersistentContainer,
+
+00:22:10.446 --> 00:22:12.316 A:middle
+not only does it [laughter].
+
+00:22:13.516 --> 00:22:17.076 A:middle
+[ Applause ]
+
+00:22:17.576 --> 00:22:19.786 A:middle
+I realized a lot of you have
+written this type yourselves
+
+00:22:19.786 --> 00:22:23.266 A:middle
+maybe but [laughter] this one
+not only encapsulates modeling
+
+00:22:23.266 --> 00:22:25.516 A:middle
+configuration it
+also has a name,
+
+00:22:26.296 --> 00:22:28.666 A:middle
+a list of store descriptions,
+and a method
+
+00:22:28.666 --> 00:22:31.326 A:middle
+to load store descriptions
+from that list
+
+00:22:31.326 --> 00:22:33.106 A:middle
+that haven't already been
+added to the coordinator.
+
+00:22:34.106 --> 00:22:35.996 A:middle
+This means that the
+project boiler plated needed
+
+00:22:35.996 --> 00:22:38.366 A:middle
+to setup core data goes
+from an entire page of code
+
+00:22:38.826 --> 00:22:40.846 A:middle
+to just a couple of lines.
+
+00:22:42.516 --> 00:22:50.816 A:middle
+[ Applause ]
+
+00:22:51.316 --> 00:22:53.156 A:middle
+So there's a lot of
+code missing here now,
+
+00:22:53.156 --> 00:22:54.676 A:middle
+let's take a look
+at how it all works.
+
+00:22:55.206 --> 00:22:57.516 A:middle
+The container guarantees that
+its properties are always valid
+
+00:22:57.516 --> 00:23:00.366 A:middle
+so the getters for things like
+the coordinator and the model,
+
+00:22:57.516 --> 00:23:00.366 A:middle
+so the getters for things like
+the coordinator and the model,
+
+00:23:00.366 --> 00:23:03.176 A:middle
+will always return new
+objects that are safe to use.
+
+00:23:04.086 --> 00:23:06.876 A:middle
+The container's initializer
+finds a model based on the name
+
+00:23:06.876 --> 00:23:08.146 A:middle
+that you pass into
+the initializer,
+
+00:23:09.186 --> 00:23:10.476 A:middle
+there's also another initializer
+
+00:23:10.476 --> 00:23:12.206 A:middle
+that takes an explicit
+model argument.
+
+00:23:13.646 --> 00:23:16.856 A:middle
+By default, new containers
+have a single store description
+
+00:23:16.856 --> 00:23:19.786 A:middle
+in the list, it's an
+SQLite with default options
+
+00:23:20.016 --> 00:23:23.016 A:middle
+and a file name based on
+the name of the container.
+
+00:23:23.636 --> 00:23:27.056 A:middle
+And it's stored in a directory
+that's defined by a class method
+
+00:23:27.056 --> 00:23:29.656 A:middle
+on the container, and
+a persistent container,
+
+00:23:29.656 --> 00:23:33.396 A:middle
+by default will return
+you a directory based
+
+00:23:33.396 --> 00:23:34.446 A:middle
+on the platform that you're on.
+
+00:23:34.446 --> 00:23:36.946 A:middle
+So it will use the application
+support directory on macOS,
+
+00:23:37.456 --> 00:23:40.516 A:middle
+your container document
+structure on iOS and launchOS,
+
+00:23:40.566 --> 00:23:43.276 A:middle
+and your containers
+caches directory on tvOS.
+
+00:23:43.276 --> 00:23:47.896 A:middle
+If you want to set your own
+directory then you can subclass
+
+00:23:47.896 --> 00:23:50.026 A:middle
+in this persistent container
+and override the direct,
+
+00:23:50.226 --> 00:23:52.826 A:middle
+sorry the defaulted
+directory URL class method.
+
+00:23:54.406 --> 00:23:56.616 A:middle
+We think container's really
+helpful for setting up core data
+
+00:23:56.856 --> 00:23:58.486 A:middle
+but they also provide
+convenience
+
+00:23:58.486 --> 00:23:59.596 A:middle
+for common operations.
+
+00:24:00.196 --> 00:24:03.376 A:middle
+Containers have a main queue
+context property called view
+
+00:24:03.376 --> 00:24:05.916 A:middle
+context that you can
+use to drive your UI.
+
+00:24:06.246 --> 00:24:09.196 A:middle
+There's also a factory method
+that vends background contexts
+
+00:24:09.196 --> 00:24:11.576 A:middle
+that are ready to use
+but most of the time,
+
+00:24:12.006 --> 00:24:14.216 A:middle
+you'll probably want to
+use the container's method
+
+00:24:14.216 --> 00:24:15.706 A:middle
+for performing background tasks
+
+00:24:15.706 --> 00:24:17.606 A:middle
+which is called
+performBackgroundTask.
+
+00:24:18.246 --> 00:24:22.026 A:middle
+So instead of having to setup a
+new background context and wire
+
+00:24:22.026 --> 00:24:23.486 A:middle
+up and then a queue a
+block just to do something
+
+00:24:23.486 --> 00:24:25.876 A:middle
+in the background you can just
+pass a block to the container.
+
+00:24:27.156 --> 00:24:28.966 A:middle
+Using performBackgroundTask
+can have a benefit to the
+
+00:24:28.966 --> 00:24:31.826 A:middle
+on code concision using it
+gives core data the ability
+
+00:24:31.826 --> 00:24:33.706 A:middle
+to reduce the number of
+contexts that are created
+
+00:24:33.706 --> 00:24:36.696 A:middle
+to do your work, and also can
+work with connection pooling
+
+00:24:36.696 --> 00:24:38.236 A:middle
+to ensure that your
+app stays responsive,
+
+00:24:38.276 --> 00:24:39.266 A:middle
+even under heavy load.
+
+00:24:41.806 --> 00:24:43.566 A:middle
+Speaking of common
+context work flows,
+
+00:24:43.966 --> 00:24:47.106 A:middle
+the NSManagedObjectContext has
+a new property this year called
+
+00:24:47.106 --> 00:24:49.796 A:middle
+automatically merges
+changes from parent.
+
+00:24:49.796 --> 00:24:51.166 A:middle
+It's a Boolean and
+when you set it
+
+00:24:51.166 --> 00:24:52.946 A:middle
+to true the context will
+automatically merge,
+
+00:24:52.946 --> 00:24:54.616 A:middle
+save the change the
+data of its parent.
+
+00:24:55.376 --> 00:24:56.076 A:middle
+This works for [laughter].
+
+00:24:57.516 --> 00:25:00.086 A:middle
+[ Applause ]
+
+00:24:57.516 --> 00:25:00.086 A:middle
+[ Applause ]
+
+00:25:00.586 --> 00:25:03.126 A:middle
+This is really handy, it
+works for child context
+
+00:25:03.126 --> 00:25:06.676 A:middle
+when the parent saves its
+changes, and it also works
+
+00:25:06.676 --> 00:25:09.476 A:middle
+for top level context when a
+sibling saves up to the store.
+
+00:25:09.936 --> 00:25:12.336 A:middle
+It works especially well
+with generation tokens
+
+00:25:12.336 --> 00:25:13.706 A:middle
+which Melissa talked
+about earlier.
+
+00:25:14.746 --> 00:25:18.566 A:middle
+So your UIs can be maintenance
+free if you pin your UI context
+
+00:25:18.566 --> 00:25:20.846 A:middle
+to the latest generation and
+then enable automatic merging,
+
+00:25:21.156 --> 00:25:23.306 A:middle
+your faults will be safe
+and your object bindings
+
+00:25:23.306 --> 00:25:25.686 A:middle
+and fetch results controllers
+will keep themselves
+
+00:25:27.196 --> 00:25:28.596 A:middle
+up to date [laughter].
+
+00:25:30.426 --> 00:25:34.966 A:middle
+Alright. Let's talk
+about generics.
+
+00:25:36.156 --> 00:25:38.616 A:middle
+Core data has adopted generics
+this year and they work great
+
+00:25:38.616 --> 00:25:39.646 A:middle
+in both ObjC and Swift.
+
+00:25:39.646 --> 00:25:43.666 A:middle
+There is a new protocol
+called NSFetchRequestResult,
+
+00:25:44.156 --> 00:25:48.246 A:middle
+and it is adopted by all of the
+types that you'd ever expect
+
+00:25:48.246 --> 00:25:51.226 A:middle
+to see back from the fetch
+request like NSManagedObject
+
+00:25:51.226 --> 00:25:52.846 A:middle
+or all the entity subclasses.
+
+00:25:53.346 --> 00:25:57.146 A:middle
+Object IDs, NSDictionary
+and NSNumber.
+
+00:25:58.146 --> 00:26:01.206 A:middle
+NSFetchRequest is now
+parameterized based on the type
+
+00:25:58.146 --> 00:26:01.206 A:middle
+NSFetchRequest is now
+parameterized based on the type
+
+00:26:01.206 --> 00:26:02.816 A:middle
+of the results which
+is restricted
+
+00:26:02.816 --> 00:26:05.806 A:middle
+by protocol conformance and
+in Swift, the fetch method
+
+00:26:05.806 --> 00:26:08.236 A:middle
+on NSManagedObjectContext
+plums the type
+
+00:26:08.236 --> 00:26:11.056 A:middle
+of fetch request all the
+way out to your results.
+
+00:26:11.796 --> 00:26:13.646 A:middle
+[Background noise] Finally,
+a fetch results controller
+
+00:26:13.706 --> 00:26:14.956 A:middle
+who adopt the parameterization
+
+00:26:14.956 --> 00:26:18.016 A:middle
+of the fetch request
+used to create it.
+
+00:26:18.876 --> 00:26:20.446 A:middle
+Speaking of
+NSFetchResultsController,
+
+00:26:20.666 --> 00:26:23.856 A:middle
+if you're using UICollection
+view, sorry there we go,
+
+00:26:23.856 --> 00:26:25.606 A:middle
+UICollection view,
+it's really easy
+
+00:26:25.606 --> 00:26:27.846 A:middle
+to adopt the new data
+source prefetching feature
+
+00:26:28.306 --> 00:26:29.306 A:middle
+if you're using core data.
+
+00:26:29.716 --> 00:26:31.386 A:middle
+All you need is an
+asynchronous fetch request,
+
+00:26:31.386 --> 00:26:34.196 A:middle
+to get the request off the main
+thread and you want to make sure
+
+00:26:34.196 --> 00:26:35.846 A:middle
+that you're not returning
+objects as faults.
+
+00:26:36.966 --> 00:26:39.316 A:middle
+For more information about
+data source prefetching,
+
+00:26:39.316 --> 00:26:41.196 A:middle
+check out Steve and
+Peter's talk from yesterday,
+
+00:26:41.356 --> 00:26:42.666 A:middle
+what's new in UICollection view.
+
+00:26:43.156 --> 00:26:46.896 A:middle
+If you're a Mac developer I
+also have good news for you.
+
+00:26:47.356 --> 00:26:49.846 A:middle
+The fetch results controller
+is now available on macOS.
+
+00:26:51.516 --> 00:26:54.556 A:middle
+[ Applause ]
+
+00:26:55.056 --> 00:26:58.156 A:middle
+Okay, so let's talk about some
+common operations in core data,
+
+00:26:58.416 --> 00:27:00.576 A:middle
+starting with getting
+an entity description.
+
+00:26:58.416 --> 00:27:00.576 A:middle
+starting with getting
+an entity description.
+
+00:27:01.596 --> 00:27:03.406 A:middle
+Oops this, there we go.
+
+00:27:04.456 --> 00:27:06.796 A:middle
+For this you need the
+entity's name as a string
+
+00:27:06.796 --> 00:27:08.376 A:middle
+and a managed object context.
+
+00:27:09.466 --> 00:27:11.786 A:middle
+Creating a fetch request also
+requires a string constant
+
+00:27:11.906 --> 00:27:13.246 A:middle
+as well as a type
+cast if you want
+
+00:27:13.246 --> 00:27:14.766 A:middle
+to take advantage
+of the new generics.
+
+00:27:15.546 --> 00:27:18.146 A:middle
+And finally, there is
+creating a new managed object
+
+00:27:18.146 --> 00:27:20.106 A:middle
+which has all three
+things, a string constant,
+
+00:27:20.236 --> 00:27:23.096 A:middle
+a context parameter,
+and a type cast.
+
+00:27:23.956 --> 00:27:25.886 A:middle
+These operations are all
+getting easier this year
+
+00:27:25.886 --> 00:27:28.506 A:middle
+through improvements we've made
+to manage object subclasses.
+
+00:27:29.446 --> 00:27:32.236 A:middle
+The entity description is now
+a class method on the subclass.
+
+00:27:34.516 --> 00:27:38.586 A:middle
+[ Applause ]
+
+00:27:39.086 --> 00:27:39.976 A:middle
+Don't worry this gets
+better [laughter].
+
+00:27:40.636 --> 00:27:42.886 A:middle
+The class also has
+a factory method
+
+00:27:42.886 --> 00:27:44.906 A:middle
+for creating new fetch
+requests that are fully typed.
+
+00:27:46.516 --> 00:27:50.186 A:middle
+[ Applause ]
+
+00:27:50.686 --> 00:27:53.226 A:middle
+And finally, you can
+create a new manage object,
+
+00:27:53.406 --> 00:27:55.976 A:middle
+object using just the
+subclass's initializer directly.
+
+00:27:57.516 --> 00:28:03.846 A:middle
+[ Applause ]
+
+00:27:57.516 --> 00:28:03.846 A:middle
+[ Applause ]
+
+00:28:04.346 --> 00:28:06.256 A:middle
+There's one more thing
+that's worth talking
+
+00:28:06.256 --> 00:28:08.036 A:middle
+about which is performing
+a fetch request.
+
+00:28:08.386 --> 00:28:10.546 A:middle
+I mentioned earlier that
+the context fetch method is
+
+00:28:10.546 --> 00:28:13.926 A:middle
+parameterized in Swift but ObjC
+doesn't support method level
+
+00:28:13.926 --> 00:28:15.916 A:middle
+generics, so we've
+also added actor
+
+00:28:15.916 --> 00:28:17.606 A:middle
+like semantics to
+fetch requests.
+
+00:28:17.996 --> 00:28:19.856 A:middle
+So you can just call
+its execute method
+
+00:28:20.116 --> 00:28:22.076 A:middle
+from inside a block
+submitted to a context
+
+00:28:22.076 --> 00:28:24.226 A:middle
+and it will return
+properly typed results.
+
+00:28:26.516 --> 00:28:29.036 A:middle
+[ Applause ]
+
+00:28:29.536 --> 00:28:31.806 A:middle
+All this new API for model
+subclasses should make a lot
+
+00:28:31.806 --> 00:28:33.736 A:middle
+of things much easier
+but I'm guessing
+
+00:28:33.736 --> 00:28:35.616 A:middle
+that you're not really looking
+forward to regenerating all
+
+00:28:35.616 --> 00:28:38.726 A:middle
+of your subclasses, but
+don't worry because,
+
+00:28:38.726 --> 00:28:41.326 A:middle
+this should be the last year you
+have to do anything with them.
+
+00:28:41.966 --> 00:28:44.726 A:middle
+Because Xcode 8 can now generate
+that code for you automatically.
+
+00:28:46.516 --> 00:28:49.556 A:middle
+[ Applause ]
+
+00:28:50.056 --> 00:28:51.766 A:middle
+You can configure code
+generation per entity
+
+00:28:51.906 --> 00:28:53.596 A:middle
+and Xcode will write
+the generated code
+
+00:28:53.596 --> 00:28:54.936 A:middle
+to your project's derived data
+
+00:28:54.936 --> 00:28:56.476 A:middle
+so it doesn't pollute
+your source tree
+
+00:28:56.476 --> 00:28:57.406 A:middle
+with code you didn't write.
+
+00:28:58.226 --> 00:28:59.596 A:middle
+You don't want to
+edit these files
+
+00:28:59.596 --> 00:29:01.346 A:middle
+since the code is
+automatically regenerated
+
+00:28:59.596 --> 00:29:01.346 A:middle
+since the code is
+automatically regenerated
+
+00:29:01.346 --> 00:29:04.576 A:middle
+when you change your model
+but if you want to do things
+
+00:29:04.576 --> 00:29:06.306 A:middle
+like add your own instance
+variables or something
+
+00:29:06.306 --> 00:29:08.626 A:middle
+to the subclass, then
+you can also tell Xcode
+
+00:29:08.626 --> 00:29:10.526 A:middle
+to only generate a
+category or extension
+
+00:29:10.526 --> 00:29:12.066 A:middle
+and then you can own
+the class itself.
+
+00:29:14.896 --> 00:29:16.796 A:middle
+In Swift all you need to do
+
+00:29:16.796 --> 00:29:18.616 A:middle
+to use this feature
+is import the module
+
+00:29:18.616 --> 00:29:21.046 A:middle
+that your entities belong to
+which is often the same module
+
+00:29:21.046 --> 00:29:23.536 A:middle
+as your code, but
+in ObjC you'll need
+
+00:29:23.536 --> 00:29:25.356 A:middle
+to know a bit more
+about how this works.
+
+00:29:26.206 --> 00:29:27.466 A:middle
+The most important file in,
+
+00:29:27.466 --> 00:29:30.916 A:middle
+to know about in ObjC is the
+core data model header file.
+
+00:29:31.706 --> 00:29:34.046 A:middle
+Each model has its own header
+file and you need to import it
+
+00:29:34.046 --> 00:29:36.536 A:middle
+to get access to all of that
+model's generated classes.
+
+00:29:37.626 --> 00:29:39.976 A:middle
+If we zoom in for a look at
+the other generated files
+
+00:29:40.096 --> 00:29:42.216 A:middle
+for entities configured
+to generate classes,
+
+00:29:42.216 --> 00:29:45.066 A:middle
+Xcode creates two headers that
+you probably already recognize
+
+00:29:45.066 --> 00:29:46.496 A:middle
+from generating classes
+yourself.
+
+00:29:46.936 --> 00:29:48.366 A:middle
+One declares the class interface
+
+00:29:48.366 --> 00:29:50.466 A:middle
+and the other declares
+the managed properties.
+
+00:29:51.526 --> 00:29:53.886 A:middle
+This is mostly important
+to know for ObjC
+
+00:29:53.886 --> 00:29:55.876 A:middle
+because if you're
+generating a category,
+
+00:29:55.876 --> 00:29:58.076 A:middle
+then Xcode will not
+generate a class interface,
+
+00:29:58.366 --> 00:30:00.946 A:middle
+and the model's header will
+import the category directly.
+
+00:29:58.366 --> 00:30:00.946 A:middle
+and the model's header will
+import the category directly.
+
+00:30:02.336 --> 00:30:04.566 A:middle
+Categories can't be declared
+without a class interface
+
+00:30:04.566 --> 00:30:06.856 A:middle
+so the generated code
+expects to find a header
+
+00:30:06.856 --> 00:30:09.396 A:middle
+in your project that's
+named after the class.
+
+00:30:09.726 --> 00:30:12.056 A:middle
+This is a file that you
+own, and if it doesn't exist
+
+00:30:12.056 --> 00:30:14.126 A:middle
+in your project then your
+target will fail to build.
+
+00:30:16.076 --> 00:30:18.286 A:middle
+So let's take a quick break
+from slides and have a look
+
+00:30:18.286 --> 00:30:19.786 A:middle
+at what all this new
+stuff means for you.
+
+00:30:19.906 --> 00:30:26.766 A:middle
+I have Xcode 8 open
+here and we're going
+
+00:30:26.766 --> 00:30:28.116 A:middle
+to create a new Xcode project.
+
+00:30:28.756 --> 00:30:32.186 A:middle
+And use iOSes master
+detail application.
+
+00:30:33.146 --> 00:30:36.096 A:middle
+We've updated the templates
+this year to use the new UI.
+
+00:30:36.416 --> 00:30:42.496 A:middle
+So if we, save this somewhere
+and go to the app delegate,
+
+00:30:43.226 --> 00:30:44.756 A:middle
+then we can see that,
+
+00:30:45.706 --> 00:30:48.846 A:middle
+we're using a persistent
+container here and we're wiring
+
+00:30:48.846 --> 00:30:51.886 A:middle
+up the master view controller
+
+00:30:52.336 --> 00:30:54.136 A:middle
+with the container's
+view context.
+
+00:30:54.136 --> 00:30:57.356 A:middle
+If we go to the master
+view controller,
+
+00:30:57.906 --> 00:31:01.016 A:middle
+we can see where it
+creates a new object
+
+00:30:57.906 --> 00:31:01.016 A:middle
+we can see where it
+creates a new object
+
+00:31:01.136 --> 00:31:04.846 A:middle
+that we're already using
+subclass initializers
+
+00:31:05.636 --> 00:31:07.136 A:middle
+that are generated by core data.
+
+00:31:07.536 --> 00:31:11.356 A:middle
+And we're not using KVC anymore
+we can set properties directly
+
+00:31:11.426 --> 00:31:14.456 A:middle
+on the manage object and if
+we command click we get taken
+
+00:31:14.456 --> 00:31:15.816 A:middle
+to the generated file.
+
+00:31:16.216 --> 00:31:20.136 A:middle
+If we come back and we look
+
+00:31:20.136 --> 00:31:22.076 A:middle
+at how the fetch results
+controller is set up,
+
+00:31:22.946 --> 00:31:23.416 A:middle
+there we are.
+
+00:31:23.996 --> 00:31:28.176 A:middle
+We can see that raising the
+fetch request factory method
+
+00:31:28.176 --> 00:31:29.486 A:middle
+on the event subclass
+
+00:31:30.056 --> 00:31:33.996 A:middle
+and there's no extra
+explicit typing here
+
+00:31:33.996 --> 00:31:37.246 A:middle
+when we create the fetch
+results controller but its type,
+
+00:31:38.126 --> 00:31:39.936 A:middle
+which is really tiny,
+but if we zoom in here,
+
+00:31:41.106 --> 00:31:42.706 A:middle
+is passed through from
+the fetch request.
+
+00:31:43.966 --> 00:31:47.506 A:middle
+This means that elsewhere,
+in the sub,
+
+00:31:47.696 --> 00:31:52.916 A:middle
+prepare for segue, there we go.
+
+00:31:53.576 --> 00:31:55.856 A:middle
+When we get an object from the
+fetch results controller it
+
+00:31:55.856 --> 00:31:56.896 A:middle
+comes back with the right type.
+
+00:31:58.506 --> 00:32:01.006 A:middle
+So that's all great we
+have no type cast anymore.
+
+00:31:58.506 --> 00:32:01.006 A:middle
+So that's all great we
+have no type cast anymore.
+
+00:32:01.646 --> 00:32:06.816 A:middle
+And, but I don't want this
+app to show timestamps
+
+00:32:06.816 --> 00:32:08.816 A:middle
+in the master view controller
+like it does by default.
+
+00:32:08.816 --> 00:32:14.616 A:middle
+So let's add a title attribute
+to our event entity here.
+
+00:32:15.256 --> 00:32:19.796 A:middle
+And we want it to
+be a string type.
+
+00:32:20.506 --> 00:32:22.826 A:middle
+Alright so we've
+rebuilt, saved our model,
+
+00:32:22.916 --> 00:32:25.896 A:middle
+and if we go back here
+and go to configure cell,
+
+00:32:25.986 --> 00:32:29.306 A:middle
+and we can delete
+this code here.
+
+00:32:29.916 --> 00:32:33.496 A:middle
+And take advantage of
+Xcode's auto completion
+
+00:32:33.496 --> 00:32:36.136 A:middle
+to get a new property that
+we just set up in our model.
+
+00:32:38.516 --> 00:32:42.596 A:middle
+[ Applause ]
+
+00:32:43.096 --> 00:32:44.626 A:middle
+And again if we command
+click on it,
+
+00:32:45.086 --> 00:32:46.326 A:middle
+all of the code has
+been updated.
+
+00:32:47.516 --> 00:32:52.186 A:middle
+[ Applause ]
+
+00:32:52.686 --> 00:32:54.836 A:middle
+One of the best hidden
+benefits of this is
+
+00:32:54.836 --> 00:32:56.856 A:middle
+if you're using manually
+generated subclasses
+
+00:32:56.856 --> 00:33:00.046 A:middle
+or even KVC, if you change
+the name of an attribute,
+
+00:32:56.856 --> 00:33:00.046 A:middle
+or even KVC, if you change
+the name of an attribute,
+
+00:33:00.286 --> 00:33:01.916 A:middle
+you can wind up with
+some really weird bugs
+
+00:33:01.956 --> 00:33:05.796 A:middle
+because your project
+compiles but when it comes
+
+00:33:05.796 --> 00:33:08.876 A:middle
+to actually making the calls
+you get a run time error,
+
+00:33:08.876 --> 00:33:10.676 A:middle
+because the key path
+doesn't exist anymore.
+
+00:33:10.676 --> 00:33:13.156 A:middle
+Automatically subclass
+generation takes care
+
+00:33:13.156 --> 00:33:13.956 A:middle
+of all of this.
+
+00:33:15.366 --> 00:33:19.106 A:middle
+So let's automatic
+subclass generation as well
+
+00:33:19.106 --> 00:33:21.486 A:middle
+as some working examples
+of core data's new API.
+
+00:33:24.916 --> 00:33:27.336 A:middle
+Last, let's talk about
+what's new in SQLite.
+
+00:33:28.806 --> 00:33:30.206 A:middle
+The SQLite library that comes
+
+00:33:30.206 --> 00:33:31.996 A:middle
+with the operating
+system has some new tricks
+
+00:33:31.996 --> 00:33:33.356 A:middle
+that you won't find
+anywhere else.
+
+00:33:33.416 --> 00:33:35.736 A:middle
+The first of which is
+multi-threading assertions.
+
+00:33:37.046 --> 00:33:40.366 A:middle
+SQLite on Apple platforms does
+not have thread safe connections
+
+00:33:40.656 --> 00:33:42.876 A:middle
+and multi-threading bugs
+can be hard to diagnose,
+
+00:33:43.116 --> 00:33:45.806 A:middle
+sometimes because they usually
+manifest as a crash report
+
+00:33:45.806 --> 00:33:48.366 A:middle
+with a single thread
+deep inside SQLite.
+
+00:33:49.506 --> 00:33:51.106 A:middle
+To make these issues
+easier to identify
+
+00:33:51.106 --> 00:33:53.586 A:middle
+and reproduce the system
+SQLite supports new environment
+
+00:33:53.586 --> 00:33:55.886 A:middle
+variable that enables
+multi-threading assertions
+
+00:33:56.176 --> 00:33:58.866 A:middle
+when they fire you'll see
+two threads in SQLite,
+
+00:33:59.246 --> 00:34:01.016 A:middle
+and they're both using
+the same connection.
+
+00:33:59.246 --> 00:34:01.016 A:middle
+and they're both using
+the same connection.
+
+00:34:01.886 --> 00:34:06.496 A:middle
+SQLite has always supported
+user defined logging functions
+
+00:34:06.496 --> 00:34:09.656 A:middle
+through a configuration that
+you can set using SQLite3 config
+
+00:34:10.005 --> 00:34:11.126 A:middle
+but that function needs
+
+00:34:11.126 --> 00:34:13.216 A:middle
+to be called before the
+library is initialized
+
+00:34:13.216 --> 00:34:14.436 A:middle
+which may have already happened.
+
+00:34:15.416 --> 00:34:17.176 A:middle
+SQLite configurability is great
+
+00:34:17.176 --> 00:34:18.726 A:middle
+but we're running
+a modeling system
+
+00:34:18.726 --> 00:34:20.295 A:middle
+that has built-in
+logging facilities
+
+00:34:20.295 --> 00:34:22.176 A:middle
+so there's now another
+environment variable
+
+00:34:22.545 --> 00:34:24.726 A:middle
+that chimes SQLite
+logging to the system log.
+
+00:34:26.496 --> 00:34:30.735 A:middle
+Finally, I want to talk
+about file operations.
+
+00:34:32.096 --> 00:34:34.806 A:middle
+All databases are represented
+by a combination of files
+
+00:34:34.806 --> 00:34:37.076 A:middle
+and file operations
+cannot be atomic
+
+00:34:37.565 --> 00:34:38.606 A:middle
+when they're in multiple files.
+
+00:34:39.096 --> 00:34:41.286 A:middle
+The result of this is that
+all file operations are
+
+00:34:41.286 --> 00:34:42.386 A:middle
+inherently unsafe.
+
+00:34:42.926 --> 00:34:45.696 A:middle
+Unix file APIs to
+NSFileManager, everything.
+
+00:34:46.616 --> 00:34:48.916 A:middle
+This is really important
+and I want to share a couple
+
+00:34:48.916 --> 00:34:50.936 A:middle
+of concrete examples of
+how things can go wrong.
+
+00:34:52.426 --> 00:34:55.025 A:middle
+Let's say I notice two database
+files in the directory and,
+
+00:34:56.295 --> 00:34:58.786 A:middle
+my code wants to do some clean
+up so it deletes them but in
+
+00:34:58.786 --> 00:35:00.066 A:middle
+between deleting the database
+
+00:34:58.786 --> 00:35:00.066 A:middle
+between deleting the database
+
+00:35:00.066 --> 00:35:02.116 A:middle
+and the journal something
+connects to the database file.
+
+00:35:03.256 --> 00:35:04.846 A:middle
+That database doesn't have
+access to the journal,
+
+00:35:05.526 --> 00:35:07.346 A:middle
+so it can't make
+sense of the database,
+
+00:35:07.536 --> 00:35:09.376 A:middle
+so it starts reporting
+errors immediately
+
+00:35:09.486 --> 00:35:10.606 A:middle
+which affects your app.
+
+00:35:11.776 --> 00:35:13.976 A:middle
+Unless you can guarantee
+that nothing is currently
+
+00:35:13.976 --> 00:35:16.096 A:middle
+or it will ever try to
+connect to a database,
+
+00:35:16.096 --> 00:35:17.886 A:middle
+it's not safe to
+delete its files.
+
+00:35:19.256 --> 00:35:21.126 A:middle
+Let's say I have a
+database in wall mode
+
+00:35:21.666 --> 00:35:23.146 A:middle
+and something is using it,
+
+00:35:23.766 --> 00:35:26.106 A:middle
+and the database finally gets
+moved aside for some reason.
+
+00:35:26.646 --> 00:35:29.466 A:middle
+When it gets open
+in its new location
+
+00:35:29.466 --> 00:35:31.556 A:middle
+that connection creates a
+new journal and lock file,
+
+00:35:32.286 --> 00:35:33.206 A:middle
+now you have two connections
+
+00:35:33.206 --> 00:35:34.836 A:middle
+that are using different
+journals and locks,
+
+00:35:34.976 --> 00:35:37.346 A:middle
+it's not long before they wind
+up corrupting the database.
+
+00:35:39.276 --> 00:35:42.316 A:middle
+These examples may seem
+contrived or rare, but there are
+
+00:35:42.316 --> 00:35:45.336 A:middle
+over a billion devices out there
+with potential for problems
+
+00:35:45.336 --> 00:35:47.726 A:middle
+with every possible operation
+on every possible file,
+
+00:35:47.856 --> 00:35:49.676 A:middle
+something will happen to
+someone using your app
+
+00:35:49.676 --> 00:35:52.216 A:middle
+and they'll be very upset when
+they wind up losing their data.
+
+00:35:53.676 --> 00:35:55.016 A:middle
+Hard links are especially bad,
+
+00:35:55.556 --> 00:35:58.626 A:middle
+don't use hard links
+with database files.
+
+00:35:59.116 --> 00:36:02.366 A:middle
+So, new this year the
+SQLite library that comes
+
+00:35:59.116 --> 00:36:02.366 A:middle
+So, new this year the
+SQLite library that comes
+
+00:36:02.366 --> 00:36:04.966 A:middle
+with the operating system takes
+advantage of dispatch sources
+
+00:36:05.416 --> 00:36:07.506 A:middle
+and database connections
+will report errors
+
+00:36:07.566 --> 00:36:10.056 A:middle
+after an illegal operation
+affects their files.
+
+00:36:10.836 --> 00:36:13.436 A:middle
+On its own the system solve
+data corruption problems
+
+00:36:13.466 --> 00:36:15.436 A:middle
+in most cases the damages
+has already been done.
+
+00:36:15.856 --> 00:36:17.316 A:middle
+So to help you identify
+
+00:36:17.316 --> 00:36:20.066 A:middle
+and debug these issues we've
+added another environment
+
+00:36:20.066 --> 00:36:22.916 A:middle
+variable that causes
+connections to assert as soon
+
+00:36:22.916 --> 00:36:24.786 A:middle
+as they detect an illegal
+operation has affected
+
+00:36:24.786 --> 00:36:25.346 A:middle
+their files.
+
+00:36:26.766 --> 00:36:27.696 A:middle
+If you're curious for more ways
+
+00:36:27.696 --> 00:36:29.116 A:middle
+that your database
+can get corrupted,
+
+00:36:29.116 --> 00:36:31.006 A:middle
+SQLite has an instructional
+manual
+
+00:36:31.006 --> 00:36:32.626 A:middle
+on their website called how
+
+00:36:32.626 --> 00:36:34.046 A:middle
+to corrupt a SQLite
+database file [laughter].
+
+00:36:39.866 --> 00:36:41.566 A:middle
+Luckily these problems
+are avoidable.
+
+00:36:42.326 --> 00:36:44.226 A:middle
+If you're using SQLite
+directly, you want to make sure
+
+00:36:44.226 --> 00:36:46.486 A:middle
+that there's only one piece of
+code that owns that database
+
+00:36:46.866 --> 00:36:49.516 A:middle
+and that code needs to go
+into the exclusive file access
+
+00:36:49.516 --> 00:36:51.146 A:middle
+so files can't be
+changed when they're open.
+
+00:36:52.246 --> 00:36:54.066 A:middle
+If you're using core
+data, and you should,
+
+00:36:54.306 --> 00:36:56.256 A:middle
+there's API in the
+persistent store coordinator
+
+00:36:56.346 --> 00:36:58.436 A:middle
+that is always safe to
+use with SQLite databases,
+
+00:36:58.436 --> 00:36:59.376 A:middle
+whether they're open or not.
+
+00:36:59.916 --> 00:37:02.876 A:middle
+There's replacePersistentStore
+which replaces one database
+
+00:36:59.916 --> 00:37:02.876 A:middle
+There's replacePersistentStore
+which replaces one database
+
+00:37:02.876 --> 00:37:03.926 A:middle
+with the contents of another.
+
+00:37:04.046 --> 00:37:05.886 A:middle
+And there's also
+destroyPersistentStore
+
+00:37:05.886 --> 00:37:08.016 A:middle
+which safely deletes
+everything in the database
+
+00:37:08.016 --> 00:37:09.616 A:middle
+and leaves an empty
+database behind.
+
+00:37:10.086 --> 00:37:15.906 A:middle
+Alright, that's it for what's
+new in core data this year.
+
+00:37:16.246 --> 00:37:18.986 A:middle
+To recap, we have a new
+feature called query generations
+
+00:37:18.986 --> 00:37:21.816 A:middle
+which gives you a stable view of
+your data at a snapshot in time.
+
+00:37:23.106 --> 00:37:24.186 A:middle
+We use support connection
+pooling
+
+00:37:24.186 --> 00:37:25.636 A:middle
+and a persistent
+store coordinator now
+
+00:37:25.736 --> 00:37:27.796 A:middle
+which allows multiple
+readers at the same time
+
+00:37:27.796 --> 00:37:30.576 A:middle
+as a single writer, allowing
+you to keep snappy interfaces
+
+00:37:30.576 --> 00:37:32.176 A:middle
+at the same time that you're
+doing a lot of data work.
+
+00:37:33.806 --> 00:37:35.576 A:middle
+Setting up core data
+is a lot easier
+
+00:37:35.636 --> 00:37:37.866 A:middle
+and then using it is also
+a lot easier with new API,
+
+00:37:38.016 --> 00:37:39.626 A:middle
+that works especially
+well in Swift.
+
+00:37:40.376 --> 00:37:43.056 A:middle
+This is all supported by great
+new integration with Xcode
+
+00:37:43.396 --> 00:37:45.946 A:middle
+and we also have new
+features in SQLite
+
+00:37:46.386 --> 00:37:48.886 A:middle
+that should make debugging
+common problems much easier.
+
+00:37:52.196 --> 00:37:53.756 A:middle
+For more information,
+please check
+
+00:37:53.756 --> 00:37:56.716 A:middle
+out the developer website,
+this was session 242.
+
+00:37:57.986 --> 00:38:00.196 A:middle
+If you want to know more,
+there's what's new in Swift
+
+00:37:57.986 --> 00:38:00.196 A:middle
+If you want to know more,
+there's what's new in Swift
+
+00:38:00.366 --> 00:38:01.556 A:middle
+as well as what's new in Cocoa.
+
+00:38:02.086 --> 00:38:02.976 A:middle
+Thanks for coming.
+
+00:38:03.516 --> 00:38:13.730 A:middle
+[ Applause ]
