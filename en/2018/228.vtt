@@ -1,407 +1,5086 @@
-  Thank you.
- Thank you.
- Good afternoon, everyone.
- My name is Phil Azar, and I'm a software engineer on the Power Team at Apple.
- Today, along with my colleague, David, I'm excited to share with you what's new in energy debugging.
- Battery life is hugely important to our customers.
- The Power Team strives to make sure that everyone can get through the day on a single charge without having to plug their device in.
- We work with our developers here at Apple to try and optimize battery life by guiding them and helping them make design choices that are energy efficient.
- Apps are also hugely important to our customers.
- In fact, we find that most usage on device is directly attributed to third-party apps.
- This is incredible, and it makes it more important now than ever before to focus on energy efficiency in the design of your application.
- To that end, we're going to talk about three things today.
- First, we're going to talk about some battery life concepts that you can employ in your application to make sure that you are being as energy efficient as possible.
- Then, we're going to talk about some tools that we have available for you to understand and quantify where energy is going in your application.
- And finally, I'll pass it on to my colleague, David, who is going to talk about a new tool that we have available to take your energy debugging one step further.
- So, let's go ahead and get started and talk about some general concepts.
- To make a battery life great for our users, we have to start with first principles and understand what makes battery life battery life.
- So, let's start.
- What is energy? Fundamentally, if you think back to physics, energy is the product of power and time.
- As your app is running on any of our platforms, it'll be consuming energy at various rates.
- This is because the different things that your app does consume different amounts of power.
- Additionally, the more time it spends consuming that power the more energy consumption you'll face.
- We can plot this graphically.
- Here, you can see as your app is running there are various peaks and troughs of power consumption.
- It will follow that the area under that curve is energy, and this relates directly back to your application in its various modes of running.
- When your app is active and when your app is idle, it's going to consume different amounts of power.
- When your app is active, we say that the power being consumed is at its highest point.
- This is because the user is directly using your application for whatever it was or intended for.
- Then, when your app is idle but still running, the power consumption drops.
- Finally, when your app is suspended, there's still a basal level of power consumption, and that's interesting to note.
- When your app is doing any of the work that it's been designed to do, it's going to be asking the system to bring up hardware that it needs to do that work, and the energy associated with that hardware being brought up and used is called overhead.
- Your app doesn't have direct control over overhead, but it really does influence through anything that it does.
- Then, when your apps first utilize those hardware resources, this is called active energy.
- So, now, your app has access to, let's say, the radio or has access to, let's say, the camera, and it's using that subsystem, this energy being consumed is going to be called active energy.
- So, then, it stands to reason that the battery life problem is actually a two-part optimization problem.
- We have to think about being efficient about the active energy that we are consuming, and we also need to be thinking about the overhead that we'll be incurring by asking for different hardware resources on the system.
- So, I've mentioned hardware and these subsystems that supposedly consume energy.
- So, what exactly consumes energy on the system? As an app developer, you're going to run into a number of different hardware subsystems in your app development process.
- But there are four subsystems that we think on the Power Team will contribute most highly to your energy consumption.
- These are as listed here; processing, networking, location, and graphics.
- Let's run through these and try to understand what they mean.
- Processing is what you might imagine.
- It's going to be the energy consumed when your app utilizes system resources on, let's say, the SOC.
- Such as DRAM, CPU, etcetera.
- It's really the workhorse component.
- Energy consumed here is going to be highly dependent on the code that your app is executing and the workload that you've asked your app to perform.
- So, in a nutshell, the more operations and code your app executes, the more energy it will consume in the form of processing.
- Networking is the next major subsystem that we think about when we talk about what consumes energy on our devices.
- Networking energy is what you might imagine.
- Whenever your app asks to do any form of networking over cellular, Wi-Fi, and Bluetooth, it's going to consumer energy in the form of networking.
- This energy is traffic-dependent.
- The more traffic that your app asks to be sent over any of these technologies, the more energy it will consume.
- So, put it bluntly, the more network requests that your app asks for, the more energy you'll consume in networking.
- Location follows suit but it's a little different.
- In a location subsystem, when your app asks to fix location using GPS, Wi-Fi, and cellular, it's going to consume energy in the location system.
- The location energy is going to be accuracy and frequency dependent.
- If you're asking to fix a user's location with a high degree of accuracy and at a very high cadence, you're going to get a lot of energy consumed in the form of location.
- So, putting it all together, the more time spent tracking location in your application, the more energy you'll consume as location energy.
- Finally, we have graphics.
- In the graphics subsystem, you would imagine that process components such as he GPU and the CPU contribute to the energy consumed by graphics.
- This is going to be animations and UI dependent.
- So, when your app is asking for any animations to be displayed or any UI to be rendered, it's going to consume energy in the form of graphics.
- This is highly complexity dependent.
- The more complex your animations and UI are the more energy that you'll consume in the form of graphics.
- Finally, a good rule of thumb is to say that the more rendering that your app does, doing animations or UI, the more energy you're going to consume in the form of graphics.
- So, we talked about these four subsystems, and what's the take-away message? There's a common thread ties them all together in our app development, and so that the more work you do, the more energy you're going to consume.
- We can't necessarily say do less work because that means our app might do less.
- So, then, the point here is that we need to optimize the work we do and make it as energy-efficient as possible.
- But it's not so simple.
- Thinking about energy efficiency is a process.
- It's not just so that we can make an optimization and suddenly our energy is going to be more efficient or our app is going to be better for battery life.
- We have to get into this mode of thinking that our app has a set of resources that it's using, and we need to use those resources efficiently.
- So, with that being said, let's take a look at some examples of real-world situations where we can think about energy efficiency and really start this process off.
- Let's talk about when our app is in the foreground.
- When our app is in the foreground, it will likely be providing the main user experience.
- For many of us, this is the most important and critical part of our application.
- With that being said, energy efficiency in the foreground is about focusing on providing value to your user, ensuring that whatever you're doing provides some immediate impact for the user experience.
- One tenet we can follow is to only do work when required.
- Sounds pretty straightforward.
- Well, let's take a look at an example and illustrate why this is so important.
- Let's say you're building a media application, and the primary goal of the media application is to present content to the user at a regular cadence.
- Well, a really robust solution would be to implement a sort of timer-based approach to refresh the content feed.
- This will ensure that the content of the user is seeing is as fresh as possible without any sort of interaction.
- This isn't a very energy-efficient approach, and let's sort of understand why.
- If we plot the power over time curve for a solution like that, we see that every time our timer fires, we have a little bit of active energy that's consumed.
- But the really important part here is that we have a ton of overhead, and this is because every time we ask to display new content, we likely have to bring up subsystems such as networking, graphics, and processing to do all that work and display that content, and the user might not actually want it.
- So, we'll end up burning a lot of energy consistently while that application is running.
- We can do better.
- If we think about what the user actually wants, the fresh content, we can implement a solution that is on demand.
- Now, in this new solution, user interaction or some kind of a notification from our server will provide us the new content and display it to the user.
- This solution isn't that different, but it's an energy-efficient approach and makes a dramatic impact on our power over time.
- Let's take a look at why.
- Now, if we imaging that our app is running in the foreground, and a user interaction occurs, we would refresh our content feed and display it to the user.
- Then, our app will go idle as our user is using it, let's say, to scroll or just to read the content that's been displayed.
- You'll notice that the overhead here is still a little bit high, but it's been significantly reduced.
- The trick here is that we've allowed the subsystems we no longer need to go to sleep and idle off.
- Another tenet that we can follow to reduce our energy consumption in the foreground is to minimize complex UI.
- So, I mentioned before that in graphics our energy consumption is highly complexity-dependent, and we always want to make our apps look as good as possible.
- So, we're going to spend a lot of time building this UI that looks great and animations that are pleasing to view.
- However, this can have unintended side effects, and let's look at an example to illustrate why.
- If I'm a video player, my goal is to let a user watch a video.
- Simple.
- But I could be tempted to add new controls and UI above that video, let's say, in the form of related videos or a scrubber or maybe volume controls.
- This allows a greater degree of control to the user to use this application and enjoy the video they're watching.
- This is actually insidiously energy inefficient, and let's understand why.
- On many of our devices, there's a display optimization in place that allows for video playback to be very energy efficient when there is no UI on screen.
- This is something that is not immediately clear when you're building an application like this.
- However, it makes all the difference.
- So, a good approach to take advantage of this optimization and counteract this sort of energy inefficiency we see is to have a simple auto dismissal of our UI controls.
- And this could mean that any related content that we put on the video or in the UI layer simply goes away if the user is not interacting with it.
- This makes a big difference on our energy consumption during video playback, as this display optimization is critical for maintaining quiescent energy-efficient playback.
- So, we've talked a lot about the foreground, but what about the background? Many of us who are building applications such as music players, or maybe even alarm clocks, are focused on the background.
- Our main experience comes from our app running effectively in the background.
- Well, when we're in the background, we have some things that we need to be aware of.
- Likely, our app is going to be running in conjunction and concurrently with other systems on device.
- Let's say I'll be using iMessage or maybe even Facetime.
- To that end, we should focus on minimizing our workload to ensure energy efficiency when we're in the background.
- Well, this is a pretty broad statement.
- So, let's kind of try to understand it.
- When you're in the background, you may be able to utilize subsystems that are already being used by other apps on the system.
- However, it's important to note that the majority of the priority for the energy consumption is going to go to those applications that are in the foreground.
- So, then, we should focus on minimizing our workload to make sure we don't interrupt those experiences.
- One way we can start thinking about this is to coalesce all of our tasks.
- If there's a lot of maintenance work, let's say, that we need to do in the background, or we have a lot of networking activity that needs to be performed, let's say, then it would be best for us to group those together and do them all at the same time.
- That way, we have the minimal impact on anything else happening on the system.
- A really common example that many of you may face is to upload analytics and working with application analytics.
- It's likely that when you're collecting these analytics you'll be sending them immediately because this is a very robust solution, and it allows you to build a dataset that is protected against crashes in your application.
- Well, doing that may not be very energy efficient.
- If we were to send our analytics every time we went into the background, we would risk overusing our networking hardware.
- And here's how that looks like when we take a look at the power over time curve.
- Every time we enter the background, we would spin up networking resources to send these analytics, and then we would come down and go idle again.
- This may not look like a lot with just three on this graph, but you can imagine if your application is experiencing heavy usage, this adds up over time.
- The right way to do this is super straightforward, and it's simply to send these in deferred batches.
- We have a lot of APIs that support this coalescing principle, and one of the biggest ones is NSURLSession.
- Using NSURLSession with a discretionary property and a background session will enable you to take advantage of this sort of an optimization very quickly, and this is the right way to do it.
- Let's take a look at what the energy over time looks like now, if we've done this.
- We can see here that while it might take a little longer for our app to do any sort of uploading for analytics, the energy that we're going to consume is going to be far less, and it's going to be condensed to one single burst.
- This is effectively the result of coalescing any tasks when you're running in the background.
- You get a high energy for a short period of time completing those tasks, but then once you're finished you no longer have to worry about doing those tasks and potentially interrupting an experience of another application.
- Another example that seems sort of straightforward is to end your tasks quickly.
- With many APIs on the system that allow you to take advantage of background running, things like UI background task and UIKit, or VOIP and PushKit.
- And these APIs have ways for you as an app developer to indicate that you no longer need to run in the background.
- So, it stands to reason that as an app developer, if you're using any of these background modes, you would call these completion handlers, let's say, to let the system know you're done.
- Well, that doesn't always happen, and in a lot of cases, we might actually forget or not want to end our task.
- So, we let our tasks expire.
- There's a great energy impact to this, and it's really something that people don't necessarily see when they're developing their application.
- Let me demonstrate why this is energy inefficient with the power over time curve.
- You could imagine if you enter the background for any reason and your task starts, you finish some time afterwards.
- Then, if we let our task expire, as we've said, we enter this sort of idle phase where you're consuming energy and our app is running in the background for whatever reason we've asked our API for, but there's not really much else happening.
- And then, we have a long tail of overhead because we've kept the system awake and subsystems we thought they needed to be using their own resources are now waiting for us to finish.
- The quick solution to this is to simply call your completion handlers whenever they're available.
- And as I mentioned, UI background task is one of the biggest ones.
- When we enter the background from the foreground, we can call this API and UIKit.
- If we don't let our system know that we don't need, if we let our system know that we don't need to do any work anymore, we save a lot of energy and allow hardware systems to go idle when they need to go idle.
- Here's what that looks like if we call these completion handlers.
- You could see here that the tail of active energy that we saw before is gone, and now we've greatly reduced our tail of overhead as well.
- A simple solution, but it has a big impact on your overall energy consumption.
- So, we've talked about some ways that we can start thinking about energy efficiency as a process.
- If we focus on optimizing the work we do in all of our use cases, we can really work on optimizing the energy that our application consumes.
- For a deeper dive into the things we talked about and to maybe get a little bit more hands-on with the code behind some of these optimizations we discussed, I really recommend that you check out our video from last year, How to write energy-efficient apps.
- In that session, you'll find that there are a lot of interesting resources and more examples on how you can use energy-efficient designs in your application.
- So, now that we've talked about some ways that we can improve energy efficiency in the design of our application, and we've spent a lot of time talking about ways that we can improve our energy efficiency through thinking about the hardware systems behind our application, what are the ways that we can quantify this? Let's say we've made a change, and we want to understand the real impact in our application.
- Well, right now, let's talk about some tools that we have available for you today to do that sort of work.
- Today, we have two tools available that you can use to quantify your energy impact.
- The first tool is the energy gauges, which are accessible directly through the Xcode debugger.
- The energy gauges are a great way for you to rapidly iterate on your codes energy consumption and to help you understand at a very high level where your energy consumption is going by subsystem.
- And then, if the gauges aren't good enough, you can jump right into the instruments from the Developer Toolkit.
- The instruments will allow you to do a deeper dive into the various subsystems on the device.
- And understand at a lower level how these actual subsystems are performing and what they're doing.
- Let's take a look at the energy gauges first.
- As I said, these are accessible directly through the Xcode Debugger UI, so they're pretty easy to use.
- Let's jump into the UI.
- As you can see, we've selected the row that says energy impact, and now we have this main area in the UI that's composed of three major sections.
- On the top left, we have the canonical gauges themselves.
- These gauges range from low, high, and very high, and represent the average energy impact of your app at an instantaneous moment.
- It's important to know that where the gauge actually falls doesn't necessarily mean good or bad.
- It means that whatever your app is doing, it's consuming this much relative amount of energy.
- It's important because it's up to you as an app developer to think about your use case and whether or not you would expect it to do that.
- To the right of that, we have the average component utilization, and this is going to be a pie chart that shows you all of the different components relative to the total amount of energy that you're consuming, what percentage those components are consuming.
- This is really useful because it's representative of those subsystems we talked about earlier, and it helps to identify if you have an excess amount of overhead or maybe if one component is taking too much energy, and you don't expect it.
- And then, immediately below that, building off of the average component utilization chart, we have a time series that represents the average utilization of each component as your app is running in real time.
- We could also see here that you have the state that your app is actually running in, foreground and background, and also it would list suspended.
- This is a really awesome tool for understanding how your app is behaving in real time.
- So, as I said, the energy gauges are really great for doing high-level characterization work and rapid profiling.
- That's the key.
- When you're iterating on your code, you're trying to get something to work as an app developer, and you're trying to put something together, it may not seem immediately clear how you could really think about energy, but the gauges are a great way to start.
- But let's say that you've done that and the gauges aren't really enough for you.
- That's where the instruments come in, and directly through the energy gauge's UI, we have access to three instruments that we think best correlate to the subsystems we talked about before.
- These include the time profile, the network profiler, and the location profiler, and if you were to click through into any of these from the energy gauge's UI, you would be able to transfer your current debug session into any of those instruments.
- Let's take a look at one of the instruments here, the Time Profiler, and try to understand the UI.
- Now, the instruments have a very standard UI, but what's interesting about it is that it's very useable.
- And let's take a look.
- Here, we can see the Time Profiler UI, and on the top, you see a bar that's representative of the different controls that you have of the actual instruments.
- On the top left, ou can see you have a Play and Pause button as well as your target that you're using to profile.
- And then, on the right, you see a plus button that allows you to very quickly drag and drop other instruments into you profiling pane, which can be found here.
- And now, this profiling pane actually allows you to see what instruments are running and currently profiling your application.
- Here, since we're using a Time Profiler, we see the CPU usage and a graphical representation of how much CPU usage is being consumed over time.
- Directly below that, we have a weighted call graph.
- Since we're using the Time Profiler, we're trying to understand how our CPU is being used by the application.
- To that end, there's a weighted call graph that allows you to see exactly what is being called in your application and how much weight it has on CPU time.
- And then, directly to the right of that, you have a summation of the heaviest stacked race in your application that basically says what is the heaviest stack during this profiling run? There are a lot of other great instruments that you can use, and here are some of them now.
- This means that the instruments are really great for a couple of things.
- The first thing is that the instruments are really great for root cause analysis.
- Let's say you have a problem in a specific subsystem, so just processing or networking.
- You would be able to identify pretty rapidly what that problem might be using the Time Profiler or the Network Profiler.
- The instruments are also really great for doing in-depth profiling of your application.
- If you implement a CPU efficiency improvement of some kind; let's say you cut down the time that it takes for an algorithm to execute, the instruments are a really good way to understand if that's the, if the intended effect of your optimization is going through on that subsystem.
- But there's also one more thing that the instruments are really awesome for that I haven't talked about today, and that's untethered profiling.
- There's a single instrument that you can use called the Energy Log, which allows you to do an untethered profiling run on a provision device while using your application.
- It's accessible directly to the developer settings, and when you start running it, you can use your phone as you normally would and use your application as you might expect for any number of use cases.
- And then, afterwards, when you're finished, you can stop the recording directly from the developer tools and jump into Instruments and upload that trace.
- This is really useful for understanding if there are any environmental problems that you're having that might be impacting your energy consumption.
- Now, we've talked about the tools; we've talked about the concepts; now, I want to do a demo and work through an example about how we can actually use these in tandem and solve energy problems and make our app more energy efficient.
- So, today, we've prepared a simple game called Energy Game, which draws sprites onscreen and allows the application to inject a number of bugs.
- It's a very simple application that we've built, and it only has an app delegate in a View Controller, but the primary purpose is to show you how to use our tools rapidly to iterate through your code.
- So, I'm going to go ahead and build Energy Game here through the Xcode UI and let it run.
- Then, you'll see on the right side that all it really does is draw a little little battery sprite at a random time.
- There it is.
- Very simple.
- If I jump straight into the Xcode debugger and jump to energy impact, now, I can see my gauges.
- And so this is the UI that we just talked about.
- It's the same three areas that we discussed, and you could see right now that all my app is doing that we've designed it to do is just placed some sprites onscreen.
- But you notice that I'm doing networking, and my overhead seems to be high for simply no reason.
- Well, this is because we're also doing a little bit of networking and uploading the spike count every time a new spike is drawn onscreen.
- And so, through the Xcode energy gauges, you can actually see the impact of doing that.
- So, I'm going to go ahead and stop this now and jump into my code to understand where this is coming from.
- So, if I go to my View controller, where I actually add a new sprite, I've had a function here to upload the sprite count, which creates a simple connection object and uploads the sprite count every time a new sprite is added.
- I'm going to go ahead and comment the cell and then jump into my app delegate and move it to the only upload the sprite account when I'm in the background.
- And for the sake of this demo, I've named that my networking optimization.
- I'm going to go ahead and rebuild Energy Game and show you the effect this has on the energy gauges.
- Now, Energy Game is running again.
- I'm going to jump back to the Xcode Debugger UI, jump back to Energy Impact, and now we don't see any networking energy, and we don't see any overhead, which is good.
- So, that's simple optimization, simply moving a networking request from one area to the other and preventing it from happening often allowed us to greatly reduce our energy impact in our quiescent use case.
- So, now, I'm going to go ahead and inject a bug and try to see how we can see a bug when we use Xcode energy gauges.
- Bug1 is a simple bug that you can see on the bottom left here that will essentially cause a CPU spin in the background.
- This is a case that many of us might face in regular and real world development.
- I'm going to go ahead and inject this bug.
- And now that I've injected it, I'm going to background Energy Game, and as you can see in the Energy Gauge's UI, we transfer to the background.
- We do a little bit of networking because I moved that networking call to the background.
- But now, we also see that our CPU is going wild.
- So, this is the power of the gauges.
- We've now, we know that we're injecting a bug, but we can see that bug directly in the gauges.
- So, now, to find the root cause, I'm going to go ahead and jump into the Time Profiler and transfer my debug session, as we discussed before.
- So, now, I transferred my debug session, and it will begin running automatically.
- And as you see, the weighted cobra apples start populating in a moment; here, we can see that the dispatched thread here is consuming the most CPU time.
- Let's go ahead and dig into it.
- And we can see that we have closure at something called appdelegate.
-compute.
- Well, let's jump back to our application and try to understand what that is.
- So, for the purpose of this demo, when we entered the background in Energy Game, we called something called computation.
- Computation is a really terrible function.
- It basically starts spinning wildly with a while true loop when we inject Big1.
- So, it's very simple for the purpose of this demo, but using both the gauges and the time profiler, we were able to dig back directly to where this was happening, and we can see that this while true loop is not good.
- So, I'll go ahead and comment this out because I love commenting out code instead of deleting it, and I'll go ahead and rebuild Energy Game.
- We'll just jump back into the gauges to see that everything is okay, and now we'll go ahead and inject Bug1 again, and I'll go to the background.
- And we see our expected networking activity but no CPU spin.
- Voila! We've solved it, using two tools in about 30 seconds or a minute.
- That's the power of these tools.
- They're able to let you rapidly iterate and root cause problems that you might face on day-to-day development.
- So, let's go back to the slides.
- So, there's some takeaways from this demo.
- The first takeaway is that the gauges, as we said, are great for rapid iteration.
- They allow you to quickly see where your problem might be happening, and they allow you to take the next step in figuring out how to solve it.
- The second takeaway is that the instruments are great for in-depth profiling.
- And finally, the third takeaway is that we want you to think about energy efficiency as a primary objective in your application development.
- We have powerful tools available for you to quickly understand where your energy is going and to root cause problems that might be energy related.
- So, let's say you've done all of that, and you've shipped your application.
- From the App Store it's getting used; all your customers are greatly thankful that you shipped it on time.
- What's next? Let's say you still see customers saying that your app is bad for battery life.
- What sort of recourse do you have? Well, now, I'm going to pass it on to my colleague, David, who's going to talk to you about how you can face those challenges and solve them using our new tools.
- David.
-  Good afternoon.
- Hi, I'm David, and I'm here today to talk about some new great tools for energy debugging.
- If you're an iOS developer with an app in the App Store, or in TestFlight, then this part of the talk is for you.
- I'd like to start with the following question, now that you've shipped your app, how do you know how our app is doing in the wild? In other words, how do you know if your customers are experiencing energy issues that are leading to bad battery life? Now, a customer may leave a review on the App Store, saying, "My battery went down a lot while using this app.
-" But they might not be able to tell you what happened.
- Or even worse, they may delete your app and not leave any feedback at all.
- So, it can be challenging to find out if you have energy issues in the wild.
- And even if you know that there are energy issues, how do you debug an issue that occurred on your customer device? You can make use of tools like instruments and gauges that Phil talked about, but unless you know what to test for, it can be challenging to reproduce.
- There can be environmental factors such as poor Wi-Fi conditions that occurred for your customer whereas on your desk, you have great Wi-Fi conditions.
- So, these are some really challenging questions.
- So, to help answer these questions, I'm excited today to talk about a new way of debugging energy issues using Xcode Energy Logs and Xcode Energy Organizer.
- First, I'll talk about Xcode Energy Logs, which is a new way of reporting energy issues on device.
- Later, I'll cover Xcode Energy Organizer, which is a new tool for viewing Energy Logs.
- With these tools, for the first time ever, you'll have the data that you need to find and to fix energy issues.
- So, let's get started.
- Xcode Energy Logs are a new way of reporting issues from device.
- We start with high CPU energy events, which is when your app is using lots of CPU.
- Each Energy Log will have a weighted call graph, which will point out the energy hotspots within your code.
- These logs will be made available from TestFlight and the App Store, so you'll have real world data, what's actually happening with your customers.
- And with these logs, you'll be able to begin improving the battery life experience.
- Let's talk about when an Xcode Energy Log is generated.
- Let's say your customer is using your app, which starts to put a really heavy load on the CPU.
- This can be natural, depending on what your app is doing.
- Well, let's say it's putting a really heavy load on the CPU for a long time.
- This causes a high CPU energy event to be detected.
- Now, there are two key thresholds that are checked for for a high CPU energy event.
- The first threshold is when your app is spinning 80% CPU for more than three minutes while in the foreground, and the second threshold is more than 80% CPU for more than one minute while in the background.
- In this latter case, your app may actually get killed to prevent runaway background usage.
- Each instance of a CPU Energy Log indicates that your app uses so much CPU that it was worth flagging.
- What this means in practical terms is that it was responsible for up to a 1% battery drop in a typical case.
- Now, you may be saying to yourself, 1% battery doesn't sound too bad.
- But to put this in context, on an iPhone 6S with an additional 1% battery, your user could have had eight minutes of additional talk time or six minutes of additional browsing or 30 minutes of additional music.
- And if your app continues to burn at this rate, the battery would have dropped even more.
- So, writing CPU-efficient apps is really important, and your users will notice.
- An Energy Log has three things that can help you figure out what has happened.
- First is the context by which what happened that triggered the report.
- For example, it will say that your app spent for 8% over three minutes.
- The second piece of information is the metadata about where the Energy Log was created; for example, on an iPhone versus an iPad and on, say, Build 30 of you app.
- The third and most important piece of information is the weighted call graph that will show you the energy hotspots in your code.
- So, let's talk a little bit more about the weighted call graph, how it was generated, and how you can use it to debug energy issues.
- Let's say your program is comprised of a main function and a number of methods, Method 1, Method 2, Method 3, and Method 4.
- Your code begins to execute until a high CPU energy event is detected.
- Up to this point, backtraces are continuously sampled at a periodic interval of once per second, where each backtrace is a sample of an active frames in execution.
- The first backtrace, for example, shows that main Method 1 and Method 2 were active.
- The second backtrace shows that main Method 3 and Method 4 were active and so on.
- Now, we can try to combine these backtraces together to form an overall picture.
- What we see here is a weight call graph, and this weighted call graph is really useful.
- Here, we can see that main was present in six out of the six samples that we collected, meaning that main was running 100% of the time.
- Of that, we see that Method 1 had five samples whereas Method 3 had only one sample.
- And within Method 1, we see that Method 2 and Method 3 had three samples and one sample respectively.
- So, this gives us an overall picture of where the code was being executed and how much time was being spent.
- So, when an Energy Log is created, there's a collection of periodic backtraces sampled at one per second.
- For each backtrace contains a list of the active frames being executed by the CPU, these backtraces are aggregated by sample count into a tree where the samples, where more samples mean more heavily executed code.
- And you can use these weighted call graphs to identify unexpected workloads in your app.
- So, now that we know what an Energy Log is, how do we access them? First, Energy Logs are created on device.
- Then, your beta testers and your customers, who have opted in, will upload these logs up to Apple.
- Now, there might be hundreds or even thousands of these logs, so we will aggregate these logs for you, sort them, and present them in a list of top energy issues to you.
- And you can download and view these logs using the new Xcode Energy Organizer tool.
- The Xcode Energy Organizer is your command center for debugging energy issues in the wild.
- Energy Organizer makes it really easy to view energy logs.
- The Energy Organizer is connected to TestFlight in the App Store, so you'll see a list of all your iOS apps.
- You'll be able to see some statistics of how often these energy issues occur in the wild.
- You'll have a list of the top energy issues sorted by how many devices that was impacted.
- You'll have a view of the weighted call graph for a number of different logs, which you'll be able to page through, using page through logs, and you can use Open in Project to jump directly into your code base so you can begin debugging these energy issues.
- And now, I'd love to show you a demo.
- Now, I've made sure that I've signed into my developer account and that I've uploaded our Energy Game app up to TestFlight in the App Store.
- To bring up the Energy Organizer, I could just go into Window here, and click Organizer.
- And this is the Energy Organizer UI.
- I make sure that the Energy tab is selected at the top, and if you've used the Crashes Organizer, you will already be familiar with this UI.
- On the left, we have a list of all of our apps.
- Next to that, we have a list of our top energy issues.
- In the center is our Weighted Call Graph, and on the right-hand side are some statistics about the energy issue.
- So, let's go ahead into the left here and select Energy Game, which is the game that we're working on.
- And then, make sure that we're on the correct build.
- We see here a list of our top energy issues, sorted by how many times it's affected.
- Let's jump into this first energy issue, which hit 64 of our devices.
- On the right-hand pane here, we have some more details about what happened, as well as a breakdown of how often that energy issue happened, and we can see that it happened across a mix of iPads, iPods, and iPod Touches, and we can see a distribution of how often it happened in the past two weeks.
- Let's take a look at the weighted call graph.
- We see that a lot of time is being spent in this dispatch call block calling into this app delegate computation function.
- Now, I can use this button here to jump us directly into our code base.
- So, we are back directly into our code.
- On the left here is one of the sample backtraces from our weighted call graph.
- We can see that we're spending a lot of time in this computation function.
- Now, this is the very function that Phil was talking about earlier on his demo.
- And we can see that he's already commented this part of the code out, so he's already addressed this energy issue.
- So, let's jump back to the organizer.
- I can go ahead and click this button here and mark this issue as resolved.
- And what this does is the next time we open the Energy Organizer, we'll see that we've already taken care of this issue.
- All right, let's jump to the second issue, which hit 42 devices.
- Now, before going into the weighted call graph, I'd like to draw your attention to three features at the bottom here.
- First is this page through logs where I can select one out of five sample energy logs out of the 42 that we've hit in the wild.
- As I page through these, you can see that the weighted call graph looks a little bit different, which is okay because these backtraces and these weighted call graphs are samples.
- However, we've grouped these together by similarity, so these logs should look fairly similar to you.
- This button here, when I click it, shows that all the system library frames that were hidden previously.
- And this button here clicks all, shows you all the frames that had low sample counts.
- Now, by default, we've hidden most of these frames for you so that we only show you the most important frames.
- Let's take a look at this function.
- It looks like a lot of time is being spent in this heavy timer function.
- Actually, I heard Phil talking about this bug off stage, and he said that he was going to take a look at it, so I'll let him deal with it.
- I can go ahead and rename this and move on to the next bug.
- Let's take a look at one more bug.
- Here, I can see there's a lot of time being spent in set next update timer and add new sprite.
- What is this function? Let's investigate.
- I'll jump directly into the code, and I can see that a lot of time is being spent in this add new sprite function.
- Okay.
- Adding new sprites can be expensive, but the question to ask ourselves is, is this an expected workload? And the answer is, in this case, not really because we only expect to be adding sprites once every few seconds.
- So it doesn't quite make sense why this is chewing up so much CPU.
- Let's take a look at the backtrace to see who is calling us.
- We're being called by set next update timer.
- So, what is this function doing? We see that within set next update timer, we're calling in to this add new sprite.
- At the end of a function, we're calling in to this update timer to schedule the next time this function is called.
- This timer is set to fire sometime between now and next update interval.
- Now, next update interval is decremented by 1 until it hits 0, and then it's re-initialized according to this line of code here.
- Now, here's where the problem is.
- Time interval since last update date can potentially be negative, and we've seen cases of this happening, especially when users try to game the system.
- Maybe they're playing a game, and they want to reset the clock.
- Maybe they want some extra lives or some extra chances, so they go into System Settings and change the clock to 24 hours ago.
- Well, in this case, this causes next update interval to be negative, and when we schedule a timer for a time that is sometime in the past, that timer will fire immediately and then call itself again and again.
- So, we effectively have an infinite loop here.
- Fortunately, this is really easy to fix.
- We just go into this function here and change this to less than or equal to 0 so that even if next update interval is negative, we can break out of the loop.
- Now, this is a really great example of an energy issue that is really difficult to catch during normal testing but is made obvious once you have the data from the field.
- That's the power of Energy Logs, and that's the power of Energy Organizer.
- Let's take a look at the three key takeaways from this demo.
- You can use the Energy Organizer to discover top energy issues in the field.
- Take a look at the top issues, take a look at how often they're happening, and take a look at what kind of devices and builds are affected.
- Second, you can view energy hotspots using the weighted call graphs.
- So, look out for the frames with unusually high sample counts, and watch out for the unexpected workloads.
- Finally, use OpenEnd Project to jump directly into your code so you can make and inspect fixes with what's going on.
- Let's summarize what we've learned today.
- First, think about energy use and treat energy as a first-class citizen in every aspect of your design, development, and testing.
- Second, make use of the great tools like energy gauges and instruments to profile your app.
- And third, take a moment to explore the new Xcode Energy Organizer to understand and fix energy issues in the field.
- For more information, please come check out the following URLs, and feel free to come by the Power and Performance Lab on Friday from 9 to 11.
- Thank you and have a great evening.
- 
+WEBVTT
+
+00:00:00.506 --> 00:00:15.500 A:middle
+[ Music ]
+
+00:00:20.021 --> 00:00:22.021 A:middle
+[ Applause ]
+
+00:00:22.026 --> 00:00:22.636 A:middle
+&gt;&gt; Thank you.
+
+00:00:24.876 --> 00:00:25.286 A:middle
+Thank you.
+
+00:00:26.516 --> 00:00:27.596 A:middle
+Good afternoon, everyone.
+
+00:00:27.986 --> 00:00:29.356 A:middle
+My name is Phil Azar, and I'm a
+
+00:00:29.356 --> 00:00:30.466 A:middle
+software engineer on the Power
+
+00:00:30.466 --> 00:00:31.036 A:middle
+Team at Apple.
+
+00:00:31.856 --> 00:00:33.426 A:middle
+Today, along with my colleague,
+
+00:00:33.426 --> 00:00:35.166 A:middle
+David, I'm excited to share with
+
+00:00:35.166 --> 00:00:36.776 A:middle
+you what's new in energy
+
+00:00:36.776 --> 00:00:37.206 A:middle
+debugging.
+
+00:00:40.336 --> 00:00:42.206 A:middle
+Battery life is hugely important
+
+00:00:42.206 --> 00:00:42.956 A:middle
+to our customers.
+
+00:00:43.446 --> 00:00:45.296 A:middle
+The Power Team strives to make
+
+00:00:45.296 --> 00:00:46.406 A:middle
+sure that everyone can get
+
+00:00:46.406 --> 00:00:47.466 A:middle
+through the day on a single
+
+00:00:47.466 --> 00:00:48.996 A:middle
+charge without having to plug
+
+00:00:48.996 --> 00:00:49.606 A:middle
+their device in.
+
+00:00:50.946 --> 00:00:52.566 A:middle
+We work with our developers here
+
+00:00:52.566 --> 00:00:54.386 A:middle
+at Apple to try and optimize
+
+00:00:54.386 --> 00:00:56.206 A:middle
+battery life by guiding them and
+
+00:00:56.206 --> 00:00:57.796 A:middle
+helping them make design choices
+
+00:00:57.796 --> 00:00:59.346 A:middle
+that are energy efficient.
+
+00:01:00.276 --> 00:01:02.426 A:middle
+Apps are also hugely important
+
+00:01:02.426 --> 00:01:03.186 A:middle
+to our customers.
+
+00:01:03.556 --> 00:01:05.906 A:middle
+In fact, we find that most usage
+
+00:01:05.906 --> 00:01:07.916 A:middle
+on device is directly attributed
+
+00:01:08.086 --> 00:01:09.126 A:middle
+to third-party apps.
+
+00:01:09.556 --> 00:01:11.216 A:middle
+This is incredible, and it makes
+
+00:01:11.216 --> 00:01:13.446 A:middle
+it more important now than ever
+
+00:01:13.446 --> 00:01:15.556 A:middle
+before to focus on energy
+
+00:01:15.556 --> 00:01:17.156 A:middle
+efficiency in the design of your
+
+00:01:17.156 --> 00:01:17.716 A:middle
+application.
+
+00:01:18.826 --> 00:01:20.356 A:middle
+To that end, we're going to talk
+
+00:01:20.356 --> 00:01:21.416 A:middle
+about three things today.
+
+00:01:21.916 --> 00:01:24.516 A:middle
+First, we're going to talk about
+
+00:01:24.516 --> 00:01:25.796 A:middle
+some battery life concepts that
+
+00:01:25.796 --> 00:01:27.136 A:middle
+you can employ in your
+
+00:01:27.136 --> 00:01:28.956 A:middle
+application to make sure that
+
+00:01:28.956 --> 00:01:29.906 A:middle
+you are being as energy
+
+00:01:29.906 --> 00:01:30.806 A:middle
+efficient as possible.
+
+00:01:31.856 --> 00:01:33.326 A:middle
+Then, we're going to talk about
+
+00:01:33.326 --> 00:01:34.506 A:middle
+some tools that we have
+
+00:01:34.506 --> 00:01:36.926 A:middle
+available for you to understand
+
+00:01:36.926 --> 00:01:38.396 A:middle
+and quantify where energy is
+
+00:01:38.396 --> 00:01:39.526 A:middle
+going in your application.
+
+00:01:40.236 --> 00:01:41.906 A:middle
+And finally, I'll pass it on to
+
+00:01:41.906 --> 00:01:42.996 A:middle
+my colleague, David, who is
+
+00:01:42.996 --> 00:01:44.266 A:middle
+going to talk about a new tool
+
+00:01:44.266 --> 00:01:45.706 A:middle
+that we have available to take
+
+00:01:45.706 --> 00:01:47.176 A:middle
+your energy debugging one step
+
+00:01:47.176 --> 00:01:47.536 A:middle
+further.
+
+00:01:48.836 --> 00:01:49.846 A:middle
+So, let's go ahead and get
+
+00:01:49.846 --> 00:01:51.186 A:middle
+started and talk about some
+
+00:01:51.186 --> 00:01:52.106 A:middle
+general concepts.
+
+00:01:53.216 --> 00:01:54.446 A:middle
+To make a battery life great for
+
+00:01:54.446 --> 00:01:56.096 A:middle
+our users, we have to start with
+
+00:01:56.096 --> 00:01:58.136 A:middle
+first principles and understand
+
+00:01:58.586 --> 00:02:00.026 A:middle
+what makes battery life battery
+
+00:01:58.586 --> 00:02:00.026 A:middle
+what makes battery life battery
+
+00:02:00.026 --> 00:02:00.346 A:middle
+life.
+
+00:02:01.396 --> 00:02:02.606 A:middle
+So, let's start.
+
+00:02:04.056 --> 00:02:05.016 A:middle
+What is energy?
+
+00:02:06.166 --> 00:02:07.646 A:middle
+Fundamentally, if you think back
+
+00:02:07.646 --> 00:02:09.376 A:middle
+to physics, energy is the
+
+00:02:09.376 --> 00:02:10.895 A:middle
+product of power and time.
+
+00:02:11.786 --> 00:02:13.386 A:middle
+As your app is running on any of
+
+00:02:13.386 --> 00:02:14.686 A:middle
+our platforms, it'll be
+
+00:02:14.686 --> 00:02:16.216 A:middle
+consuming energy at various
+
+00:02:16.216 --> 00:02:16.666 A:middle
+rates.
+
+00:02:17.696 --> 00:02:18.716 A:middle
+This is because the different
+
+00:02:18.716 --> 00:02:19.746 A:middle
+things that your app does
+
+00:02:19.746 --> 00:02:20.766 A:middle
+consume different amounts of
+
+00:02:20.766 --> 00:02:21.196 A:middle
+power.
+
+00:02:22.086 --> 00:02:23.746 A:middle
+Additionally, the more time it
+
+00:02:23.746 --> 00:02:25.606 A:middle
+spends consuming that power the
+
+00:02:25.606 --> 00:02:26.716 A:middle
+more energy consumption you'll
+
+00:02:26.716 --> 00:02:27.146 A:middle
+face.
+
+00:02:27.916 --> 00:02:29.086 A:middle
+We can plot this graphically.
+
+00:02:30.226 --> 00:02:31.956 A:middle
+Here, you can see as your app is
+
+00:02:31.956 --> 00:02:33.366 A:middle
+running there are various peaks
+
+00:02:33.366 --> 00:02:34.316 A:middle
+and troughs of power
+
+00:02:34.316 --> 00:02:34.806 A:middle
+consumption.
+
+00:02:35.506 --> 00:02:37.216 A:middle
+It will follow that the area
+
+00:02:37.216 --> 00:02:39.926 A:middle
+under that curve is energy, and
+
+00:02:39.926 --> 00:02:41.246 A:middle
+this relates directly back to
+
+00:02:41.246 --> 00:02:42.486 A:middle
+your application in its various
+
+00:02:42.486 --> 00:02:44.706 A:middle
+modes of running.
+
+00:02:44.836 --> 00:02:46.586 A:middle
+When your app is active and when
+
+00:02:46.586 --> 00:02:48.676 A:middle
+your app is idle, it's going to
+
+00:02:48.676 --> 00:02:49.576 A:middle
+consume different amounts of
+
+00:02:49.576 --> 00:02:49.966 A:middle
+power.
+
+00:02:50.476 --> 00:02:52.116 A:middle
+When your app is active, we say
+
+00:02:52.116 --> 00:02:53.376 A:middle
+that the power being consumed is
+
+00:02:53.376 --> 00:02:54.386 A:middle
+at its highest point.
+
+00:02:55.126 --> 00:02:56.246 A:middle
+This is because the user is
+
+00:02:56.246 --> 00:02:57.626 A:middle
+directly using your application
+
+00:02:57.626 --> 00:02:59.286 A:middle
+for whatever it was or intended
+
+00:02:59.286 --> 00:02:59.556 A:middle
+for.
+
+00:03:00.146 --> 00:03:01.996 A:middle
+Then, when your app is idle but
+
+00:03:01.996 --> 00:03:03.346 A:middle
+still running, the power
+
+00:03:03.346 --> 00:03:04.396 A:middle
+consumption drops.
+
+00:03:05.916 --> 00:03:07.326 A:middle
+Finally, when your app is
+
+00:03:07.326 --> 00:03:09.106 A:middle
+suspended, there's still a basal
+
+00:03:09.106 --> 00:03:11.256 A:middle
+level of power consumption, and
+
+00:03:11.256 --> 00:03:12.226 A:middle
+that's interesting to note.
+
+00:03:13.646 --> 00:03:14.786 A:middle
+When your app is doing any of
+
+00:03:14.786 --> 00:03:16.036 A:middle
+the work that it's been designed
+
+00:03:16.036 --> 00:03:17.536 A:middle
+to do, it's going to be asking
+
+00:03:17.536 --> 00:03:19.186 A:middle
+the system to bring up hardware
+
+00:03:19.576 --> 00:03:20.946 A:middle
+that it needs to do that work,
+
+00:03:21.816 --> 00:03:23.946 A:middle
+and the energy associated with
+
+00:03:23.946 --> 00:03:25.156 A:middle
+that hardware being brought up
+
+00:03:25.156 --> 00:03:27.106 A:middle
+and used is called overhead.
+
+00:03:28.146 --> 00:03:29.176 A:middle
+Your app doesn't have direct
+
+00:03:29.266 --> 00:03:31.146 A:middle
+control over overhead, but it
+
+00:03:31.146 --> 00:03:33.186 A:middle
+really does influence through
+
+00:03:33.186 --> 00:03:35.706 A:middle
+anything that it does.
+
+00:03:35.906 --> 00:03:37.076 A:middle
+Then, when your apps first
+
+00:03:37.076 --> 00:03:38.086 A:middle
+utilize those hardware
+
+00:03:38.086 --> 00:03:40.156 A:middle
+resources, this is called active
+
+00:03:40.156 --> 00:03:40.556 A:middle
+energy.
+
+00:03:41.106 --> 00:03:42.936 A:middle
+So, now, your app has access to,
+
+00:03:42.936 --> 00:03:44.916 A:middle
+let's say, the radio or has
+
+00:03:44.916 --> 00:03:45.786 A:middle
+access to, let's say, the
+
+00:03:45.786 --> 00:03:47.426 A:middle
+camera, and it's using that
+
+00:03:47.816 --> 00:03:50.066 A:middle
+subsystem, this energy being
+
+00:03:50.066 --> 00:03:51.256 A:middle
+consumed is going to be called
+
+00:03:51.256 --> 00:03:52.016 A:middle
+active energy.
+
+00:03:53.136 --> 00:03:54.396 A:middle
+So, then, it stands to reason
+
+00:03:55.076 --> 00:03:56.376 A:middle
+that the battery life problem is
+
+00:03:56.376 --> 00:03:57.966 A:middle
+actually a two-part optimization
+
+00:03:57.966 --> 00:03:58.356 A:middle
+problem.
+
+00:03:58.926 --> 00:03:59.876 A:middle
+We have to think about being
+
+00:03:59.876 --> 00:04:01.076 A:middle
+efficient about the active
+
+00:03:59.876 --> 00:04:01.076 A:middle
+efficient about the active
+
+00:04:01.076 --> 00:04:02.216 A:middle
+energy that we are consuming,
+
+00:04:02.526 --> 00:04:03.746 A:middle
+and we also need to be thinking
+
+00:04:03.746 --> 00:04:05.186 A:middle
+about the overhead that we'll be
+
+00:04:05.186 --> 00:04:06.546 A:middle
+incurring by asking for
+
+00:04:06.546 --> 00:04:08.246 A:middle
+different hardware resources on
+
+00:04:08.636 --> 00:04:09.000 A:middle
+the system.
+
+00:04:11.236 --> 00:04:13.056 A:middle
+So, I've mentioned hardware and
+
+00:04:13.056 --> 00:04:14.576 A:middle
+these subsystems that supposedly
+
+00:04:14.576 --> 00:04:15.316 A:middle
+consume energy.
+
+00:04:16.026 --> 00:04:17.706 A:middle
+So, what exactly consumes energy
+
+00:04:17.706 --> 00:04:18.255 A:middle
+on the system?
+
+00:04:18.916 --> 00:04:20.055 A:middle
+As an app developer, you're
+
+00:04:20.055 --> 00:04:21.236 A:middle
+going to run into a number of
+
+00:04:21.236 --> 00:04:23.036 A:middle
+different hardware subsystems in
+
+00:04:23.036 --> 00:04:24.386 A:middle
+your app development process.
+
+00:04:25.596 --> 00:04:26.946 A:middle
+But there are four subsystems
+
+00:04:26.946 --> 00:04:28.206 A:middle
+that we think on the Power Team
+
+00:04:28.436 --> 00:04:29.846 A:middle
+will contribute most highly to
+
+00:04:29.846 --> 00:04:30.836 A:middle
+your energy consumption.
+
+00:04:31.286 --> 00:04:33.716 A:middle
+These are as listed here;
+
+00:04:34.846 --> 00:04:36.346 A:middle
+processing, networking,
+
+00:04:36.626 --> 00:04:38.236 A:middle
+location, and graphics.
+
+00:04:38.746 --> 00:04:40.806 A:middle
+Let's run through these and try
+
+00:04:40.806 --> 00:04:41.856 A:middle
+to understand what they mean.
+
+00:04:43.236 --> 00:04:44.746 A:middle
+Processing is what you might
+
+00:04:44.746 --> 00:04:45.186 A:middle
+imagine.
+
+00:04:46.416 --> 00:04:47.766 A:middle
+It's going to be the energy
+
+00:04:47.766 --> 00:04:49.476 A:middle
+consumed when your app utilizes
+
+00:04:49.476 --> 00:04:50.816 A:middle
+system resources on, let's say,
+
+00:04:50.816 --> 00:04:51.436 A:middle
+the SOC.
+
+00:04:51.806 --> 00:04:54.096 A:middle
+Such as DRAM, CPU, etcetera.
+
+00:04:55.256 --> 00:04:56.356 A:middle
+It's really the workhorse
+
+00:04:56.356 --> 00:04:56.896 A:middle
+component.
+
+00:04:57.566 --> 00:04:59.426 A:middle
+Energy consumed here is going to
+
+00:04:59.426 --> 00:05:01.546 A:middle
+be highly dependent on the code
+
+00:04:59.426 --> 00:05:01.546 A:middle
+be highly dependent on the code
+
+00:05:01.546 --> 00:05:02.786 A:middle
+that your app is executing and
+
+00:05:02.786 --> 00:05:03.856 A:middle
+the workload that you've asked
+
+00:05:03.856 --> 00:05:04.726 A:middle
+your app to perform.
+
+00:05:06.116 --> 00:05:07.656 A:middle
+So, in a nutshell, the more
+
+00:05:07.656 --> 00:05:09.116 A:middle
+operations and code your app
+
+00:05:09.116 --> 00:05:10.976 A:middle
+executes, the more energy it
+
+00:05:10.976 --> 00:05:12.156 A:middle
+will consume in the form of
+
+00:05:12.156 --> 00:05:13.306 A:middle
+processing.
+
+00:05:14.436 --> 00:05:16.016 A:middle
+Networking is the next major
+
+00:05:16.016 --> 00:05:17.226 A:middle
+subsystem that we think about
+
+00:05:17.596 --> 00:05:18.796 A:middle
+when we talk about what consumes
+
+00:05:18.796 --> 00:05:22.326 A:middle
+energy on our devices.
+
+00:05:22.416 --> 00:05:23.736 A:middle
+Networking energy is what you
+
+00:05:23.736 --> 00:05:24.356 A:middle
+might imagine.
+
+00:05:24.896 --> 00:05:26.476 A:middle
+Whenever your app asks to do any
+
+00:05:26.476 --> 00:05:27.956 A:middle
+form of networking over
+
+00:05:27.956 --> 00:05:29.966 A:middle
+cellular, Wi-Fi, and Bluetooth,
+
+00:05:30.286 --> 00:05:31.966 A:middle
+it's going to consumer energy in
+
+00:05:31.966 --> 00:05:32.826 A:middle
+the form of networking.
+
+00:05:34.176 --> 00:05:35.096 A:middle
+This energy is
+
+00:05:35.096 --> 00:05:35.956 A:middle
+traffic-dependent.
+
+00:05:36.466 --> 00:05:37.806 A:middle
+The more traffic that your app
+
+00:05:37.806 --> 00:05:39.286 A:middle
+asks to be sent over any of
+
+00:05:39.286 --> 00:05:40.746 A:middle
+these technologies, the more
+
+00:05:40.746 --> 00:05:41.736 A:middle
+energy it will consume.
+
+00:05:41.836 --> 00:05:44.876 A:middle
+So, put it bluntly, the more
+
+00:05:44.876 --> 00:05:46.146 A:middle
+network requests that your app
+
+00:05:46.146 --> 00:05:47.896 A:middle
+asks for, the more energy you'll
+
+00:05:47.896 --> 00:05:49.286 A:middle
+consume in networking.
+
+00:05:50.796 --> 00:05:52.496 A:middle
+Location follows suit but it's a
+
+00:05:52.496 --> 00:05:53.026 A:middle
+little different.
+
+00:05:54.226 --> 00:05:56.096 A:middle
+In a location subsystem, when
+
+00:05:56.096 --> 00:05:57.986 A:middle
+your app asks to fix location
+
+00:05:58.756 --> 00:06:01.276 A:middle
+using GPS, Wi-Fi, and cellular,
+
+00:05:58.756 --> 00:06:01.276 A:middle
+using GPS, Wi-Fi, and cellular,
+
+00:06:01.996 --> 00:06:03.126 A:middle
+it's going to consume energy in
+
+00:06:03.126 --> 00:06:04.286 A:middle
+the location system.
+
+00:06:05.676 --> 00:06:07.356 A:middle
+The location energy is going to
+
+00:06:07.356 --> 00:06:08.776 A:middle
+be accuracy and frequency
+
+00:06:08.776 --> 00:06:09.166 A:middle
+dependent.
+
+00:06:10.136 --> 00:06:11.376 A:middle
+If you're asking to fix a user's
+
+00:06:11.376 --> 00:06:12.526 A:middle
+location with a high degree of
+
+00:06:12.526 --> 00:06:14.366 A:middle
+accuracy and at a very high
+
+00:06:14.366 --> 00:06:16.276 A:middle
+cadence, you're going to get a
+
+00:06:16.276 --> 00:06:17.686 A:middle
+lot of energy consumed in the
+
+00:06:17.686 --> 00:06:18.416 A:middle
+form of location.
+
+00:06:18.936 --> 00:06:21.736 A:middle
+So, putting it all together, the
+
+00:06:21.736 --> 00:06:23.056 A:middle
+more time spent tracking
+
+00:06:23.056 --> 00:06:24.436 A:middle
+location in your application,
+
+00:06:24.646 --> 00:06:25.916 A:middle
+the more energy you'll consume
+
+00:06:26.366 --> 00:06:27.176 A:middle
+as location energy.
+
+00:06:30.136 --> 00:06:32.306 A:middle
+Finally, we have graphics.
+
+00:06:32.806 --> 00:06:35.656 A:middle
+In the graphics subsystem, you
+
+00:06:35.656 --> 00:06:36.806 A:middle
+would imagine that process
+
+00:06:36.806 --> 00:06:38.506 A:middle
+components such as he GPU and
+
+00:06:38.506 --> 00:06:40.146 A:middle
+the CPU contribute to the energy
+
+00:06:40.146 --> 00:06:41.626 A:middle
+consumed by graphics.
+
+00:06:42.786 --> 00:06:44.016 A:middle
+This is going to be animations
+
+00:06:44.016 --> 00:06:44.956 A:middle
+and UI dependent.
+
+00:06:45.886 --> 00:06:47.206 A:middle
+So, when your app is asking for
+
+00:06:47.206 --> 00:06:48.926 A:middle
+any animations to be displayed
+
+00:06:48.926 --> 00:06:50.496 A:middle
+or any UI to be rendered, it's
+
+00:06:50.496 --> 00:06:51.576 A:middle
+going to consume energy in the
+
+00:06:51.576 --> 00:06:52.626 A:middle
+form of graphics.
+
+00:06:53.956 --> 00:06:55.556 A:middle
+This is highly complexity
+
+00:06:55.556 --> 00:06:55.956 A:middle
+dependent.
+
+00:06:56.846 --> 00:06:58.446 A:middle
+The more complex your animations
+
+00:06:58.446 --> 00:07:00.186 A:middle
+and UI are the more energy that
+
+00:06:58.446 --> 00:07:00.186 A:middle
+and UI are the more energy that
+
+00:07:00.186 --> 00:07:01.366 A:middle
+you'll consume in the form of
+
+00:07:01.366 --> 00:07:01.936 A:middle
+graphics.
+
+00:07:03.746 --> 00:07:06.306 A:middle
+Finally, a good rule of thumb is
+
+00:07:06.306 --> 00:07:07.386 A:middle
+to say that the more rendering
+
+00:07:07.386 --> 00:07:08.826 A:middle
+that your app does, doing
+
+00:07:08.826 --> 00:07:10.716 A:middle
+animations or UI, the more
+
+00:07:10.716 --> 00:07:11.876 A:middle
+energy you're going to consume
+
+00:07:11.876 --> 00:07:12.876 A:middle
+in the form of graphics.
+
+00:07:13.386 --> 00:07:16.846 A:middle
+So, we talked about these four
+
+00:07:16.846 --> 00:07:18.516 A:middle
+subsystems, and what's the
+
+00:07:18.516 --> 00:07:19.386 A:middle
+take-away message?
+
+00:07:19.896 --> 00:07:21.146 A:middle
+There's a common thread ties
+
+00:07:21.146 --> 00:07:22.426 A:middle
+them all together in our app
+
+00:07:22.426 --> 00:07:24.066 A:middle
+development, and so that the
+
+00:07:24.066 --> 00:07:25.386 A:middle
+more work you do, the more
+
+00:07:25.386 --> 00:07:26.526 A:middle
+energy you're going to consume.
+
+00:07:26.956 --> 00:07:29.766 A:middle
+We can't necessarily say do less
+
+00:07:29.766 --> 00:07:31.246 A:middle
+work because that means our app
+
+00:07:31.246 --> 00:07:31.996 A:middle
+might do less.
+
+00:07:32.966 --> 00:07:34.116 A:middle
+So, then, the point here is that
+
+00:07:34.116 --> 00:07:35.566 A:middle
+we need to optimize the work we
+
+00:07:35.566 --> 00:07:36.706 A:middle
+do and make it as
+
+00:07:36.706 --> 00:07:38.066 A:middle
+energy-efficient as possible.
+
+00:07:38.586 --> 00:07:41.606 A:middle
+But it's not so simple.
+
+00:07:42.706 --> 00:07:44.236 A:middle
+Thinking about energy efficiency
+
+00:07:44.276 --> 00:07:45.146 A:middle
+is a process.
+
+00:07:45.886 --> 00:07:46.846 A:middle
+It's not just so that we can
+
+00:07:46.846 --> 00:07:48.016 A:middle
+make an optimization and
+
+00:07:48.016 --> 00:07:49.556 A:middle
+suddenly our energy is going to
+
+00:07:49.556 --> 00:07:52.246 A:middle
+be more efficient or our app is
+
+00:07:52.246 --> 00:07:53.096 A:middle
+going to be better for battery
+
+00:07:53.096 --> 00:07:53.416 A:middle
+life.
+
+00:07:53.646 --> 00:07:56.016 A:middle
+We have to get into this mode of
+
+00:07:56.016 --> 00:07:57.746 A:middle
+thinking that our app has a set
+
+00:07:57.746 --> 00:07:58.886 A:middle
+of resources that it's using,
+
+00:07:58.886 --> 00:07:59.686 A:middle
+and we need to use those
+
+00:07:59.686 --> 00:08:00.776 A:middle
+resources efficiently.
+
+00:07:59.686 --> 00:08:00.776 A:middle
+resources efficiently.
+
+00:08:01.256 --> 00:08:04.166 A:middle
+So, with that being said, let's
+
+00:08:04.166 --> 00:08:05.926 A:middle
+take a look at some examples of
+
+00:08:05.926 --> 00:08:07.706 A:middle
+real-world situations where we
+
+00:08:07.706 --> 00:08:08.656 A:middle
+can think about energy
+
+00:08:08.656 --> 00:08:10.636 A:middle
+efficiency and really start this
+
+00:08:10.636 --> 00:08:11.356 A:middle
+process off.
+
+00:08:12.296 --> 00:08:13.696 A:middle
+Let's talk about when our app is
+
+00:08:13.696 --> 00:08:14.336 A:middle
+in the foreground.
+
+00:08:15.646 --> 00:08:16.186 A:middle
+When our app is in the
+
+00:08:16.186 --> 00:08:17.816 A:middle
+foreground, it will likely be
+
+00:08:17.816 --> 00:08:18.816 A:middle
+providing the main user
+
+00:08:18.816 --> 00:08:19.496 A:middle
+experience.
+
+00:08:19.776 --> 00:08:21.126 A:middle
+For many of us, this is the most
+
+00:08:21.126 --> 00:08:22.166 A:middle
+important and critical part of
+
+00:08:22.166 --> 00:08:22.896 A:middle
+our application.
+
+00:08:23.546 --> 00:08:25.986 A:middle
+With that being said, energy
+
+00:08:25.986 --> 00:08:27.146 A:middle
+efficiency in the foreground is
+
+00:08:27.146 --> 00:08:28.496 A:middle
+about focusing on providing
+
+00:08:28.546 --> 00:08:30.726 A:middle
+value to your user, ensuring
+
+00:08:30.726 --> 00:08:31.696 A:middle
+that whatever you're doing
+
+00:08:31.696 --> 00:08:33.326 A:middle
+provides some immediate impact
+
+00:08:33.326 --> 00:08:34.846 A:middle
+for the user experience.
+
+00:08:35.916 --> 00:08:37.796 A:middle
+One tenet we can follow is to
+
+00:08:37.796 --> 00:08:39.106 A:middle
+only do work when required.
+
+00:08:40.166 --> 00:08:41.226 A:middle
+Sounds pretty straightforward.
+
+00:08:42.176 --> 00:08:43.616 A:middle
+Well, let's take a look at an
+
+00:08:43.616 --> 00:08:45.246 A:middle
+example and illustrate why this
+
+00:08:45.246 --> 00:08:45.906 A:middle
+is so important.
+
+00:08:46.326 --> 00:08:48.096 A:middle
+Let's say you're building a
+
+00:08:48.096 --> 00:08:49.826 A:middle
+media application, and the
+
+00:08:49.826 --> 00:08:50.886 A:middle
+primary goal of the media
+
+00:08:50.886 --> 00:08:52.336 A:middle
+application is to present
+
+00:08:52.336 --> 00:08:54.056 A:middle
+content to the user at a regular
+
+00:08:54.056 --> 00:08:54.606 A:middle
+cadence.
+
+00:08:55.476 --> 00:08:57.666 A:middle
+Well, a really robust solution
+
+00:08:57.756 --> 00:08:59.186 A:middle
+would be to implement a sort of
+
+00:08:59.186 --> 00:09:00.736 A:middle
+timer-based approach to refresh
+
+00:08:59.186 --> 00:09:00.736 A:middle
+timer-based approach to refresh
+
+00:09:00.736 --> 00:09:01.456 A:middle
+the content feed.
+
+00:09:01.816 --> 00:09:03.436 A:middle
+This will ensure that the
+
+00:09:03.436 --> 00:09:05.136 A:middle
+content of the user is seeing is
+
+00:09:05.136 --> 00:09:06.916 A:middle
+as fresh as possible without any
+
+00:09:06.916 --> 00:09:07.796 A:middle
+sort of interaction.
+
+00:09:09.016 --> 00:09:09.936 A:middle
+This isn't a very
+
+00:09:09.936 --> 00:09:12.196 A:middle
+energy-efficient approach, and
+
+00:09:12.196 --> 00:09:13.336 A:middle
+let's sort of understand why.
+
+00:09:13.956 --> 00:09:16.496 A:middle
+If we plot the power over time
+
+00:09:16.496 --> 00:09:18.576 A:middle
+curve for a solution like that,
+
+00:09:19.116 --> 00:09:20.546 A:middle
+we see that every time our timer
+
+00:09:20.546 --> 00:09:22.576 A:middle
+fires, we have a little bit of
+
+00:09:22.576 --> 00:09:23.886 A:middle
+active energy that's consumed.
+
+00:09:25.266 --> 00:09:26.336 A:middle
+But the really important part
+
+00:09:26.336 --> 00:09:28.146 A:middle
+here is that we have a ton of
+
+00:09:28.146 --> 00:09:30.486 A:middle
+overhead, and this is because
+
+00:09:30.486 --> 00:09:32.426 A:middle
+every time we ask to display new
+
+00:09:32.426 --> 00:09:34.056 A:middle
+content, we likely have to bring
+
+00:09:34.056 --> 00:09:35.236 A:middle
+up subsystems such as
+
+00:09:35.236 --> 00:09:37.246 A:middle
+networking, graphics, and
+
+00:09:37.246 --> 00:09:38.886 A:middle
+processing to do all that work
+
+00:09:38.886 --> 00:09:40.256 A:middle
+and display that content, and
+
+00:09:40.256 --> 00:09:41.636 A:middle
+the user might not actually want
+
+00:09:41.636 --> 00:09:41.766 A:middle
+it.
+
+00:09:42.326 --> 00:09:43.446 A:middle
+So, we'll end up burning a lot
+
+00:09:43.446 --> 00:09:45.036 A:middle
+of energy consistently while
+
+00:09:45.036 --> 00:09:45.946 A:middle
+that application is running.
+
+00:09:46.456 --> 00:09:48.026 A:middle
+We can do better.
+
+00:09:48.336 --> 00:09:50.926 A:middle
+If we think about what the user
+
+00:09:50.926 --> 00:09:52.236 A:middle
+actually wants, the fresh
+
+00:09:52.236 --> 00:09:53.876 A:middle
+content, we can implement a
+
+00:09:53.876 --> 00:09:55.896 A:middle
+solution that is on demand.
+
+00:09:57.326 --> 00:09:59.146 A:middle
+Now, in this new solution, user
+
+00:09:59.146 --> 00:10:00.646 A:middle
+interaction or some kind of a
+
+00:09:59.146 --> 00:10:00.646 A:middle
+interaction or some kind of a
+
+00:10:00.646 --> 00:10:01.916 A:middle
+notification from our server
+
+00:10:02.416 --> 00:10:03.796 A:middle
+will provide us the new content
+
+00:10:04.436 --> 00:10:05.586 A:middle
+and display it to the user.
+
+00:10:07.416 --> 00:10:08.646 A:middle
+This solution isn't that
+
+00:10:08.646 --> 00:10:09.426 A:middle
+different, but it's an
+
+00:10:09.426 --> 00:10:11.136 A:middle
+energy-efficient approach and
+
+00:10:11.136 --> 00:10:12.906 A:middle
+makes a dramatic impact on our
+
+00:10:12.906 --> 00:10:13.726 A:middle
+power over time.
+
+00:10:14.426 --> 00:10:15.286 A:middle
+Let's take a look at why.
+
+00:10:16.496 --> 00:10:17.936 A:middle
+Now, if we imaging that our app
+
+00:10:17.936 --> 00:10:18.996 A:middle
+is running in the foreground,
+
+00:10:18.996 --> 00:10:20.296 A:middle
+and a user interaction occurs,
+
+00:10:20.656 --> 00:10:22.056 A:middle
+we would refresh our content
+
+00:10:22.056 --> 00:10:23.756 A:middle
+feed and display it to the user.
+
+00:10:24.276 --> 00:10:26.636 A:middle
+Then, our app will go idle as
+
+00:10:26.636 --> 00:10:27.986 A:middle
+our user is using it, let's say,
+
+00:10:28.746 --> 00:10:29.996 A:middle
+to scroll or just to read the
+
+00:10:29.996 --> 00:10:31.116 A:middle
+content that's been displayed.
+
+00:10:31.796 --> 00:10:33.206 A:middle
+You'll notice that the overhead
+
+00:10:33.206 --> 00:10:34.516 A:middle
+here is still a little bit high,
+
+00:10:34.516 --> 00:10:35.706 A:middle
+but it's been significantly
+
+00:10:35.706 --> 00:10:36.176 A:middle
+reduced.
+
+00:10:37.026 --> 00:10:38.086 A:middle
+The trick here is that we've
+
+00:10:38.086 --> 00:10:39.606 A:middle
+allowed the subsystems we no
+
+00:10:39.606 --> 00:10:41.846 A:middle
+longer need to go to sleep and
+
+00:10:41.846 --> 00:10:43.026 A:middle
+idle off.
+
+00:10:45.276 --> 00:10:47.166 A:middle
+Another tenet that we can follow
+
+00:10:47.556 --> 00:10:49.046 A:middle
+to reduce our energy consumption
+
+00:10:49.046 --> 00:10:51.306 A:middle
+in the foreground is to minimize
+
+00:10:51.306 --> 00:10:52.196 A:middle
+complex UI.
+
+00:10:53.376 --> 00:10:54.516 A:middle
+So, I mentioned before that in
+
+00:10:54.516 --> 00:10:56.696 A:middle
+graphics our energy consumption
+
+00:10:56.696 --> 00:10:58.676 A:middle
+is highly complexity-dependent,
+
+00:10:59.756 --> 00:11:00.726 A:middle
+and we always want to make our
+
+00:10:59.756 --> 00:11:00.726 A:middle
+and we always want to make our
+
+00:11:00.726 --> 00:11:01.926 A:middle
+apps look as good as possible.
+
+00:11:01.926 --> 00:11:03.226 A:middle
+So, we're going to spend a lot
+
+00:11:03.226 --> 00:11:04.726 A:middle
+of time building this UI that
+
+00:11:04.726 --> 00:11:06.436 A:middle
+looks great and animations that
+
+00:11:06.436 --> 00:11:07.406 A:middle
+are pleasing to view.
+
+00:11:08.686 --> 00:11:09.406 A:middle
+However, this can have
+
+00:11:09.406 --> 00:11:11.556 A:middle
+unintended side effects, and
+
+00:11:11.816 --> 00:11:12.946 A:middle
+let's look at an example to
+
+00:11:12.946 --> 00:11:13.666 A:middle
+illustrate why.
+
+00:11:14.266 --> 00:11:17.636 A:middle
+If I'm a video player, my goal
+
+00:11:17.636 --> 00:11:19.156 A:middle
+is to let a user watch a video.
+
+00:11:20.056 --> 00:11:20.416 A:middle
+Simple.
+
+00:11:21.116 --> 00:11:22.696 A:middle
+But I could be tempted to add
+
+00:11:22.696 --> 00:11:24.786 A:middle
+new controls and UI above that
+
+00:11:24.786 --> 00:11:26.446 A:middle
+video, let's say, in the form of
+
+00:11:26.516 --> 00:11:28.716 A:middle
+related videos or a scrubber or
+
+00:11:28.716 --> 00:11:29.856 A:middle
+maybe volume controls.
+
+00:11:30.896 --> 00:11:32.076 A:middle
+This allows a greater degree of
+
+00:11:32.076 --> 00:11:34.276 A:middle
+control to the user to use this
+
+00:11:34.276 --> 00:11:35.666 A:middle
+application and enjoy the video
+
+00:11:35.666 --> 00:11:36.756 A:middle
+they're watching.
+
+00:11:37.636 --> 00:11:39.256 A:middle
+This is actually insidiously
+
+00:11:39.256 --> 00:11:41.606 A:middle
+energy inefficient, and let's
+
+00:11:41.606 --> 00:11:42.406 A:middle
+understand why.
+
+00:11:43.506 --> 00:11:45.276 A:middle
+On many of our devices, there's
+
+00:11:45.276 --> 00:11:46.836 A:middle
+a display optimization in place
+
+00:11:47.086 --> 00:11:48.496 A:middle
+that allows for video playback
+
+00:11:48.496 --> 00:11:50.076 A:middle
+to be very energy efficient when
+
+00:11:50.076 --> 00:11:51.456 A:middle
+there is no UI on screen.
+
+00:11:52.276 --> 00:11:53.426 A:middle
+This is something that is not
+
+00:11:53.426 --> 00:11:54.526 A:middle
+immediately clear when you're
+
+00:11:54.526 --> 00:11:55.556 A:middle
+building an application like
+
+00:11:55.556 --> 00:11:55.896 A:middle
+this.
+
+00:11:56.216 --> 00:11:57.516 A:middle
+However, it makes all the
+
+00:11:57.516 --> 00:11:58.116 A:middle
+difference.
+
+00:11:58.556 --> 00:12:01.236 A:middle
+So, a good approach to take
+
+00:11:58.556 --> 00:12:01.236 A:middle
+So, a good approach to take
+
+00:12:01.236 --> 00:12:02.586 A:middle
+advantage of this optimization
+
+00:12:02.586 --> 00:12:03.966 A:middle
+and counteract this sort of
+
+00:12:03.966 --> 00:12:06.066 A:middle
+energy inefficiency we see is to
+
+00:12:06.806 --> 00:12:09.596 A:middle
+have a simple auto dismissal of
+
+00:12:09.596 --> 00:12:10.556 A:middle
+our UI controls.
+
+00:12:11.076 --> 00:12:13.676 A:middle
+And this could mean that any
+
+00:12:13.676 --> 00:12:15.526 A:middle
+related content that we put on
+
+00:12:15.526 --> 00:12:17.296 A:middle
+the video or in the UI layer
+
+00:12:17.496 --> 00:12:18.786 A:middle
+simply goes away if the user is
+
+00:12:18.786 --> 00:12:19.606 A:middle
+not interacting with it.
+
+00:12:20.776 --> 00:12:22.526 A:middle
+This makes a big difference on
+
+00:12:22.526 --> 00:12:23.546 A:middle
+our energy consumption during
+
+00:12:23.546 --> 00:12:25.466 A:middle
+video playback, as this display
+
+00:12:25.466 --> 00:12:27.006 A:middle
+optimization is critical for
+
+00:12:27.006 --> 00:12:28.166 A:middle
+maintaining quiescent
+
+00:12:28.596 --> 00:12:30.076 A:middle
+energy-efficient playback.
+
+00:12:30.076 --> 00:12:34.586 A:middle
+So, we've talked a lot about the
+
+00:12:34.586 --> 00:12:36.116 A:middle
+foreground, but what about the
+
+00:12:36.116 --> 00:12:36.646 A:middle
+background?
+
+00:12:37.136 --> 00:12:38.316 A:middle
+Many of us who are building
+
+00:12:38.316 --> 00:12:39.396 A:middle
+applications such as music
+
+00:12:39.396 --> 00:12:40.996 A:middle
+players, or maybe even alarm
+
+00:12:40.996 --> 00:12:42.176 A:middle
+clocks, are focused on the
+
+00:12:42.176 --> 00:12:42.706 A:middle
+background.
+
+00:12:43.296 --> 00:12:44.746 A:middle
+Our main experience comes from
+
+00:12:44.746 --> 00:12:46.316 A:middle
+our app running effectively in
+
+00:12:46.316 --> 00:12:46.776 A:middle
+the background.
+
+00:12:48.796 --> 00:12:49.866 A:middle
+Well, when we're in the
+
+00:12:49.866 --> 00:12:51.116 A:middle
+background, we have some things
+
+00:12:51.116 --> 00:12:52.056 A:middle
+that we need to be aware of.
+
+00:12:53.326 --> 00:12:54.416 A:middle
+Likely, our app is going to be
+
+00:12:54.416 --> 00:12:55.646 A:middle
+running in conjunction and
+
+00:12:55.646 --> 00:12:57.196 A:middle
+concurrently with other systems
+
+00:12:57.196 --> 00:12:57.816 A:middle
+on device.
+
+00:12:58.616 --> 00:13:00.466 A:middle
+Let's say I'll be using iMessage
+
+00:12:58.616 --> 00:13:00.466 A:middle
+Let's say I'll be using iMessage
+
+00:13:00.606 --> 00:13:01.626 A:middle
+or maybe even Facetime.
+
+00:13:02.316 --> 00:13:04.466 A:middle
+To that end, we should focus on
+
+00:13:04.466 --> 00:13:06.346 A:middle
+minimizing our workload to
+
+00:13:06.346 --> 00:13:07.576 A:middle
+ensure energy efficiency when
+
+00:13:07.576 --> 00:13:08.346 A:middle
+we're in the background.
+
+00:13:09.816 --> 00:13:11.186 A:middle
+Well, this is a pretty broad
+
+00:13:11.186 --> 00:13:11.676 A:middle
+statement.
+
+00:13:11.956 --> 00:13:12.686 A:middle
+So, let's kind of try to
+
+00:13:12.686 --> 00:13:14.196 A:middle
+understand it.
+
+00:13:14.566 --> 00:13:15.556 A:middle
+When you're in the background,
+
+00:13:16.076 --> 00:13:17.166 A:middle
+you may be able to utilize
+
+00:13:17.166 --> 00:13:18.216 A:middle
+subsystems that are already
+
+00:13:18.216 --> 00:13:19.936 A:middle
+being used by other apps on the
+
+00:13:19.936 --> 00:13:20.446 A:middle
+system.
+
+00:13:20.906 --> 00:13:22.436 A:middle
+However, it's important to note
+
+00:13:22.436 --> 00:13:23.266 A:middle
+that the majority of the
+
+00:13:23.266 --> 00:13:24.766 A:middle
+priority for the energy
+
+00:13:24.766 --> 00:13:25.966 A:middle
+consumption is going to go to
+
+00:13:25.966 --> 00:13:26.966 A:middle
+those applications that are in
+
+00:13:26.966 --> 00:13:27.466 A:middle
+the foreground.
+
+00:13:28.356 --> 00:13:30.286 A:middle
+So, then, we should focus on
+
+00:13:30.286 --> 00:13:31.696 A:middle
+minimizing our workload to make
+
+00:13:31.696 --> 00:13:32.636 A:middle
+sure we don't interrupt those
+
+00:13:32.636 --> 00:13:33.406 A:middle
+experiences.
+
+00:13:34.616 --> 00:13:35.726 A:middle
+One way we can start thinking
+
+00:13:35.726 --> 00:13:37.756 A:middle
+about this is to coalesce all of
+
+00:13:37.756 --> 00:13:38.226 A:middle
+our tasks.
+
+00:13:38.846 --> 00:13:40.016 A:middle
+If there's a lot of maintenance
+
+00:13:40.016 --> 00:13:41.016 A:middle
+work, let's say, that we need to
+
+00:13:41.016 --> 00:13:42.486 A:middle
+do in the background, or we have
+
+00:13:42.486 --> 00:13:43.556 A:middle
+a lot of networking activity
+
+00:13:43.556 --> 00:13:44.516 A:middle
+that needs to be performed,
+
+00:13:45.016 --> 00:13:46.766 A:middle
+let's say, then it would be best
+
+00:13:46.766 --> 00:13:47.946 A:middle
+for us to group those together
+
+00:13:47.946 --> 00:13:49.106 A:middle
+and do them all at the same
+
+00:13:49.106 --> 00:13:49.476 A:middle
+time.
+
+00:13:50.206 --> 00:13:51.346 A:middle
+That way, we have the minimal
+
+00:13:51.346 --> 00:13:52.736 A:middle
+impact on anything else
+
+00:13:52.736 --> 00:13:53.526 A:middle
+happening on the system.
+
+00:13:53.966 --> 00:13:56.476 A:middle
+A really common example that
+
+00:13:56.476 --> 00:13:57.726 A:middle
+many of you may face is to
+
+00:13:57.726 --> 00:13:59.356 A:middle
+upload analytics and working
+
+00:13:59.356 --> 00:14:00.546 A:middle
+with application analytics.
+
+00:13:59.356 --> 00:14:00.546 A:middle
+with application analytics.
+
+00:14:01.886 --> 00:14:02.886 A:middle
+It's likely that when you're
+
+00:14:02.886 --> 00:14:04.046 A:middle
+collecting these analytics
+
+00:14:04.396 --> 00:14:04.986 A:middle
+you'll be sending them
+
+00:14:04.986 --> 00:14:06.416 A:middle
+immediately because this is a
+
+00:14:06.416 --> 00:14:07.756 A:middle
+very robust solution, and it
+
+00:14:07.756 --> 00:14:09.266 A:middle
+allows you to build a dataset
+
+00:14:09.686 --> 00:14:10.606 A:middle
+that is protected against
+
+00:14:10.606 --> 00:14:11.726 A:middle
+crashes in your application.
+
+00:14:12.986 --> 00:14:14.466 A:middle
+Well, doing that may not be very
+
+00:14:14.466 --> 00:14:15.286 A:middle
+energy efficient.
+
+00:14:15.956 --> 00:14:17.196 A:middle
+If we were to send our analytics
+
+00:14:17.196 --> 00:14:18.056 A:middle
+every time we went into the
+
+00:14:18.056 --> 00:14:19.826 A:middle
+background, we would risk
+
+00:14:19.826 --> 00:14:20.876 A:middle
+overusing our networking
+
+00:14:20.876 --> 00:14:21.236 A:middle
+hardware.
+
+00:14:21.726 --> 00:14:23.836 A:middle
+And here's how that looks like
+
+00:14:23.836 --> 00:14:24.866 A:middle
+when we take a look at the power
+
+00:14:24.866 --> 00:14:25.566 A:middle
+over time curve.
+
+00:14:26.566 --> 00:14:27.376 A:middle
+Every time we enter the
+
+00:14:27.376 --> 00:14:28.896 A:middle
+background, we would spin up
+
+00:14:28.896 --> 00:14:30.526 A:middle
+networking resources to send
+
+00:14:30.526 --> 00:14:31.516 A:middle
+these analytics, and then we
+
+00:14:31.516 --> 00:14:32.606 A:middle
+would come down and go idle
+
+00:14:32.606 --> 00:14:32.856 A:middle
+again.
+
+00:14:34.106 --> 00:14:35.176 A:middle
+This may not look like a lot
+
+00:14:35.406 --> 00:14:36.886 A:middle
+with just three on this graph,
+
+00:14:37.346 --> 00:14:38.356 A:middle
+but you can imagine if your
+
+00:14:38.356 --> 00:14:39.516 A:middle
+application is experiencing
+
+00:14:39.516 --> 00:14:41.216 A:middle
+heavy usage, this adds up over
+
+00:14:41.216 --> 00:14:41.526 A:middle
+time.
+
+00:14:43.816 --> 00:14:45.186 A:middle
+The right way to do this is
+
+00:14:45.226 --> 00:14:48.246 A:middle
+super straightforward, and it's
+
+00:14:48.246 --> 00:14:49.586 A:middle
+simply to send these in deferred
+
+00:14:49.586 --> 00:14:50.166 A:middle
+batches.
+
+00:14:50.216 --> 00:14:52.226 A:middle
+We have a lot of APIs that
+
+00:14:52.226 --> 00:14:54.056 A:middle
+support this coalescing
+
+00:14:54.056 --> 00:14:55.346 A:middle
+principle, and one of the
+
+00:14:55.346 --> 00:14:56.836 A:middle
+biggest ones is NSURLSession.
+
+00:14:57.896 --> 00:14:59.156 A:middle
+Using NSURLSession with a
+
+00:14:59.156 --> 00:15:00.836 A:middle
+discretionary property and a
+
+00:14:59.156 --> 00:15:00.836 A:middle
+discretionary property and a
+
+00:15:00.836 --> 00:15:02.356 A:middle
+background session will enable
+
+00:15:02.356 --> 00:15:03.996 A:middle
+you to take advantage of this
+
+00:15:03.996 --> 00:15:05.696 A:middle
+sort of an optimization very
+
+00:15:05.696 --> 00:15:06.056 A:middle
+quickly,
+
+00:15:06.546 --> 00:15:09.466 A:middle
+and this is the right way to do
+
+00:15:10.016 --> 00:15:10.086 A:middle
+it.
+
+00:15:10.936 --> 00:15:12.286 A:middle
+Let's take a look at what the
+
+00:15:12.286 --> 00:15:14.156 A:middle
+energy over time looks like now,
+
+00:15:14.426 --> 00:15:15.236 A:middle
+if we've done this.
+
+00:15:15.726 --> 00:15:18.596 A:middle
+We can see here that while it
+
+00:15:18.596 --> 00:15:20.236 A:middle
+might take a little longer for
+
+00:15:20.236 --> 00:15:21.676 A:middle
+our app to do any sort of
+
+00:15:21.676 --> 00:15:23.216 A:middle
+uploading for analytics, the
+
+00:15:23.216 --> 00:15:24.006 A:middle
+energy that we're going to
+
+00:15:24.006 --> 00:15:26.326 A:middle
+consume is going to be far less,
+
+00:15:26.746 --> 00:15:27.876 A:middle
+and it's going to be condensed
+
+00:15:27.876 --> 00:15:28.936 A:middle
+to one single burst.
+
+00:15:29.656 --> 00:15:31.256 A:middle
+This is effectively the result
+
+00:15:31.406 --> 00:15:33.386 A:middle
+of coalescing any tasks when
+
+00:15:33.386 --> 00:15:33.786 A:middle
+you're running in the
+
+00:15:33.786 --> 00:15:34.196 A:middle
+background.
+
+00:15:35.126 --> 00:15:36.666 A:middle
+You get a high energy for a
+
+00:15:36.666 --> 00:15:38.176 A:middle
+short period of time completing
+
+00:15:38.176 --> 00:15:39.436 A:middle
+those tasks, but then once
+
+00:15:39.436 --> 00:15:40.926 A:middle
+you're finished you no longer
+
+00:15:40.926 --> 00:15:41.916 A:middle
+have to worry about doing those
+
+00:15:41.916 --> 00:15:42.886 A:middle
+tasks and potentially
+
+00:15:42.886 --> 00:15:44.086 A:middle
+interrupting an experience of
+
+00:15:44.086 --> 00:15:45.336 A:middle
+another application.
+
+00:15:47.016 --> 00:15:49.306 A:middle
+Another example that seems sort
+
+00:15:49.306 --> 00:15:50.666 A:middle
+of straightforward is to end
+
+00:15:50.666 --> 00:15:51.506 A:middle
+your tasks quickly.
+
+00:15:52.706 --> 00:15:54.126 A:middle
+With many APIs on the system
+
+00:15:54.126 --> 00:15:55.256 A:middle
+that allow you to take advantage
+
+00:15:55.256 --> 00:15:57.446 A:middle
+of background running, things
+
+00:15:57.446 --> 00:15:58.636 A:middle
+like UI background task and
+
+00:15:58.636 --> 00:16:00.546 A:middle
+UIKit, or VOIP and PushKit.
+
+00:15:58.636 --> 00:16:00.546 A:middle
+UIKit, or VOIP and PushKit.
+
+00:16:00.996 --> 00:16:04.766 A:middle
+And these APIs have ways for you
+
+00:16:04.766 --> 00:16:06.036 A:middle
+as an app developer to indicate
+
+00:16:06.266 --> 00:16:07.376 A:middle
+that you no longer need to run
+
+00:16:07.376 --> 00:16:10.956 A:middle
+in the background.
+
+00:16:11.076 --> 00:16:12.706 A:middle
+So, it stands to reason that as
+
+00:16:12.706 --> 00:16:13.626 A:middle
+an app developer, if you're
+
+00:16:13.626 --> 00:16:14.586 A:middle
+using any of these background
+
+00:16:14.586 --> 00:16:16.536 A:middle
+modes, you would call these
+
+00:16:16.596 --> 00:16:17.786 A:middle
+completion handlers, let's say,
+
+00:16:18.226 --> 00:16:18.976 A:middle
+to let the system know you're
+
+00:16:18.976 --> 00:16:19.236 A:middle
+done.
+
+00:16:19.866 --> 00:16:21.536 A:middle
+Well, that doesn't always
+
+00:16:21.536 --> 00:16:23.346 A:middle
+happen, and in a lot of cases,
+
+00:16:23.846 --> 00:16:25.906 A:middle
+we might actually forget or not
+
+00:16:25.906 --> 00:16:26.936 A:middle
+want to end our task.
+
+00:16:27.916 --> 00:16:29.276 A:middle
+So, we let our tasks expire.
+
+00:16:30.576 --> 00:16:32.316 A:middle
+There's a great energy impact to
+
+00:16:32.316 --> 00:16:35.606 A:middle
+this, and it's really something
+
+00:16:35.606 --> 00:16:37.456 A:middle
+that people don't necessarily
+
+00:16:37.456 --> 00:16:38.506 A:middle
+see when they're developing
+
+00:16:38.506 --> 00:16:39.126 A:middle
+their application.
+
+00:16:40.246 --> 00:16:41.436 A:middle
+Let me demonstrate why this is
+
+00:16:41.436 --> 00:16:42.506 A:middle
+energy inefficient with the
+
+00:16:42.506 --> 00:16:43.286 A:middle
+power over time curve.
+
+00:16:44.746 --> 00:16:45.916 A:middle
+You could imagine if you enter
+
+00:16:45.916 --> 00:16:47.086 A:middle
+the background for any reason
+
+00:16:47.086 --> 00:16:48.746 A:middle
+and your task starts, you finish
+
+00:16:48.746 --> 00:16:49.736 A:middle
+some time afterwards.
+
+00:16:50.436 --> 00:16:52.576 A:middle
+Then, if we let our task expire,
+
+00:16:52.726 --> 00:16:54.466 A:middle
+as we've said, we enter this
+
+00:16:54.466 --> 00:16:55.806 A:middle
+sort of idle phase where you're
+
+00:16:55.806 --> 00:16:57.326 A:middle
+consuming energy and our app is
+
+00:16:57.326 --> 00:16:58.306 A:middle
+running in the background for
+
+00:16:58.306 --> 00:17:00.206 A:middle
+whatever reason we've asked our
+
+00:16:58.306 --> 00:17:00.206 A:middle
+whatever reason we've asked our
+
+00:17:00.206 --> 00:17:01.996 A:middle
+API for, but there's not really
+
+00:17:01.996 --> 00:17:02.846 A:middle
+much else happening.
+
+00:17:03.206 --> 00:17:04.726 A:middle
+And then, we have a long tail of
+
+00:17:04.726 --> 00:17:06.205 A:middle
+overhead because we've kept the
+
+00:17:06.205 --> 00:17:08.656 A:middle
+system awake and subsystems we
+
+00:17:08.656 --> 00:17:10.596 A:middle
+thought they needed to be using
+
+00:17:10.596 --> 00:17:12.195 A:middle
+their own resources are now
+
+00:17:12.306 --> 00:17:13.356 A:middle
+waiting for us to finish.
+
+00:17:13.866 --> 00:17:17.526 A:middle
+The quick solution to this is to
+
+00:17:17.526 --> 00:17:18.766 A:middle
+simply call your completion
+
+00:17:18.766 --> 00:17:20.236 A:middle
+handlers whenever they're
+
+00:17:20.236 --> 00:17:21.256 A:middle
+available.
+
+00:17:21.796 --> 00:17:23.886 A:middle
+And as I mentioned, UI
+
+00:17:23.886 --> 00:17:25.016 A:middle
+background task is one of the
+
+00:17:25.016 --> 00:17:25.656 A:middle
+biggest ones.
+
+00:17:25.976 --> 00:17:27.026 A:middle
+When we enter the background
+
+00:17:27.336 --> 00:17:28.886 A:middle
+from the foreground, we can call
+
+00:17:28.886 --> 00:17:29.966 A:middle
+this API and UIKit.
+
+00:17:30.746 --> 00:17:31.946 A:middle
+If we don't let our system know
+
+00:17:31.946 --> 00:17:33.446 A:middle
+that we don't need, if we let
+
+00:17:33.446 --> 00:17:34.276 A:middle
+our system know that we don't
+
+00:17:34.276 --> 00:17:35.756 A:middle
+need to do any work anymore, we
+
+00:17:35.756 --> 00:17:37.406 A:middle
+save a lot of energy and allow
+
+00:17:37.406 --> 00:17:39.746 A:middle
+hardware systems to go idle when
+
+00:17:39.746 --> 00:17:40.426 A:middle
+they need to go idle.
+
+00:17:41.446 --> 00:17:42.586 A:middle
+Here's what that looks like if
+
+00:17:42.586 --> 00:17:43.406 A:middle
+we call these completion
+
+00:17:43.406 --> 00:17:43.866 A:middle
+handlers.
+
+00:17:45.006 --> 00:17:46.506 A:middle
+You could see here that the tail
+
+00:17:46.506 --> 00:17:47.446 A:middle
+of active energy that we saw
+
+00:17:47.446 --> 00:17:49.476 A:middle
+before is gone, and now we've
+
+00:17:49.476 --> 00:17:50.686 A:middle
+greatly reduced our tail of
+
+00:17:50.686 --> 00:17:51.456 A:middle
+overhead as well.
+
+00:17:52.026 --> 00:17:54.596 A:middle
+A simple solution, but it has a
+
+00:17:54.596 --> 00:17:56.066 A:middle
+big impact on your overall
+
+00:17:56.066 --> 00:17:56.856 A:middle
+energy consumption.
+
+00:18:01.136 --> 00:18:03.346 A:middle
+So, we've talked about some ways
+
+00:18:03.346 --> 00:18:04.336 A:middle
+that we can start thinking about
+
+00:18:04.336 --> 00:18:05.966 A:middle
+energy efficiency as a process.
+
+00:18:06.686 --> 00:18:08.076 A:middle
+If we focus on optimizing the
+
+00:18:08.076 --> 00:18:09.616 A:middle
+work we do in all of our use
+
+00:18:09.616 --> 00:18:12.176 A:middle
+cases, we can really work on
+
+00:18:12.176 --> 00:18:13.396 A:middle
+optimizing the energy that our
+
+00:18:13.396 --> 00:18:14.536 A:middle
+application consumes.
+
+00:18:14.916 --> 00:18:17.826 A:middle
+For a deeper dive into the
+
+00:18:17.826 --> 00:18:18.996 A:middle
+things we talked about and to
+
+00:18:18.996 --> 00:18:19.916 A:middle
+maybe get a little bit more
+
+00:18:19.916 --> 00:18:21.436 A:middle
+hands-on with the code behind
+
+00:18:21.436 --> 00:18:22.566 A:middle
+some of these optimizations we
+
+00:18:22.566 --> 00:18:24.346 A:middle
+discussed, I really recommend
+
+00:18:24.346 --> 00:18:25.276 A:middle
+that you check out our video
+
+00:18:25.276 --> 00:18:26.736 A:middle
+from last year, How to write
+
+00:18:26.736 --> 00:18:27.786 A:middle
+energy-efficient apps.
+
+00:18:28.696 --> 00:18:29.896 A:middle
+In that session, you'll find
+
+00:18:29.896 --> 00:18:30.506 A:middle
+that there are a lot of
+
+00:18:30.506 --> 00:18:32.386 A:middle
+interesting resources and more
+
+00:18:32.386 --> 00:18:34.606 A:middle
+examples on how you can use
+
+00:18:34.606 --> 00:18:35.846 A:middle
+energy-efficient designs in your
+
+00:18:35.846 --> 00:18:36.356 A:middle
+application.
+
+00:18:40.316 --> 00:18:42.026 A:middle
+So, now that we've talked about
+
+00:18:42.266 --> 00:18:43.346 A:middle
+some ways that we can improve
+
+00:18:43.346 --> 00:18:44.536 A:middle
+energy efficiency in the design
+
+00:18:44.536 --> 00:18:46.676 A:middle
+of our application, and we've
+
+00:18:46.836 --> 00:18:48.266 A:middle
+spent a lot of time talking
+
+00:18:48.266 --> 00:18:49.856 A:middle
+about ways that we can improve
+
+00:18:50.506 --> 00:18:51.746 A:middle
+our energy efficiency through
+
+00:18:51.746 --> 00:18:53.426 A:middle
+thinking about the hardware
+
+00:18:53.426 --> 00:18:54.936 A:middle
+systems behind our application,
+
+00:18:55.776 --> 00:18:56.756 A:middle
+what are the ways that we can
+
+00:18:56.756 --> 00:18:57.576 A:middle
+quantify this?
+
+00:18:57.906 --> 00:18:59.116 A:middle
+Let's say we've made a change,
+
+00:18:59.116 --> 00:19:00.506 A:middle
+and we want to understand the
+
+00:18:59.116 --> 00:19:00.506 A:middle
+and we want to understand the
+
+00:19:00.506 --> 00:19:02.026 A:middle
+real impact in our application.
+
+00:19:03.146 --> 00:19:04.136 A:middle
+Well, right now, let's talk
+
+00:19:04.136 --> 00:19:05.096 A:middle
+about some tools that we have
+
+00:19:05.096 --> 00:19:06.966 A:middle
+available for you today to do
+
+00:19:06.966 --> 00:19:09.976 A:middle
+that sort of work.
+
+00:19:10.156 --> 00:19:11.416 A:middle
+Today, we have two tools
+
+00:19:11.416 --> 00:19:12.966 A:middle
+available that you can use to
+
+00:19:12.966 --> 00:19:14.276 A:middle
+quantify your energy impact.
+
+00:19:15.506 --> 00:19:16.796 A:middle
+The first tool is the energy
+
+00:19:16.796 --> 00:19:18.026 A:middle
+gauges, which are accessible
+
+00:19:18.026 --> 00:19:19.026 A:middle
+directly through the Xcode
+
+00:19:19.026 --> 00:19:19.436 A:middle
+debugger.
+
+00:19:20.586 --> 00:19:21.696 A:middle
+The energy gauges are a great
+
+00:19:21.696 --> 00:19:23.096 A:middle
+way for you to rapidly iterate
+
+00:19:23.096 --> 00:19:24.446 A:middle
+on your codes energy consumption
+
+00:19:24.916 --> 00:19:26.036 A:middle
+and to help you understand at a
+
+00:19:26.036 --> 00:19:28.016 A:middle
+very high level where your
+
+00:19:28.016 --> 00:19:29.586 A:middle
+energy consumption is going by
+
+00:19:29.586 --> 00:19:30.126 A:middle
+subsystem.
+
+00:19:30.476 --> 00:19:32.886 A:middle
+And then, if the gauges aren't
+
+00:19:32.886 --> 00:19:34.446 A:middle
+good enough, you can jump right
+
+00:19:34.446 --> 00:19:35.616 A:middle
+into the instruments from the
+
+00:19:35.616 --> 00:19:36.396 A:middle
+Developer Toolkit.
+
+00:19:37.446 --> 00:19:38.516 A:middle
+The instruments will allow you
+
+00:19:38.516 --> 00:19:39.836 A:middle
+to do a deeper dive into the
+
+00:19:39.836 --> 00:19:40.916 A:middle
+various subsystems on the
+
+00:19:40.916 --> 00:19:41.366 A:middle
+device.
+
+00:19:41.706 --> 00:19:43.626 A:middle
+And understand at a lower level
+
+00:19:43.816 --> 00:19:45.076 A:middle
+how these actual subsystems are
+
+00:19:45.076 --> 00:19:46.556 A:middle
+performing and what they're
+
+00:19:46.556 --> 00:19:46.896 A:middle
+doing.
+
+00:19:47.366 --> 00:19:49.606 A:middle
+Let's take a look at the energy
+
+00:19:49.606 --> 00:19:50.846 A:middle
+gauges first.
+
+00:19:51.626 --> 00:19:53.166 A:middle
+As I said, these are accessible
+
+00:19:53.166 --> 00:19:54.296 A:middle
+directly through the Xcode
+
+00:19:54.296 --> 00:19:56.236 A:middle
+Debugger UI, so they're pretty
+
+00:19:56.236 --> 00:19:58.276 A:middle
+easy to use.
+
+00:19:58.376 --> 00:19:59.356 A:middle
+Let's jump into the UI.
+
+00:20:00.006 --> 00:20:01.126 A:middle
+As you can see, we've selected
+
+00:20:01.126 --> 00:20:02.566 A:middle
+the row that says energy impact,
+
+00:20:02.566 --> 00:20:04.446 A:middle
+and now we have this main area
+
+00:20:04.446 --> 00:20:05.586 A:middle
+in the UI that's composed of
+
+00:20:05.586 --> 00:20:06.716 A:middle
+three major sections.
+
+00:20:07.736 --> 00:20:08.896 A:middle
+On the top left, we have the
+
+00:20:08.896 --> 00:20:10.436 A:middle
+canonical gauges themselves.
+
+00:20:11.456 --> 00:20:13.706 A:middle
+These gauges range from low,
+
+00:20:14.006 --> 00:20:15.706 A:middle
+high, and very high, and
+
+00:20:15.706 --> 00:20:17.096 A:middle
+represent the average energy
+
+00:20:17.096 --> 00:20:18.756 A:middle
+impact of your app at an
+
+00:20:18.756 --> 00:20:19.766 A:middle
+instantaneous moment.
+
+00:20:20.786 --> 00:20:22.256 A:middle
+It's important to know that
+
+00:20:22.256 --> 00:20:23.846 A:middle
+where the gauge actually falls
+
+00:20:23.846 --> 00:20:25.356 A:middle
+doesn't necessarily mean good or
+
+00:20:25.356 --> 00:20:25.716 A:middle
+bad.
+
+00:20:26.236 --> 00:20:27.446 A:middle
+It means that whatever your app
+
+00:20:27.446 --> 00:20:29.366 A:middle
+is doing, it's consuming this
+
+00:20:29.366 --> 00:20:30.756 A:middle
+much relative amount of energy.
+
+00:20:31.716 --> 00:20:33.866 A:middle
+It's important because it's up
+
+00:20:33.866 --> 00:20:35.076 A:middle
+to you as an app developer to
+
+00:20:35.076 --> 00:20:36.306 A:middle
+think about your use case and
+
+00:20:36.306 --> 00:20:37.346 A:middle
+whether or not you would expect
+
+00:20:37.346 --> 00:20:38.466 A:middle
+it to do that.
+
+00:20:39.376 --> 00:20:41.306 A:middle
+To the right of that, we have
+
+00:20:41.306 --> 00:20:42.206 A:middle
+the average component
+
+00:20:42.206 --> 00:20:44.156 A:middle
+utilization, and this is going
+
+00:20:44.156 --> 00:20:45.846 A:middle
+to be a pie chart that shows you
+
+00:20:46.216 --> 00:20:47.576 A:middle
+all of the different components
+
+00:20:47.956 --> 00:20:49.616 A:middle
+relative to the total amount of
+
+00:20:49.616 --> 00:20:50.646 A:middle
+energy that you're consuming,
+
+00:20:51.076 --> 00:20:52.316 A:middle
+what percentage those components
+
+00:20:52.316 --> 00:20:52.816 A:middle
+are consuming.
+
+00:20:54.016 --> 00:20:55.316 A:middle
+This is really useful because
+
+00:20:55.316 --> 00:20:56.456 A:middle
+it's representative of those
+
+00:20:56.456 --> 00:20:57.436 A:middle
+subsystems we talked about
+
+00:20:57.436 --> 00:20:58.646 A:middle
+earlier, and it helps to
+
+00:20:58.646 --> 00:21:00.896 A:middle
+identify if you have an excess
+
+00:20:58.646 --> 00:21:00.896 A:middle
+identify if you have an excess
+
+00:21:00.896 --> 00:21:02.226 A:middle
+amount of overhead or maybe if
+
+00:21:02.226 --> 00:21:03.586 A:middle
+one component is taking too much
+
+00:21:03.586 --> 00:21:04.766 A:middle
+energy, and you don't expect it.
+
+00:21:05.116 --> 00:21:08.036 A:middle
+And then, immediately below
+
+00:21:08.036 --> 00:21:09.586 A:middle
+that, building off of the
+
+00:21:09.586 --> 00:21:10.876 A:middle
+average component utilization
+
+00:21:10.876 --> 00:21:12.956 A:middle
+chart, we have a time series
+
+00:21:13.626 --> 00:21:15.346 A:middle
+that represents the average
+
+00:21:15.346 --> 00:21:17.026 A:middle
+utilization of each component as
+
+00:21:17.026 --> 00:21:17.936 A:middle
+your app is running in real
+
+00:21:17.936 --> 00:21:18.236 A:middle
+time.
+
+00:21:18.966 --> 00:21:20.606 A:middle
+We could also see here that you
+
+00:21:20.606 --> 00:21:22.196 A:middle
+have the state that your app is
+
+00:21:22.196 --> 00:21:23.626 A:middle
+actually running in, foreground
+
+00:21:23.626 --> 00:21:25.116 A:middle
+and background, and also it
+
+00:21:25.116 --> 00:21:25.866 A:middle
+would list suspended.
+
+00:21:27.006 --> 00:21:28.386 A:middle
+This is a really awesome tool
+
+00:21:28.586 --> 00:21:29.876 A:middle
+for understanding how your app
+
+00:21:29.876 --> 00:21:31.116 A:middle
+is behaving in real time.
+
+00:21:31.556 --> 00:21:34.996 A:middle
+So, as I said, the energy gauges
+
+00:21:34.996 --> 00:21:37.236 A:middle
+are really great for doing
+
+00:21:37.236 --> 00:21:38.776 A:middle
+high-level characterization work
+
+00:21:39.586 --> 00:21:40.926 A:middle
+and rapid profiling.
+
+00:21:41.456 --> 00:21:42.186 A:middle
+That's the key.
+
+00:21:42.756 --> 00:21:43.756 A:middle
+When you're iterating on your
+
+00:21:43.756 --> 00:21:44.646 A:middle
+code, you're trying to get
+
+00:21:44.646 --> 00:21:45.756 A:middle
+something to work as an app
+
+00:21:45.756 --> 00:21:46.606 A:middle
+developer, and you're trying to
+
+00:21:46.606 --> 00:21:48.496 A:middle
+put something together, it may
+
+00:21:48.496 --> 00:21:49.696 A:middle
+not seem immediately clear how
+
+00:21:49.696 --> 00:21:50.716 A:middle
+you could really think about
+
+00:21:50.716 --> 00:21:52.236 A:middle
+energy, but the gauges are a
+
+00:21:52.236 --> 00:21:53.026 A:middle
+great way to start.
+
+00:21:55.296 --> 00:21:56.406 A:middle
+But let's say that you've done
+
+00:21:56.406 --> 00:21:57.566 A:middle
+that and the gauges aren't
+
+00:21:57.566 --> 00:21:58.316 A:middle
+really enough for you.
+
+00:21:58.816 --> 00:22:00.586 A:middle
+That's where the instruments
+
+00:21:58.816 --> 00:22:00.586 A:middle
+That's where the instruments
+
+00:22:00.586 --> 00:22:02.726 A:middle
+come in, and directly through
+
+00:22:02.726 --> 00:22:04.396 A:middle
+the energy gauge's UI, we have
+
+00:22:04.396 --> 00:22:06.246 A:middle
+access to three instruments that
+
+00:22:06.246 --> 00:22:07.966 A:middle
+we think best correlate to the
+
+00:22:07.966 --> 00:22:08.996 A:middle
+subsystems we talked about
+
+00:22:08.996 --> 00:22:09.366 A:middle
+before.
+
+00:22:10.716 --> 00:22:13.066 A:middle
+These include the time profile,
+
+00:22:13.586 --> 00:22:15.096 A:middle
+the network profiler, and the
+
+00:22:15.096 --> 00:22:17.516 A:middle
+location profiler, and if you
+
+00:22:17.516 --> 00:22:18.916 A:middle
+were to click through into any
+
+00:22:18.916 --> 00:22:20.576 A:middle
+of these from the energy gauge's
+
+00:22:20.796 --> 00:22:21.416 A:middle
+UI, you would be able to
+
+00:22:21.416 --> 00:22:22.596 A:middle
+transfer your current debug
+
+00:22:22.596 --> 00:22:24.006 A:middle
+session into any of those
+
+00:22:24.006 --> 00:22:24.586 A:middle
+instruments.
+
+00:22:25.016 --> 00:22:27.616 A:middle
+Let's take a look at one of the
+
+00:22:27.616 --> 00:22:29.136 A:middle
+instruments here, the Time
+
+00:22:29.136 --> 00:22:30.956 A:middle
+Profiler, and try to understand
+
+00:22:31.696 --> 00:22:33.386 A:middle
+the UI.
+
+00:22:33.576 --> 00:22:34.936 A:middle
+Now, the instruments have a very
+
+00:22:34.936 --> 00:22:37.176 A:middle
+standard UI, but what's
+
+00:22:37.176 --> 00:22:38.536 A:middle
+interesting about it is that
+
+00:22:38.536 --> 00:22:39.566 A:middle
+it's very useable.
+
+00:22:40.196 --> 00:22:40.986 A:middle
+And let's take a look.
+
+00:22:42.416 --> 00:22:43.656 A:middle
+Here, we can see the Time
+
+00:22:43.656 --> 00:22:46.116 A:middle
+Profiler UI, and on the top, you
+
+00:22:46.116 --> 00:22:48.076 A:middle
+see a bar that's representative
+
+00:22:48.076 --> 00:22:48.996 A:middle
+of the different controls that
+
+00:22:48.996 --> 00:22:50.366 A:middle
+you have of the actual
+
+00:22:50.366 --> 00:22:50.916 A:middle
+instruments.
+
+00:22:51.416 --> 00:22:52.596 A:middle
+On the top left, ou can see you
+
+00:22:52.596 --> 00:22:53.886 A:middle
+have a Play and Pause button as
+
+00:22:53.886 --> 00:22:55.066 A:middle
+well as your target that you're
+
+00:22:55.066 --> 00:22:56.116 A:middle
+using to profile.
+
+00:22:56.116 --> 00:22:58.136 A:middle
+And then, on the right, you see
+
+00:22:58.136 --> 00:22:59.656 A:middle
+a plus button that allows you to
+
+00:22:59.656 --> 00:23:01.276 A:middle
+very quickly drag and drop other
+
+00:22:59.656 --> 00:23:01.276 A:middle
+very quickly drag and drop other
+
+00:23:01.276 --> 00:23:03.296 A:middle
+instruments into you profiling
+
+00:23:03.296 --> 00:23:05.046 A:middle
+pane, which can be found here.
+
+00:23:06.156 --> 00:23:07.386 A:middle
+And now, this profiling pane
+
+00:23:07.386 --> 00:23:08.586 A:middle
+actually allows you to see what
+
+00:23:08.586 --> 00:23:09.586 A:middle
+instruments are running and
+
+00:23:09.586 --> 00:23:10.516 A:middle
+currently profiling your
+
+00:23:10.516 --> 00:23:11.046 A:middle
+application.
+
+00:23:12.026 --> 00:23:13.176 A:middle
+Here, since we're using a Time
+
+00:23:13.176 --> 00:23:15.316 A:middle
+Profiler, we see the CPU usage
+
+00:23:15.626 --> 00:23:17.076 A:middle
+and a graphical representation
+
+00:23:17.106 --> 00:23:18.406 A:middle
+of how much CPU usage is being
+
+00:23:18.406 --> 00:23:19.506 A:middle
+consumed over time.
+
+00:23:21.396 --> 00:23:22.726 A:middle
+Directly below that, we have a
+
+00:23:22.726 --> 00:23:23.756 A:middle
+weighted call graph.
+
+00:23:24.246 --> 00:23:25.036 A:middle
+Since we're using the Time
+
+00:23:25.036 --> 00:23:25.986 A:middle
+Profiler, we're trying to
+
+00:23:25.986 --> 00:23:28.056 A:middle
+understand how our CPU is being
+
+00:23:28.056 --> 00:23:28.916 A:middle
+used by the application.
+
+00:23:30.026 --> 00:23:31.526 A:middle
+To that end, there's a weighted
+
+00:23:31.526 --> 00:23:32.506 A:middle
+call graph that allows you to
+
+00:23:32.506 --> 00:23:34.436 A:middle
+see exactly what is being called
+
+00:23:34.436 --> 00:23:35.806 A:middle
+in your application and how much
+
+00:23:35.806 --> 00:23:37.966 A:middle
+weight it has on CPU time.
+
+00:23:38.456 --> 00:23:40.876 A:middle
+And then, directly to the right
+
+00:23:40.876 --> 00:23:42.156 A:middle
+of that, you have a summation of
+
+00:23:42.156 --> 00:23:43.356 A:middle
+the heaviest stacked race in
+
+00:23:43.356 --> 00:23:45.416 A:middle
+your application that basically
+
+00:23:45.416 --> 00:23:47.616 A:middle
+says what is the heaviest stack
+
+00:23:47.986 --> 00:23:49.606 A:middle
+during this profiling run?
+
+00:23:50.676 --> 00:23:52.086 A:middle
+There are a lot of other great
+
+00:23:52.086 --> 00:23:53.246 A:middle
+instruments that you can use,
+
+00:23:54.636 --> 00:23:58.156 A:middle
+and here are some of them now.
+
+00:23:58.156 --> 00:23:59.196 A:middle
+This means that the instruments
+
+00:23:59.196 --> 00:24:01.156 A:middle
+are really great for a couple of
+
+00:23:59.196 --> 00:24:01.156 A:middle
+are really great for a couple of
+
+00:24:01.156 --> 00:24:01.546 A:middle
+things.
+
+00:24:02.186 --> 00:24:03.526 A:middle
+The first thing is that the
+
+00:24:03.526 --> 00:24:04.906 A:middle
+instruments are really great for
+
+00:24:04.906 --> 00:24:05.946 A:middle
+root cause analysis.
+
+00:24:06.286 --> 00:24:07.326 A:middle
+Let's say you have a problem in
+
+00:24:07.326 --> 00:24:08.766 A:middle
+a specific subsystem, so just
+
+00:24:08.766 --> 00:24:09.886 A:middle
+processing or networking.
+
+00:24:10.756 --> 00:24:12.326 A:middle
+You would be able to identify
+
+00:24:12.446 --> 00:24:14.296 A:middle
+pretty rapidly what that problem
+
+00:24:14.296 --> 00:24:16.066 A:middle
+might be using the Time Profiler
+
+00:24:16.506 --> 00:24:17.466 A:middle
+or the Network Profiler.
+
+00:24:18.226 --> 00:24:19.626 A:middle
+The instruments are also really
+
+00:24:19.626 --> 00:24:21.586 A:middle
+great for doing in-depth
+
+00:24:21.586 --> 00:24:22.836 A:middle
+profiling of your application.
+
+00:24:23.786 --> 00:24:25.586 A:middle
+If you implement a CPU
+
+00:24:25.586 --> 00:24:27.396 A:middle
+efficiency improvement of some
+
+00:24:27.396 --> 00:24:28.756 A:middle
+kind; let's say you cut down the
+
+00:24:28.756 --> 00:24:29.566 A:middle
+time that it takes for an
+
+00:24:29.566 --> 00:24:31.166 A:middle
+algorithm to execute, the
+
+00:24:31.616 --> 00:24:32.706 A:middle
+instruments are a really good
+
+00:24:32.706 --> 00:24:34.566 A:middle
+way to understand if that's the,
+
+00:24:34.566 --> 00:24:36.336 A:middle
+if the intended effect of your
+
+00:24:36.336 --> 00:24:38.196 A:middle
+optimization is going through on
+
+00:24:38.196 --> 00:24:38.916 A:middle
+that subsystem.
+
+00:24:39.206 --> 00:24:41.596 A:middle
+But there's also one more thing
+
+00:24:41.596 --> 00:24:42.466 A:middle
+that the instruments are really
+
+00:24:42.466 --> 00:24:44.056 A:middle
+awesome for that I haven't
+
+00:24:44.056 --> 00:24:46.046 A:middle
+talked about today, and that's
+
+00:24:46.096 --> 00:24:47.206 A:middle
+untethered profiling.
+
+00:24:48.406 --> 00:24:49.846 A:middle
+There's a single instrument that
+
+00:24:49.846 --> 00:24:51.126 A:middle
+you can use called the Energy
+
+00:24:51.126 --> 00:24:52.876 A:middle
+Log, which allows you to do an
+
+00:24:52.946 --> 00:24:55.536 A:middle
+untethered profiling run on a
+
+00:24:55.536 --> 00:24:57.476 A:middle
+provision device while using
+
+00:24:57.476 --> 00:24:58.106 A:middle
+your application.
+
+00:24:58.616 --> 00:24:59.846 A:middle
+It's accessible directly to the
+
+00:24:59.846 --> 00:25:02.176 A:middle
+developer settings, and when you
+
+00:24:59.846 --> 00:25:02.176 A:middle
+developer settings, and when you
+
+00:25:02.176 --> 00:25:03.566 A:middle
+start running it, you can use
+
+00:25:03.566 --> 00:25:04.656 A:middle
+your phone as you normally would
+
+00:25:04.656 --> 00:25:05.686 A:middle
+and use your application as you
+
+00:25:05.686 --> 00:25:06.956 A:middle
+might expect for any number of
+
+00:25:06.956 --> 00:25:07.536 A:middle
+use cases.
+
+00:25:08.256 --> 00:25:09.106 A:middle
+And then, afterwards, when
+
+00:25:09.106 --> 00:25:10.126 A:middle
+you're finished, you can stop
+
+00:25:10.126 --> 00:25:11.136 A:middle
+the recording directly from the
+
+00:25:11.136 --> 00:25:12.926 A:middle
+developer tools and jump into
+
+00:25:12.926 --> 00:25:14.106 A:middle
+Instruments and upload that
+
+00:25:14.106 --> 00:25:14.526 A:middle
+trace.
+
+00:25:15.116 --> 00:25:16.396 A:middle
+This is really useful for
+
+00:25:16.396 --> 00:25:17.386 A:middle
+understanding if there are any
+
+00:25:17.386 --> 00:25:18.436 A:middle
+environmental problems that
+
+00:25:18.436 --> 00:25:19.576 A:middle
+you're having that might be
+
+00:25:19.576 --> 00:25:20.416 A:middle
+impacting your energy
+
+00:25:20.416 --> 00:25:20.866 A:middle
+consumption.
+
+00:25:20.866 --> 00:25:23.966 A:middle
+Now, we've talked about the
+
+00:25:23.966 --> 00:25:25.016 A:middle
+tools; we've talked about the
+
+00:25:25.016 --> 00:25:27.256 A:middle
+concepts; now, I want to do a
+
+00:25:27.256 --> 00:25:29.916 A:middle
+demo and work through an example
+
+00:25:29.916 --> 00:25:31.026 A:middle
+about how we can actually use
+
+00:25:31.026 --> 00:25:32.896 A:middle
+these in tandem and solve energy
+
+00:25:32.896 --> 00:25:33.616 A:middle
+problems and make our app more
+
+00:25:33.616 --> 00:25:34.000 A:middle
+energy efficient.
+
+00:25:39.206 --> 00:25:40.816 A:middle
+So, today, we've prepared a
+
+00:25:40.816 --> 00:25:42.496 A:middle
+simple game called Energy Game,
+
+00:25:42.816 --> 00:25:44.646 A:middle
+which draws sprites onscreen and
+
+00:25:44.646 --> 00:25:46.436 A:middle
+allows the application to inject
+
+00:25:46.436 --> 00:25:47.376 A:middle
+a number of bugs.
+
+00:25:47.936 --> 00:25:49.136 A:middle
+It's a very simple application
+
+00:25:49.136 --> 00:25:50.116 A:middle
+that we've built, and it only
+
+00:25:50.116 --> 00:25:51.176 A:middle
+has an app delegate in a View
+
+00:25:51.176 --> 00:25:52.466 A:middle
+Controller, but the primary
+
+00:25:52.466 --> 00:25:53.866 A:middle
+purpose is to show you how to
+
+00:25:53.866 --> 00:25:56.276 A:middle
+use our tools rapidly to iterate
+
+00:25:56.376 --> 00:25:56.996 A:middle
+through your code.
+
+00:25:57.496 --> 00:25:59.676 A:middle
+So, I'm going to go ahead and
+
+00:25:59.676 --> 00:26:01.136 A:middle
+build Energy Game here through
+
+00:25:59.676 --> 00:26:01.136 A:middle
+build Energy Game here through
+
+00:26:01.136 --> 00:26:03.406 A:middle
+the Xcode UI and let it run.
+
+00:26:04.136 --> 00:26:05.976 A:middle
+Then, you'll see on the right
+
+00:26:05.976 --> 00:26:07.956 A:middle
+side that all it really does is
+
+00:26:07.956 --> 00:26:08.736 A:middle
+draw a little little battery
+
+00:26:08.736 --> 00:26:10.126 A:middle
+sprite at a random time.
+
+00:26:10.746 --> 00:26:11.226 A:middle
+There it is.
+
+00:26:11.706 --> 00:26:12.246 A:middle
+Very simple.
+
+00:26:13.016 --> 00:26:15.266 A:middle
+If I jump straight into the
+
+00:26:15.266 --> 00:26:16.716 A:middle
+Xcode debugger and jump to
+
+00:26:16.716 --> 00:26:18.756 A:middle
+energy impact, now, I can see my
+
+00:26:18.756 --> 00:26:19.286 A:middle
+gauges.
+
+00:26:19.796 --> 00:26:22.226 A:middle
+And so this is the UI that we
+
+00:26:22.226 --> 00:26:22.976 A:middle
+just talked about.
+
+00:26:23.366 --> 00:26:25.336 A:middle
+It's the same three areas that
+
+00:26:25.336 --> 00:26:26.946 A:middle
+we discussed, and you could see
+
+00:26:26.946 --> 00:26:28.556 A:middle
+right now that all my app is
+
+00:26:28.556 --> 00:26:30.086 A:middle
+doing that we've designed it to
+
+00:26:30.086 --> 00:26:32.656 A:middle
+do is just placed some sprites
+
+00:26:32.656 --> 00:26:33.126 A:middle
+onscreen.
+
+00:26:33.926 --> 00:26:35.056 A:middle
+But you notice that I'm doing
+
+00:26:35.056 --> 00:26:36.346 A:middle
+networking, and my overhead
+
+00:26:36.346 --> 00:26:38.486 A:middle
+seems to be high for simply no
+
+00:26:38.486 --> 00:26:38.836 A:middle
+reason.
+
+00:26:39.526 --> 00:26:40.806 A:middle
+Well, this is because we're also
+
+00:26:40.806 --> 00:26:42.556 A:middle
+doing a little bit of networking
+
+00:26:42.556 --> 00:26:43.886 A:middle
+and uploading the spike count
+
+00:26:44.056 --> 00:26:45.376 A:middle
+every time a new spike is drawn
+
+00:26:45.376 --> 00:26:45.846 A:middle
+onscreen.
+
+00:26:46.766 --> 00:26:48.036 A:middle
+And so, through the Xcode energy
+
+00:26:48.036 --> 00:26:49.406 A:middle
+gauges, you can actually see the
+
+00:26:49.406 --> 00:26:50.866 A:middle
+impact of doing that.
+
+00:26:51.576 --> 00:26:53.796 A:middle
+So, I'm going to go ahead and
+
+00:26:53.796 --> 00:26:55.666 A:middle
+stop this now and jump into my
+
+00:26:55.666 --> 00:26:57.346 A:middle
+code to understand where this is
+
+00:26:57.346 --> 00:26:57.796 A:middle
+coming from.
+
+00:26:58.296 --> 00:27:00.656 A:middle
+So, if I go to my View
+
+00:26:58.296 --> 00:27:00.656 A:middle
+So, if I go to my View
+
+00:27:00.656 --> 00:27:02.076 A:middle
+controller, where I actually add
+
+00:27:02.076 --> 00:27:03.346 A:middle
+a new sprite, I've had a
+
+00:27:03.346 --> 00:27:04.466 A:middle
+function here to upload the
+
+00:27:04.466 --> 00:27:05.876 A:middle
+sprite count, which creates a
+
+00:27:05.876 --> 00:27:07.906 A:middle
+simple connection object and
+
+00:27:07.906 --> 00:27:09.176 A:middle
+uploads the sprite count every
+
+00:27:09.176 --> 00:27:10.106 A:middle
+time a new sprite is added.
+
+00:27:10.476 --> 00:27:11.446 A:middle
+I'm going to go ahead and
+
+00:27:11.446 --> 00:27:13.946 A:middle
+comment the cell and then jump
+
+00:27:13.946 --> 00:27:15.416 A:middle
+into my app delegate and move it
+
+00:27:16.056 --> 00:27:17.586 A:middle
+to the only upload the sprite
+
+00:27:17.586 --> 00:27:18.396 A:middle
+account when I'm in the
+
+00:27:18.396 --> 00:27:18.826 A:middle
+background.
+
+00:27:19.306 --> 00:27:21.486 A:middle
+And for the sake of this demo,
+
+00:27:21.486 --> 00:27:22.516 A:middle
+I've named that my networking
+
+00:27:22.516 --> 00:27:23.086 A:middle
+optimization.
+
+00:27:24.066 --> 00:27:24.986 A:middle
+I'm going to go ahead and
+
+00:27:24.986 --> 00:27:27.216 A:middle
+rebuild Energy Game and show you
+
+00:27:27.216 --> 00:27:28.276 A:middle
+the effect this has on the
+
+00:27:28.276 --> 00:27:31.806 A:middle
+energy gauges.
+
+00:27:31.936 --> 00:27:33.376 A:middle
+Now, Energy Game is running
+
+00:27:33.376 --> 00:27:33.656 A:middle
+again.
+
+00:27:33.656 --> 00:27:35.286 A:middle
+I'm going to jump back to the
+
+00:27:35.286 --> 00:27:37.906 A:middle
+Xcode Debugger UI, jump back to
+
+00:27:37.906 --> 00:27:41.686 A:middle
+Energy Impact, and now we don't
+
+00:27:41.686 --> 00:27:42.826 A:middle
+see any networking energy, and
+
+00:27:42.826 --> 00:27:44.606 A:middle
+we don't see any overhead, which
+
+00:27:44.606 --> 00:27:44.936 A:middle
+is good.
+
+00:27:45.756 --> 00:27:47.186 A:middle
+So, that's simple optimization,
+
+00:27:47.486 --> 00:27:48.596 A:middle
+simply moving a networking
+
+00:27:48.596 --> 00:27:50.066 A:middle
+request from one area to the
+
+00:27:50.066 --> 00:27:51.416 A:middle
+other and preventing it from
+
+00:27:51.416 --> 00:27:54.116 A:middle
+happening often allowed us to
+
+00:27:54.116 --> 00:27:56.066 A:middle
+greatly reduce our energy impact
+
+00:27:56.976 --> 00:27:58.076 A:middle
+in our quiescent use case.
+
+00:27:58.596 --> 00:28:01.156 A:middle
+So, now, I'm going to go ahead
+
+00:27:58.596 --> 00:28:01.156 A:middle
+So, now, I'm going to go ahead
+
+00:28:01.156 --> 00:28:02.636 A:middle
+and inject a bug and try to see
+
+00:28:02.636 --> 00:28:04.826 A:middle
+how we can see a bug when we use
+
+00:28:04.826 --> 00:28:06.076 A:middle
+Xcode energy gauges.
+
+00:28:06.806 --> 00:28:08.796 A:middle
+Bug1 is a simple bug that you
+
+00:28:08.796 --> 00:28:09.976 A:middle
+can see on the bottom left here
+
+00:28:10.146 --> 00:28:11.506 A:middle
+that will essentially cause a
+
+00:28:11.566 --> 00:28:12.866 A:middle
+CPU spin in the background.
+
+00:28:13.276 --> 00:28:14.406 A:middle
+This is a case that many of us
+
+00:28:14.406 --> 00:28:15.906 A:middle
+might face in regular and real
+
+00:28:15.906 --> 00:28:16.616 A:middle
+world development.
+
+00:28:17.246 --> 00:28:18.596 A:middle
+I'm going to go ahead and inject
+
+00:28:18.596 --> 00:28:19.066 A:middle
+this bug.
+
+00:28:19.066 --> 00:28:21.966 A:middle
+And now that I've injected it,
+
+00:28:21.966 --> 00:28:23.186 A:middle
+I'm going to background Energy
+
+00:28:23.186 --> 00:28:25.216 A:middle
+Game, and as you can see in the
+
+00:28:25.216 --> 00:28:26.886 A:middle
+Energy Gauge's UI, we transfer
+
+00:28:26.886 --> 00:28:27.456 A:middle
+to the background.
+
+00:28:28.536 --> 00:28:29.686 A:middle
+We do a little bit of networking
+
+00:28:29.686 --> 00:28:30.876 A:middle
+because I moved that networking
+
+00:28:30.876 --> 00:28:31.836 A:middle
+call to the background.
+
+00:28:32.686 --> 00:28:33.866 A:middle
+But now, we also see that our
+
+00:28:33.866 --> 00:28:35.396 A:middle
+CPU is going wild.
+
+00:28:35.906 --> 00:28:38.356 A:middle
+So, this is the power of the
+
+00:28:38.356 --> 00:28:38.926 A:middle
+gauges.
+
+00:28:39.006 --> 00:28:40.136 A:middle
+We've now, we know that we're
+
+00:28:40.136 --> 00:28:41.366 A:middle
+injecting a bug, but we can see
+
+00:28:41.366 --> 00:28:42.836 A:middle
+that bug directly in the gauges.
+
+00:28:44.036 --> 00:28:45.106 A:middle
+So, now, to find the root cause,
+
+00:28:45.106 --> 00:28:46.326 A:middle
+I'm going to go ahead and jump
+
+00:28:46.326 --> 00:28:47.386 A:middle
+into the Time Profiler and
+
+00:28:47.386 --> 00:28:48.586 A:middle
+transfer my debug session, as we
+
+00:28:48.616 --> 00:28:49.000 A:middle
+discussed before.
+
+00:28:53.656 --> 00:28:55.256 A:middle
+So, now, I transferred my debug
+
+00:28:55.256 --> 00:28:56.266 A:middle
+session, and it will begin
+
+00:28:56.266 --> 00:28:57.196 A:middle
+running automatically.
+
+00:28:57.706 --> 00:29:00.976 A:middle
+And as you see, the weighted
+
+00:28:57.706 --> 00:29:00.976 A:middle
+And as you see, the weighted
+
+00:29:00.976 --> 00:29:03.346 A:middle
+cobra apples start populating in
+
+00:29:03.346 --> 00:29:08.136 A:middle
+a moment; here, we can see that
+
+00:29:08.136 --> 00:29:09.386 A:middle
+the dispatched thread here is
+
+00:29:09.386 --> 00:29:10.666 A:middle
+consuming the most CPU time.
+
+00:29:11.076 --> 00:29:12.436 A:middle
+Let's go ahead and dig into it.
+
+00:29:12.896 --> 00:29:16.886 A:middle
+And we can see that we have
+
+00:29:16.886 --> 00:29:17.996 A:middle
+closure at something called
+
+00:29:17.996 --> 00:29:19.156 A:middle
+appdelegate.compute.
+
+00:29:20.226 --> 00:29:21.936 A:middle
+Well, let's jump back to our
+
+00:29:21.936 --> 00:29:22.676 A:middle
+application and try to
+
+00:29:22.676 --> 00:29:23.656 A:middle
+understand what that is.
+
+00:29:29.596 --> 00:29:30.736 A:middle
+So, for the purpose of this
+
+00:29:30.736 --> 00:29:32.676 A:middle
+demo, when we entered the
+
+00:29:32.676 --> 00:29:34.006 A:middle
+background in Energy Game, we
+
+00:29:34.006 --> 00:29:34.826 A:middle
+called something called
+
+00:29:34.826 --> 00:29:35.466 A:middle
+computation.
+
+00:29:36.656 --> 00:29:39.896 A:middle
+Computation is a really terrible
+
+00:29:40.866 --> 00:29:41.686 A:middle
+function.
+
+00:29:41.686 --> 00:29:44.006 A:middle
+It basically starts spinning
+
+00:29:44.206 --> 00:29:45.836 A:middle
+wildly with a while true loop
+
+00:29:46.346 --> 00:29:47.886 A:middle
+when we inject Big1.
+
+00:29:48.046 --> 00:29:49.096 A:middle
+So, it's very simple for the
+
+00:29:49.096 --> 00:29:51.246 A:middle
+purpose of this demo, but using
+
+00:29:51.246 --> 00:29:52.636 A:middle
+both the gauges and the time
+
+00:29:52.636 --> 00:29:53.796 A:middle
+profiler, we were able to dig
+
+00:29:53.796 --> 00:29:55.326 A:middle
+back directly to where this was
+
+00:29:55.326 --> 00:29:57.186 A:middle
+happening, and we can see that
+
+00:29:57.186 --> 00:29:59.076 A:middle
+this while true loop is not
+
+00:29:59.076 --> 00:29:59.266 A:middle
+good.
+
+00:30:00.456 --> 00:30:01.566 A:middle
+So, I'll go ahead and comment
+
+00:30:01.566 --> 00:30:04.466 A:middle
+this out because I love
+
+00:30:04.466 --> 00:30:05.766 A:middle
+commenting out code instead of
+
+00:30:05.766 --> 00:30:08.196 A:middle
+deleting it, and I'll go ahead
+
+00:30:08.196 --> 00:30:10.036 A:middle
+and rebuild Energy Game.
+
+00:30:13.276 --> 00:30:14.416 A:middle
+We'll just jump back into the
+
+00:30:14.416 --> 00:30:15.816 A:middle
+gauges to see that everything is
+
+00:30:15.816 --> 00:30:18.626 A:middle
+okay, and now we'll go ahead and
+
+00:30:22.556 --> 00:30:23.696 A:middle
+inject Bug1 again, and I'll go
+
+00:30:24.216 --> 00:30:25.000 A:middle
+to the background.
+
+00:30:29.496 --> 00:30:30.706 A:middle
+And we see our expected
+
+00:30:30.706 --> 00:30:32.316 A:middle
+networking activity but no CPU
+
+00:30:32.316 --> 00:30:32.606 A:middle
+spin.
+
+00:30:33.596 --> 00:30:35.796 A:middle
+Voila! We've solved it, using
+
+00:30:35.796 --> 00:30:38.656 A:middle
+two tools in about 30 seconds or
+
+00:30:38.656 --> 00:30:38.916 A:middle
+a minute.
+
+00:30:39.476 --> 00:30:41.076 A:middle
+That's the power of these tools.
+
+00:30:41.146 --> 00:30:42.386 A:middle
+They're able to let you rapidly
+
+00:30:42.386 --> 00:30:43.786 A:middle
+iterate and root cause problems
+
+00:30:43.786 --> 00:30:45.026 A:middle
+that you might face on
+
+00:30:45.026 --> 00:30:46.406 A:middle
+day-to-day development.
+
+00:30:46.976 --> 00:30:49.000 A:middle
+So, let's go back to the slides.
+
+00:30:54.696 --> 00:30:56.056 A:middle
+So, there's some takeaways from
+
+00:30:56.056 --> 00:30:56.496 A:middle
+this demo.
+
+00:30:58.336 --> 00:30:59.716 A:middle
+The first takeaway is that the
+
+00:30:59.716 --> 00:31:01.336 A:middle
+gauges, as we said, are great
+
+00:30:59.716 --> 00:31:01.336 A:middle
+gauges, as we said, are great
+
+00:31:01.336 --> 00:31:02.246 A:middle
+for rapid iteration.
+
+00:31:02.956 --> 00:31:04.246 A:middle
+They allow you to quickly see
+
+00:31:04.626 --> 00:31:05.466 A:middle
+where your problem might be
+
+00:31:05.466 --> 00:31:07.376 A:middle
+happening, and they allow you to
+
+00:31:07.376 --> 00:31:08.626 A:middle
+take the next step in figuring
+
+00:31:08.626 --> 00:31:09.866 A:middle
+out how to solve it.
+
+00:31:11.416 --> 00:31:13.906 A:middle
+The second takeaway is that the
+
+00:31:13.906 --> 00:31:15.616 A:middle
+instruments are great for
+
+00:31:15.616 --> 00:31:16.476 A:middle
+in-depth profiling.
+
+00:31:16.976 --> 00:31:20.386 A:middle
+And finally, the third takeaway
+
+00:31:20.446 --> 00:31:21.396 A:middle
+is that we want you to think
+
+00:31:21.396 --> 00:31:23.286 A:middle
+about energy efficiency as a
+
+00:31:23.286 --> 00:31:24.536 A:middle
+primary objective in your
+
+00:31:24.536 --> 00:31:25.406 A:middle
+application development.
+
+00:31:26.186 --> 00:31:27.476 A:middle
+We have powerful tools available
+
+00:31:27.476 --> 00:31:28.796 A:middle
+for you to quickly understand
+
+00:31:29.136 --> 00:31:30.346 A:middle
+where your energy is going and
+
+00:31:30.346 --> 00:31:31.836 A:middle
+to root cause problems that
+
+00:31:31.836 --> 00:31:32.796 A:middle
+might be energy related.
+
+00:31:33.296 --> 00:31:35.466 A:middle
+So, let's say you've done all of
+
+00:31:35.466 --> 00:31:36.426 A:middle
+that, and you've shipped your
+
+00:31:36.426 --> 00:31:36.976 A:middle
+application.
+
+00:31:37.776 --> 00:31:39.086 A:middle
+From the App Store it's getting
+
+00:31:39.086 --> 00:31:40.546 A:middle
+used; all your customers are
+
+00:31:40.546 --> 00:31:42.436 A:middle
+greatly thankful that you
+
+00:31:42.436 --> 00:31:43.066 A:middle
+shipped it on time.
+
+00:31:43.516 --> 00:31:44.166 A:middle
+What's next?
+
+00:31:45.056 --> 00:31:46.086 A:middle
+Let's say you still see
+
+00:31:46.116 --> 00:31:47.306 A:middle
+customers saying that your app
+
+00:31:47.306 --> 00:31:48.336 A:middle
+is bad for battery life.
+
+00:31:48.986 --> 00:31:50.036 A:middle
+What sort of recourse do you
+
+00:31:50.036 --> 00:31:50.286 A:middle
+have?
+
+00:31:51.326 --> 00:31:53.096 A:middle
+Well, now, I'm going to pass it
+
+00:31:53.096 --> 00:31:54.236 A:middle
+on to my colleague, David, who's
+
+00:31:54.596 --> 00:31:56.126 A:middle
+going to talk to you about how
+
+00:31:56.126 --> 00:31:57.486 A:middle
+you can face those challenges
+
+00:31:57.486 --> 00:31:58.946 A:middle
+and solve them using our new
+
+00:31:58.946 --> 00:31:59.446 A:middle
+tools.
+
+00:31:59.586 --> 00:31:59.896 A:middle
+David.
+
+00:32:00.516 --> 00:32:04.866 A:middle
+[ Applause ]
+
+00:32:05.366 --> 00:32:06.126 A:middle
+&gt;&gt; Good afternoon.
+
+00:32:06.906 --> 00:32:08.846 A:middle
+Hi, I'm David, and I'm here
+
+00:32:08.846 --> 00:32:10.736 A:middle
+today to talk about some new
+
+00:32:10.736 --> 00:32:12.486 A:middle
+great tools for energy
+
+00:32:12.486 --> 00:32:12.876 A:middle
+debugging.
+
+00:32:13.476 --> 00:32:18.056 A:middle
+If you're an iOS developer with
+
+00:32:18.056 --> 00:32:19.786 A:middle
+an app in the App Store, or in
+
+00:32:19.786 --> 00:32:21.216 A:middle
+TestFlight, then this part of
+
+00:32:21.216 --> 00:32:22.356 A:middle
+the talk is for you.
+
+00:32:23.506 --> 00:32:24.596 A:middle
+I'd like to start with the
+
+00:32:24.596 --> 00:32:26.836 A:middle
+following question, now that
+
+00:32:26.836 --> 00:32:28.436 A:middle
+you've shipped your app, how do
+
+00:32:28.436 --> 00:32:29.866 A:middle
+you know how our app is doing in
+
+00:32:29.866 --> 00:32:30.306 A:middle
+the wild?
+
+00:32:31.356 --> 00:32:33.676 A:middle
+In other words, how do you know
+
+00:32:34.126 --> 00:32:35.206 A:middle
+if your customers are
+
+00:32:35.206 --> 00:32:37.246 A:middle
+experiencing energy issues that
+
+00:32:37.246 --> 00:32:38.936 A:middle
+are leading to bad battery life?
+
+00:32:38.936 --> 00:32:41.636 A:middle
+Now, a customer may leave a
+
+00:32:41.636 --> 00:32:43.176 A:middle
+review on the App Store, saying,
+
+00:32:43.716 --> 00:32:45.886 A:middle
+"My battery went down a lot
+
+00:32:45.886 --> 00:32:46.976 A:middle
+while using this app."
+
+00:32:48.246 --> 00:32:49.396 A:middle
+But they might not be able to
+
+00:32:49.396 --> 00:32:50.786 A:middle
+tell you what happened.
+
+00:32:51.786 --> 00:32:53.576 A:middle
+Or even worse, they may delete
+
+00:32:53.576 --> 00:32:54.906 A:middle
+your app and not leave any
+
+00:32:54.906 --> 00:32:55.646 A:middle
+feedback at all.
+
+00:32:56.816 --> 00:32:58.316 A:middle
+So, it can be challenging to
+
+00:32:58.316 --> 00:33:00.166 A:middle
+find out if you have energy
+
+00:32:58.316 --> 00:33:00.166 A:middle
+find out if you have energy
+
+00:33:00.166 --> 00:33:01.196 A:middle
+issues in the wild.
+
+00:33:01.576 --> 00:33:03.946 A:middle
+And even if you know that there
+
+00:33:03.946 --> 00:33:06.066 A:middle
+are energy issues, how do you
+
+00:33:06.066 --> 00:33:08.066 A:middle
+debug an issue that occurred on
+
+00:33:08.066 --> 00:33:08.996 A:middle
+your customer device?
+
+00:33:09.596 --> 00:33:13.256 A:middle
+You can make use of tools like
+
+00:33:13.336 --> 00:33:14.746 A:middle
+instruments and gauges that Phil
+
+00:33:14.746 --> 00:33:16.816 A:middle
+talked about, but unless you
+
+00:33:16.816 --> 00:33:18.986 A:middle
+know what to test for, it can be
+
+00:33:18.986 --> 00:33:20.336 A:middle
+challenging to reproduce.
+
+00:33:21.556 --> 00:33:22.616 A:middle
+There can be environmental
+
+00:33:22.616 --> 00:33:24.956 A:middle
+factors such as poor Wi-Fi
+
+00:33:24.956 --> 00:33:26.366 A:middle
+conditions that occurred for
+
+00:33:26.366 --> 00:33:28.946 A:middle
+your customer whereas on your
+
+00:33:28.946 --> 00:33:30.056 A:middle
+desk, you have great Wi-Fi
+
+00:33:30.056 --> 00:33:30.596 A:middle
+conditions.
+
+00:33:31.076 --> 00:33:33.946 A:middle
+So, these are some really
+
+00:33:33.946 --> 00:33:34.976 A:middle
+challenging questions.
+
+00:33:35.486 --> 00:33:38.726 A:middle
+So, to help answer these
+
+00:33:38.726 --> 00:33:40.606 A:middle
+questions, I'm excited today to
+
+00:33:40.606 --> 00:33:42.866 A:middle
+talk about a new way of
+
+00:33:42.866 --> 00:33:46.596 A:middle
+debugging energy issues using
+
+00:33:46.596 --> 00:33:48.746 A:middle
+Xcode Energy Logs and Xcode
+
+00:33:48.746 --> 00:33:49.646 A:middle
+Energy Organizer.
+
+00:33:50.736 --> 00:33:52.126 A:middle
+First, I'll talk about Xcode
+
+00:33:52.126 --> 00:33:54.056 A:middle
+Energy Logs, which is a new way
+
+00:33:54.306 --> 00:33:56.276 A:middle
+of reporting energy issues on
+
+00:33:56.276 --> 00:33:56.686 A:middle
+device.
+
+00:33:57.736 --> 00:33:59.416 A:middle
+Later, I'll cover Xcode Energy
+
+00:33:59.416 --> 00:34:01.176 A:middle
+Organizer, which is a new tool
+
+00:33:59.416 --> 00:34:01.176 A:middle
+Organizer, which is a new tool
+
+00:34:01.176 --> 00:34:02.536 A:middle
+for viewing Energy Logs.
+
+00:34:03.026 --> 00:34:06.116 A:middle
+With these tools, for the first
+
+00:34:06.116 --> 00:34:07.916 A:middle
+time ever, you'll have the data
+
+00:34:07.916 --> 00:34:11.835 A:middle
+that you need to find and to fix
+
+00:34:12.065 --> 00:34:12.896 A:middle
+energy issues.
+
+00:34:13.516 --> 00:34:14.266 A:middle
+So, let's get started.
+
+00:34:15.896 --> 00:34:18.096 A:middle
+Xcode Energy Logs are a new way
+
+00:34:18.096 --> 00:34:19.806 A:middle
+of reporting issues from device.
+
+00:34:20.456 --> 00:34:23.896 A:middle
+We start with high CPU energy
+
+00:34:23.896 --> 00:34:25.295 A:middle
+events, which is when your app
+
+00:34:25.295 --> 00:34:26.966 A:middle
+is using lots of CPU.
+
+00:34:28.036 --> 00:34:29.775 A:middle
+Each Energy Log will have a
+
+00:34:29.775 --> 00:34:31.616 A:middle
+weighted call graph, which will
+
+00:34:31.616 --> 00:34:33.076 A:middle
+point out the energy hotspots
+
+00:34:33.076 --> 00:34:33.755 A:middle
+within your code.
+
+00:34:35.106 --> 00:34:36.196 A:middle
+These logs will be made
+
+00:34:36.196 --> 00:34:38.156 A:middle
+available from TestFlight and
+
+00:34:38.156 --> 00:34:39.876 A:middle
+the App Store, so you'll have
+
+00:34:39.876 --> 00:34:41.496 A:middle
+real world data, what's actually
+
+00:34:41.496 --> 00:34:43.286 A:middle
+happening with your customers.
+
+00:34:44.096 --> 00:34:45.295 A:middle
+And with these logs, you'll be
+
+00:34:45.295 --> 00:34:46.606 A:middle
+able to begin improving the
+
+00:34:46.606 --> 00:34:47.846 A:middle
+battery life experience.
+
+00:34:48.366 --> 00:34:51.866 A:middle
+Let's talk about when an Xcode
+
+00:34:51.866 --> 00:34:53.436 A:middle
+Energy Log is generated.
+
+00:34:54.735 --> 00:34:56.106 A:middle
+Let's say your customer is using
+
+00:34:56.106 --> 00:34:57.886 A:middle
+your app, which starts to put a
+
+00:34:57.886 --> 00:34:59.656 A:middle
+really heavy load on the CPU.
+
+00:35:00.476 --> 00:35:02.296 A:middle
+This can be natural, depending
+
+00:35:02.296 --> 00:35:03.326 A:middle
+on what your app is doing.
+
+00:35:04.396 --> 00:35:05.646 A:middle
+Well, let's say it's putting a
+
+00:35:05.646 --> 00:35:07.846 A:middle
+really heavy load on the CPU for
+
+00:35:07.846 --> 00:35:08.496 A:middle
+a long time.
+
+00:35:09.066 --> 00:35:14.046 A:middle
+This causes a high CPU energy
+
+00:35:14.046 --> 00:35:15.136 A:middle
+event to be detected.
+
+00:35:15.656 --> 00:35:18.236 A:middle
+Now, there are two key
+
+00:35:18.236 --> 00:35:20.616 A:middle
+thresholds that are checked for
+
+00:35:21.246 --> 00:35:22.546 A:middle
+for a high CPU energy event.
+
+00:35:23.186 --> 00:35:24.836 A:middle
+The first threshold is when your
+
+00:35:24.836 --> 00:35:27.216 A:middle
+app is spinning 80% CPU for more
+
+00:35:27.216 --> 00:35:28.966 A:middle
+than three minutes while in the
+
+00:35:29.016 --> 00:35:30.806 A:middle
+foreground, and the second
+
+00:35:30.806 --> 00:35:33.636 A:middle
+threshold is more than 80% CPU
+
+00:35:34.006 --> 00:35:35.446 A:middle
+for more than one minute while
+
+00:35:35.446 --> 00:35:36.086 A:middle
+in the background.
+
+00:35:37.056 --> 00:35:38.696 A:middle
+In this latter case, your app
+
+00:35:38.696 --> 00:35:40.346 A:middle
+may actually get killed to
+
+00:35:40.346 --> 00:35:41.576 A:middle
+prevent runaway background
+
+00:35:41.576 --> 00:35:42.046 A:middle
+usage.
+
+00:35:44.896 --> 00:35:47.486 A:middle
+Each instance of a CPU Energy
+
+00:35:47.486 --> 00:35:49.496 A:middle
+Log indicates that your app uses
+
+00:35:49.496 --> 00:35:51.086 A:middle
+so much CPU that it was worth
+
+00:35:51.086 --> 00:35:51.566 A:middle
+flagging.
+
+00:35:52.726 --> 00:35:53.816 A:middle
+What this means in practical
+
+00:35:53.816 --> 00:35:56.276 A:middle
+terms is that it was responsible
+
+00:35:56.276 --> 00:35:59.536 A:middle
+for up to a 1% battery drop in a
+
+00:35:59.536 --> 00:36:01.636 A:middle
+typical case.
+
+00:35:59.536 --> 00:36:01.636 A:middle
+typical case.
+
+00:36:01.836 --> 00:36:03.026 A:middle
+Now, you may be saying to
+
+00:36:03.026 --> 00:36:04.726 A:middle
+yourself, 1% battery doesn't
+
+00:36:04.726 --> 00:36:05.776 A:middle
+sound too bad.
+
+00:36:07.036 --> 00:36:09.396 A:middle
+But to put this in context, on
+
+00:36:09.396 --> 00:36:12.146 A:middle
+an iPhone 6S with an additional
+
+00:36:12.146 --> 00:36:14.696 A:middle
+1% battery, your user could have
+
+00:36:14.696 --> 00:36:16.606 A:middle
+had eight minutes of additional
+
+00:36:16.606 --> 00:36:19.256 A:middle
+talk time or six minutes of
+
+00:36:19.256 --> 00:36:21.696 A:middle
+additional browsing or 30
+
+00:36:21.696 --> 00:36:23.486 A:middle
+minutes of additional music.
+
+00:36:24.286 --> 00:36:25.996 A:middle
+And if your app continues to
+
+00:36:25.996 --> 00:36:28.536 A:middle
+burn at this rate, the battery
+
+00:36:28.536 --> 00:36:29.836 A:middle
+would have dropped even more.
+
+00:36:30.526 --> 00:36:32.606 A:middle
+So, writing CPU-efficient apps
+
+00:36:32.916 --> 00:36:34.846 A:middle
+is really important, and your
+
+00:36:34.846 --> 00:36:36.166 A:middle
+users will notice.
+
+00:36:36.636 --> 00:36:39.816 A:middle
+An Energy Log has three things
+
+00:36:39.946 --> 00:36:41.006 A:middle
+that can help you figure out
+
+00:36:41.156 --> 00:36:41.776 A:middle
+what has happened.
+
+00:36:42.406 --> 00:36:44.586 A:middle
+First is the context by which
+
+00:36:44.586 --> 00:36:46.346 A:middle
+what happened that triggered the
+
+00:36:46.346 --> 00:36:46.756 A:middle
+report.
+
+00:36:47.266 --> 00:36:48.826 A:middle
+For example, it will say that
+
+00:36:49.446 --> 00:36:52.236 A:middle
+your app spent for 8% over three
+
+00:36:52.236 --> 00:36:52.616 A:middle
+minutes.
+
+00:36:53.136 --> 00:36:55.346 A:middle
+The second piece of information
+
+00:36:55.346 --> 00:36:57.306 A:middle
+is the metadata about where the
+
+00:36:57.306 --> 00:36:59.326 A:middle
+Energy Log was created; for
+
+00:36:59.326 --> 00:37:00.916 A:middle
+example, on an iPhone versus an
+
+00:36:59.326 --> 00:37:00.916 A:middle
+example, on an iPhone versus an
+
+00:37:00.966 --> 00:37:03.876 A:middle
+iPad and on, say, Build 30 of
+
+00:37:03.876 --> 00:37:04.226 A:middle
+you app.
+
+00:37:05.596 --> 00:37:06.966 A:middle
+The third and most important
+
+00:37:06.966 --> 00:37:08.426 A:middle
+piece of information is the
+
+00:37:08.426 --> 00:37:09.996 A:middle
+weighted call graph that will
+
+00:37:09.996 --> 00:37:11.516 A:middle
+show you the energy hotspots in
+
+00:37:11.516 --> 00:37:11.916 A:middle
+your code.
+
+00:37:12.456 --> 00:37:14.256 A:middle
+So, let's talk a little bit more
+
+00:37:14.256 --> 00:37:15.366 A:middle
+about the weighted call graph,
+
+00:37:16.126 --> 00:37:17.896 A:middle
+how it was generated, and how
+
+00:37:17.896 --> 00:37:19.386 A:middle
+you can use it to debug energy
+
+00:37:19.386 --> 00:37:19.796 A:middle
+issues.
+
+00:37:23.576 --> 00:37:24.626 A:middle
+Let's say your program is
+
+00:37:24.626 --> 00:37:26.846 A:middle
+comprised of a main function and
+
+00:37:26.846 --> 00:37:28.406 A:middle
+a number of methods, Method 1,
+
+00:37:28.546 --> 00:37:30.436 A:middle
+Method 2, Method 3, and Method
+
+00:37:30.436 --> 00:37:30.776 A:middle
+4.
+
+00:37:31.286 --> 00:37:35.046 A:middle
+Your code begins to execute
+
+00:37:35.496 --> 00:37:37.316 A:middle
+until a high CPU energy event is
+
+00:37:37.316 --> 00:37:37.806 A:middle
+detected.
+
+00:37:38.376 --> 00:37:42.516 A:middle
+Up to this point, backtraces are
+
+00:37:42.516 --> 00:37:44.686 A:middle
+continuously sampled at a
+
+00:37:44.686 --> 00:37:46.406 A:middle
+periodic interval of once per
+
+00:37:46.406 --> 00:37:49.916 A:middle
+second, where each backtrace is
+
+00:37:49.916 --> 00:37:53.446 A:middle
+a sample of an active frames in
+
+00:37:53.446 --> 00:37:54.096 A:middle
+execution.
+
+00:37:55.576 --> 00:37:57.026 A:middle
+The first backtrace, for
+
+00:37:57.026 --> 00:37:59.606 A:middle
+example, shows that main Method
+
+00:37:59.606 --> 00:38:01.986 A:middle
+1 and Method 2 were active.
+
+00:37:59.606 --> 00:38:01.986 A:middle
+1 and Method 2 were active.
+
+00:38:03.796 --> 00:38:05.726 A:middle
+The second backtrace shows that
+
+00:38:05.726 --> 00:38:09.236 A:middle
+main Method 3 and Method 4 were
+
+00:38:10.226 --> 00:38:11.756 A:middle
+active and so on.
+
+00:38:17.566 --> 00:38:19.186 A:middle
+Now, we can try to combine these
+
+00:38:19.226 --> 00:38:21.196 A:middle
+backtraces together to form an
+
+00:38:21.196 --> 00:38:22.216 A:middle
+overall picture.
+
+00:38:23.026 --> 00:38:24.746 A:middle
+What we see here is a weight
+
+00:38:24.746 --> 00:38:26.946 A:middle
+call graph, and this weighted
+
+00:38:27.036 --> 00:38:28.396 A:middle
+call graph is really useful.
+
+00:38:29.426 --> 00:38:31.036 A:middle
+Here, we can see that main was
+
+00:38:31.076 --> 00:38:32.496 A:middle
+present in six out of the six
+
+00:38:32.496 --> 00:38:33.826 A:middle
+samples that we collected,
+
+00:38:35.046 --> 00:38:36.426 A:middle
+meaning that main was running
+
+00:38:36.426 --> 00:38:38.816 A:middle
+100% of the time.
+
+00:38:39.026 --> 00:38:40.976 A:middle
+Of that, we see that Method 1
+
+00:38:41.136 --> 00:38:43.936 A:middle
+had five samples whereas Method
+
+00:38:43.996 --> 00:38:45.556 A:middle
+3 had only one sample.
+
+00:38:45.986 --> 00:38:48.986 A:middle
+And within Method 1, we see that
+
+00:38:48.986 --> 00:38:51.426 A:middle
+Method 2 and Method 3 had three
+
+00:38:51.656 --> 00:38:52.696 A:middle
+samples and one sample
+
+00:38:52.696 --> 00:38:53.376 A:middle
+respectively.
+
+00:38:54.566 --> 00:38:56.016 A:middle
+So, this gives us an overall
+
+00:38:56.016 --> 00:38:58.416 A:middle
+picture of where the code was
+
+00:38:58.446 --> 00:39:00.346 A:middle
+being executed and how much time
+
+00:38:58.446 --> 00:39:00.346 A:middle
+being executed and how much time
+
+00:39:00.586 --> 00:39:01.336 A:middle
+was being spent.
+
+00:39:04.716 --> 00:39:06.266 A:middle
+So, when an Energy Log is
+
+00:39:06.266 --> 00:39:08.466 A:middle
+created, there's a collection of
+
+00:39:08.506 --> 00:39:10.766 A:middle
+periodic backtraces sampled at
+
+00:39:10.766 --> 00:39:11.586 A:middle
+one per second.
+
+00:39:12.166 --> 00:39:15.616 A:middle
+For each backtrace contains a
+
+00:39:15.616 --> 00:39:17.136 A:middle
+list of the active frames being
+
+00:39:17.136 --> 00:39:19.946 A:middle
+executed by the CPU, these
+
+00:39:20.016 --> 00:39:21.546 A:middle
+backtraces are aggregated by
+
+00:39:21.546 --> 00:39:24.916 A:middle
+sample count into a tree where
+
+00:39:24.916 --> 00:39:27.786 A:middle
+the samples, where more samples
+
+00:39:27.786 --> 00:39:29.366 A:middle
+mean more heavily executed code.
+
+00:39:30.426 --> 00:39:31.596 A:middle
+And you can use these weighted
+
+00:39:31.596 --> 00:39:33.036 A:middle
+call graphs to identify
+
+00:39:33.226 --> 00:39:35.216 A:middle
+unexpected workloads in your
+
+00:39:35.756 --> 00:39:35.826 A:middle
+app.
+
+00:39:37.336 --> 00:39:38.736 A:middle
+So, now that we know what an
+
+00:39:38.736 --> 00:39:40.846 A:middle
+Energy Log is, how do we access
+
+00:39:40.846 --> 00:39:41.086 A:middle
+them?
+
+00:39:42.576 --> 00:39:44.736 A:middle
+First, Energy Logs are created
+
+00:39:44.736 --> 00:39:45.446 A:middle
+on device.
+
+00:39:46.806 --> 00:39:48.416 A:middle
+Then, your beta testers and your
+
+00:39:48.416 --> 00:39:50.246 A:middle
+customers, who have opted in,
+
+00:39:50.876 --> 00:39:53.076 A:middle
+will upload these logs up to
+
+00:39:53.076 --> 00:39:53.456 A:middle
+Apple.
+
+00:39:54.636 --> 00:39:55.996 A:middle
+Now, there might be hundreds or
+
+00:39:55.996 --> 00:39:58.856 A:middle
+even thousands of these logs, so
+
+00:39:58.856 --> 00:40:01.096 A:middle
+we will aggregate these logs for
+
+00:39:58.856 --> 00:40:01.096 A:middle
+we will aggregate these logs for
+
+00:40:01.096 --> 00:40:03.556 A:middle
+you, sort them, and present them
+
+00:40:03.556 --> 00:40:05.766 A:middle
+in a list of top energy issues
+
+00:40:05.766 --> 00:40:06.246 A:middle
+to you.
+
+00:40:07.426 --> 00:40:08.886 A:middle
+And you can download and view
+
+00:40:08.886 --> 00:40:10.956 A:middle
+these logs using the new Xcode
+
+00:40:11.016 --> 00:40:12.436 A:middle
+Energy Organizer tool.
+
+00:40:12.976 --> 00:40:16.316 A:middle
+The Xcode Energy Organizer is
+
+00:40:16.316 --> 00:40:17.816 A:middle
+your command center for
+
+00:40:17.816 --> 00:40:19.766 A:middle
+debugging energy issues in the
+
+00:40:19.766 --> 00:40:20.206 A:middle
+wild.
+
+00:40:21.536 --> 00:40:23.296 A:middle
+Energy Organizer makes it really
+
+00:40:23.296 --> 00:40:25.036 A:middle
+easy to view energy logs.
+
+00:40:26.336 --> 00:40:27.706 A:middle
+The Energy Organizer is
+
+00:40:27.706 --> 00:40:29.216 A:middle
+connected to TestFlight in the
+
+00:40:29.216 --> 00:40:31.086 A:middle
+App Store, so you'll see a list
+
+00:40:31.086 --> 00:40:32.386 A:middle
+of all your iOS apps.
+
+00:40:32.886 --> 00:40:36.466 A:middle
+You'll be able to see some
+
+00:40:36.466 --> 00:40:38.446 A:middle
+statistics of how often these
+
+00:40:38.446 --> 00:40:40.336 A:middle
+energy issues occur in the wild.
+
+00:40:40.336 --> 00:40:43.486 A:middle
+You'll have a list of the top
+
+00:40:43.486 --> 00:40:45.076 A:middle
+energy issues sorted by how many
+
+00:40:45.076 --> 00:40:46.446 A:middle
+devices that was impacted.
+
+00:40:46.916 --> 00:40:49.286 A:middle
+You'll have a view of the
+
+00:40:49.286 --> 00:40:51.216 A:middle
+weighted call graph for a number
+
+00:40:51.216 --> 00:40:52.826 A:middle
+of different logs, which you'll
+
+00:40:52.826 --> 00:40:54.436 A:middle
+be able to page through, using
+
+00:40:54.436 --> 00:40:58.036 A:middle
+page through logs, and you can
+
+00:40:58.036 --> 00:40:59.946 A:middle
+use Open in Project to jump
+
+00:40:59.946 --> 00:41:01.556 A:middle
+directly into your code base so
+
+00:40:59.946 --> 00:41:01.556 A:middle
+directly into your code base so
+
+00:41:01.556 --> 00:41:02.756 A:middle
+you can begin debugging these
+
+00:41:02.756 --> 00:41:03.576 A:middle
+energy issues.
+
+00:41:03.576 --> 00:41:04.446 A:middle
+And now, I'd love to show you a
+
+00:41:04.446 --> 00:41:04.886 A:middle
+demo.
+
+00:41:15.696 --> 00:41:16.846 A:middle
+Now, I've made sure that I've
+
+00:41:16.846 --> 00:41:18.506 A:middle
+signed into my developer account
+
+00:41:19.016 --> 00:41:20.446 A:middle
+and that I've uploaded our
+
+00:41:20.446 --> 00:41:23.066 A:middle
+Energy Game app up to TestFlight
+
+00:41:23.276 --> 00:41:23.956 A:middle
+in the App Store.
+
+00:41:25.026 --> 00:41:25.816 A:middle
+To bring up the Energy
+
+00:41:25.816 --> 00:41:27.826 A:middle
+Organizer, I could just go into
+
+00:41:27.826 --> 00:41:31.286 A:middle
+Window here, and click
+
+00:41:31.286 --> 00:41:31.876 A:middle
+Organizer.
+
+00:41:35.596 --> 00:41:37.426 A:middle
+And this is the Energy Organizer
+
+00:41:37.426 --> 00:41:37.646 A:middle
+UI.
+
+00:41:37.646 --> 00:41:40.866 A:middle
+I make sure that the Energy tab
+
+00:41:40.866 --> 00:41:43.706 A:middle
+is selected at the top, and if
+
+00:41:43.706 --> 00:41:44.596 A:middle
+you've used the Crashes
+
+00:41:44.596 --> 00:41:46.256 A:middle
+Organizer, you will already be
+
+00:41:46.256 --> 00:41:47.626 A:middle
+familiar with this UI.
+
+00:41:47.626 --> 00:41:50.536 A:middle
+On the left, we have a list of
+
+00:41:50.536 --> 00:41:51.286 A:middle
+all of our apps.
+
+00:41:52.576 --> 00:41:53.736 A:middle
+Next to that, we have a list of
+
+00:41:53.736 --> 00:41:55.146 A:middle
+our top energy issues.
+
+00:41:56.146 --> 00:41:57.496 A:middle
+In the center is our Weighted
+
+00:41:57.496 --> 00:41:59.486 A:middle
+Call Graph, and on the
+
+00:41:59.486 --> 00:42:01.276 A:middle
+right-hand side are some
+
+00:41:59.486 --> 00:42:01.276 A:middle
+right-hand side are some
+
+00:42:01.276 --> 00:42:03.006 A:middle
+statistics about the energy
+
+00:42:03.006 --> 00:42:03.386 A:middle
+issue.
+
+00:42:04.796 --> 00:42:06.506 A:middle
+So, let's go ahead into the left
+
+00:42:06.506 --> 00:42:09.136 A:middle
+here and select Energy Game,
+
+00:42:09.346 --> 00:42:10.176 A:middle
+which is the game that we're
+
+00:42:10.176 --> 00:42:10.736 A:middle
+working on.
+
+00:42:11.236 --> 00:42:13.616 A:middle
+And then, make sure that we're
+
+00:42:13.616 --> 00:42:14.000 A:middle
+on the correct build.
+
+00:42:19.756 --> 00:42:21.736 A:middle
+We see here a list of our top
+
+00:42:21.736 --> 00:42:23.846 A:middle
+energy issues, sorted by how
+
+00:42:23.846 --> 00:42:25.036 A:middle
+many times it's affected.
+
+00:42:25.546 --> 00:42:28.496 A:middle
+Let's jump into this first
+
+00:42:28.496 --> 00:42:31.996 A:middle
+energy issue, which hit 64 of
+
+00:42:31.996 --> 00:42:32.686 A:middle
+our devices.
+
+00:42:36.656 --> 00:42:38.426 A:middle
+On the right-hand pane here, we
+
+00:42:38.426 --> 00:42:39.786 A:middle
+have some more details about
+
+00:42:39.786 --> 00:42:42.076 A:middle
+what happened, as well as a
+
+00:42:42.076 --> 00:42:43.946 A:middle
+breakdown of how often that
+
+00:42:43.946 --> 00:42:45.616 A:middle
+energy issue happened, and we
+
+00:42:45.616 --> 00:42:47.236 A:middle
+can see that it happened across
+
+00:42:47.236 --> 00:42:49.806 A:middle
+a mix of iPads, iPods, and iPod
+
+00:42:49.806 --> 00:42:51.946 A:middle
+Touches, and we can see a
+
+00:42:51.946 --> 00:42:53.626 A:middle
+distribution of how often it
+
+00:42:53.626 --> 00:42:55.196 A:middle
+happened in the past two weeks.
+
+00:42:55.806 --> 00:42:57.576 A:middle
+Let's take a look at the
+
+00:42:57.576 --> 00:42:58.476 A:middle
+weighted call graph.
+
+00:42:58.966 --> 00:43:03.406 A:middle
+We see that a lot of time is
+
+00:42:58.966 --> 00:43:03.406 A:middle
+We see that a lot of time is
+
+00:43:03.406 --> 00:43:05.136 A:middle
+being spent in this dispatch
+
+00:43:05.136 --> 00:43:07.066 A:middle
+call block calling into this app
+
+00:43:07.266 --> 00:43:09.046 A:middle
+delegate computation function.
+
+00:43:09.146 --> 00:43:12.446 A:middle
+Now, I can use this button here
+
+00:43:13.456 --> 00:43:16.386 A:middle
+to jump us directly into our
+
+00:43:16.386 --> 00:43:21.786 A:middle
+code base.
+
+00:43:21.986 --> 00:43:23.686 A:middle
+So, we are back directly into
+
+00:43:23.686 --> 00:43:24.106 A:middle
+our code.
+
+00:43:25.096 --> 00:43:27.196 A:middle
+On the left here is one of the
+
+00:43:27.196 --> 00:43:28.826 A:middle
+sample backtraces from our
+
+00:43:28.826 --> 00:43:29.766 A:middle
+weighted call graph.
+
+00:43:30.296 --> 00:43:33.716 A:middle
+We can see that we're spending a
+
+00:43:33.716 --> 00:43:35.326 A:middle
+lot of time in this computation
+
+00:43:35.326 --> 00:43:35.726 A:middle
+function.
+
+00:43:36.216 --> 00:43:39.386 A:middle
+Now, this is the very function
+
+00:43:40.006 --> 00:43:41.056 A:middle
+that Phil was talking about
+
+00:43:41.056 --> 00:43:43.000 A:middle
+earlier on his demo.
+
+00:43:49.126 --> 00:43:52.586 A:middle
+And we can see that he's already
+
+00:43:52.586 --> 00:43:53.666 A:middle
+commented this part of the code
+
+00:43:53.666 --> 00:43:54.486 A:middle
+out, so he's already addressed
+
+00:43:54.486 --> 00:43:55.086 A:middle
+this energy issue.
+
+00:43:55.086 --> 00:43:55.736 A:middle
+So, let's jump back to the
+
+00:43:55.766 --> 00:43:56.000 A:middle
+organizer.
+
+00:44:04.316 --> 00:44:05.856 A:middle
+I can go ahead and click this
+
+00:44:05.896 --> 00:44:08.326 A:middle
+button here and mark this issue
+
+00:44:08.326 --> 00:44:08.976 A:middle
+as resolved.
+
+00:44:10.216 --> 00:44:11.656 A:middle
+And what this does is the next
+
+00:44:11.656 --> 00:44:12.606 A:middle
+time we open the Energy
+
+00:44:12.606 --> 00:44:14.626 A:middle
+Organizer, we'll see that we've
+
+00:44:14.626 --> 00:44:15.656 A:middle
+already taken care of this
+
+00:44:15.656 --> 00:44:16.026 A:middle
+issue.
+
+00:44:16.576 --> 00:44:18.936 A:middle
+All right, let's jump to the
+
+00:44:18.936 --> 00:44:20.606 A:middle
+second issue, which hit 42
+
+00:44:20.606 --> 00:44:21.126 A:middle
+devices.
+
+00:44:21.736 --> 00:44:23.716 A:middle
+Now, before going into the
+
+00:44:23.716 --> 00:44:24.926 A:middle
+weighted call graph, I'd like to
+
+00:44:24.926 --> 00:44:26.086 A:middle
+draw your attention to three
+
+00:44:26.086 --> 00:44:27.366 A:middle
+features at the bottom here.
+
+00:44:29.576 --> 00:44:32.436 A:middle
+First is this page through logs
+
+00:44:33.826 --> 00:44:35.236 A:middle
+where I can select one out of
+
+00:44:35.336 --> 00:44:37.526 A:middle
+five sample energy logs out of
+
+00:44:37.526 --> 00:44:38.656 A:middle
+the 42 that we've hit in the
+
+00:44:38.656 --> 00:44:38.996 A:middle
+wild.
+
+00:44:38.996 --> 00:44:44.936 A:middle
+As I page through these, you can
+
+00:44:44.936 --> 00:44:46.536 A:middle
+see that the weighted call graph
+
+00:44:46.536 --> 00:44:47.596 A:middle
+looks a little bit different,
+
+00:44:48.256 --> 00:44:50.496 A:middle
+which is okay because these
+
+00:44:50.546 --> 00:44:51.816 A:middle
+backtraces and these weighted
+
+00:44:51.816 --> 00:44:53.246 A:middle
+call graphs are samples.
+
+00:44:54.586 --> 00:44:55.966 A:middle
+However, we've grouped these
+
+00:44:55.996 --> 00:44:58.216 A:middle
+together by similarity, so these
+
+00:44:58.216 --> 00:45:00.026 A:middle
+logs should look fairly similar
+
+00:44:58.216 --> 00:45:00.026 A:middle
+logs should look fairly similar
+
+00:45:00.026 --> 00:45:01.016 A:middle
+to you.
+
+00:45:02.676 --> 00:45:05.836 A:middle
+This button here, when I click
+
+00:45:05.836 --> 00:45:08.116 A:middle
+it, shows that all the system
+
+00:45:08.596 --> 00:45:10.836 A:middle
+library frames that were hidden
+
+00:45:10.836 --> 00:45:11.416 A:middle
+previously.
+
+00:45:11.926 --> 00:45:15.236 A:middle
+And this button here clicks all,
+
+00:45:15.866 --> 00:45:17.906 A:middle
+shows you all the frames that
+
+00:45:17.906 --> 00:45:19.056 A:middle
+had low sample counts.
+
+00:45:19.996 --> 00:45:21.566 A:middle
+Now, by default, we've hidden
+
+00:45:21.996 --> 00:45:24.066 A:middle
+most of these frames for you so
+
+00:45:24.066 --> 00:45:25.436 A:middle
+that we only show you the most
+
+00:45:25.436 --> 00:45:27.000 A:middle
+important frames.
+
+00:45:34.156 --> 00:45:35.366 A:middle
+Let's take a look at this
+
+00:45:35.366 --> 00:45:35.796 A:middle
+function.
+
+00:45:38.406 --> 00:45:39.966 A:middle
+It looks like a lot of time is
+
+00:45:39.966 --> 00:45:41.606 A:middle
+being spent in this heavy timer
+
+00:45:41.606 --> 00:45:42.086 A:middle
+function.
+
+00:45:43.056 --> 00:45:44.426 A:middle
+Actually, I heard Phil talking
+
+00:45:44.426 --> 00:45:46.196 A:middle
+about this bug off stage, and he
+
+00:45:46.196 --> 00:45:47.186 A:middle
+said that he was going to take a
+
+00:45:47.186 --> 00:45:48.586 A:middle
+look at it, so I'll let him deal
+
+00:45:48.636 --> 00:45:49.426 A:middle
+with it.
+
+00:45:50.236 --> 00:45:52.506 A:middle
+I can go ahead and rename this
+
+00:45:56.556 --> 00:45:57.996 A:middle
+and move on to the next bug.
+
+00:45:59.246 --> 00:46:00.306 A:middle
+Let's take a look at one more
+
+00:45:59.246 --> 00:46:00.306 A:middle
+Let's take a look at one more
+
+00:46:00.306 --> 00:46:01.000 A:middle
+bug.
+
+00:46:13.336 --> 00:46:15.016 A:middle
+Here, I can see there's a lot of
+
+00:46:15.056 --> 00:46:17.276 A:middle
+time being spent in set next
+
+00:46:17.276 --> 00:46:19.106 A:middle
+update timer and add new sprite.
+
+00:46:19.816 --> 00:46:20.616 A:middle
+What is this function?
+
+00:46:21.476 --> 00:46:22.326 A:middle
+Let's investigate.
+
+00:46:25.476 --> 00:46:26.786 A:middle
+I'll jump directly into the
+
+00:46:26.786 --> 00:46:27.000 A:middle
+code,
+
+00:46:36.896 --> 00:46:38.456 A:middle
+and I can see that a lot of time
+
+00:46:38.456 --> 00:46:40.766 A:middle
+is being spent in this add new
+
+00:46:40.766 --> 00:46:41.716 A:middle
+sprite function.
+
+00:46:42.676 --> 00:46:42.996 A:middle
+Okay.
+
+00:46:43.266 --> 00:46:44.226 A:middle
+Adding new sprites can be
+
+00:46:44.226 --> 00:46:46.986 A:middle
+expensive, but the question to
+
+00:46:46.986 --> 00:46:49.046 A:middle
+ask ourselves is, is this an
+
+00:46:49.046 --> 00:46:50.126 A:middle
+expected workload?
+
+00:46:51.366 --> 00:46:52.776 A:middle
+And the answer is, in this case,
+
+00:46:53.076 --> 00:46:55.656 A:middle
+not really because we only
+
+00:46:55.656 --> 00:46:57.936 A:middle
+expect to be adding sprites once
+
+00:46:57.966 --> 00:46:58.896 A:middle
+every few seconds.
+
+00:46:59.586 --> 00:47:00.816 A:middle
+So it doesn't quite make sense
+
+00:46:59.586 --> 00:47:00.816 A:middle
+So it doesn't quite make sense
+
+00:47:01.106 --> 00:47:02.416 A:middle
+why this is chewing up so much
+
+00:47:02.466 --> 00:47:02.956 A:middle
+CPU.
+
+00:47:03.886 --> 00:47:04.996 A:middle
+Let's take a look at the
+
+00:47:04.996 --> 00:47:06.456 A:middle
+backtrace to see who is calling
+
+00:47:07.256 --> 00:47:07.346 A:middle
+us.
+
+00:47:07.956 --> 00:47:10.286 A:middle
+We're being called by set next
+
+00:47:10.376 --> 00:47:11.136 A:middle
+update timer.
+
+00:47:12.066 --> 00:47:17.936 A:middle
+So, what is this function doing?
+
+00:47:18.106 --> 00:47:19.716 A:middle
+We see that within set next
+
+00:47:19.716 --> 00:47:21.076 A:middle
+update timer, we're calling in
+
+00:47:21.076 --> 00:47:22.136 A:middle
+to this add new sprite.
+
+00:47:22.526 --> 00:47:25.756 A:middle
+At the end of a function, we're
+
+00:47:25.756 --> 00:47:28.116 A:middle
+calling in to this update timer
+
+00:47:28.606 --> 00:47:30.646 A:middle
+to schedule the next time this
+
+00:47:30.646 --> 00:47:31.416 A:middle
+function is called.
+
+00:47:33.216 --> 00:47:34.866 A:middle
+This timer is set to fire
+
+00:47:34.946 --> 00:47:37.476 A:middle
+sometime between now and next
+
+00:47:37.516 --> 00:47:38.356 A:middle
+update interval.
+
+00:47:40.216 --> 00:47:42.096 A:middle
+Now, next update interval is
+
+00:47:42.096 --> 00:47:44.316 A:middle
+decremented by 1 until it hits
+
+00:47:44.316 --> 00:47:48.186 A:middle
+0, and then it's re-initialized
+
+00:47:48.286 --> 00:47:50.006 A:middle
+according to this line of code
+
+00:47:50.006 --> 00:47:50.326 A:middle
+here.
+
+00:47:52.376 --> 00:47:53.896 A:middle
+Now, here's where the problem
+
+00:47:53.896 --> 00:47:54.086 A:middle
+is.
+
+00:47:55.546 --> 00:47:57.376 A:middle
+Time interval since last update
+
+00:47:57.426 --> 00:47:59.586 A:middle
+date can potentially be
+
+00:47:59.586 --> 00:48:02.226 A:middle
+negative, and we've seen cases
+
+00:47:59.586 --> 00:48:02.226 A:middle
+negative, and we've seen cases
+
+00:48:02.226 --> 00:48:03.926 A:middle
+of this happening, especially
+
+00:48:03.926 --> 00:48:05.786 A:middle
+when users try to game the
+
+00:48:05.786 --> 00:48:06.296 A:middle
+system.
+
+00:48:07.116 --> 00:48:08.276 A:middle
+Maybe they're playing a game,
+
+00:48:09.556 --> 00:48:10.606 A:middle
+and they want to reset the
+
+00:48:10.606 --> 00:48:11.036 A:middle
+clock.
+
+00:48:11.816 --> 00:48:13.296 A:middle
+Maybe they want some extra lives
+
+00:48:13.296 --> 00:48:14.966 A:middle
+or some extra chances, so they
+
+00:48:14.966 --> 00:48:16.606 A:middle
+go into System Settings and
+
+00:48:16.606 --> 00:48:18.056 A:middle
+change the clock to 24 hours
+
+00:48:18.056 --> 00:48:18.346 A:middle
+ago.
+
+00:48:19.496 --> 00:48:21.896 A:middle
+Well, in this case, this causes
+
+00:48:21.896 --> 00:48:23.136 A:middle
+next update interval to be
+
+00:48:23.136 --> 00:48:25.996 A:middle
+negative, and when we schedule a
+
+00:48:25.996 --> 00:48:27.816 A:middle
+timer for a time that is
+
+00:48:27.816 --> 00:48:29.936 A:middle
+sometime in the past, that timer
+
+00:48:29.936 --> 00:48:32.056 A:middle
+will fire immediately and then
+
+00:48:32.056 --> 00:48:33.836 A:middle
+call itself again and again.
+
+00:48:35.036 --> 00:48:36.476 A:middle
+So, we effectively have an
+
+00:48:36.476 --> 00:48:39.516 A:middle
+infinite loop here.
+
+00:48:39.686 --> 00:48:41.136 A:middle
+Fortunately, this is really easy
+
+00:48:41.136 --> 00:48:41.576 A:middle
+to fix.
+
+00:48:42.356 --> 00:48:44.116 A:middle
+We just go into this function
+
+00:48:44.116 --> 00:48:46.786 A:middle
+here and change this to less
+
+00:48:46.786 --> 00:48:49.026 A:middle
+than or equal to 0 so that even
+
+00:48:49.066 --> 00:48:50.496 A:middle
+if next update interval is
+
+00:48:50.496 --> 00:48:52.326 A:middle
+negative, we can break out of
+
+00:48:52.326 --> 00:48:52.686 A:middle
+the loop.
+
+00:48:53.136 --> 00:48:55.866 A:middle
+Now, this is a really great
+
+00:48:55.936 --> 00:48:58.576 A:middle
+example of an energy issue that
+
+00:48:58.576 --> 00:49:00.626 A:middle
+is really difficult to catch
+
+00:48:58.576 --> 00:49:00.626 A:middle
+is really difficult to catch
+
+00:49:02.036 --> 00:49:04.046 A:middle
+during normal testing but is
+
+00:49:04.046 --> 00:49:05.906 A:middle
+made obvious once you have the
+
+00:49:06.006 --> 00:49:06.966 A:middle
+data from the field.
+
+00:49:07.466 --> 00:49:10.126 A:middle
+That's the power of Energy Logs,
+
+00:49:11.156 --> 00:49:12.586 A:middle
+and that's the power of Energy
+
+00:49:12.586 --> 00:49:13.146 A:middle
+Organizer.
+
+00:49:14.636 --> 00:49:15.776 A:middle
+Let's take a look at the three
+
+00:49:15.776 --> 00:49:17.126 A:middle
+key takeaways from this demo.
+
+00:49:17.696 --> 00:49:20.486 A:middle
+You can use the Energy Organizer
+
+00:49:20.486 --> 00:49:22.796 A:middle
+to discover top energy issues in
+
+00:49:22.796 --> 00:49:23.226 A:middle
+the field.
+
+00:49:24.366 --> 00:49:25.776 A:middle
+Take a look at the top issues,
+
+00:49:26.256 --> 00:49:27.436 A:middle
+take a look at how often they're
+
+00:49:27.436 --> 00:49:29.616 A:middle
+happening, and take a look at
+
+00:49:29.616 --> 00:49:31.076 A:middle
+what kind of devices and builds
+
+00:49:31.076 --> 00:49:31.676 A:middle
+are affected.
+
+00:49:32.896 --> 00:49:35.076 A:middle
+Second, you can view energy
+
+00:49:35.076 --> 00:49:37.206 A:middle
+hotspots using the weighted call
+
+00:49:37.206 --> 00:49:37.626 A:middle
+graphs.
+
+00:49:38.596 --> 00:49:39.946 A:middle
+So, look out for the frames with
+
+00:49:40.016 --> 00:49:41.416 A:middle
+unusually high sample counts,
+
+00:49:42.686 --> 00:49:44.176 A:middle
+and watch out for the unexpected
+
+00:49:44.176 --> 00:49:44.676 A:middle
+workloads.
+
+00:49:45.996 --> 00:49:49.256 A:middle
+Finally, use OpenEnd Project to
+
+00:49:49.256 --> 00:49:50.646 A:middle
+jump directly into your code so
+
+00:49:51.206 --> 00:49:54.016 A:middle
+you can make and inspect fixes
+
+00:49:55.046 --> 00:49:55.716 A:middle
+with what's going on.
+
+00:49:57.166 --> 00:49:59.326 A:middle
+Let's summarize what we've
+
+00:49:59.326 --> 00:50:00.000 A:middle
+learned today.
+
+00:50:03.196 --> 00:50:05.396 A:middle
+First, think about energy use
+
+00:50:05.736 --> 00:50:06.736 A:middle
+and treat energy as a
+
+00:50:06.736 --> 00:50:08.386 A:middle
+first-class citizen in every
+
+00:50:08.386 --> 00:50:09.666 A:middle
+aspect of your design,
+
+00:50:10.466 --> 00:50:11.746 A:middle
+development, and testing.
+
+00:50:13.106 --> 00:50:14.836 A:middle
+Second, make use of the great
+
+00:50:14.836 --> 00:50:17.896 A:middle
+tools like energy gauges and
+
+00:50:17.896 --> 00:50:19.876 A:middle
+instruments to profile your app.
+
+00:50:21.196 --> 00:50:23.606 A:middle
+And third, take a moment to
+
+00:50:23.606 --> 00:50:25.296 A:middle
+explore the new Xcode Energy
+
+00:50:25.296 --> 00:50:27.846 A:middle
+Organizer to understand and fix
+
+00:50:27.846 --> 00:50:30.266 A:middle
+energy issues in the field.
+
+00:50:31.316 --> 00:50:32.856 A:middle
+For more information, please
+
+00:50:32.856 --> 00:50:34.096 A:middle
+come check out the following
+
+00:50:34.096 --> 00:50:37.126 A:middle
+URLs, and feel free to come by
+
+00:50:37.126 --> 00:50:39.256 A:middle
+the Power and Performance Lab on
+
+00:50:39.256 --> 00:50:40.476 A:middle
+Friday from 9 to 11.
+
+00:50:41.306 --> 00:50:42.346 A:middle
+Thank you and have a great
+
+00:50:42.346 --> 00:50:42.676 A:middle
+evening.
+
+00:50:43.516 --> 00:50:46.500 A:middle
+[ Applause ]

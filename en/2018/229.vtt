@@ -1,391 +1,4579 @@
-  Good morning.
- My name is Michael LeHew, and I worked on the collections for the foundations team at Apple.
- And today, I want to talk about specific things that you should know about to ensure that your use of collections in Swift is as effective as possible.
- I'm going to cover a lot of territory today about details and all aspects of collections available for use in Swift.
- We're going to explore some common pitfalls and how to avoid them including performance issues, and I'm also going to offer very specific advice about when to choose to use specific collections.
- So let's begin.
- I want you to imagine a world, a world without collections.
- And in this world, we may not have arrays, but it still has bears, but every time we need another bear, we're going to need to define another variable, and we want to do things with these bears.
- We're going to need to repeat ourselves.
- Pretty scary, right? It gets worse though.
- This world also doesn't have dictionaries, but thankfully being clever developers, we can work around that with the function, where we painstakingly define each case that we care about, and using this function is very similar to using a dictionary, except none of those dynamic capabilities that we need.
- But who likes a mutable state, right? Fortunately for us though, we don't live in this world.
- Thankfully our world has bears and collections along with a rich first-class syntax for defining them.
- And APIs that help us not repeat ourselves when we iterate or retrieve the elements that they may store.
- Collections are so pervasive and share so many common features and algorithms that in Swift they all conform to a common protocol.
- Not surprisingly, it's called collection.
- And in Swift, collections are sequences whose elements can be traversed multiple times, nondestructively, and whose elements can be accessed via a subscript.
- Let's see, look at how they do that but considering an abstract representation of a collection.
- This could be an array defined contiguously in memory, a hash table, a red black tree, a link list or anything else that you can imagine.
- What matters is that it supports the concept of an initial index called start index.
- It can be used to access the initial element of the collection.
- It has an end index, which identifies the end of the collection, and collections support the ability to iterate from their start index to their end index.
- They can do this multiple times, and they also support a subscript to retrieve elements from the collection itself.
- Let's see what this looks like in code.
- Indeed, if we look at the definition of collection, it's declared as a sequence of elements.
- It also has an additional associated type called index, which must be comparable.
- It offers a subscript to retrieve elements from, or using that index, and we define a start and an end index identifying the bounds of our collection.
- And finally, we have a function called index after, which lets us get from one index to another.
- And this last function is so important because it allows the standard library to define many useful and powerful default behaviors with the incredible power of protocol extensions.
- Let's look at some of these.
- When you conform to collection, you gain access to an incredible range of functionality with properties that let you get the first and the last element or identify the count or check to see if a collection is empty.
- You also gain API that lets you iterate through a Collection using 4N syntax.
- And super useful functions like map, filter, and reduce.
- Now let's go ahead and make Collection even more powerful by adding our own extension.
- Collection already provides a way to iterate through every element, but I want a function that will let me iterate through every other element, skipping some of the values along the way and will do this by adding an extension to Collection.
- Let's start with the methods signature.
- We're going to call our function every other, and it's going to take a closure that will call on each element that we care about.
- We'll get the bounds of our iteration, and to find another variable, that starts at the start, which will mutate along as we go.
- We'll call the closure on the current element and advance our current index to the next one.
- And we may have invalidated our index at this point, we may have reached the end of the collection, so we need to make sure that we did that, and if we did, we can then advance our index one more time and thus skip every other element.
- And if we call this we see, if we call this on the close range from one to ten, we see that we skip the even elements.
- And so we see that Collections let us describe some really powerful behavior, but it turns out collections aren't alone.
- In fact, Collection is not the only protocol that we have.
- In Swift, we have access to a rich hierarchy of collection protocols, each greatly improving on the kinds of assumptions that we can make about our types.
- Let's go ahead and talk about a couple of these.
- We've already established that Collection lets you go forward from a given index, but there are also bidirectional collections, which let you go in the other direction.
- Now, of course, bidirectional collections are collections themselves, and so we can still iterate forward as well.
- The next most flexible form of collection is what's known as a random access collection, and with these, these add the requirement that it would be constant time to compute, or compute another index from another or to compute the distance between two indexes.
- The compiler cannot enforce this, and so when you conform to random acts as a collection, you're making a promise.
- But if you satisfy this promise, if you can deliver on this promise, the protocol gives you the power to access any index in the collection in constant time.
- And of course, random access collections remain collections, and so you can still iterate forward and backward.
- Now as Swift developers, we have access to many useful collections that conform to these protocols, collections such as array, set, and dictionary.
- But thanks to the general purpose utility of these protocols, many other types conform to these collection protocols as well, such as data, range, and string.
- Or the index collections, and they all gain access to all of this rich functionality by simply conforming to Collection in their own fashion.
- Indeed, once you know how any one of these types works, you can apply that knowledge to any of the others, and there are quite a few.
- So I'm going to talk about the details about how a type conforms to Collection, and it all begins with describing how it is indexed.
- Each collection has its own kind of index.
- And that index must be comparable.
- In some cases, the indices can look like integers, like arrays, but just because an index happens to look like an integer doesn't mean that you should use it like one.
- Now I want to ask a few questions that might have surprising answers.
- The first is how do we get the first element of an array, and instantly you probably all thought, well I'll just call array subzero.
- An array's index happens to be it.
- So you can sometimes say this and get exactly what you intend.
- But it isn't the best way to do this.
- I'm going to go ahead and ask the same question, but this time about a different collection.
- What's the first element of a set? Now this might seem like a really weird question, right? Sets are unordered.
- However, they are collections, and being collections, you can iterate through them, and when you iterate through a set, you're going to iterate through one element first, and so that's really the question we're asking here.
- So can I say set subzero? Happily, the compiler will say no, and that's because set's index type is an int, the type system wants us to use the correct index type.
- Lucky for us we already know how to do that.
- We know the collection protocol tells us that all collections have a start index, so let's go ahead and use that, and if we do this, this will actually work with all collections.
- Start index is always going to be the element of the first item that you would see when you iterate.
- But there's a nuance to watch out for when using indices to directly subscript into any collection.
- And that is, it can crash.
- I haven't actually asserted that these collections have contents in them, and so when you're, I'm just using start index, and these collections could be empty.
- It turns out though that accessing the first element in a collection is such a common task that there's an even better way.
- Simply call first.
- And if you call first, this is a lot safer, because the return time of this is optional, reflecting the fact that not all collections have a first element.
- So I have another question.
- It's the second element of a collection, and I want to emphasize collection here.
- It could be any collection, an array, a set, or something that doesn't even exist yet.
- Let's go ahead and add a new property to collection via protocol extension, and we'll call it second, and just like first, it's going to return optional, because not all collections have two elements.
- So, let's try writing this by subscripting 1.
- But here our zero-based indexing instincts are going to lead us astray, and then we'll be caught by the compiler again.
- We want this code to work with every collection, and not all collections use integers to index.
- So let's try a different approach.
- What I really want is one greater than the start index.
- But lucky here, the compiler will catch this as well.
- You can't add 1 to an arbitrary index type.
- Index types are supposed to be opaque or can be opaque.
- And what we really need to be doing here is we need to be using the API provided by the collection protocol to do this.
- So let's go ahead and do this.
- I commented out a sketch of the things that we're going to need to do to find the second element.
- The very first thing that we need to do is we need to check to see if the collection is empty.
- Collections are empty when their start index is exactly equivalent to their end index.
- So let's check for that and return nil, because such a collection doesn't have a second element.
- Oh, and so now we can assume that our collection has one element in it.
- We can use index after to get the second element or the second index, but we need to make sure that that index is valid, and let's see this visually.
- We advance after, but if the collection only had one element in it, we have now actually produced an invalid index, and if we tried to subscript with that index, we'd get that fatal error that we saw just a moment ago.
- So we check for it to be valid, and this is very similar to the empty [inaudible].
- We just make sure that our index is not equal to the end index returning nil.
- Again, because two-element collections don't have a, or one-element collections don't have a second element.
- At this point, we have all the assumptions we need to know that our collection has at least two elements in it, and so we're safe to use the subscript operator with that index, retrieving the value that we desire.
- Now, it turns out, or that looks like a lot of code, but it's worth pointing out that this general purpose index math will work with any collection, which is pretty awesome, and it turns out Swift has a better way to do this though.
- There's something called slices, but before I show how to do it with slices, I want to talk about what slices are and how they work.
- Slices are a type that describe only part of a collection.
- And every slice has their own start and end index, and slices exist separately from the collections, from their originating collection.
- And what makes slices so efficient is they occupy no extra storage.
- They simply refer back to the original collection, and when slices are subscripted, they read out of the original buffer.
- And they can do this because they share the same indices as their underlying collection.
- And let's take a look at how that works.
- We can prove this to ourselves.
- We'll start with an array, and we'll ask that array to drop its first element, producing a slice that's one element shorter.
- And because we care about proving about the indices, we'll actually get the second index of the array by asking to advance one after the start index, and then we'll compare those.
- And indeed, they are the same.
- Now this dropfirst function looks exactly like we need to succinctly get the second element of our collection.
- So let's go back to our previous solution, and see how much more expressive we can be with slices.
- Remember all that fancy index [inaudible] code we had to write earlier? Well, by using dropfirst, we're going to let slices take care of all that fancy index bounds checking for us.
- And since first returns an optional, this will work as expected with empty and single element collections.
- Let's visualize what's happening here.
- We start with an array, and we form a slice by dropping the first element.
- We then use the first property to subscript into the slice, retrieving the element from the original collection.
- Now I don't know about you, but I'd much rather maintain this code.
- Now every type is free to describe its own slice type, and many do.
- For instance, arrays define array slices that are especially attuned to the most common use cases that arrays work with.
- Similarly, string defines a substring slice type, and substrings, again, are tuned to the special cases that are most common with strings.
- Some types, like set, will make use of the generalized slice type defined in the standard library.
- That's because sets are unordered.
- There's not very much else that they can do.
- They just basically need to maintain a start and an end index [inaudible] to the original collection.
- Data and range on the other hand are their own slice types, and so there's a lot of options that you have here.
- And there's one more thing about slices that I want to talk about before we move on.
- Let's suppose that we had a really large collection, like thousands and thousands and thousands of elements.
- And we add a couple of small slices to parts of that collection.
- It's important to remember that the slice keeps the entirety of the originating collection alive as long as the slice is around.
- And this can lead to surprising problems.
- Let see how this works in code.
- Let's suppose I have an extension on an array that allows me to return the first half, and I'm using the droplast function here to do so.
- And we have an array of eight numbers, and we call our extension, producing the slice, and then to try to get rid of that original storage of eight numbers, I go ahead and assign that array to an empty array.
- Our first clue that something interesting is happening occurs when we ask our slice for its first element.
- We're somehow able to return one, even though we threw away the storage for the original array.
- Either there was a copy or something magical is going on.
- And so if we wanted to eliminate that buffer though, and oh the magic that's actually going on is that we're holding onto the buffer.
- And so if we wanted to eliminate that, what we could do is we could form an actual copy of the array from the slice, and then if we set that slice to an empty array itself, that copy would still be valid.
- Let's visualize what just happened.
- We started with an array.
- We then formed a slice on the first half of that array.
- We then created a copy of that, setting the array to be empty and setting that slice to be empty.
- And only after we did that did the underlying storage go away.
- So in this matter, slices sort of work like lazy copies.
- You get to choose when you make a copy of the elements yourself, and it turns out that this concept of being lazy and doing something later is really useful in other contexts too.
- One such context is function calls.
- Now function calls in Swift are eager by default.
- That is, they consume their input and return their output as demanded.
- Consider this example.
- We start with a range from one to 4000, and ranges are a really succinct way of representing a lot of numbers.
- It's just a start and an end, and it knows how to produce them.
- We then map this though multiplying each value by two, and so we've now actually allocated an array of 4000 elements and performed our mapping function on each of them.
- We then filter that down to four elements.
- And so at this point, we've actually gone ahead and allocated 4004, you know, space for 4004 elements, but we only really needed the final four.
- And that's an awful lot of intermediate computation that maybe we don't always desire.
- It would be great if there was a way just to not do any of it, unless it was absolutely needed.
- And Swift's answer for that is called being lazy, just like in real life.
- We'll start as we did before with the range, and then we'll tell that range to be lazy.
- And when we do this, what happens is we wrap the original collection with a lazy collection, and when we perform operations on this lazy collection, what's going to happen is we're going to wrap it again.
- And so when we wrap the, when we call map on it, we actually aren't mapping.
- We're not doing anything with that closure other than storing it for later should we ever need to use it.
- Further, if I filter that lazy map collection, the filter simply wraps the map collection, noting that it's going to filter later on demand, but not right now.
- Now let's go ahead and ask our lazy filter collection for it's first element.
- When we do this, we'll start by asking the lazy filter collection for it's first element, but the lazy filter collection doesn't know.
- It wraps something that might know.
- And so it'll defer to the map collection.
- And the map collection also doesn't know it's first element, but it wraps a collection that might, and indeed, the range knows it's first element.
- The first element of the range is the value one, which it returns to the lazy map collection where now the lazy map collection can actually perform it's closure, computing the value 2, which it returns to the lazy filter collection as a candidatefirst element.
- Now lucky for us in this case, 2 happens to be less than 10, and so the lazy filter collection finds it first element on the first try, which it returns back to its caller.
- Now that's a lot of different computation.
- And I mentioned that lazy aims to only do calculation as needed on demand, but another thing that it avoids is creating intermediate storage.
- So I want to show an example of that.
- Let's suppose we had an array of different kind of bears.
- However, I want to point out that some of these bears are redundant.
- We already know that they're bears.
- They don't need to tell us again.
- So let's write some code to find those silly, redundant bears, and we'll do this using a lazy filter, as before.
- And in this case, producing a lazy filter is going to be a lazy filter collection that wraps an array of strings.
- In our closer here, were going to print out which bear we're currently iterating on before we do our predicate check.
- And we're doing this because I want to understand how filter works a little better, and then we'll call first, and when we do this, we'll defer to the lazy filter collection, and then the lazy filter collection will in turn defer to the original storage where we'll print out Grizzly, check the predicate, which in this case is false, Grizzly does not contain the word bear, and advance on to panda.
- When we get to panda, when we get to panda, we'll again print out panda, check to see if it contains the word bear, and advance on to spectacle.
- Spectacle gets printed, also doesn't contain the word bear, and we advance finally to gummy bears, which mercifully has the word bear in it, and which the lazy filter collection can now return to its caller.
- Now what would happen if we called first again? Well, it's the same story.
- We ask the lazy filter collection, which defers to the underlying collection, which repeats that calculation, returning it to its caller.
- Now this might not typically be what you want, and so if you find yourself needing to repeatedly ask the lazy collection to calculate its result, there's a way to make sure that that happens just once.
- We can ensure that the lazy collection is iterated exactly once by creating a new nonlazy collection from the lazy, and when you do this, it will still defer to the lazy collection, but now the iteration will proceed through the entirety of your underlying collection, producing essentially, you know, the nonlazy version of that lazy calculation.
- And so in this case, we get an array containing the string gummy bears.
- And if we print the first element of that ray, we don't need to consult the closure at all or the lazy collection at all.
- We basically stamped out the laziness and now have an eager array.
- So when should we be lazy? Well, lazy collections are a really great way to eliminate the overhead of chained maps and filters.
- They excel when you find yourself only needing part of the result of a collection calculation, or we should avoid using lazy if your closures have side effects, and your closures should rarely have side effects.
- And be sure to reify back, or I should say, be sure to consider reifying back into a regular collection when you cross API boundaries.
- Lazy should often be an implementation detail.
- Now up until now, we've been able to do a lot of cool things with just mutable collections, but of course Swift lets us mutate our collections as well.
- Let's talk about the two kinds of collections that we haven't talked about yet.
- The first of these is mutable collection.
- This adds a setter to the subscript so that you can change the contents of a collection but not its length.
- And you have to be able to do this in constant time.
- The next is called a Range Replaceable Collection, and this is the kind of collection that you get when you can remove elements from a collection or insert them.
- And now I want to talk about one of the questions I get asked all the time.
- Why does my perfectly reasonable collection code crash? And like all good question answers, I almost always follow up with a few questions of my own.
- Sometimes I start with the classic, well what are you trying to do? And I usually quickly follow up with, well how are you using your collections? Are you mutating them? Are you sure you aren't accessing your collections for multiple threads? And I ask these questions because their answers often lead to the root cause of the problem.
- Well, let's begin with the assumption that threads aren't involved.
- I'm not ready to think about threads yet.
- It's not even 9:30.
- Suppose we had an array, and we get the index of an element that we know is there, in this case the value e.
- And then we mutate the collection, say by removing its first element, and we go ahead and print the element associated with that index.
- Well when we do this, unfortunately this will produce a fatal error.
- The index is no longer valid.
- In fact, the index became invalid the moment we mutated our collection.
- A far safer approach would be to mutate our collection first and then calculate the index.
- It's worth pointing out that mutation always invalidates indices.
- This doesn't just apply to arrays.
- Let's take a look at how this problem could manifest with dictionaries.
- Let's suppose that we have a dictionary showing a few of a bear's favorite things.
- We'll grab the index of our bear's favorite food and print it out, confirming that, indeed, it's salmon.
- Next, we'll add a couple more favorite things that this bear has, and then we'll make sure that our favorite food is still salmon.
- And we'll see that, wait a minute, our favorite good isn't hibernation, it's salmon.
- And just like arrays, we invalidated our index the moment we mutated the dictionary.
- It's also worth pointing out that this code can crash.
- So how do we go about fixing this? Well, it turns out it's the same exact fix that we used with the array.
- We just simply recompute the index after we mutate.
- Well, one thing to keep in mind that when you're recomputing indices this is something that can sometimes be expensive.
- Some index search methods take linear time.
- And so you want to take care to only find the indices that you need.
- So here's my advice if you want to avoid finding yourself in these kinds of situations.
- Remember that mutation almost always invalidates your indices.
- You might get away with it sometimes, but it's really best to just treat this as a hard rule.
- You'll be much happier for it.
- Also remember that slices hold on to the underlying original state of the collection even after it was mutated, and because of that, really think twice about holding onto indices or slices when the underlying collection is mutable.
- And keep in mind that index computation can sometimes take a nontrivial amount of time.
- So take care to only calculate indices as needed.
- So a little bit later, let's bring threads into the discussion.
- I mentioned that one of the questions that I ask is are your threads accessible for multiple threads? And the reason why I ask this is because our collections assume that you will access them from a single thread.
- And this is a really good thing for reasons of performance.
- It makes it so that all single-threaded use cases don't have to pay the tax of locks or any of those other primitives that you could use to ensure mutual exclusion.
- And when threads are involved, only developers using the collections will have all the information needed to restrict access with the appropriate lock or a serial queue at a much higher level abstraction than us lowly framework developers could ever offer.
- So let's see what these kinds of problems could look like.
- Let's suppose we have an array that we aim to fill up with sleeping bears, and to simulate each bear being their own bear and in charge of themselves, we're going to get access to a concurrent dispatch queue that we'll use to tell each bear to go to sleep.
- And because this is a concurrent dispatch queue, it's some time helpful to like imagine the code running at the same time, which I'll simulate by putting them on the same line.
- And later in our application, let's go ahead and check in on those sleeping bears, and sometimes we'll see grandpa and cubs snoozing happily.
- Other times, cub will go to sleep first, and then it'll be grandpa.
- Sometimes, quite mysteriously, only grandpa is sleeping in.
- And other times, it'll be the cub, and sometimes our program just up and crashes, and nobody bear's getting any sleep.
- All of these possibilities suggest that there's a possible race condition, and indeed, it seems likely given all the potential threads involved in this example.
- And we can prove this to ourselves using the thread sanitizer or TSAN that's included within Xcode.
- And if we were to do so, we'd get output that kind of looks like this, and indeed, TSAN would catch the race.
- It would tell us there's a Swift access race.
- It would tell us which threads are involved and give us a summary at the end telling us which line to actually go start looking for our problem.
- And all that evidence is actually going to be really helpful to find the bug.
- So we've proven that there's a bug here.
- TSAN has never lied in my experience with them.
- So we can fix this by eliminating the bears' ability to go to sleep at the same time, and we'll do that with a serial dispatch queue.
- And now only one bear can go to sleep at a time.
- And so if we peek in on our sleeping bears again now, taking care to do so on the appropriate queue, we see that sure enough grandpa and cub are snoozing away peacefully like we expected.
- So my advice for working with collections for multiple threads is try to isolate your data so that it can only be seen from a single thread, and when you can't do that, make sure that you have an appropriate form in mutual exclusion, such as a serial dispatch queue or locks.
- And always use the thread sanitizer to double check your work.
- It's far better to catch bugs before they ship in your app than after.
- And I have a little bit more advice for working with mutable collections.
- The first of which is if you can avoid it, don't use mutable state at all.
- So far all the difficulties that I've described have come about because we've been working with mutable state.
- You can avoid all the potential for this complexity by avoiding mutable collections in the first place.
- Many times you can actually emulate the mutations that you want to perform by using a slice or using a lazy wrapper, and it's almost always easier to understand data that cannot change.
- And thanks to mutability being built into Swift, the compiler will help you if you're leaving a state mutable when you're not actually mutating it.
- Now I have one more piece of advice that actually concerns how best to use mutable state when you have to.
- And that's when you're forming new collections.
- You can help performance if you're lucky enough to know an exact count or a really good approximation of how many elements you're actually going to need.
- Most collection APIs have a way of being able to provide this hint, and when you do this, you get exactly the size you need with no overhead.
- If you don't, our collections are general purpose tools.
- They're meant to work on a wide variety of cases, and as you incrementally add elements, you may actually end up over allocating the amount of storage that you need, but taking care that you don't over estimate when providing such hints, because otherwise you'll find yourself in the same exactly situation where you're using up more storage than you actually need.
- And now, I want to move on to my final topic for today.
- And that's the wide range of collections that become available for you when you import Foundation and when you should consider using them.
- In addition to the standard library collections, when you import Foundation, you gain access to the great reference-type collections that objective C developers have been using for decades.
- And many of these also gain conformance in Swift and thus behave just the collections that we've been talking about.
- That said, there are a couple important things to keep in mind.
- First thing to keep in mind is that these NS [inaudible] collections are reference types.
- And this is best examined by considering an example.
- We're going to define value types and reference types and do the same things with them on two sides.
- So with our value type, we'll call it x.
- It will be an array of strings.
- We get an empty array called x.
- With a reference type, we get an empty array, but x is pointing to it.
- We then mutate that array with the value type.
- That array is mutated in line.
- With the reference type, that array is, the reference, the array that is being referenced is mutated in line.
- We add another variable.
- With the value type, something really special happens.
- We actually don't copy the storage at this point.
- Why is an array that knows that its storage is actually owned by x? And why is that actually going to perform that copy until either of those collections is mutated.
- The reference type is a little bit different.
- Y is just another pointer to the same underlying array.
- So let's go ahead and mutate y.
- We'll put another bear in that array.
- With the value type what happens is first we invoke that copy on write machinery.
- We're writing to a y, so we need to copy it, and then we can insert the next bear.
- With the reference, it's a little bit simpler.
- There's only one array.
- We simply put the panda in the array.
- There's a second thing that you need to keep in mind when working with the foundation collections in Swift.
- And that is, all objective-C APIs in Swift appear as Swift native value types.
- And this is actually really wonderful because it let's code in each language speak naturally with the types that they work with best.
- But how can this work? The two languages have completely different implementations for these collections.
- And the reason why it works is something known as bridging.
- Bridging is how we convert between the two different runtime representations, and this is something that's necessary because Swift and objective-C, I'm sure you've noticed, are very different languages with very different compile and runtime features.
- And while we've optimized bridging to be as fast as it can be, it's not free.
- There will always be a cost when bridging between the two languages.
- So what happens when we bridge? Well, when we bridge between the language, we have dispersed set up new storage, equivalent storage, so if you're taking n things in one language, you'll take up n space in the next one.
- Then we need to go element by element and convert potentially between them, and this per-element bridging can sometimes be recursive.
- For instance, if I have an array of strings, first we'll bridge the array, and then we'll bridge each individual string.
- And when this happens at the boundary between the two languages, we call it eager bridging.
- And collections will always be bridged eagerly when the elements of the collection need bridging as well.
- And this arises most often with dictionaries keyed by strings.
- When collection bridging is not eager, we call it lazy.
- And this happens when the element types of the collection aren't bridged themselves, such as NSViews.
- In this case, bridging will be deferred until the collection is actually first used.
- Let's make this concrete with some examples.
- We'll first consider an objective-C API describing an NSArray of NSDatas.
- Now NSArray is bridged to array, and NSData is bridged to value-type data.
- And so such a collection would be bridged eagerly.
- I mentioned a moment ago that NSViews are not bridged in Swift.
- They remain reference types in Swift.
- And so an NSArray of NSViews will be lazily bridged.
- The bridging won't happen until you first access or try to use that array.
- And finally, an NSDictionary with keys that are NS strings will be bridged eagerly because the strings need to come across in Swift as value-type strings.
- So now that we know what bridging is, how it works, and when it happens, we can move on to the most important question of all, which is when should you care about it.
- And the answer is really straightforward.
- When you measure it negatively impacting your app.
- Specifically, when you take a time profile or trace an instrument, pay special attention to where your code crosses between the languages, especially when this happens inside a loop.
- Some bridging is going to happen, and that's totally okay.
- What you're looking for though is a disproportionate amount of time or a surprising amount of time spent in code that you didn't write that has the word bridge in it.
- Let's look at a concrete example.
- Suppose I have a manuscript for a great children's story that I'm working on, but it's really long, so I'm only going to show a little bit here, but to really make it pop, I want to make every word or every instance of the word brown actually be the color brown, and in the interest of space, I'm only going to show highlighting the first word.
- To do this, I'm going to use an NS mutable attributed string.
- I'll pass my story in there.
- And then using the attributed strings string property, I'll ask for the range of the Swift string brown, which will produce a range of strings native index type.
- And as mutable string works with NS ranges, and so I'll use the convenience initializer that we introduced last year to convert to an NS range, and this, I'm calling again attributed strings string property to do the conversion.
- And then we'll color the first instance of the word brown.
- And when I go to run this code, I notice it's a little slow.
- So I profile it.
- And I see that, to my surprise, I thought all the time would be spent coloring the word brown, but indeed, it's actually computing the indices, and why is that? And the reason for that is that we're actually bridging our string multiple times across languages.
- Mutable attributed string is an objective-C reference type, and so when we're asking for the string property, we're actually having to convert from an NSString to a string.
- And we're doing it once here when we calculated the first range, and we're doing it a second time when we convert for the NSRange.
- You can imagine how expensive this would be if we did this in a loop looking for all the text to color.
- Now let's look into why this is happening.
- Every time I call text.
-string, we start in a Swift execution context.
- However, the implementation of NSMutableAttributedString is objective-C, and so in order to provide the result, we actually have to consult the original implementation.
- The original implementation returns an NSString, which is the reference type, and so when return to string, it needs to be bridged, graphing cluster by graphing cluster, character by character.
- And bridging happens whether it's a return type or a parameter.
- So now that we know those details, we can make, now we can actually make this a little bit better.
- Let's just bridge once.
- And let's remeasure our code and see that indeed we've improved our performance by half.
- But it turns out this year we can do a little better.
- Oh, and also, now we're not bridging where we do that.
- But this year we can do a little bit better.
- This year, if we actually [inaudible] to an NSString when we ask for the text.
-string's property, when we get the variable out, no bridging is actually going to occur.
- And further, by doing so, now that string is an NSString, when we call the range of property, we're actually going to get an NSRange out of it automatically.
- We won't need to do any of the range conversion between Swift native types and the NS ranges, which is pretty excellent.
- So let's measure this code and see how it is, and sure enough, this looks pretty good.
- Much, much faster than the, you know, almost 800 milliseconds that we were consuming previously.
- However, I do want to point out that we're still bridging here.
- And it's a teeny, tiny bridge, but we're still bridging.
- Brown here is a Swift value type string.
- And every time we call into the objective-C API range of [inaudible] NSString, we're actually going to bridge that teeny, tiny string back to an NSString.
- This is inexpensive in this case.
- I'm only doing it once, but you can imagine, if this was in a loop, that small amount would add up over time.
- And so you want to take care to avoid bridging the same small strings repeatedly.
- However, before you do such optimizations, always measure.
- And so now that we've seen the details of bridging, I want to offer a little bit of advice about when to use Foundation collections.
- You should consider using them explicitly when you need a collection with reference semantics.
- Don't need to write one of those for yourself, we already have many great ones.
- You should also use it when you're working with types that you know to be reference types.
- Things like NS proxies or core data managed objects.
- And the final time to consider using them is when you're round tripping with objective-C code, but I'd recommend strongly doing this only after you've measured and identified that bridging is indeed the culprit for whatever performance problems you may be seeing.
- And now, we've reached the end of today's dive into the incredible power of our world's collections in Swift.
- I want you to use this new-found understanding to review your existing use of collections.
- Look for places where you can improve your code through more effective use of indices and slices.
- Measure your code.
- And look for places where you could benefit by being lazy or by tuning how you bridge.
- Use the thread sanitizer to help audit your mutable state, and further hone your mastery of collections by apply all the concepts discussed today in Playgrounds and you own apps.
- Be sure to visit our last few labs today if you have any questions about collections.
- We're here to help.
- Thank you so much for you time.
- Now go out and be effective.
- 
+WEBVTT
+
+00:00:07.516 --> 00:00:15.516 A:middle
+[ Music ]
+
+00:00:16.516 --> 00:00:21.576 A:middle
+[ Applause ]
+
+00:00:22.076 --> 00:00:22.436 A:middle
+&gt;&gt; Good morning.
+
+00:00:24.016 --> 00:00:25.346 A:middle
+My name is Michael LeHew, and I
+
+00:00:25.346 --> 00:00:26.436 A:middle
+worked on the collections for
+
+00:00:26.436 --> 00:00:27.726 A:middle
+the foundations team at Apple.
+
+00:00:27.726 --> 00:00:30.876 A:middle
+And today, I want to talk about
+
+00:00:30.876 --> 00:00:31.946 A:middle
+specific things that you should
+
+00:00:31.946 --> 00:00:33.036 A:middle
+know about to ensure that your
+
+00:00:33.036 --> 00:00:34.526 A:middle
+use of collections in Swift is
+
+00:00:34.526 --> 00:00:35.656 A:middle
+as effective as possible.
+
+00:00:36.156 --> 00:00:38.276 A:middle
+I'm going to cover a lot of
+
+00:00:38.276 --> 00:00:39.856 A:middle
+territory today about details
+
+00:00:39.926 --> 00:00:42.046 A:middle
+and all aspects of collections
+
+00:00:42.046 --> 00:00:43.136 A:middle
+available for use in Swift.
+
+00:00:43.416 --> 00:00:44.596 A:middle
+We're going to explore some
+
+00:00:44.646 --> 00:00:46.616 A:middle
+common pitfalls and how to avoid
+
+00:00:46.616 --> 00:00:47.506 A:middle
+them including performance
+
+00:00:47.506 --> 00:00:48.756 A:middle
+issues, and I'm also going to
+
+00:00:48.756 --> 00:00:50.676 A:middle
+offer very specific advice about
+
+00:00:50.676 --> 00:00:51.936 A:middle
+when to choose to use specific
+
+00:00:51.936 --> 00:00:52.366 A:middle
+collections.
+
+00:00:53.306 --> 00:00:53.996 A:middle
+So let's begin.
+
+00:00:54.136 --> 00:00:57.336 A:middle
+I want you to imagine a world, a
+
+00:00:57.696 --> 00:00:59.176 A:middle
+world without collections.
+
+00:00:59.846 --> 00:01:03.146 A:middle
+And in this world, we may not
+
+00:00:59.846 --> 00:01:03.146 A:middle
+And in this world, we may not
+
+00:01:03.146 --> 00:01:04.816 A:middle
+have arrays, but it still has
+
+00:01:04.926 --> 00:01:07.796 A:middle
+bears, but every time we need
+
+00:01:07.796 --> 00:01:10.136 A:middle
+another bear, we're going to
+
+00:01:10.136 --> 00:01:11.436 A:middle
+need to define another variable,
+
+00:01:12.026 --> 00:01:13.296 A:middle
+and we want to do things with
+
+00:01:13.296 --> 00:01:13.726 A:middle
+these bears.
+
+00:01:13.726 --> 00:01:14.666 A:middle
+We're going to need to repeat
+
+00:01:14.666 --> 00:01:15.266 A:middle
+ourselves.
+
+00:01:16.306 --> 00:01:17.106 A:middle
+Pretty scary, right?
+
+00:01:18.546 --> 00:01:19.236 A:middle
+It gets worse though.
+
+00:01:19.236 --> 00:01:20.596 A:middle
+This world also doesn't have
+
+00:01:20.636 --> 00:01:23.196 A:middle
+dictionaries, but thankfully
+
+00:01:23.336 --> 00:01:25.016 A:middle
+being clever developers, we can
+
+00:01:25.016 --> 00:01:25.766 A:middle
+work around that with the
+
+00:01:25.766 --> 00:01:27.936 A:middle
+function, where we painstakingly
+
+00:01:27.936 --> 00:01:29.246 A:middle
+define each case that we care
+
+00:01:29.246 --> 00:01:31.586 A:middle
+about, and using this function
+
+00:01:31.586 --> 00:01:32.546 A:middle
+is very similar to using a
+
+00:01:32.546 --> 00:01:34.716 A:middle
+dictionary, except none of those
+
+00:01:34.716 --> 00:01:35.926 A:middle
+dynamic capabilities that we
+
+00:01:35.926 --> 00:01:36.136 A:middle
+need.
+
+00:01:36.666 --> 00:01:37.676 A:middle
+But who likes a mutable state,
+
+00:01:37.676 --> 00:01:37.906 A:middle
+right?
+
+00:01:38.976 --> 00:01:40.536 A:middle
+Fortunately for us though, we
+
+00:01:40.536 --> 00:01:41.356 A:middle
+don't live in this world.
+
+00:01:42.146 --> 00:01:43.816 A:middle
+Thankfully our world has bears
+
+00:01:43.946 --> 00:01:45.586 A:middle
+and collections along with a
+
+00:01:45.646 --> 00:01:47.016 A:middle
+rich first-class syntax for
+
+00:01:47.016 --> 00:01:47.546 A:middle
+defining them.
+
+00:01:48.076 --> 00:01:51.086 A:middle
+And APIs that help us not repeat
+
+00:01:51.086 --> 00:01:53.666 A:middle
+ourselves when we iterate or
+
+00:01:53.926 --> 00:01:55.316 A:middle
+retrieve the elements that they
+
+00:01:55.316 --> 00:01:55.886 A:middle
+may store.
+
+00:01:57.336 --> 00:01:58.916 A:middle
+Collections are so pervasive and
+
+00:01:58.916 --> 00:02:00.506 A:middle
+share so many common features
+
+00:01:58.916 --> 00:02:00.506 A:middle
+share so many common features
+
+00:02:00.506 --> 00:02:01.686 A:middle
+and algorithms that in Swift
+
+00:02:01.686 --> 00:02:03.036 A:middle
+they all conform to a common
+
+00:02:03.036 --> 00:02:03.476 A:middle
+protocol.
+
+00:02:04.036 --> 00:02:06.446 A:middle
+Not surprisingly, it's called
+
+00:02:06.446 --> 00:02:06.876 A:middle
+collection.
+
+00:02:06.876 --> 00:02:09.186 A:middle
+And in Swift, collections are
+
+00:02:09.186 --> 00:02:10.675 A:middle
+sequences whose elements can be
+
+00:02:10.675 --> 00:02:12.196 A:middle
+traversed multiple times,
+
+00:02:12.426 --> 00:02:13.806 A:middle
+nondestructively, and whose
+
+00:02:13.806 --> 00:02:15.106 A:middle
+elements can be accessed via a
+
+00:02:15.106 --> 00:02:15.606 A:middle
+subscript.
+
+00:02:17.576 --> 00:02:19.106 A:middle
+Let's see, look at how they do
+
+00:02:19.106 --> 00:02:20.446 A:middle
+that but considering an abstract
+
+00:02:20.446 --> 00:02:21.736 A:middle
+representation of a collection.
+
+00:02:23.026 --> 00:02:24.456 A:middle
+This could be an array defined
+
+00:02:24.456 --> 00:02:26.006 A:middle
+contiguously in memory, a hash
+
+00:02:26.076 --> 00:02:29.246 A:middle
+table, a red black tree, a link
+
+00:02:29.246 --> 00:02:30.266 A:middle
+list or anything else that you
+
+00:02:30.266 --> 00:02:30.776 A:middle
+can imagine.
+
+00:02:31.516 --> 00:02:32.636 A:middle
+What matters is that it supports
+
+00:02:32.636 --> 00:02:34.296 A:middle
+the concept of an initial index
+
+00:02:34.296 --> 00:02:35.386 A:middle
+called start index.
+
+00:02:36.796 --> 00:02:38.426 A:middle
+It can be used to access the
+
+00:02:38.426 --> 00:02:39.306 A:middle
+initial element of the
+
+00:02:39.306 --> 00:02:39.806 A:middle
+collection.
+
+00:02:40.556 --> 00:02:41.736 A:middle
+It has an end index, which
+
+00:02:41.736 --> 00:02:42.646 A:middle
+identifies the end of the
+
+00:02:42.646 --> 00:02:44.746 A:middle
+collection, and collections
+
+00:02:44.746 --> 00:02:46.166 A:middle
+support the ability to iterate
+
+00:02:46.166 --> 00:02:47.546 A:middle
+from their start index to their
+
+00:02:47.546 --> 00:02:48.286 A:middle
+end index.
+
+00:02:49.476 --> 00:02:51.056 A:middle
+They can do this multiple times,
+
+00:02:51.426 --> 00:02:52.396 A:middle
+and they also support a
+
+00:02:52.396 --> 00:02:54.646 A:middle
+subscript to retrieve elements
+
+00:02:54.676 --> 00:02:55.876 A:middle
+from the collection itself.
+
+00:02:56.456 --> 00:02:58.336 A:middle
+Let's see what this looks like
+
+00:02:58.336 --> 00:02:58.746 A:middle
+in code.
+
+00:02:59.736 --> 00:03:00.606 A:middle
+Indeed, if we look at the
+
+00:02:59.736 --> 00:03:00.606 A:middle
+Indeed, if we look at the
+
+00:03:00.606 --> 00:03:02.326 A:middle
+definition of collection, it's
+
+00:03:02.326 --> 00:03:03.256 A:middle
+declared as a sequence of
+
+00:03:03.256 --> 00:03:03.716 A:middle
+elements.
+
+00:03:04.836 --> 00:03:05.916 A:middle
+It also has an additional
+
+00:03:05.916 --> 00:03:07.736 A:middle
+associated type called index,
+
+00:03:07.836 --> 00:03:08.936 A:middle
+which must be comparable.
+
+00:03:10.216 --> 00:03:11.656 A:middle
+It offers a subscript to
+
+00:03:11.656 --> 00:03:13.316 A:middle
+retrieve elements from, or using
+
+00:03:13.316 --> 00:03:15.196 A:middle
+that index, and we define a
+
+00:03:15.196 --> 00:03:16.306 A:middle
+start and an end index
+
+00:03:16.456 --> 00:03:18.076 A:middle
+identifying the bounds of our
+
+00:03:18.076 --> 00:03:18.576 A:middle
+collection.
+
+00:03:18.926 --> 00:03:21.076 A:middle
+And finally, we have a function
+
+00:03:21.136 --> 00:03:22.766 A:middle
+called index after, which lets
+
+00:03:22.766 --> 00:03:24.366 A:middle
+us get from one index to
+
+00:03:24.366 --> 00:03:24.656 A:middle
+another.
+
+00:03:24.706 --> 00:03:27.096 A:middle
+And this last function is so
+
+00:03:27.096 --> 00:03:28.656 A:middle
+important because it allows the
+
+00:03:28.656 --> 00:03:30.756 A:middle
+standard library to define many
+
+00:03:30.756 --> 00:03:32.136 A:middle
+useful and powerful default
+
+00:03:32.136 --> 00:03:33.596 A:middle
+behaviors with the incredible
+
+00:03:33.596 --> 00:03:35.006 A:middle
+power of protocol extensions.
+
+00:03:35.476 --> 00:03:38.266 A:middle
+Let's look at some of these.
+
+00:03:38.426 --> 00:03:39.956 A:middle
+When you conform to collection,
+
+00:03:39.956 --> 00:03:41.566 A:middle
+you gain access to an incredible
+
+00:03:41.566 --> 00:03:42.916 A:middle
+range of functionality with
+
+00:03:42.916 --> 00:03:44.966 A:middle
+properties that let you get the
+
+00:03:44.966 --> 00:03:46.296 A:middle
+first and the last element or
+
+00:03:46.426 --> 00:03:48.636 A:middle
+identify the count or check to
+
+00:03:48.636 --> 00:03:49.706 A:middle
+see if a collection is empty.
+
+00:03:50.466 --> 00:03:51.626 A:middle
+You also gain API that lets you
+
+00:03:51.626 --> 00:03:52.676 A:middle
+iterate through a Collection
+
+00:03:52.776 --> 00:03:54.216 A:middle
+using 4N syntax.
+
+00:03:55.216 --> 00:03:56.886 A:middle
+And super useful functions like
+
+00:03:56.886 --> 00:03:58.226 A:middle
+map, filter, and reduce.
+
+00:03:59.256 --> 00:03:59.976 A:middle
+Now let's go ahead and make
+
+00:03:59.976 --> 00:04:01.356 A:middle
+Collection even more powerful by
+
+00:03:59.976 --> 00:04:01.356 A:middle
+Collection even more powerful by
+
+00:04:01.356 --> 00:04:02.426 A:middle
+adding our own extension.
+
+00:04:03.736 --> 00:04:05.026 A:middle
+Collection already provides a
+
+00:04:05.026 --> 00:04:06.236 A:middle
+way to iterate through every
+
+00:04:06.236 --> 00:04:08.786 A:middle
+element, but I want a function
+
+00:04:08.786 --> 00:04:09.646 A:middle
+that will let me iterate through
+
+00:04:09.646 --> 00:04:11.066 A:middle
+every other element, skipping
+
+00:04:11.066 --> 00:04:12.266 A:middle
+some of the values along the way
+
+00:04:13.496 --> 00:04:14.616 A:middle
+and will do this by adding an
+
+00:04:14.616 --> 00:04:15.626 A:middle
+extension to Collection.
+
+00:04:16.036 --> 00:04:16.935 A:middle
+Let's start with the methods
+
+00:04:16.935 --> 00:04:17.375 A:middle
+signature.
+
+00:04:18.136 --> 00:04:19.136 A:middle
+We're going to call our function
+
+00:04:19.266 --> 00:04:20.305 A:middle
+every other, and it's going to
+
+00:04:20.305 --> 00:04:21.555 A:middle
+take a closure that will call on
+
+00:04:21.555 --> 00:04:23.126 A:middle
+each element that we care about.
+
+00:04:24.126 --> 00:04:25.016 A:middle
+We'll get the bounds of our
+
+00:04:25.016 --> 00:04:27.486 A:middle
+iteration, and to find another
+
+00:04:27.486 --> 00:04:29.236 A:middle
+variable, that starts at the
+
+00:04:29.236 --> 00:04:30.326 A:middle
+start, which will mutate along
+
+00:04:30.326 --> 00:04:30.826 A:middle
+as we go.
+
+00:04:32.106 --> 00:04:33.506 A:middle
+We'll call the closure on the
+
+00:04:33.506 --> 00:04:36.016 A:middle
+current element and advance our
+
+00:04:36.016 --> 00:04:37.266 A:middle
+current index to the next one.
+
+00:04:37.866 --> 00:04:39.076 A:middle
+And we may have invalidated our
+
+00:04:39.076 --> 00:04:40.086 A:middle
+index at this point, we may have
+
+00:04:40.086 --> 00:04:40.576 A:middle
+reached the end of the
+
+00:04:40.576 --> 00:04:41.536 A:middle
+collection, so we need to make
+
+00:04:41.536 --> 00:04:43.626 A:middle
+sure that we did that, and if we
+
+00:04:43.626 --> 00:04:44.906 A:middle
+did, we can then advance our
+
+00:04:44.906 --> 00:04:46.716 A:middle
+index one more time and thus
+
+00:04:46.716 --> 00:04:47.886 A:middle
+skip every other element.
+
+00:04:48.326 --> 00:04:49.726 A:middle
+And if we call this we see, if
+
+00:04:49.726 --> 00:04:50.976 A:middle
+we call this on the close range
+
+00:04:51.136 --> 00:04:53.066 A:middle
+from one to ten, we see that we
+
+00:04:53.066 --> 00:04:54.236 A:middle
+skip the even elements.
+
+00:04:54.646 --> 00:04:56.926 A:middle
+And so we see that Collections
+
+00:04:56.926 --> 00:04:58.236 A:middle
+let us describe some really
+
+00:04:58.236 --> 00:05:00.616 A:middle
+powerful behavior, but it turns
+
+00:04:58.236 --> 00:05:00.616 A:middle
+powerful behavior, but it turns
+
+00:05:00.616 --> 00:05:02.216 A:middle
+out collections aren't alone.
+
+00:05:02.296 --> 00:05:03.136 A:middle
+In fact, Collection is not the
+
+00:05:03.136 --> 00:05:04.086 A:middle
+only protocol that we have.
+
+00:05:04.086 --> 00:05:05.526 A:middle
+In Swift, we have access to a
+
+00:05:05.636 --> 00:05:07.286 A:middle
+rich hierarchy of collection
+
+00:05:07.286 --> 00:05:08.356 A:middle
+protocols, each greatly
+
+00:05:08.356 --> 00:05:09.286 A:middle
+improving on the kinds of
+
+00:05:09.286 --> 00:05:10.276 A:middle
+assumptions that we can make
+
+00:05:10.276 --> 00:05:11.076 A:middle
+about our types.
+
+00:05:11.706 --> 00:05:12.576 A:middle
+Let's go ahead and talk about a
+
+00:05:12.576 --> 00:05:13.226 A:middle
+couple of these.
+
+00:05:13.546 --> 00:05:15.896 A:middle
+We've already established that
+
+00:05:15.896 --> 00:05:17.356 A:middle
+Collection lets you go forward
+
+00:05:17.356 --> 00:05:19.866 A:middle
+from a given index, but there
+
+00:05:19.866 --> 00:05:20.886 A:middle
+are also bidirectional
+
+00:05:20.886 --> 00:05:22.406 A:middle
+collections, which let you go in
+
+00:05:22.406 --> 00:05:24.826 A:middle
+the other direction.
+
+00:05:24.896 --> 00:05:26.086 A:middle
+Now, of course, bidirectional
+
+00:05:26.086 --> 00:05:27.196 A:middle
+collections are collections
+
+00:05:27.246 --> 00:05:28.636 A:middle
+themselves, and so we can still
+
+00:05:28.636 --> 00:05:29.726 A:middle
+iterate forward as well.
+
+00:05:31.336 --> 00:05:32.836 A:middle
+The next most flexible form of
+
+00:05:32.836 --> 00:05:34.086 A:middle
+collection is what's known as a
+
+00:05:34.086 --> 00:05:35.506 A:middle
+random access collection, and
+
+00:05:35.506 --> 00:05:36.926 A:middle
+with these, these add the
+
+00:05:36.926 --> 00:05:38.266 A:middle
+requirement that it would be
+
+00:05:38.266 --> 00:05:40.386 A:middle
+constant time to compute, or
+
+00:05:40.386 --> 00:05:41.646 A:middle
+compute another index from
+
+00:05:41.646 --> 00:05:42.606 A:middle
+another or to compute the
+
+00:05:42.606 --> 00:05:43.886 A:middle
+distance between two indexes.
+
+00:05:44.456 --> 00:05:45.856 A:middle
+The compiler cannot enforce
+
+00:05:45.926 --> 00:05:47.486 A:middle
+this, and so when you conform to
+
+00:05:47.486 --> 00:05:48.466 A:middle
+random acts as a collection,
+
+00:05:48.646 --> 00:05:49.756 A:middle
+you're making a promise.
+
+00:05:49.996 --> 00:05:51.796 A:middle
+But if you satisfy this promise,
+
+00:05:51.796 --> 00:05:52.516 A:middle
+if you can deliver on this
+
+00:05:52.516 --> 00:05:53.806 A:middle
+promise, the protocol gives you
+
+00:05:53.806 --> 00:05:55.386 A:middle
+the power to access any index in
+
+00:05:55.386 --> 00:05:57.186 A:middle
+the collection in constant time.
+
+00:05:57.966 --> 00:05:59.046 A:middle
+And of course, random access
+
+00:05:59.046 --> 00:06:00.426 A:middle
+collections remain collections,
+
+00:05:59.046 --> 00:06:00.426 A:middle
+collections remain collections,
+
+00:06:00.426 --> 00:06:01.316 A:middle
+and so you can still iterate
+
+00:06:01.316 --> 00:06:02.536 A:middle
+forward and backward.
+
+00:06:02.606 --> 00:06:05.796 A:middle
+Now as Swift developers, we have
+
+00:06:05.796 --> 00:06:06.896 A:middle
+access to many useful
+
+00:06:06.896 --> 00:06:08.046 A:middle
+collections that conform to
+
+00:06:08.046 --> 00:06:10.626 A:middle
+these protocols, collections
+
+00:06:10.626 --> 00:06:11.666 A:middle
+such as array, set, and
+
+00:06:11.666 --> 00:06:12.186 A:middle
+dictionary.
+
+00:06:12.656 --> 00:06:14.836 A:middle
+But thanks to the general
+
+00:06:14.836 --> 00:06:15.746 A:middle
+purpose utility of these
+
+00:06:15.746 --> 00:06:17.006 A:middle
+protocols, many other types
+
+00:06:17.196 --> 00:06:18.696 A:middle
+conform to these collection
+
+00:06:18.696 --> 00:06:20.186 A:middle
+protocols as well, such as data,
+
+00:06:20.476 --> 00:06:21.416 A:middle
+range, and string.
+
+00:06:22.566 --> 00:06:24.356 A:middle
+Or the index collections, and
+
+00:06:24.356 --> 00:06:25.546 A:middle
+they all gain access to all of
+
+00:06:25.546 --> 00:06:26.816 A:middle
+this rich functionality by
+
+00:06:26.816 --> 00:06:28.216 A:middle
+simply conforming to Collection
+
+00:06:28.216 --> 00:06:29.036 A:middle
+in their own fashion.
+
+00:06:29.346 --> 00:06:31.006 A:middle
+Indeed, once you know how any
+
+00:06:31.006 --> 00:06:32.246 A:middle
+one of these types works, you
+
+00:06:32.246 --> 00:06:33.616 A:middle
+can apply that knowledge to any
+
+00:06:33.616 --> 00:06:35.326 A:middle
+of the others, and there are
+
+00:06:35.326 --> 00:06:35.886 A:middle
+quite a few.
+
+00:06:35.916 --> 00:06:38.006 A:middle
+So I'm going to talk about the
+
+00:06:38.006 --> 00:06:39.586 A:middle
+details about how a type
+
+00:06:39.586 --> 00:06:41.166 A:middle
+conforms to Collection, and it
+
+00:06:41.166 --> 00:06:43.456 A:middle
+all begins with describing how
+
+00:06:43.666 --> 00:06:46.376 A:middle
+it is indexed.
+
+00:06:46.446 --> 00:06:47.746 A:middle
+Each collection has its own kind
+
+00:06:47.746 --> 00:06:48.336 A:middle
+of index.
+
+00:06:48.856 --> 00:06:50.766 A:middle
+And that index must be
+
+00:06:50.766 --> 00:06:51.306 A:middle
+comparable.
+
+00:06:52.286 --> 00:06:54.306 A:middle
+In some cases, the indices can
+
+00:06:54.306 --> 00:06:56.446 A:middle
+look like integers, like arrays,
+
+00:06:56.716 --> 00:06:57.566 A:middle
+but just because an index
+
+00:06:57.566 --> 00:06:58.736 A:middle
+happens to look like an integer
+
+00:06:58.896 --> 00:06:59.956 A:middle
+doesn't mean that you should use
+
+00:06:59.956 --> 00:07:00.456 A:middle
+it like one.
+
+00:06:59.956 --> 00:07:00.456 A:middle
+it like one.
+
+00:07:01.436 --> 00:07:02.186 A:middle
+Now I want to ask a few
+
+00:07:02.186 --> 00:07:03.396 A:middle
+questions that might have
+
+00:07:03.396 --> 00:07:04.386 A:middle
+surprising answers.
+
+00:07:05.056 --> 00:07:06.116 A:middle
+The first is how do we get the
+
+00:07:06.116 --> 00:07:08.926 A:middle
+first element of an array, and
+
+00:07:08.996 --> 00:07:10.496 A:middle
+instantly you probably all
+
+00:07:10.566 --> 00:07:11.786 A:middle
+thought, well I'll just call
+
+00:07:11.786 --> 00:07:12.456 A:middle
+array subzero.
+
+00:07:12.526 --> 00:07:14.196 A:middle
+An array's index happens to be
+
+00:07:14.196 --> 00:07:14.386 A:middle
+it.
+
+00:07:14.766 --> 00:07:16.236 A:middle
+So you can sometimes say this
+
+00:07:16.366 --> 00:07:17.586 A:middle
+and get exactly what you intend.
+
+00:07:18.036 --> 00:07:19.106 A:middle
+But it isn't the best way to do
+
+00:07:19.106 --> 00:07:19.446 A:middle
+this.
+
+00:07:19.636 --> 00:07:20.636 A:middle
+I'm going to go ahead and ask
+
+00:07:20.676 --> 00:07:22.026 A:middle
+the same question, but this time
+
+00:07:22.196 --> 00:07:23.166 A:middle
+about a different collection.
+
+00:07:23.666 --> 00:07:26.056 A:middle
+What's the first element of a
+
+00:07:26.056 --> 00:07:26.246 A:middle
+set?
+
+00:07:26.986 --> 00:07:27.856 A:middle
+Now this might seem like a
+
+00:07:27.856 --> 00:07:29.276 A:middle
+really weird question, right?
+
+00:07:29.576 --> 00:07:30.356 A:middle
+Sets are unordered.
+
+00:07:31.016 --> 00:07:32.236 A:middle
+However, they are collections,
+
+00:07:32.376 --> 00:07:33.286 A:middle
+and being collections, you can
+
+00:07:33.286 --> 00:07:34.706 A:middle
+iterate through them, and when
+
+00:07:34.706 --> 00:07:35.576 A:middle
+you iterate through a set,
+
+00:07:35.636 --> 00:07:36.886 A:middle
+you're going to iterate through
+
+00:07:36.886 --> 00:07:38.156 A:middle
+one element first, and so that's
+
+00:07:38.156 --> 00:07:39.326 A:middle
+really the question we're asking
+
+00:07:39.396 --> 00:07:39.586 A:middle
+here.
+
+00:07:40.896 --> 00:07:42.026 A:middle
+So can I say set subzero?
+
+00:07:42.856 --> 00:07:44.306 A:middle
+Happily, the compiler will say
+
+00:07:44.306 --> 00:07:46.986 A:middle
+no, and that's because set's
+
+00:07:46.986 --> 00:07:49.346 A:middle
+index type is an int, the type
+
+00:07:49.346 --> 00:07:50.446 A:middle
+system wants us to use the
+
+00:07:50.446 --> 00:07:52.816 A:middle
+correct index type.
+
+00:07:52.996 --> 00:07:54.016 A:middle
+Lucky for us we already know how
+
+00:07:54.016 --> 00:07:54.486 A:middle
+to do that.
+
+00:07:54.796 --> 00:07:55.796 A:middle
+We know the collection protocol
+
+00:07:55.796 --> 00:07:56.856 A:middle
+tells us that all collections
+
+00:07:56.856 --> 00:07:58.266 A:middle
+have a start index, so let's go
+
+00:07:58.266 --> 00:07:59.286 A:middle
+ahead and use that, and if we do
+
+00:07:59.286 --> 00:08:00.496 A:middle
+this, this will actually work
+
+00:07:59.286 --> 00:08:00.496 A:middle
+this, this will actually work
+
+00:08:00.496 --> 00:08:01.326 A:middle
+with all collections.
+
+00:08:01.496 --> 00:08:03.076 A:middle
+Start index is always going to
+
+00:08:03.076 --> 00:08:05.246 A:middle
+be the element of the first item
+
+00:08:05.246 --> 00:08:05.966 A:middle
+that you would see when you
+
+00:08:05.966 --> 00:08:06.336 A:middle
+iterate.
+
+00:08:06.986 --> 00:08:08.056 A:middle
+But there's a nuance to watch
+
+00:08:08.056 --> 00:08:09.626 A:middle
+out for when using indices to
+
+00:08:09.626 --> 00:08:10.896 A:middle
+directly subscript into any
+
+00:08:10.896 --> 00:08:11.356 A:middle
+collection.
+
+00:08:11.636 --> 00:08:14.966 A:middle
+And that is, it can crash.
+
+00:08:15.216 --> 00:08:17.146 A:middle
+I haven't actually asserted that
+
+00:08:17.146 --> 00:08:18.356 A:middle
+these collections have contents
+
+00:08:18.356 --> 00:08:20.056 A:middle
+in them, and so when you're, I'm
+
+00:08:20.216 --> 00:08:21.276 A:middle
+just using start index, and
+
+00:08:21.276 --> 00:08:22.126 A:middle
+these collections could be
+
+00:08:22.126 --> 00:08:22.426 A:middle
+empty.
+
+00:08:23.636 --> 00:08:24.416 A:middle
+It turns out though that
+
+00:08:24.416 --> 00:08:25.616 A:middle
+accessing the first element in a
+
+00:08:25.616 --> 00:08:27.996 A:middle
+collection is such a common task
+
+00:08:28.206 --> 00:08:30.866 A:middle
+that there's an even better way.
+
+00:08:31.076 --> 00:08:32.236 A:middle
+Simply call first.
+
+00:08:32.885 --> 00:08:34.346 A:middle
+And if you call first, this is a
+
+00:08:34.346 --> 00:08:35.756 A:middle
+lot safer, because the return
+
+00:08:35.756 --> 00:08:37.056 A:middle
+time of this is optional,
+
+00:08:37.326 --> 00:08:38.676 A:middle
+reflecting the fact that not all
+
+00:08:38.676 --> 00:08:39.606 A:middle
+collections have a first
+
+00:08:39.606 --> 00:08:39.956 A:middle
+element.
+
+00:08:39.956 --> 00:08:43.285 A:middle
+So I have another question.
+
+00:08:44.526 --> 00:08:45.696 A:middle
+It's the second element of a
+
+00:08:45.696 --> 00:08:46.796 A:middle
+collection, and I want to
+
+00:08:46.796 --> 00:08:48.116 A:middle
+emphasize collection here.
+
+00:08:48.306 --> 00:08:49.606 A:middle
+It could be any collection, an
+
+00:08:49.606 --> 00:08:50.626 A:middle
+array, a set, or something that
+
+00:08:50.626 --> 00:08:51.626 A:middle
+doesn't even exist yet.
+
+00:08:52.026 --> 00:08:53.796 A:middle
+Let's go ahead and add a new
+
+00:08:53.876 --> 00:08:55.106 A:middle
+property to collection via
+
+00:08:55.106 --> 00:08:55.976 A:middle
+protocol extension, and we'll
+
+00:08:55.976 --> 00:08:57.566 A:middle
+call it second, and just like
+
+00:08:57.636 --> 00:08:58.436 A:middle
+first, it's going to return
+
+00:08:58.436 --> 00:08:59.556 A:middle
+optional, because not all
+
+00:08:59.556 --> 00:09:00.936 A:middle
+collections have two elements.
+
+00:08:59.556 --> 00:09:00.936 A:middle
+collections have two elements.
+
+00:09:02.216 --> 00:09:05.806 A:middle
+So, let's try writing this by
+
+00:09:05.806 --> 00:09:06.496 A:middle
+subscripting 1.
+
+00:09:06.846 --> 00:09:08.636 A:middle
+But here our zero-based indexing
+
+00:09:08.636 --> 00:09:09.596 A:middle
+instincts are going to lead us
+
+00:09:09.596 --> 00:09:11.056 A:middle
+astray, and then we'll be caught
+
+00:09:11.056 --> 00:09:12.716 A:middle
+by the compiler again.
+
+00:09:13.596 --> 00:09:14.906 A:middle
+We want this code to work with
+
+00:09:14.906 --> 00:09:16.366 A:middle
+every collection, and not all
+
+00:09:16.366 --> 00:09:17.636 A:middle
+collections use integers to
+
+00:09:17.636 --> 00:09:18.156 A:middle
+index.
+
+00:09:18.636 --> 00:09:19.946 A:middle
+So let's try a different
+
+00:09:19.946 --> 00:09:20.336 A:middle
+approach.
+
+00:09:21.226 --> 00:09:22.456 A:middle
+What I really want is one
+
+00:09:22.456 --> 00:09:24.526 A:middle
+greater than the start index.
+
+00:09:25.396 --> 00:09:26.806 A:middle
+But lucky here, the compiler
+
+00:09:26.806 --> 00:09:27.886 A:middle
+will catch this as well.
+
+00:09:29.126 --> 00:09:30.956 A:middle
+You can't add 1 to an arbitrary
+
+00:09:30.956 --> 00:09:31.496 A:middle
+index type.
+
+00:09:31.666 --> 00:09:32.826 A:middle
+Index types are supposed to be
+
+00:09:32.826 --> 00:09:34.056 A:middle
+opaque or can be opaque.
+
+00:09:34.056 --> 00:09:36.496 A:middle
+And what we really need to be
+
+00:09:36.496 --> 00:09:37.836 A:middle
+doing here is we need to be
+
+00:09:37.836 --> 00:09:38.826 A:middle
+using the API provided by the
+
+00:09:38.826 --> 00:09:40.126 A:middle
+collection protocol to do this.
+
+00:09:40.126 --> 00:09:41.456 A:middle
+So let's go ahead and do this.
+
+00:09:42.746 --> 00:09:44.626 A:middle
+I commented out a sketch of the
+
+00:09:44.626 --> 00:09:45.436 A:middle
+things that we're going to need
+
+00:09:45.436 --> 00:09:46.216 A:middle
+to do to find the second
+
+00:09:46.216 --> 00:09:46.596 A:middle
+element.
+
+00:09:47.246 --> 00:09:48.066 A:middle
+The very first thing that we
+
+00:09:48.066 --> 00:09:48.966 A:middle
+need to do is we need to check
+
+00:09:48.966 --> 00:09:49.866 A:middle
+to see if the collection is
+
+00:09:49.906 --> 00:09:50.226 A:middle
+empty.
+
+00:09:51.076 --> 00:09:52.056 A:middle
+Collections are empty when their
+
+00:09:52.056 --> 00:09:53.236 A:middle
+start index is exactly
+
+00:09:53.236 --> 00:09:54.616 A:middle
+equivalent to their end index.
+
+00:09:54.906 --> 00:09:56.106 A:middle
+So let's check for that and
+
+00:09:56.106 --> 00:09:57.796 A:middle
+return nil, because such a
+
+00:09:57.796 --> 00:10:00.536 A:middle
+collection doesn't have a second
+
+00:09:57.796 --> 00:10:00.536 A:middle
+collection doesn't have a second
+
+00:10:00.536 --> 00:10:00.866 A:middle
+element.
+
+00:10:01.486 --> 00:10:04.166 A:middle
+Oh, and so now we can assume
+
+00:10:04.166 --> 00:10:05.486 A:middle
+that our collection has one
+
+00:10:05.486 --> 00:10:06.156 A:middle
+element in it.
+
+00:10:06.596 --> 00:10:09.356 A:middle
+We can use index after to get
+
+00:10:09.356 --> 00:10:10.666 A:middle
+the second element or the second
+
+00:10:10.666 --> 00:10:12.316 A:middle
+index, but we need to make sure
+
+00:10:12.316 --> 00:10:14.286 A:middle
+that that index is valid, and
+
+00:10:14.286 --> 00:10:15.206 A:middle
+let's see this visually.
+
+00:10:15.326 --> 00:10:16.506 A:middle
+We advance after, but if the
+
+00:10:16.506 --> 00:10:17.646 A:middle
+collection only had one element
+
+00:10:17.646 --> 00:10:18.856 A:middle
+in it, we have now actually
+
+00:10:18.856 --> 00:10:19.966 A:middle
+produced an invalid index, and
+
+00:10:19.966 --> 00:10:20.886 A:middle
+if we tried to subscript with
+
+00:10:20.886 --> 00:10:22.076 A:middle
+that index, we'd get that fatal
+
+00:10:22.076 --> 00:10:23.056 A:middle
+error that we saw just a moment
+
+00:10:23.056 --> 00:10:23.246 A:middle
+ago.
+
+00:10:23.696 --> 00:10:24.786 A:middle
+So we check for it to be valid,
+
+00:10:24.786 --> 00:10:25.796 A:middle
+and this is very similar to the
+
+00:10:25.796 --> 00:10:26.066 A:middle
+empty [inaudible].
+
+00:10:26.296 --> 00:10:27.756 A:middle
+We just make sure that our index
+
+00:10:28.096 --> 00:10:29.376 A:middle
+is not equal to the end index
+
+00:10:29.516 --> 00:10:30.096 A:middle
+returning nil.
+
+00:10:30.626 --> 00:10:31.786 A:middle
+Again, because two-element
+
+00:10:31.786 --> 00:10:33.276 A:middle
+collections don't have a, or
+
+00:10:33.276 --> 00:10:34.336 A:middle
+one-element collections don't
+
+00:10:34.336 --> 00:10:35.196 A:middle
+have a second element.
+
+00:10:35.996 --> 00:10:36.956 A:middle
+At this point, we have all the
+
+00:10:36.956 --> 00:10:38.296 A:middle
+assumptions we need to know that
+
+00:10:38.296 --> 00:10:39.386 A:middle
+our collection has at least two
+
+00:10:39.386 --> 00:10:40.746 A:middle
+elements in it, and so we're
+
+00:10:40.746 --> 00:10:41.696 A:middle
+safe to use the subscript
+
+00:10:41.696 --> 00:10:42.696 A:middle
+operator with that index,
+
+00:10:43.906 --> 00:10:44.856 A:middle
+retrieving the value that we
+
+00:10:44.856 --> 00:10:45.236 A:middle
+desire.
+
+00:10:45.236 --> 00:10:48.736 A:middle
+Now, it turns out, or that looks
+
+00:10:48.736 --> 00:10:50.436 A:middle
+like a lot of code, but it's
+
+00:10:50.506 --> 00:10:51.576 A:middle
+worth pointing out that this
+
+00:10:51.576 --> 00:10:53.016 A:middle
+general purpose index math will
+
+00:10:53.016 --> 00:10:54.546 A:middle
+work with any collection, which
+
+00:10:54.546 --> 00:10:56.266 A:middle
+is pretty awesome, and it turns
+
+00:10:56.266 --> 00:10:57.786 A:middle
+out Swift has a better way to do
+
+00:10:57.786 --> 00:10:58.106 A:middle
+this though.
+
+00:10:58.856 --> 00:11:00.216 A:middle
+There's something called slices,
+
+00:10:58.856 --> 00:11:00.216 A:middle
+There's something called slices,
+
+00:11:00.606 --> 00:11:01.716 A:middle
+but before I show how to do it
+
+00:11:01.756 --> 00:11:02.946 A:middle
+with slices, I want to talk
+
+00:11:02.946 --> 00:11:04.826 A:middle
+about what slices are and how
+
+00:11:04.826 --> 00:11:05.000 A:middle
+they work.
+
+00:11:08.266 --> 00:11:10.946 A:middle
+Slices are a type that describe
+
+00:11:10.946 --> 00:11:11.946 A:middle
+only part of a collection.
+
+00:11:13.176 --> 00:11:14.476 A:middle
+And every slice has their own
+
+00:11:14.476 --> 00:11:17.606 A:middle
+start and end index, and slices
+
+00:11:17.606 --> 00:11:18.556 A:middle
+exist separately from the
+
+00:11:18.556 --> 00:11:19.956 A:middle
+collections, from their
+
+00:11:19.986 --> 00:11:20.916 A:middle
+originating collection.
+
+00:11:21.336 --> 00:11:22.526 A:middle
+And what makes slices so
+
+00:11:22.526 --> 00:11:23.746 A:middle
+efficient is they occupy no
+
+00:11:23.746 --> 00:11:24.406 A:middle
+extra storage.
+
+00:11:24.536 --> 00:11:25.806 A:middle
+They simply refer back to the
+
+00:11:25.806 --> 00:11:28.856 A:middle
+original collection, and when
+
+00:11:28.856 --> 00:11:30.416 A:middle
+slices are subscripted, they
+
+00:11:30.416 --> 00:11:31.586 A:middle
+read out of the original buffer.
+
+00:11:32.806 --> 00:11:33.736 A:middle
+And they can do this because
+
+00:11:34.796 --> 00:11:36.046 A:middle
+they share the same indices as
+
+00:11:36.046 --> 00:11:37.016 A:middle
+their underlying collection.
+
+00:11:37.466 --> 00:11:38.286 A:middle
+And let's take a look at how
+
+00:11:38.286 --> 00:11:38.706 A:middle
+that works.
+
+00:11:38.706 --> 00:11:39.806 A:middle
+We can prove this to ourselves.
+
+00:11:40.136 --> 00:11:41.976 A:middle
+We'll start with an array, and
+
+00:11:41.976 --> 00:11:43.296 A:middle
+we'll ask that array to drop its
+
+00:11:43.296 --> 00:11:45.356 A:middle
+first element, producing a slice
+
+00:11:45.386 --> 00:11:46.286 A:middle
+that's one element shorter.
+
+00:11:46.636 --> 00:11:47.916 A:middle
+And because we care about
+
+00:11:48.116 --> 00:11:49.546 A:middle
+proving about the indices, we'll
+
+00:11:49.546 --> 00:11:50.926 A:middle
+actually get the second index of
+
+00:11:50.926 --> 00:11:52.836 A:middle
+the array by asking to advance
+
+00:11:53.046 --> 00:11:54.576 A:middle
+one after the start index, and
+
+00:11:54.576 --> 00:11:55.426 A:middle
+then we'll compare those.
+
+00:11:55.466 --> 00:11:58.446 A:middle
+And indeed, they are the same.
+
+00:11:58.546 --> 00:11:59.696 A:middle
+Now this dropfirst function
+
+00:11:59.696 --> 00:12:00.836 A:middle
+looks exactly like we need to
+
+00:11:59.696 --> 00:12:00.836 A:middle
+looks exactly like we need to
+
+00:12:00.836 --> 00:12:01.836 A:middle
+succinctly get the second
+
+00:12:01.836 --> 00:12:02.816 A:middle
+element of our collection.
+
+00:12:03.796 --> 00:12:04.816 A:middle
+So let's go back to our previous
+
+00:12:04.816 --> 00:12:05.806 A:middle
+solution, and see how much more
+
+00:12:05.806 --> 00:12:06.616 A:middle
+expressive we can be with
+
+00:12:06.616 --> 00:12:07.146 A:middle
+slices.
+
+00:12:08.396 --> 00:12:10.536 A:middle
+Remember all that fancy index
+
+00:12:10.536 --> 00:12:11.166 A:middle
+[inaudible] code we had to write
+
+00:12:11.166 --> 00:12:11.516 A:middle
+earlier?
+
+00:12:12.806 --> 00:12:14.166 A:middle
+Well, by using dropfirst, we're
+
+00:12:14.166 --> 00:12:15.326 A:middle
+going to let slices take care of
+
+00:12:15.326 --> 00:12:16.686 A:middle
+all that fancy index bounds
+
+00:12:16.686 --> 00:12:17.386 A:middle
+checking for us.
+
+00:12:17.736 --> 00:12:19.156 A:middle
+And since first returns an
+
+00:12:19.156 --> 00:12:21.606 A:middle
+optional, this will work as
+
+00:12:21.606 --> 00:12:23.556 A:middle
+expected with empty and single
+
+00:12:23.556 --> 00:12:24.486 A:middle
+element collections.
+
+00:12:25.116 --> 00:12:26.206 A:middle
+Let's visualize what's happening
+
+00:12:26.206 --> 00:12:26.376 A:middle
+here.
+
+00:12:27.686 --> 00:12:29.156 A:middle
+We start with an array, and we
+
+00:12:29.156 --> 00:12:30.496 A:middle
+form a slice by dropping the
+
+00:12:30.496 --> 00:12:31.096 A:middle
+first element.
+
+00:12:32.386 --> 00:12:34.906 A:middle
+We then use the first property
+
+00:12:35.696 --> 00:12:37.626 A:middle
+to subscript into the slice,
+
+00:12:37.776 --> 00:12:38.716 A:middle
+retrieving the element from the
+
+00:12:38.716 --> 00:12:39.416 A:middle
+original collection.
+
+00:12:39.536 --> 00:12:40.826 A:middle
+Now I don't know about you, but
+
+00:12:40.826 --> 00:12:42.996 A:middle
+I'd much rather maintain this
+
+00:12:43.616 --> 00:12:44.126 A:middle
+code.
+
+00:12:44.946 --> 00:12:46.026 A:middle
+Now every type is free to
+
+00:12:46.026 --> 00:12:47.446 A:middle
+describe its own slice type, and
+
+00:12:47.446 --> 00:12:48.046 A:middle
+many do.
+
+00:12:48.596 --> 00:12:50.076 A:middle
+For instance, arrays define
+
+00:12:50.486 --> 00:12:51.766 A:middle
+array slices that are especially
+
+00:12:51.766 --> 00:12:52.846 A:middle
+attuned to the most common use
+
+00:12:52.846 --> 00:12:54.446 A:middle
+cases that arrays work with.
+
+00:12:54.976 --> 00:12:57.396 A:middle
+Similarly, string defines a
+
+00:12:57.396 --> 00:12:59.096 A:middle
+substring slice type, and
+
+00:12:59.096 --> 00:13:00.706 A:middle
+substrings, again, are tuned to
+
+00:12:59.096 --> 00:13:00.706 A:middle
+substrings, again, are tuned to
+
+00:13:00.706 --> 00:13:01.806 A:middle
+the special cases that are most
+
+00:13:01.806 --> 00:13:02.396 A:middle
+common with strings.
+
+00:13:03.406 --> 00:13:06.196 A:middle
+Some types, like set, will make
+
+00:13:06.196 --> 00:13:07.746 A:middle
+use of the generalized slice
+
+00:13:07.846 --> 00:13:08.766 A:middle
+type defined in the standard
+
+00:13:08.766 --> 00:13:09.106 A:middle
+library.
+
+00:13:09.256 --> 00:13:10.096 A:middle
+That's because sets are
+
+00:13:10.096 --> 00:13:10.516 A:middle
+unordered.
+
+00:13:10.516 --> 00:13:11.506 A:middle
+There's not very much else that
+
+00:13:11.506 --> 00:13:11.886 A:middle
+they can do.
+
+00:13:11.886 --> 00:13:12.806 A:middle
+They just basically need to
+
+00:13:12.806 --> 00:13:13.976 A:middle
+maintain a start and an end
+
+00:13:13.976 --> 00:13:14.906 A:middle
+index [inaudible] to the
+
+00:13:14.906 --> 00:13:15.896 A:middle
+original collection.
+
+00:13:16.906 --> 00:13:18.576 A:middle
+Data and range on the other hand
+
+00:13:18.576 --> 00:13:20.426 A:middle
+are their own slice types, and
+
+00:13:20.426 --> 00:13:21.736 A:middle
+so there's a lot of options that
+
+00:13:21.736 --> 00:13:22.326 A:middle
+you have here.
+
+00:13:22.756 --> 00:13:24.106 A:middle
+And there's one more thing about
+
+00:13:24.106 --> 00:13:25.166 A:middle
+slices that I want to talk about
+
+00:13:25.166 --> 00:13:25.846 A:middle
+before we move on.
+
+00:13:26.366 --> 00:13:28.576 A:middle
+Let's suppose that we had a
+
+00:13:28.716 --> 00:13:29.986 A:middle
+really large collection, like
+
+00:13:30.176 --> 00:13:31.276 A:middle
+thousands and thousands and
+
+00:13:31.276 --> 00:13:32.166 A:middle
+thousands of elements.
+
+00:13:32.806 --> 00:13:34.016 A:middle
+And we add a couple of small
+
+00:13:34.016 --> 00:13:34.976 A:middle
+slices to parts of that
+
+00:13:34.976 --> 00:13:35.476 A:middle
+collection.
+
+00:13:36.666 --> 00:13:37.746 A:middle
+It's important to remember that
+
+00:13:37.746 --> 00:13:39.586 A:middle
+the slice keeps the entirety of
+
+00:13:39.586 --> 00:13:41.506 A:middle
+the originating collection alive
+
+00:13:41.506 --> 00:13:43.206 A:middle
+as long as the slice is around.
+
+00:13:43.286 --> 00:13:44.506 A:middle
+And this can lead to surprising
+
+00:13:44.506 --> 00:13:44.996 A:middle
+problems.
+
+00:13:45.226 --> 00:13:46.426 A:middle
+Let see how this works in code.
+
+00:13:47.836 --> 00:13:49.296 A:middle
+Let's suppose I have an
+
+00:13:49.296 --> 00:13:50.196 A:middle
+extension on an array that
+
+00:13:50.196 --> 00:13:51.226 A:middle
+allows me to return the first
+
+00:13:51.226 --> 00:13:53.816 A:middle
+half, and I'm using the droplast
+
+00:13:53.816 --> 00:13:55.236 A:middle
+function here to do so.
+
+00:13:55.806 --> 00:13:56.806 A:middle
+And we have an array of eight
+
+00:13:56.806 --> 00:13:58.096 A:middle
+numbers, and we call our
+
+00:13:58.096 --> 00:14:00.526 A:middle
+extension, producing the slice,
+
+00:13:58.096 --> 00:14:00.526 A:middle
+extension, producing the slice,
+
+00:14:00.976 --> 00:14:01.986 A:middle
+and then to try to get rid of
+
+00:14:01.986 --> 00:14:03.326 A:middle
+that original storage of eight
+
+00:14:03.386 --> 00:14:05.006 A:middle
+numbers, I go ahead and assign
+
+00:14:05.006 --> 00:14:06.026 A:middle
+that array to an empty array.
+
+00:14:06.546 --> 00:14:08.786 A:middle
+Our first clue that something
+
+00:14:09.296 --> 00:14:11.096 A:middle
+interesting is happening occurs
+
+00:14:11.096 --> 00:14:12.246 A:middle
+when we ask our slice for its
+
+00:14:12.246 --> 00:14:12.816 A:middle
+first element.
+
+00:14:13.536 --> 00:14:14.636 A:middle
+We're somehow able to return
+
+00:14:14.636 --> 00:14:16.576 A:middle
+one, even though we threw away
+
+00:14:16.576 --> 00:14:18.876 A:middle
+the storage for the original
+
+00:14:18.876 --> 00:14:19.086 A:middle
+array.
+
+00:14:19.596 --> 00:14:20.906 A:middle
+Either there was a copy or
+
+00:14:20.906 --> 00:14:22.336 A:middle
+something magical is going on.
+
+00:14:23.356 --> 00:14:25.946 A:middle
+And so if we wanted to eliminate
+
+00:14:25.946 --> 00:14:27.566 A:middle
+that buffer though, and oh the
+
+00:14:27.566 --> 00:14:28.646 A:middle
+magic that's actually going on
+
+00:14:28.646 --> 00:14:29.466 A:middle
+is that we're holding onto the
+
+00:14:29.466 --> 00:14:29.796 A:middle
+buffer.
+
+00:14:30.166 --> 00:14:31.196 A:middle
+And so if we wanted to eliminate
+
+00:14:31.196 --> 00:14:32.196 A:middle
+that, what we could do is we
+
+00:14:32.196 --> 00:14:34.136 A:middle
+could form an actual copy of the
+
+00:14:34.136 --> 00:14:36.166 A:middle
+array from the slice, and then
+
+00:14:36.166 --> 00:14:37.826 A:middle
+if we set that slice to an empty
+
+00:14:37.826 --> 00:14:39.666 A:middle
+array itself, that copy would
+
+00:14:39.666 --> 00:14:40.306 A:middle
+still be valid.
+
+00:14:41.466 --> 00:14:42.346 A:middle
+Let's visualize what just
+
+00:14:42.346 --> 00:14:42.606 A:middle
+happened.
+
+00:14:43.106 --> 00:14:44.546 A:middle
+We started with an array.
+
+00:14:45.096 --> 00:14:46.346 A:middle
+We then formed a slice on the
+
+00:14:46.346 --> 00:14:47.886 A:middle
+first half of that array.
+
+00:14:49.576 --> 00:14:52.146 A:middle
+We then created a copy of that,
+
+00:14:52.506 --> 00:14:53.586 A:middle
+setting the array to be empty
+
+00:14:53.906 --> 00:14:54.816 A:middle
+and setting that slice to be
+
+00:14:54.816 --> 00:14:55.176 A:middle
+empty.
+
+00:14:55.176 --> 00:14:57.936 A:middle
+And only after we did that did
+
+00:14:57.936 --> 00:14:59.046 A:middle
+the underlying storage go away.
+
+00:14:59.046 --> 00:15:02.716 A:middle
+So in this matter, slices sort
+
+00:14:59.046 --> 00:15:02.716 A:middle
+So in this matter, slices sort
+
+00:15:02.716 --> 00:15:03.876 A:middle
+of work like lazy copies.
+
+00:15:04.256 --> 00:15:05.966 A:middle
+You get to choose when you make
+
+00:15:05.966 --> 00:15:07.416 A:middle
+a copy of the elements yourself,
+
+00:15:08.246 --> 00:15:09.016 A:middle
+and it turns out that this
+
+00:15:09.016 --> 00:15:10.646 A:middle
+concept of being lazy and doing
+
+00:15:10.646 --> 00:15:12.946 A:middle
+something later is really useful
+
+00:15:12.946 --> 00:15:14.156 A:middle
+in other contexts too.
+
+00:15:15.566 --> 00:15:17.386 A:middle
+One such context is function
+
+00:15:17.386 --> 00:15:17.746 A:middle
+calls.
+
+00:15:18.816 --> 00:15:20.316 A:middle
+Now function calls in Swift are
+
+00:15:20.316 --> 00:15:21.216 A:middle
+eager by default.
+
+00:15:22.056 --> 00:15:23.326 A:middle
+That is, they consume their
+
+00:15:23.326 --> 00:15:25.626 A:middle
+input and return their output as
+
+00:15:25.696 --> 00:15:26.156 A:middle
+demanded.
+
+00:15:27.056 --> 00:15:28.236 A:middle
+Consider this example.
+
+00:15:28.596 --> 00:15:29.776 A:middle
+We start with a range from one
+
+00:15:29.776 --> 00:15:31.506 A:middle
+to 4000, and ranges are a really
+
+00:15:31.556 --> 00:15:32.836 A:middle
+succinct way of representing a
+
+00:15:32.836 --> 00:15:33.516 A:middle
+lot of numbers.
+
+00:15:33.906 --> 00:15:35.266 A:middle
+It's just a start and an end,
+
+00:15:35.266 --> 00:15:36.586 A:middle
+and it knows how to produce
+
+00:15:36.846 --> 00:15:36.936 A:middle
+them.
+
+00:15:37.336 --> 00:15:38.516 A:middle
+We then map this though
+
+00:15:38.516 --> 00:15:39.836 A:middle
+multiplying each value by two,
+
+00:15:39.836 --> 00:15:40.916 A:middle
+and so we've now actually
+
+00:15:40.916 --> 00:15:42.026 A:middle
+allocated an array of 4000
+
+00:15:42.026 --> 00:15:43.536 A:middle
+elements and performed our
+
+00:15:43.536 --> 00:15:45.456 A:middle
+mapping function on each of
+
+00:15:45.456 --> 00:15:45.626 A:middle
+them.
+
+00:15:46.396 --> 00:15:47.676 A:middle
+We then filter that down to four
+
+00:15:47.676 --> 00:15:48.126 A:middle
+elements.
+
+00:15:48.746 --> 00:15:49.586 A:middle
+And so at this point, we've
+
+00:15:49.586 --> 00:15:50.476 A:middle
+actually gone ahead and
+
+00:15:50.476 --> 00:15:53.746 A:middle
+allocated 4004, you know, space
+
+00:15:53.746 --> 00:15:56.636 A:middle
+for 4004 elements, but we only
+
+00:15:56.636 --> 00:15:57.696 A:middle
+really needed the final four.
+
+00:15:58.216 --> 00:16:01.256 A:middle
+And that's an awful lot of
+
+00:15:58.216 --> 00:16:01.256 A:middle
+And that's an awful lot of
+
+00:16:01.256 --> 00:16:02.786 A:middle
+intermediate computation that
+
+00:16:02.786 --> 00:16:03.936 A:middle
+maybe we don't always desire.
+
+00:16:04.546 --> 00:16:05.586 A:middle
+It would be great if there was a
+
+00:16:05.586 --> 00:16:06.636 A:middle
+way just to not do any of it,
+
+00:16:07.066 --> 00:16:08.246 A:middle
+unless it was absolutely needed.
+
+00:16:08.736 --> 00:16:11.316 A:middle
+And Swift's answer for that is
+
+00:16:11.316 --> 00:16:12.616 A:middle
+called being lazy, just like in
+
+00:16:12.616 --> 00:16:12.966 A:middle
+real life.
+
+00:16:14.756 --> 00:16:15.736 A:middle
+We'll start as we did before
+
+00:16:15.736 --> 00:16:18.296 A:middle
+with the range, and then we'll
+
+00:16:18.296 --> 00:16:19.706 A:middle
+tell that range to be lazy.
+
+00:16:19.706 --> 00:16:20.746 A:middle
+And when we do this, what
+
+00:16:20.746 --> 00:16:23.076 A:middle
+happens is we wrap the original
+
+00:16:23.076 --> 00:16:25.026 A:middle
+collection with a lazy
+
+00:16:25.026 --> 00:16:26.586 A:middle
+collection, and when we perform
+
+00:16:26.586 --> 00:16:27.996 A:middle
+operations on this lazy
+
+00:16:27.996 --> 00:16:29.036 A:middle
+collection, what's going to
+
+00:16:29.036 --> 00:16:30.276 A:middle
+happen is we're going to wrap it
+
+00:16:30.276 --> 00:16:30.566 A:middle
+again.
+
+00:16:30.566 --> 00:16:32.176 A:middle
+And so when we wrap the, when we
+
+00:16:32.176 --> 00:16:33.236 A:middle
+call map on it, we actually
+
+00:16:33.536 --> 00:16:34.096 A:middle
+aren't mapping.
+
+00:16:34.346 --> 00:16:35.166 A:middle
+We're not doing anything with
+
+00:16:35.166 --> 00:16:36.156 A:middle
+that closure other than storing
+
+00:16:36.156 --> 00:16:37.306 A:middle
+it for later should we ever need
+
+00:16:37.306 --> 00:16:37.746 A:middle
+to use it.
+
+00:16:38.566 --> 00:16:40.396 A:middle
+Further, if I filter that lazy
+
+00:16:40.396 --> 00:16:41.806 A:middle
+map collection, the filter
+
+00:16:41.806 --> 00:16:43.546 A:middle
+simply wraps the map collection,
+
+00:16:43.806 --> 00:16:44.816 A:middle
+noting that it's going to filter
+
+00:16:44.816 --> 00:16:46.236 A:middle
+later on demand, but not right
+
+00:16:46.236 --> 00:16:46.476 A:middle
+now.
+
+00:16:47.896 --> 00:16:49.426 A:middle
+Now let's go ahead and ask our
+
+00:16:49.426 --> 00:16:50.696 A:middle
+lazy filter collection for it's
+
+00:16:50.696 --> 00:16:51.326 A:middle
+first element.
+
+00:16:55.236 --> 00:16:58.056 A:middle
+When we do this, we'll start by
+
+00:16:58.056 --> 00:16:59.006 A:middle
+asking the lazy filter
+
+00:16:59.006 --> 00:16:59.776 A:middle
+collection for it's first
+
+00:16:59.776 --> 00:17:01.406 A:middle
+element, but the lazy filter
+
+00:16:59.776 --> 00:17:01.406 A:middle
+element, but the lazy filter
+
+00:17:01.406 --> 00:17:02.286 A:middle
+collection doesn't know.
+
+00:17:02.996 --> 00:17:04.175 A:middle
+It wraps something that might
+
+00:17:04.256 --> 00:17:04.435 A:middle
+know.
+
+00:17:05.026 --> 00:17:06.006 A:middle
+And so it'll defer to the map
+
+00:17:06.086 --> 00:17:06.536 A:middle
+collection.
+
+00:17:06.596 --> 00:17:08.356 A:middle
+And the map collection also
+
+00:17:08.596 --> 00:17:09.756 A:middle
+doesn't know it's first element,
+
+00:17:10.205 --> 00:17:11.326 A:middle
+but it wraps a collection that
+
+00:17:11.326 --> 00:17:12.876 A:middle
+might, and indeed, the range
+
+00:17:12.876 --> 00:17:13.756 A:middle
+knows it's first element.
+
+00:17:14.925 --> 00:17:16.296 A:middle
+The first element of the range
+
+00:17:16.356 --> 00:17:17.816 A:middle
+is the value one, which it
+
+00:17:17.816 --> 00:17:18.826 A:middle
+returns to the lazy map
+
+00:17:18.876 --> 00:17:21.226 A:middle
+collection where now the lazy
+
+00:17:21.226 --> 00:17:22.215 A:middle
+map collection can actually
+
+00:17:22.215 --> 00:17:24.296 A:middle
+perform it's closure, computing
+
+00:17:24.296 --> 00:17:26.126 A:middle
+the value 2, which it returns to
+
+00:17:26.126 --> 00:17:27.506 A:middle
+the lazy filter collection as a
+
+00:17:27.656 --> 00:17:28.716 A:middle
+candidatefirst element.
+
+00:17:29.346 --> 00:17:31.096 A:middle
+Now lucky for us in this case, 2
+
+00:17:31.096 --> 00:17:32.586 A:middle
+happens to be less than 10, and
+
+00:17:32.586 --> 00:17:33.696 A:middle
+so the lazy filter collection
+
+00:17:33.696 --> 00:17:35.076 A:middle
+finds it first element on the
+
+00:17:35.076 --> 00:17:37.006 A:middle
+first try, which it returns back
+
+00:17:37.006 --> 00:17:37.506 A:middle
+to its caller.
+
+00:17:38.056 --> 00:17:40.096 A:middle
+Now that's a lot of different
+
+00:17:40.096 --> 00:17:40.736 A:middle
+computation.
+
+00:17:41.426 --> 00:17:43.346 A:middle
+And I mentioned that lazy aims
+
+00:17:43.346 --> 00:17:44.906 A:middle
+to only do calculation as needed
+
+00:17:44.906 --> 00:17:46.626 A:middle
+on demand, but another thing
+
+00:17:46.626 --> 00:17:47.716 A:middle
+that it avoids is creating
+
+00:17:47.716 --> 00:17:48.586 A:middle
+intermediate storage.
+
+00:17:49.446 --> 00:17:51.216 A:middle
+So I want to show an example of
+
+00:17:52.096 --> 00:17:52.236 A:middle
+that.
+
+00:17:52.286 --> 00:17:53.426 A:middle
+Let's suppose we had an array of
+
+00:17:53.426 --> 00:17:54.406 A:middle
+different kind of bears.
+
+00:17:55.296 --> 00:17:57.206 A:middle
+However, I want to point out
+
+00:17:57.206 --> 00:17:58.196 A:middle
+that some of these bears are
+
+00:17:58.196 --> 00:17:58.636 A:middle
+redundant.
+
+00:17:59.416 --> 00:18:00.176 A:middle
+We already know that they're
+
+00:17:59.416 --> 00:18:00.176 A:middle
+We already know that they're
+
+00:18:00.176 --> 00:18:00.706 A:middle
+bears.
+
+00:18:01.016 --> 00:18:01.796 A:middle
+They don't need to tell us
+
+00:18:01.796 --> 00:18:02.336 A:middle
+again.
+
+00:18:03.376 --> 00:18:04.576 A:middle
+So let's write some code to find
+
+00:18:04.576 --> 00:18:05.756 A:middle
+those silly, redundant bears,
+
+00:18:05.756 --> 00:18:07.356 A:middle
+and we'll do this using a lazy
+
+00:18:07.356 --> 00:18:08.366 A:middle
+filter, as before.
+
+00:18:08.366 --> 00:18:11.996 A:middle
+And in this case, producing a
+
+00:18:11.996 --> 00:18:13.206 A:middle
+lazy filter is going to be a
+
+00:18:13.206 --> 00:18:14.676 A:middle
+lazy filter collection that
+
+00:18:14.746 --> 00:18:16.156 A:middle
+wraps an array of strings.
+
+00:18:16.716 --> 00:18:17.946 A:middle
+In our closer here, were going
+
+00:18:17.946 --> 00:18:19.396 A:middle
+to print out which bear we're
+
+00:18:19.396 --> 00:18:21.056 A:middle
+currently iterating on before we
+
+00:18:21.056 --> 00:18:21.836 A:middle
+do our predicate check.
+
+00:18:21.836 --> 00:18:23.006 A:middle
+And we're doing this because I
+
+00:18:23.006 --> 00:18:24.146 A:middle
+want to understand how filter
+
+00:18:24.146 --> 00:18:25.096 A:middle
+works a little better, and then
+
+00:18:25.096 --> 00:18:26.806 A:middle
+we'll call first, and when we do
+
+00:18:26.806 --> 00:18:28.116 A:middle
+this, we'll defer to the lazy
+
+00:18:28.116 --> 00:18:31.446 A:middle
+filter collection, and then the
+
+00:18:31.446 --> 00:18:32.726 A:middle
+lazy filter collection will in
+
+00:18:32.776 --> 00:18:33.966 A:middle
+turn defer to the original
+
+00:18:33.966 --> 00:18:37.226 A:middle
+storage where we'll print out
+
+00:18:37.326 --> 00:18:41.476 A:middle
+Grizzly, check the predicate,
+
+00:18:42.016 --> 00:18:43.496 A:middle
+which in this case is false,
+
+00:18:43.496 --> 00:18:44.406 A:middle
+Grizzly does not contain the
+
+00:18:44.406 --> 00:18:45.636 A:middle
+word bear, and advance on to
+
+00:18:45.636 --> 00:18:45.976 A:middle
+panda.
+
+00:18:47.336 --> 00:18:51.046 A:middle
+When we get to panda, when we
+
+00:18:51.046 --> 00:18:52.456 A:middle
+get to panda, we'll again print
+
+00:18:52.746 --> 00:18:54.596 A:middle
+out panda, check to see if it
+
+00:18:54.596 --> 00:18:55.936 A:middle
+contains the word bear, and
+
+00:18:55.936 --> 00:18:56.926 A:middle
+advance on to spectacle.
+
+00:18:57.996 --> 00:19:00.006 A:middle
+Spectacle gets printed, also
+
+00:18:57.996 --> 00:19:00.006 A:middle
+Spectacle gets printed, also
+
+00:19:00.006 --> 00:19:00.996 A:middle
+doesn't contain the word bear,
+
+00:19:01.146 --> 00:19:02.346 A:middle
+and we advance finally to gummy
+
+00:19:02.346 --> 00:19:04.936 A:middle
+bears, which mercifully has the
+
+00:19:04.936 --> 00:19:07.046 A:middle
+word bear in it, and which the
+
+00:19:07.046 --> 00:19:08.316 A:middle
+lazy filter collection can now
+
+00:19:08.346 --> 00:19:10.666 A:middle
+return to its caller.
+
+00:19:12.046 --> 00:19:12.976 A:middle
+Now what would happen if we
+
+00:19:12.976 --> 00:19:14.106 A:middle
+called first again?
+
+00:19:15.196 --> 00:19:18.476 A:middle
+Well, it's the same story.
+
+00:19:18.906 --> 00:19:19.896 A:middle
+We ask the lazy filter
+
+00:19:19.896 --> 00:19:21.536 A:middle
+collection, which defers to the
+
+00:19:21.536 --> 00:19:22.676 A:middle
+underlying collection, which
+
+00:19:22.676 --> 00:19:23.926 A:middle
+repeats that calculation,
+
+00:19:24.796 --> 00:19:25.836 A:middle
+returning it to its caller.
+
+00:19:26.066 --> 00:19:29.046 A:middle
+Now this might not typically be
+
+00:19:29.046 --> 00:19:30.626 A:middle
+what you want, and so if you
+
+00:19:30.626 --> 00:19:31.506 A:middle
+find yourself needing to
+
+00:19:31.506 --> 00:19:32.586 A:middle
+repeatedly ask the lazy
+
+00:19:32.586 --> 00:19:33.576 A:middle
+collection to calculate its
+
+00:19:33.576 --> 00:19:35.066 A:middle
+result, there's a way to make
+
+00:19:35.066 --> 00:19:35.976 A:middle
+sure that that happens just
+
+00:19:35.976 --> 00:19:36.356 A:middle
+once.
+
+00:19:36.876 --> 00:19:38.836 A:middle
+We can ensure that the lazy
+
+00:19:38.836 --> 00:19:40.176 A:middle
+collection is iterated exactly
+
+00:19:40.176 --> 00:19:42.116 A:middle
+once by creating a new nonlazy
+
+00:19:42.176 --> 00:19:44.466 A:middle
+collection from the lazy, and
+
+00:19:44.466 --> 00:19:46.156 A:middle
+when you do this, it will still
+
+00:19:46.156 --> 00:19:47.306 A:middle
+defer to the lazy collection,
+
+00:19:47.786 --> 00:19:48.586 A:middle
+but now the iteration will
+
+00:19:48.586 --> 00:19:50.466 A:middle
+proceed through the entirety of
+
+00:19:50.466 --> 00:19:51.686 A:middle
+your underlying collection,
+
+00:19:53.536 --> 00:19:55.116 A:middle
+producing essentially, you know,
+
+00:19:55.116 --> 00:19:56.706 A:middle
+the nonlazy version of that lazy
+
+00:19:56.706 --> 00:19:57.376 A:middle
+calculation.
+
+00:19:57.446 --> 00:19:59.096 A:middle
+And so in this case, we get an
+
+00:19:59.096 --> 00:20:00.266 A:middle
+array containing the string
+
+00:19:59.096 --> 00:20:00.266 A:middle
+array containing the string
+
+00:20:00.266 --> 00:20:00.776 A:middle
+gummy bears.
+
+00:20:01.466 --> 00:20:02.646 A:middle
+And if we print the first
+
+00:20:02.646 --> 00:20:03.976 A:middle
+element of that ray, we don't
+
+00:20:03.976 --> 00:20:05.176 A:middle
+need to consult the closure at
+
+00:20:05.176 --> 00:20:06.106 A:middle
+all or the lazy collection at
+
+00:20:06.106 --> 00:20:06.246 A:middle
+all.
+
+00:20:06.246 --> 00:20:07.376 A:middle
+We basically stamped out the
+
+00:20:07.376 --> 00:20:08.986 A:middle
+laziness and now have an eager
+
+00:20:08.986 --> 00:20:09.226 A:middle
+array.
+
+00:20:11.676 --> 00:20:13.156 A:middle
+So when should we be lazy?
+
+00:20:14.156 --> 00:20:15.586 A:middle
+Well, lazy collections are a
+
+00:20:15.586 --> 00:20:16.616 A:middle
+really great way to eliminate
+
+00:20:16.616 --> 00:20:17.896 A:middle
+the overhead of chained maps and
+
+00:20:17.896 --> 00:20:18.406 A:middle
+filters.
+
+00:20:18.686 --> 00:20:19.566 A:middle
+They excel when you find
+
+00:20:19.566 --> 00:20:20.826 A:middle
+yourself only needing part of
+
+00:20:20.826 --> 00:20:21.666 A:middle
+the result of a collection
+
+00:20:21.666 --> 00:20:24.116 A:middle
+calculation, or we should avoid
+
+00:20:24.116 --> 00:20:26.006 A:middle
+using lazy if your closures have
+
+00:20:26.276 --> 00:20:27.726 A:middle
+side effects, and your closures
+
+00:20:27.726 --> 00:20:28.946 A:middle
+should rarely have side effects.
+
+00:20:29.686 --> 00:20:31.406 A:middle
+And be sure to reify back, or I
+
+00:20:31.406 --> 00:20:32.526 A:middle
+should say, be sure to consider
+
+00:20:32.526 --> 00:20:33.856 A:middle
+reifying back into a regular
+
+00:20:33.856 --> 00:20:35.146 A:middle
+collection when you cross API
+
+00:20:35.146 --> 00:20:35.586 A:middle
+boundaries.
+
+00:20:36.196 --> 00:20:37.046 A:middle
+Lazy should often be an
+
+00:20:37.046 --> 00:20:38.026 A:middle
+implementation detail.
+
+00:20:38.546 --> 00:20:40.996 A:middle
+Now up until now, we've been
+
+00:20:40.996 --> 00:20:42.226 A:middle
+able to do a lot of cool things
+
+00:20:42.336 --> 00:20:43.616 A:middle
+with just mutable collections,
+
+00:20:44.926 --> 00:20:46.426 A:middle
+but of course Swift lets us
+
+00:20:46.426 --> 00:20:47.696 A:middle
+mutate our collections as well.
+
+00:20:49.106 --> 00:20:50.036 A:middle
+Let's talk about the two kinds
+
+00:20:50.036 --> 00:20:51.206 A:middle
+of collections that we haven't
+
+00:20:51.206 --> 00:20:52.386 A:middle
+talked about yet.
+
+00:20:52.936 --> 00:20:54.556 A:middle
+The first of these is mutable
+
+00:20:54.556 --> 00:20:54.976 A:middle
+collection.
+
+00:20:56.036 --> 00:20:56.856 A:middle
+This adds a setter to the
+
+00:20:56.856 --> 00:20:58.006 A:middle
+subscript so that you can change
+
+00:20:58.006 --> 00:20:59.316 A:middle
+the contents of a collection but
+
+00:20:59.316 --> 00:20:59.866 A:middle
+not its length.
+
+00:21:00.476 --> 00:21:01.146 A:middle
+And you have to be able to do
+
+00:21:01.146 --> 00:21:01.976 A:middle
+this in constant time.
+
+00:21:05.356 --> 00:21:07.846 A:middle
+The next is called a Range
+
+00:21:07.846 --> 00:21:08.856 A:middle
+Replaceable Collection, and this
+
+00:21:08.856 --> 00:21:09.726 A:middle
+is the kind of collection that
+
+00:21:09.726 --> 00:21:11.196 A:middle
+you get when you can remove
+
+00:21:11.196 --> 00:21:13.596 A:middle
+elements from a collection or
+
+00:21:13.596 --> 00:21:14.196 A:middle
+insert them.
+
+00:21:14.326 --> 00:21:16.916 A:middle
+And now I want to talk about one
+
+00:21:16.916 --> 00:21:18.326 A:middle
+of the questions I get asked all
+
+00:21:19.176 --> 00:21:20.206 A:middle
+the time.
+
+00:21:20.416 --> 00:21:21.806 A:middle
+Why does my perfectly reasonable
+
+00:21:21.806 --> 00:21:22.646 A:middle
+collection code crash?
+
+00:21:23.736 --> 00:21:24.796 A:middle
+And like all good question
+
+00:21:24.796 --> 00:21:26.066 A:middle
+answers, I almost always follow
+
+00:21:26.066 --> 00:21:26.986 A:middle
+up with a few questions of my
+
+00:21:26.986 --> 00:21:27.206 A:middle
+own.
+
+00:21:28.436 --> 00:21:29.246 A:middle
+Sometimes I start with the
+
+00:21:29.246 --> 00:21:30.186 A:middle
+classic, well what are you
+
+00:21:30.186 --> 00:21:30.706 A:middle
+trying to do?
+
+00:21:30.896 --> 00:21:32.986 A:middle
+And I usually quickly follow up
+
+00:21:32.986 --> 00:21:34.026 A:middle
+with, well how are you using
+
+00:21:34.026 --> 00:21:34.756 A:middle
+your collections?
+
+00:21:35.156 --> 00:21:36.056 A:middle
+Are you mutating them?
+
+00:21:36.236 --> 00:21:36.786 A:middle
+Are you sure you aren't
+
+00:21:36.786 --> 00:21:37.806 A:middle
+accessing your collections for
+
+00:21:37.806 --> 00:21:38.366 A:middle
+multiple threads?
+
+00:21:38.976 --> 00:21:40.366 A:middle
+And I ask these questions
+
+00:21:40.366 --> 00:21:42.836 A:middle
+because their answers often lead
+
+00:21:42.836 --> 00:21:44.186 A:middle
+to the root cause of the
+
+00:21:44.456 --> 00:21:44.776 A:middle
+problem.
+
+00:21:44.776 --> 00:21:46.696 A:middle
+Well, let's begin with the
+
+00:21:46.696 --> 00:21:47.556 A:middle
+assumption that threads aren't
+
+00:21:47.556 --> 00:21:47.866 A:middle
+involved.
+
+00:21:48.276 --> 00:21:49.146 A:middle
+I'm not ready to think about
+
+00:21:49.146 --> 00:21:49.516 A:middle
+threads yet.
+
+00:21:49.516 --> 00:21:51.996 A:middle
+It's not even 9:30.
+
+00:21:52.176 --> 00:21:54.026 A:middle
+Suppose we had an array, and we
+
+00:21:54.026 --> 00:21:55.716 A:middle
+get the index of an element that
+
+00:21:55.716 --> 00:21:57.576 A:middle
+we know is there, in this case
+
+00:21:57.576 --> 00:21:58.076 A:middle
+the value e.
+
+00:21:58.346 --> 00:21:59.396 A:middle
+And then we mutate the
+
+00:21:59.396 --> 00:22:00.546 A:middle
+collection, say by removing its
+
+00:21:59.396 --> 00:22:00.546 A:middle
+collection, say by removing its
+
+00:22:00.546 --> 00:22:03.146 A:middle
+first element, and we go ahead
+
+00:22:03.146 --> 00:22:04.796 A:middle
+and print the element associated
+
+00:22:04.796 --> 00:22:05.576 A:middle
+with that index.
+
+00:22:06.206 --> 00:22:07.076 A:middle
+Well when we do this,
+
+00:22:07.076 --> 00:22:09.526 A:middle
+unfortunately this will produce
+
+00:22:09.526 --> 00:22:10.366 A:middle
+a fatal error.
+
+00:22:11.796 --> 00:22:13.226 A:middle
+The index is no longer valid.
+
+00:22:13.326 --> 00:22:14.826 A:middle
+In fact, the index became
+
+00:22:14.826 --> 00:22:16.306 A:middle
+invalid the moment we mutated
+
+00:22:16.306 --> 00:22:16.946 A:middle
+our collection.
+
+00:22:17.466 --> 00:22:20.676 A:middle
+A far safer approach would be to
+
+00:22:20.676 --> 00:22:22.586 A:middle
+mutate our collection first and
+
+00:22:22.586 --> 00:22:24.196 A:middle
+then calculate the index.
+
+00:22:24.196 --> 00:22:27.356 A:middle
+It's worth pointing out that
+
+00:22:27.356 --> 00:22:28.566 A:middle
+mutation always invalidates
+
+00:22:28.566 --> 00:22:29.006 A:middle
+indices.
+
+00:22:29.066 --> 00:22:30.116 A:middle
+This doesn't just apply to
+
+00:22:30.116 --> 00:22:30.496 A:middle
+arrays.
+
+00:22:31.146 --> 00:22:32.206 A:middle
+Let's take a look at how this
+
+00:22:32.376 --> 00:22:33.266 A:middle
+problem could manifest with
+
+00:22:33.266 --> 00:22:33.866 A:middle
+dictionaries.
+
+00:22:35.036 --> 00:22:35.816 A:middle
+Let's suppose that we have a
+
+00:22:35.816 --> 00:22:36.936 A:middle
+dictionary showing a few of a
+
+00:22:36.936 --> 00:22:37.966 A:middle
+bear's favorite things.
+
+00:22:39.096 --> 00:22:40.056 A:middle
+We'll grab the index of our
+
+00:22:40.056 --> 00:22:41.586 A:middle
+bear's favorite food and print
+
+00:22:41.586 --> 00:22:43.316 A:middle
+it out, confirming that, indeed,
+
+00:22:43.316 --> 00:22:43.706 A:middle
+it's salmon.
+
+00:22:45.036 --> 00:22:46.486 A:middle
+Next, we'll add a couple more
+
+00:22:46.486 --> 00:22:47.466 A:middle
+favorite things that this bear
+
+00:22:47.466 --> 00:22:49.226 A:middle
+has, and then we'll make sure
+
+00:22:49.226 --> 00:22:50.106 A:middle
+that our favorite food is still
+
+00:22:50.106 --> 00:22:50.376 A:middle
+salmon.
+
+00:22:50.376 --> 00:22:52.446 A:middle
+And we'll see that, wait a
+
+00:22:52.446 --> 00:22:53.836 A:middle
+minute, our favorite good isn't
+
+00:22:53.886 --> 00:22:55.136 A:middle
+hibernation, it's salmon.
+
+00:22:55.436 --> 00:22:58.076 A:middle
+And just like arrays, we
+
+00:22:58.076 --> 00:22:59.576 A:middle
+invalidated our index the moment
+
+00:22:59.576 --> 00:23:00.646 A:middle
+we mutated the dictionary.
+
+00:22:59.576 --> 00:23:00.646 A:middle
+we mutated the dictionary.
+
+00:23:01.466 --> 00:23:02.446 A:middle
+It's also worth pointing out
+
+00:23:02.736 --> 00:23:03.726 A:middle
+that this code can crash.
+
+00:23:05.146 --> 00:23:06.186 A:middle
+So how do we go about fixing
+
+00:23:06.186 --> 00:23:06.516 A:middle
+this?
+
+00:23:07.606 --> 00:23:08.926 A:middle
+Well, it turns out it's the same
+
+00:23:08.926 --> 00:23:10.266 A:middle
+exact fix that we used with the
+
+00:23:10.266 --> 00:23:10.496 A:middle
+array.
+
+00:23:11.276 --> 00:23:12.286 A:middle
+We just simply recompute the
+
+00:23:12.286 --> 00:23:13.256 A:middle
+index after we mutate.
+
+00:23:13.696 --> 00:23:15.386 A:middle
+Well, one thing to keep in mind
+
+00:23:15.626 --> 00:23:16.486 A:middle
+that when you're recomputing
+
+00:23:16.486 --> 00:23:17.896 A:middle
+indices this is something that
+
+00:23:17.896 --> 00:23:18.916 A:middle
+can sometimes be expensive.
+
+00:23:18.916 --> 00:23:20.896 A:middle
+Some index search methods take
+
+00:23:20.976 --> 00:23:21.676 A:middle
+linear time.
+
+00:23:22.226 --> 00:23:23.496 A:middle
+And so you want to take care to
+
+00:23:23.496 --> 00:23:24.766 A:middle
+only find the indices that you
+
+00:23:25.206 --> 00:23:25.306 A:middle
+need.
+
+00:23:26.596 --> 00:23:27.936 A:middle
+So here's my advice if you want
+
+00:23:27.936 --> 00:23:28.866 A:middle
+to avoid finding yourself in
+
+00:23:28.866 --> 00:23:30.046 A:middle
+these kinds of situations.
+
+00:23:30.456 --> 00:23:32.196 A:middle
+Remember that mutation almost
+
+00:23:32.196 --> 00:23:33.546 A:middle
+always invalidates your indices.
+
+00:23:33.986 --> 00:23:35.586 A:middle
+You might get away with it
+
+00:23:35.586 --> 00:23:36.986 A:middle
+sometimes, but it's really best
+
+00:23:36.986 --> 00:23:38.066 A:middle
+to just treat this as a hard
+
+00:23:38.066 --> 00:23:38.346 A:middle
+rule.
+
+00:23:38.636 --> 00:23:39.936 A:middle
+You'll be much happier for it.
+
+00:23:40.926 --> 00:23:42.256 A:middle
+Also remember that slices hold
+
+00:23:42.256 --> 00:23:44.136 A:middle
+on to the underlying original
+
+00:23:44.276 --> 00:23:45.416 A:middle
+state of the collection even
+
+00:23:45.416 --> 00:23:46.976 A:middle
+after it was mutated, and
+
+00:23:46.976 --> 00:23:48.586 A:middle
+because of that, really think
+
+00:23:48.586 --> 00:23:50.136 A:middle
+twice about holding onto indices
+
+00:23:50.136 --> 00:23:51.786 A:middle
+or slices when the underlying
+
+00:23:51.786 --> 00:23:52.626 A:middle
+collection is mutable.
+
+00:23:53.776 --> 00:23:54.816 A:middle
+And keep in mind that index
+
+00:23:54.816 --> 00:23:56.556 A:middle
+computation can sometimes take a
+
+00:23:56.556 --> 00:23:57.756 A:middle
+nontrivial amount of time.
+
+00:23:59.246 --> 00:24:00.516 A:middle
+So take care to only calculate
+
+00:23:59.246 --> 00:24:00.516 A:middle
+So take care to only calculate
+
+00:24:00.516 --> 00:24:01.446 A:middle
+indices as needed.
+
+00:24:01.956 --> 00:24:04.146 A:middle
+So a little bit later, let's
+
+00:24:04.176 --> 00:24:04.816 A:middle
+bring threads into the
+
+00:24:04.816 --> 00:24:05.296 A:middle
+discussion.
+
+00:24:05.786 --> 00:24:06.576 A:middle
+I mentioned that one of the
+
+00:24:06.576 --> 00:24:07.966 A:middle
+questions that I ask is are your
+
+00:24:08.046 --> 00:24:09.866 A:middle
+threads accessible for multiple
+
+00:24:09.866 --> 00:24:10.166 A:middle
+threads?
+
+00:24:10.456 --> 00:24:13.256 A:middle
+And the reason why I ask this is
+
+00:24:13.256 --> 00:24:14.646 A:middle
+because our collections assume
+
+00:24:14.646 --> 00:24:15.686 A:middle
+that you will access them from a
+
+00:24:15.686 --> 00:24:16.416 A:middle
+single thread.
+
+00:24:17.156 --> 00:24:18.746 A:middle
+And this is a really good thing
+
+00:24:18.746 --> 00:24:19.916 A:middle
+for reasons of performance.
+
+00:24:20.516 --> 00:24:21.376 A:middle
+It makes it so that all
+
+00:24:21.376 --> 00:24:22.696 A:middle
+single-threaded use cases don't
+
+00:24:22.696 --> 00:24:24.716 A:middle
+have to pay the tax of locks or
+
+00:24:24.716 --> 00:24:26.416 A:middle
+any of those other primitives
+
+00:24:26.416 --> 00:24:27.386 A:middle
+that you could use to ensure
+
+00:24:27.386 --> 00:24:29.076 A:middle
+mutual exclusion.
+
+00:24:30.226 --> 00:24:31.196 A:middle
+And when threads are involved,
+
+00:24:31.356 --> 00:24:32.746 A:middle
+only developers using the
+
+00:24:32.746 --> 00:24:33.786 A:middle
+collections will have all the
+
+00:24:33.786 --> 00:24:35.066 A:middle
+information needed to restrict
+
+00:24:35.066 --> 00:24:36.556 A:middle
+access with the appropriate lock
+
+00:24:36.556 --> 00:24:38.056 A:middle
+or a serial queue at a much
+
+00:24:38.106 --> 00:24:39.346 A:middle
+higher level abstraction than us
+
+00:24:39.346 --> 00:24:40.466 A:middle
+lowly framework developers could
+
+00:24:40.466 --> 00:24:40.956 A:middle
+ever offer.
+
+00:24:40.956 --> 00:24:43.596 A:middle
+So let's see what these kinds of
+
+00:24:43.596 --> 00:24:44.356 A:middle
+problems could look like.
+
+00:24:45.536 --> 00:24:46.546 A:middle
+Let's suppose we have an array
+
+00:24:46.546 --> 00:24:47.596 A:middle
+that we aim to fill up with
+
+00:24:47.596 --> 00:24:49.896 A:middle
+sleeping bears, and to simulate
+
+00:24:49.896 --> 00:24:52.026 A:middle
+each bear being their own bear
+
+00:24:52.026 --> 00:24:52.926 A:middle
+and in charge of themselves,
+
+00:24:52.926 --> 00:24:53.796 A:middle
+we're going to get access to a
+
+00:24:53.886 --> 00:24:56.356 A:middle
+concurrent dispatch queue that
+
+00:24:56.356 --> 00:24:57.496 A:middle
+we'll use to tell each bear to
+
+00:24:57.496 --> 00:24:58.036 A:middle
+go to sleep.
+
+00:24:58.156 --> 00:24:59.936 A:middle
+And because this is a concurrent
+
+00:24:59.936 --> 00:25:01.196 A:middle
+dispatch queue, it's some time
+
+00:24:59.936 --> 00:25:01.196 A:middle
+dispatch queue, it's some time
+
+00:25:01.196 --> 00:25:02.456 A:middle
+helpful to like imagine the code
+
+00:25:02.456 --> 00:25:04.086 A:middle
+running at the same time, which
+
+00:25:04.086 --> 00:25:05.466 A:middle
+I'll simulate by putting them on
+
+00:25:05.466 --> 00:25:06.176 A:middle
+the same line.
+
+00:25:06.986 --> 00:25:08.086 A:middle
+And later in our application,
+
+00:25:08.086 --> 00:25:09.036 A:middle
+let's go ahead and check in on
+
+00:25:09.036 --> 00:25:11.376 A:middle
+those sleeping bears, and
+
+00:25:11.376 --> 00:25:13.506 A:middle
+sometimes we'll see grandpa and
+
+00:25:13.556 --> 00:25:14.476 A:middle
+cubs snoozing happily.
+
+00:25:15.136 --> 00:25:17.086 A:middle
+Other times, cub will go to
+
+00:25:17.086 --> 00:25:18.276 A:middle
+sleep first, and then it'll be
+
+00:25:18.276 --> 00:25:18.636 A:middle
+grandpa.
+
+00:25:19.516 --> 00:25:20.936 A:middle
+Sometimes, quite mysteriously,
+
+00:25:21.166 --> 00:25:22.966 A:middle
+only grandpa is sleeping in.
+
+00:25:23.506 --> 00:25:25.166 A:middle
+And other times, it'll be the
+
+00:25:25.226 --> 00:25:28.226 A:middle
+cub, and sometimes our program
+
+00:25:28.226 --> 00:25:29.986 A:middle
+just up and crashes, and nobody
+
+00:25:30.086 --> 00:25:32.046 A:middle
+bear's getting any sleep.
+
+00:25:32.216 --> 00:25:33.246 A:middle
+All of these possibilities
+
+00:25:33.246 --> 00:25:34.356 A:middle
+suggest that there's a possible
+
+00:25:34.356 --> 00:25:36.306 A:middle
+race condition, and indeed, it
+
+00:25:36.356 --> 00:25:37.336 A:middle
+seems likely given all the
+
+00:25:37.336 --> 00:25:39.326 A:middle
+potential threads involved in
+
+00:25:39.326 --> 00:25:40.146 A:middle
+this example.
+
+00:25:41.116 --> 00:25:41.946 A:middle
+And we can prove this to
+
+00:25:41.946 --> 00:25:42.916 A:middle
+ourselves using the thread
+
+00:25:42.916 --> 00:25:44.196 A:middle
+sanitizer or TSAN that's
+
+00:25:44.196 --> 00:25:45.106 A:middle
+included within Xcode.
+
+00:25:45.606 --> 00:25:47.406 A:middle
+And if we were to do so, we'd
+
+00:25:47.406 --> 00:25:48.376 A:middle
+get output that kind of looks
+
+00:25:48.376 --> 00:25:50.836 A:middle
+like this, and indeed, TSAN
+
+00:25:50.836 --> 00:25:51.676 A:middle
+would catch the race.
+
+00:25:51.676 --> 00:25:53.586 A:middle
+It would tell us there's a Swift
+
+00:25:53.586 --> 00:25:54.066 A:middle
+access race.
+
+00:25:54.626 --> 00:25:55.796 A:middle
+It would tell us which threads
+
+00:25:55.796 --> 00:25:58.016 A:middle
+are involved and give us a
+
+00:25:58.016 --> 00:25:59.076 A:middle
+summary at the end telling us
+
+00:25:59.126 --> 00:26:00.346 A:middle
+which line to actually go start
+
+00:25:59.126 --> 00:26:00.346 A:middle
+which line to actually go start
+
+00:26:00.346 --> 00:26:01.256 A:middle
+looking for our problem.
+
+00:26:02.336 --> 00:26:03.336 A:middle
+And all that evidence is
+
+00:26:03.336 --> 00:26:04.226 A:middle
+actually going to be really
+
+00:26:04.226 --> 00:26:06.946 A:middle
+helpful to find the bug.
+
+00:26:06.946 --> 00:26:07.746 A:middle
+So we've proven that there's a
+
+00:26:07.746 --> 00:26:08.156 A:middle
+bug here.
+
+00:26:08.416 --> 00:26:10.376 A:middle
+TSAN has never lied in my
+
+00:26:10.376 --> 00:26:11.256 A:middle
+experience with them.
+
+00:26:12.616 --> 00:26:14.036 A:middle
+So we can fix this by
+
+00:26:14.036 --> 00:26:15.446 A:middle
+eliminating the bears' ability
+
+00:26:15.446 --> 00:26:16.466 A:middle
+to go to sleep at the same time,
+
+00:26:16.846 --> 00:26:17.826 A:middle
+and we'll do that with a serial
+
+00:26:17.826 --> 00:26:18.456 A:middle
+dispatch queue.
+
+00:26:19.736 --> 00:26:20.846 A:middle
+And now only one bear can go to
+
+00:26:20.846 --> 00:26:21.446 A:middle
+sleep at a time.
+
+00:26:21.946 --> 00:26:22.846 A:middle
+And so if we peek in on our
+
+00:26:22.846 --> 00:26:25.236 A:middle
+sleeping bears again now, taking
+
+00:26:25.236 --> 00:26:26.516 A:middle
+care to do so on the appropriate
+
+00:26:26.516 --> 00:26:28.926 A:middle
+queue, we see that sure enough
+
+00:26:29.226 --> 00:26:30.496 A:middle
+grandpa and cub are snoozing
+
+00:26:30.496 --> 00:26:31.586 A:middle
+away peacefully like we
+
+00:26:31.586 --> 00:26:32.006 A:middle
+expected.
+
+00:26:33.936 --> 00:26:35.306 A:middle
+So my advice for working with
+
+00:26:35.306 --> 00:26:36.526 A:middle
+collections for multiple threads
+
+00:26:36.976 --> 00:26:38.336 A:middle
+is try to isolate your data so
+
+00:26:38.336 --> 00:26:39.296 A:middle
+that it can only be seen from a
+
+00:26:39.296 --> 00:26:40.856 A:middle
+single thread, and when you
+
+00:26:40.856 --> 00:26:42.906 A:middle
+can't do that, make sure that
+
+00:26:42.906 --> 00:26:43.766 A:middle
+you have an appropriate form in
+
+00:26:43.766 --> 00:26:45.126 A:middle
+mutual exclusion, such as a
+
+00:26:45.126 --> 00:26:46.726 A:middle
+serial dispatch queue or locks.
+
+00:26:47.816 --> 00:26:49.016 A:middle
+And always use the thread
+
+00:26:49.016 --> 00:26:50.226 A:middle
+sanitizer to double check your
+
+00:26:50.226 --> 00:26:50.476 A:middle
+work.
+
+00:26:50.876 --> 00:26:52.376 A:middle
+It's far better to catch bugs
+
+00:26:52.406 --> 00:26:53.426 A:middle
+before they ship in your app
+
+00:26:53.816 --> 00:26:54.236 A:middle
+than after.
+
+00:26:54.236 --> 00:26:56.496 A:middle
+And I have a little bit more
+
+00:26:56.496 --> 00:26:57.496 A:middle
+advice for working with mutable
+
+00:26:57.496 --> 00:26:58.046 A:middle
+collections.
+
+00:26:59.476 --> 00:27:01.166 A:middle
+The first of which is if you can
+
+00:26:59.476 --> 00:27:01.166 A:middle
+The first of which is if you can
+
+00:27:01.166 --> 00:27:02.676 A:middle
+avoid it, don't use mutable
+
+00:27:02.676 --> 00:27:03.366 A:middle
+state at all.
+
+00:27:04.456 --> 00:27:05.706 A:middle
+So far all the difficulties that
+
+00:27:05.706 --> 00:27:06.906 A:middle
+I've described have come about
+
+00:27:06.906 --> 00:27:07.916 A:middle
+because we've been working with
+
+00:27:07.916 --> 00:27:08.526 A:middle
+mutable state.
+
+00:27:08.926 --> 00:27:10.066 A:middle
+You can avoid all the potential
+
+00:27:10.066 --> 00:27:11.356 A:middle
+for this complexity by avoiding
+
+00:27:11.356 --> 00:27:12.686 A:middle
+mutable collections in the first
+
+00:27:12.686 --> 00:27:13.096 A:middle
+place.
+
+00:27:13.866 --> 00:27:14.976 A:middle
+Many times you can actually
+
+00:27:14.976 --> 00:27:16.116 A:middle
+emulate the mutations that you
+
+00:27:16.116 --> 00:27:18.026 A:middle
+want to perform by using a slice
+
+00:27:18.766 --> 00:27:20.676 A:middle
+or using a lazy wrapper, and
+
+00:27:20.676 --> 00:27:21.666 A:middle
+it's almost always easier to
+
+00:27:21.666 --> 00:27:22.796 A:middle
+understand data that cannot
+
+00:27:22.856 --> 00:27:23.316 A:middle
+change.
+
+00:27:23.626 --> 00:27:25.416 A:middle
+And thanks to mutability being
+
+00:27:25.576 --> 00:27:27.066 A:middle
+built into Swift, the compiler
+
+00:27:27.066 --> 00:27:28.196 A:middle
+will help you if you're leaving
+
+00:27:28.196 --> 00:27:29.276 A:middle
+a state mutable when you're not
+
+00:27:29.276 --> 00:27:30.726 A:middle
+actually mutating it.
+
+00:27:32.436 --> 00:27:33.756 A:middle
+Now I have one more piece of
+
+00:27:33.756 --> 00:27:35.486 A:middle
+advice that actually concerns
+
+00:27:35.486 --> 00:27:36.746 A:middle
+how best to use mutable state
+
+00:27:36.746 --> 00:27:38.656 A:middle
+when you have to.
+
+00:27:38.856 --> 00:27:39.656 A:middle
+And that's when you're forming
+
+00:27:39.656 --> 00:27:40.396 A:middle
+new collections.
+
+00:27:40.606 --> 00:27:41.606 A:middle
+You can help performance if
+
+00:27:41.606 --> 00:27:42.786 A:middle
+you're lucky enough to know an
+
+00:27:42.786 --> 00:27:45.246 A:middle
+exact count or a really good
+
+00:27:45.246 --> 00:27:46.156 A:middle
+approximation of how many
+
+00:27:46.156 --> 00:27:47.056 A:middle
+elements you're actually going
+
+00:27:47.056 --> 00:27:47.226 A:middle
+to need.
+
+00:27:47.776 --> 00:27:49.326 A:middle
+Most collection APIs have a way
+
+00:27:49.326 --> 00:27:50.466 A:middle
+of being able to provide this
+
+00:27:50.536 --> 00:27:51.756 A:middle
+hint, and when you do this, you
+
+00:27:51.756 --> 00:27:53.136 A:middle
+get exactly the size you need
+
+00:27:53.136 --> 00:27:53.846 A:middle
+with no overhead.
+
+00:27:54.496 --> 00:27:56.146 A:middle
+If you don't, our collections
+
+00:27:56.146 --> 00:27:57.286 A:middle
+are general purpose tools.
+
+00:27:58.106 --> 00:27:59.036 A:middle
+They're meant to work on a wide
+
+00:27:59.036 --> 00:28:00.126 A:middle
+variety of cases, and as you
+
+00:27:59.036 --> 00:28:00.126 A:middle
+variety of cases, and as you
+
+00:28:00.126 --> 00:28:01.656 A:middle
+incrementally add elements, you
+
+00:28:01.656 --> 00:28:03.736 A:middle
+may actually end up over
+
+00:28:03.736 --> 00:28:04.816 A:middle
+allocating the amount of storage
+
+00:28:04.816 --> 00:28:06.706 A:middle
+that you need, but taking care
+
+00:28:06.706 --> 00:28:07.726 A:middle
+that you don't over estimate
+
+00:28:07.726 --> 00:28:09.226 A:middle
+when providing such hints,
+
+00:28:09.446 --> 00:28:10.186 A:middle
+because otherwise you'll find
+
+00:28:10.186 --> 00:28:11.156 A:middle
+yourself in the same exactly
+
+00:28:11.156 --> 00:28:12.116 A:middle
+situation where you're using up
+
+00:28:12.116 --> 00:28:13.366 A:middle
+more storage than you actually
+
+00:28:13.876 --> 00:28:13.966 A:middle
+need.
+
+00:28:14.756 --> 00:28:16.216 A:middle
+And now, I want to move on to my
+
+00:28:16.216 --> 00:28:17.266 A:middle
+final topic for today.
+
+00:28:17.266 --> 00:28:20.196 A:middle
+And that's the wide range of
+
+00:28:20.196 --> 00:28:20.986 A:middle
+collections that become
+
+00:28:20.986 --> 00:28:22.876 A:middle
+available for you when you
+
+00:28:22.876 --> 00:28:24.166 A:middle
+import Foundation and when you
+
+00:28:24.166 --> 00:28:25.756 A:middle
+should consider using them.
+
+00:28:26.456 --> 00:28:28.286 A:middle
+In addition to the standard
+
+00:28:28.286 --> 00:28:29.266 A:middle
+library collections, when you
+
+00:28:29.266 --> 00:28:30.606 A:middle
+import Foundation, you gain
+
+00:28:30.606 --> 00:28:31.546 A:middle
+access to the great
+
+00:28:31.546 --> 00:28:32.806 A:middle
+reference-type collections that
+
+00:28:32.806 --> 00:28:34.216 A:middle
+objective C developers have been
+
+00:28:34.216 --> 00:28:35.076 A:middle
+using for decades.
+
+00:28:35.076 --> 00:28:37.636 A:middle
+And many of these also gain
+
+00:28:37.636 --> 00:28:39.636 A:middle
+conformance in Swift and thus
+
+00:28:39.636 --> 00:28:40.816 A:middle
+behave just the collections that
+
+00:28:40.816 --> 00:28:41.636 A:middle
+we've been talking about.
+
+00:28:42.356 --> 00:28:43.246 A:middle
+That said, there are a couple
+
+00:28:43.246 --> 00:28:44.136 A:middle
+important things to keep in
+
+00:28:44.136 --> 00:28:44.426 A:middle
+mind.
+
+00:28:44.906 --> 00:28:48.046 A:middle
+First thing to keep in mind is
+
+00:28:48.046 --> 00:28:48.676 A:middle
+that these NS [inaudible]
+
+00:28:48.726 --> 00:28:50.376 A:middle
+collections are reference types.
+
+00:28:50.556 --> 00:28:51.616 A:middle
+And this is best examined by
+
+00:28:51.616 --> 00:28:52.696 A:middle
+considering an example.
+
+00:28:53.636 --> 00:28:54.546 A:middle
+We're going to define value
+
+00:28:54.636 --> 00:28:55.596 A:middle
+types and reference types and do
+
+00:28:55.596 --> 00:28:57.196 A:middle
+the same things with them on two
+
+00:28:57.196 --> 00:28:57.476 A:middle
+sides.
+
+00:28:58.406 --> 00:28:59.536 A:middle
+So with our value type, we'll
+
+00:28:59.536 --> 00:29:00.196 A:middle
+call it x.
+
+00:28:59.536 --> 00:29:00.196 A:middle
+call it x.
+
+00:29:00.196 --> 00:29:01.456 A:middle
+It will be an array of strings.
+
+00:29:02.476 --> 00:29:04.466 A:middle
+We get an empty array called x.
+
+00:29:05.076 --> 00:29:06.206 A:middle
+With a reference type, we get an
+
+00:29:06.206 --> 00:29:08.306 A:middle
+empty array, but x is pointing
+
+00:29:08.306 --> 00:29:08.606 A:middle
+to it.
+
+00:29:10.036 --> 00:29:12.086 A:middle
+We then mutate that array with
+
+00:29:12.086 --> 00:29:12.656 A:middle
+the value type.
+
+00:29:12.656 --> 00:29:14.086 A:middle
+That array is mutated in line.
+
+00:29:14.736 --> 00:29:16.326 A:middle
+With the reference type, that
+
+00:29:16.486 --> 00:29:17.786 A:middle
+array is, the reference, the
+
+00:29:17.786 --> 00:29:19.646 A:middle
+array that is being referenced
+
+00:29:19.696 --> 00:29:20.816 A:middle
+is mutated in line.
+
+00:29:21.406 --> 00:29:22.286 A:middle
+We add another variable.
+
+00:29:22.556 --> 00:29:24.376 A:middle
+With the value type, something
+
+00:29:24.376 --> 00:29:25.276 A:middle
+really special happens.
+
+00:29:25.546 --> 00:29:26.316 A:middle
+We actually don't copy the
+
+00:29:26.316 --> 00:29:27.156 A:middle
+storage at this point.
+
+00:29:27.396 --> 00:29:29.766 A:middle
+Why is an array that knows that
+
+00:29:29.766 --> 00:29:30.926 A:middle
+its storage is actually owned by
+
+00:29:30.926 --> 00:29:31.056 A:middle
+x?
+
+00:29:31.056 --> 00:29:33.366 A:middle
+And why is that actually going
+
+00:29:33.436 --> 00:29:34.666 A:middle
+to perform that copy until
+
+00:29:34.666 --> 00:29:35.536 A:middle
+either of those collections is
+
+00:29:35.536 --> 00:29:35.916 A:middle
+mutated.
+
+00:29:36.676 --> 00:29:37.456 A:middle
+The reference type is a little
+
+00:29:37.456 --> 00:29:37.956 A:middle
+bit different.
+
+00:29:38.946 --> 00:29:40.616 A:middle
+Y is just another pointer to the
+
+00:29:40.616 --> 00:29:41.666 A:middle
+same underlying array.
+
+00:29:43.096 --> 00:29:44.516 A:middle
+So let's go ahead and mutate y.
+
+00:29:44.656 --> 00:29:45.516 A:middle
+We'll put another bear in that
+
+00:29:45.516 --> 00:29:45.786 A:middle
+array.
+
+00:29:46.126 --> 00:29:47.266 A:middle
+With the value type what happens
+
+00:29:47.546 --> 00:29:48.786 A:middle
+is first we invoke that copy on
+
+00:29:48.786 --> 00:29:49.336 A:middle
+write machinery.
+
+00:29:49.486 --> 00:29:51.256 A:middle
+We're writing to a y, so we need
+
+00:29:51.256 --> 00:29:53.816 A:middle
+to copy it, and then we can
+
+00:29:53.816 --> 00:29:54.966 A:middle
+insert the next bear.
+
+00:29:55.146 --> 00:29:57.106 A:middle
+With the reference, it's a
+
+00:29:57.106 --> 00:29:57.826 A:middle
+little bit simpler.
+
+00:29:58.056 --> 00:29:58.846 A:middle
+There's only one array.
+
+00:29:59.216 --> 00:30:00.756 A:middle
+We simply put the panda in the
+
+00:29:59.216 --> 00:30:00.756 A:middle
+We simply put the panda in the
+
+00:30:00.756 --> 00:30:00.946 A:middle
+array.
+
+00:30:01.576 --> 00:30:04.006 A:middle
+There's a second thing that you
+
+00:30:04.006 --> 00:30:05.306 A:middle
+need to keep in mind when
+
+00:30:05.306 --> 00:30:07.466 A:middle
+working with the foundation
+
+00:30:07.466 --> 00:30:08.586 A:middle
+collections in Swift.
+
+00:30:08.816 --> 00:30:11.696 A:middle
+And that is, all objective-C
+
+00:30:11.696 --> 00:30:13.416 A:middle
+APIs in Swift appear as Swift
+
+00:30:13.546 --> 00:30:14.616 A:middle
+native value types.
+
+00:30:14.926 --> 00:30:15.856 A:middle
+And this is actually really
+
+00:30:15.856 --> 00:30:16.986 A:middle
+wonderful because it let's code
+
+00:30:16.986 --> 00:30:18.706 A:middle
+in each language speak naturally
+
+00:30:18.706 --> 00:30:19.596 A:middle
+with the types that they work
+
+00:30:19.596 --> 00:30:19.926 A:middle
+with best.
+
+00:30:21.046 --> 00:30:21.846 A:middle
+But how can this work?
+
+00:30:22.216 --> 00:30:22.946 A:middle
+The two languages have
+
+00:30:22.946 --> 00:30:23.526 A:middle
+completely different
+
+00:30:23.526 --> 00:30:24.426 A:middle
+implementations for these
+
+00:30:24.426 --> 00:30:24.866 A:middle
+collections.
+
+00:30:25.976 --> 00:30:27.986 A:middle
+And the reason why it works is
+
+00:30:27.986 --> 00:30:28.886 A:middle
+something known as bridging.
+
+00:30:29.566 --> 00:30:30.526 A:middle
+Bridging is how we convert
+
+00:30:30.526 --> 00:30:31.416 A:middle
+between the two different
+
+00:30:31.776 --> 00:30:33.266 A:middle
+runtime representations, and
+
+00:30:33.266 --> 00:30:33.886 A:middle
+this is something that's
+
+00:30:33.926 --> 00:30:35.036 A:middle
+necessary because Swift and
+
+00:30:35.036 --> 00:30:36.736 A:middle
+objective-C, I'm sure you've
+
+00:30:36.736 --> 00:30:37.946 A:middle
+noticed, are very different
+
+00:30:37.946 --> 00:30:39.686 A:middle
+languages with very different
+
+00:30:39.686 --> 00:30:41.236 A:middle
+compile and runtime features.
+
+00:30:42.326 --> 00:30:43.436 A:middle
+And while we've optimized
+
+00:30:43.436 --> 00:30:44.976 A:middle
+bridging to be as fast as it can
+
+00:30:44.976 --> 00:30:46.186 A:middle
+be, it's not free.
+
+00:30:46.546 --> 00:30:48.146 A:middle
+There will always be a cost when
+
+00:30:48.146 --> 00:30:48.886 A:middle
+bridging between the two
+
+00:30:48.886 --> 00:30:49.466 A:middle
+languages.
+
+00:30:50.656 --> 00:30:52.066 A:middle
+So what happens when we bridge?
+
+00:30:52.836 --> 00:30:54.206 A:middle
+Well, when we bridge between the
+
+00:30:54.206 --> 00:30:55.606 A:middle
+language, we have dispersed set
+
+00:30:55.606 --> 00:30:57.166 A:middle
+up new storage, equivalent
+
+00:30:57.166 --> 00:30:58.376 A:middle
+storage, so if you're taking n
+
+00:30:58.376 --> 00:30:59.246 A:middle
+things in one language, you'll
+
+00:30:59.246 --> 00:31:00.806 A:middle
+take up n space in the next one.
+
+00:30:59.246 --> 00:31:00.806 A:middle
+take up n space in the next one.
+
+00:31:01.206 --> 00:31:02.296 A:middle
+Then we need to go element by
+
+00:31:02.296 --> 00:31:04.806 A:middle
+element and convert potentially
+
+00:31:04.806 --> 00:31:05.376 A:middle
+between them, and this
+
+00:31:05.436 --> 00:31:06.276 A:middle
+per-element bridging can
+
+00:31:06.276 --> 00:31:06.976 A:middle
+sometimes be recursive.
+
+00:31:07.076 --> 00:31:08.886 A:middle
+For instance, if I have an array
+
+00:31:08.886 --> 00:31:10.226 A:middle
+of strings, first we'll bridge
+
+00:31:10.226 --> 00:31:11.406 A:middle
+the array, and then we'll bridge
+
+00:31:11.446 --> 00:31:12.786 A:middle
+each individual string.
+
+00:31:12.966 --> 00:31:14.746 A:middle
+And when this happens at the
+
+00:31:14.746 --> 00:31:15.606 A:middle
+boundary between the two
+
+00:31:15.606 --> 00:31:16.996 A:middle
+languages, we call it eager
+
+00:31:16.996 --> 00:31:17.366 A:middle
+bridging.
+
+00:31:17.836 --> 00:31:19.996 A:middle
+And collections will always be
+
+00:31:19.996 --> 00:31:21.036 A:middle
+bridged eagerly when the
+
+00:31:21.036 --> 00:31:22.846 A:middle
+elements of the collection need
+
+00:31:22.846 --> 00:31:23.536 A:middle
+bridging as well.
+
+00:31:23.536 --> 00:31:25.506 A:middle
+And this arises most often with
+
+00:31:25.536 --> 00:31:27.316 A:middle
+dictionaries keyed by strings.
+
+00:31:27.846 --> 00:31:29.926 A:middle
+When collection bridging is not
+
+00:31:29.966 --> 00:31:31.446 A:middle
+eager, we call it lazy.
+
+00:31:31.526 --> 00:31:32.416 A:middle
+And this happens when the
+
+00:31:32.416 --> 00:31:33.636 A:middle
+element types of the collection
+
+00:31:33.776 --> 00:31:35.296 A:middle
+aren't bridged themselves, such
+
+00:31:35.376 --> 00:31:36.016 A:middle
+as NSViews.
+
+00:31:36.526 --> 00:31:37.816 A:middle
+In this case, bridging will be
+
+00:31:38.056 --> 00:31:39.566 A:middle
+deferred until the collection is
+
+00:31:39.566 --> 00:31:40.746 A:middle
+actually first used.
+
+00:31:40.966 --> 00:31:42.276 A:middle
+Let's make this concrete with
+
+00:31:42.276 --> 00:31:42.826 A:middle
+some examples.
+
+00:31:43.596 --> 00:31:44.356 A:middle
+We'll first consider an
+
+00:31:44.356 --> 00:31:45.896 A:middle
+objective-C API describing an
+
+00:31:45.896 --> 00:31:46.926 A:middle
+NSArray of NSDatas.
+
+00:31:47.866 --> 00:31:49.566 A:middle
+Now NSArray is bridged to array,
+
+00:31:49.566 --> 00:31:51.076 A:middle
+and NSData is bridged to
+
+00:31:51.076 --> 00:31:51.856 A:middle
+value-type data.
+
+00:31:52.086 --> 00:31:53.606 A:middle
+And so such a collection would
+
+00:31:53.606 --> 00:31:54.396 A:middle
+be bridged eagerly.
+
+00:31:54.616 --> 00:31:57.016 A:middle
+I mentioned a moment ago that
+
+00:31:57.016 --> 00:31:58.126 A:middle
+NSViews are not bridged in
+
+00:31:58.126 --> 00:31:58.466 A:middle
+Swift.
+
+00:31:58.466 --> 00:32:00.206 A:middle
+They remain reference types in
+
+00:31:58.466 --> 00:32:00.206 A:middle
+They remain reference types in
+
+00:32:00.206 --> 00:32:00.516 A:middle
+Swift.
+
+00:32:00.516 --> 00:32:02.556 A:middle
+And so an NSArray of NSViews
+
+00:32:03.186 --> 00:32:04.186 A:middle
+will be lazily bridged.
+
+00:32:04.406 --> 00:32:05.436 A:middle
+The bridging won't happen until
+
+00:32:05.436 --> 00:32:07.626 A:middle
+you first access or try to use
+
+00:32:07.626 --> 00:32:08.806 A:middle
+that array.
+
+00:32:10.556 --> 00:32:13.066 A:middle
+And finally, an NSDictionary
+
+00:32:13.066 --> 00:32:15.336 A:middle
+with keys that are NS strings
+
+00:32:15.336 --> 00:32:17.666 A:middle
+will be bridged eagerly because
+
+00:32:17.666 --> 00:32:18.756 A:middle
+the strings need to come across
+
+00:32:18.846 --> 00:32:21.346 A:middle
+in Swift as value-type strings.
+
+00:32:22.336 --> 00:32:22.996 A:middle
+So now that we know what
+
+00:32:22.996 --> 00:32:24.616 A:middle
+bridging is, how it works, and
+
+00:32:24.616 --> 00:32:26.166 A:middle
+when it happens, we can move on
+
+00:32:26.166 --> 00:32:27.146 A:middle
+to the most important question
+
+00:32:27.146 --> 00:32:28.956 A:middle
+of all, which is when should you
+
+00:32:28.956 --> 00:32:29.586 A:middle
+care about it.
+
+00:32:29.736 --> 00:32:30.506 A:middle
+And the answer is really
+
+00:32:30.506 --> 00:32:31.116 A:middle
+straightforward.
+
+00:32:31.416 --> 00:32:32.466 A:middle
+When you measure it negatively
+
+00:32:32.466 --> 00:32:33.966 A:middle
+impacting your app.
+
+00:32:35.676 --> 00:32:36.906 A:middle
+Specifically, when you take a
+
+00:32:37.026 --> 00:32:37.856 A:middle
+time profile or trace an
+
+00:32:37.856 --> 00:32:39.206 A:middle
+instrument, pay special
+
+00:32:39.206 --> 00:32:40.416 A:middle
+attention to where your code
+
+00:32:40.416 --> 00:32:41.736 A:middle
+crosses between the languages,
+
+00:32:41.946 --> 00:32:42.956 A:middle
+especially when this happens
+
+00:32:42.956 --> 00:32:44.236 A:middle
+inside a loop.
+
+00:32:44.956 --> 00:32:45.736 A:middle
+Some bridging is going to
+
+00:32:45.736 --> 00:32:47.196 A:middle
+happen, and that's totally okay.
+
+00:32:47.596 --> 00:32:48.586 A:middle
+What you're looking for though
+
+00:32:48.976 --> 00:32:50.456 A:middle
+is a disproportionate amount of
+
+00:32:50.526 --> 00:32:51.626 A:middle
+time or a surprising amount of
+
+00:32:51.696 --> 00:32:53.106 A:middle
+time spent in code that you
+
+00:32:53.106 --> 00:32:54.486 A:middle
+didn't write that has the word
+
+00:32:54.486 --> 00:32:55.026 A:middle
+bridge in it.
+
+00:32:56.556 --> 00:32:57.346 A:middle
+Let's look at a concrete
+
+00:32:57.406 --> 00:32:58.376 A:middle
+example.
+
+00:32:58.886 --> 00:33:00.186 A:middle
+Suppose I have a manuscript for
+
+00:32:58.886 --> 00:33:00.186 A:middle
+Suppose I have a manuscript for
+
+00:33:00.186 --> 00:33:01.746 A:middle
+a great children's story that
+
+00:33:01.746 --> 00:33:02.646 A:middle
+I'm working on, but it's really
+
+00:33:02.646 --> 00:33:03.516 A:middle
+long, so I'm only going to show
+
+00:33:03.516 --> 00:33:05.086 A:middle
+a little bit here, but to really
+
+00:33:05.086 --> 00:33:07.486 A:middle
+make it pop, I want to make
+
+00:33:07.756 --> 00:33:09.646 A:middle
+every word or every instance of
+
+00:33:09.646 --> 00:33:11.006 A:middle
+the word brown actually be the
+
+00:33:11.006 --> 00:33:12.596 A:middle
+color brown, and in the interest
+
+00:33:12.596 --> 00:33:13.636 A:middle
+of space, I'm only going to show
+
+00:33:13.636 --> 00:33:14.636 A:middle
+highlighting the first word.
+
+00:33:14.846 --> 00:33:17.386 A:middle
+To do this, I'm going to use an
+
+00:33:17.386 --> 00:33:18.486 A:middle
+NS mutable attributed string.
+
+00:33:18.806 --> 00:33:21.666 A:middle
+I'll pass my story in there.
+
+00:33:21.926 --> 00:33:23.566 A:middle
+And then using the attributed
+
+00:33:23.566 --> 00:33:25.266 A:middle
+strings string property, I'll
+
+00:33:25.266 --> 00:33:26.416 A:middle
+ask for the range of the Swift
+
+00:33:26.416 --> 00:33:28.206 A:middle
+string brown, which will produce
+
+00:33:28.206 --> 00:33:29.886 A:middle
+a range of strings native index
+
+00:33:29.886 --> 00:33:30.086 A:middle
+type.
+
+00:33:30.656 --> 00:33:32.466 A:middle
+And as mutable string works with
+
+00:33:32.556 --> 00:33:33.626 A:middle
+NS ranges, and so I'll use the
+
+00:33:33.626 --> 00:33:34.916 A:middle
+convenience initializer that we
+
+00:33:34.916 --> 00:33:37.526 A:middle
+introduced last year to convert
+
+00:33:37.586 --> 00:33:39.626 A:middle
+to an NS range, and this, I'm
+
+00:33:39.626 --> 00:33:41.756 A:middle
+calling again attributed strings
+
+00:33:41.926 --> 00:33:43.606 A:middle
+string property to do the
+
+00:33:43.606 --> 00:33:44.006 A:middle
+conversion.
+
+00:33:44.296 --> 00:33:45.296 A:middle
+And then we'll color the first
+
+00:33:45.466 --> 00:33:46.396 A:middle
+instance of the word brown.
+
+00:33:47.156 --> 00:33:48.206 A:middle
+And when I go to run this code,
+
+00:33:48.206 --> 00:33:49.636 A:middle
+I notice it's a little slow.
+
+00:33:50.916 --> 00:33:52.526 A:middle
+So I profile it.
+
+00:33:52.526 --> 00:33:54.516 A:middle
+And I see that, to my surprise,
+
+00:33:54.516 --> 00:33:55.296 A:middle
+I thought all the time would be
+
+00:33:55.296 --> 00:33:56.436 A:middle
+spent coloring the word brown,
+
+00:33:56.436 --> 00:33:57.306 A:middle
+but indeed, it's actually
+
+00:33:57.306 --> 00:33:58.366 A:middle
+computing the indices, and why
+
+00:33:58.366 --> 00:33:58.676 A:middle
+is that?
+
+00:33:59.306 --> 00:34:01.416 A:middle
+And the reason for that is that
+
+00:33:59.306 --> 00:34:01.416 A:middle
+And the reason for that is that
+
+00:34:01.416 --> 00:34:02.256 A:middle
+we're actually bridging our
+
+00:34:02.256 --> 00:34:03.766 A:middle
+string multiple times across
+
+00:34:03.766 --> 00:34:04.306 A:middle
+languages.
+
+00:34:04.576 --> 00:34:05.976 A:middle
+Mutable attributed string is an
+
+00:34:05.976 --> 00:34:08.295 A:middle
+objective-C reference type, and
+
+00:34:08.295 --> 00:34:09.766 A:middle
+so when we're asking for the
+
+00:34:09.766 --> 00:34:10.826 A:middle
+string property, we're actually
+
+00:34:10.826 --> 00:34:11.646 A:middle
+having to convert from an
+
+00:34:11.646 --> 00:34:12.366 A:middle
+NSString to a string.
+
+00:34:12.585 --> 00:34:15.326 A:middle
+And we're doing it once here
+
+00:34:15.326 --> 00:34:16.335 A:middle
+when we calculated the first
+
+00:34:16.335 --> 00:34:17.505 A:middle
+range, and we're doing it a
+
+00:34:17.505 --> 00:34:18.466 A:middle
+second time when we convert for
+
+00:34:18.466 --> 00:34:19.166 A:middle
+the NSRange.
+
+00:34:19.516 --> 00:34:21.726 A:middle
+You can imagine how expensive
+
+00:34:21.766 --> 00:34:22.996 A:middle
+this would be if we did this in
+
+00:34:22.996 --> 00:34:24.505 A:middle
+a loop looking for all the text
+
+00:34:24.505 --> 00:34:24.886 A:middle
+to color.
+
+00:34:24.886 --> 00:34:26.556 A:middle
+Now let's look into why this is
+
+00:34:26.556 --> 00:34:26.946 A:middle
+happening.
+
+00:34:27.556 --> 00:34:28.876 A:middle
+Every time I call text.string,
+
+00:34:29.206 --> 00:34:30.545 A:middle
+we start in a Swift execution
+
+00:34:30.585 --> 00:34:31.106 A:middle
+context.
+
+00:34:31.795 --> 00:34:33.025 A:middle
+However, the implementation of
+
+00:34:33.025 --> 00:34:34.056 A:middle
+NSMutableAttributedString is
+
+00:34:34.056 --> 00:34:35.496 A:middle
+objective-C, and so in order to
+
+00:34:35.496 --> 00:34:37.076 A:middle
+provide the result, we actually
+
+00:34:37.076 --> 00:34:38.466 A:middle
+have to consult the original
+
+00:34:38.466 --> 00:34:39.085 A:middle
+implementation.
+
+00:34:40.436 --> 00:34:41.716 A:middle
+The original implementation
+
+00:34:41.716 --> 00:34:43.596 A:middle
+returns an NSString, which is
+
+00:34:43.596 --> 00:34:44.856 A:middle
+the reference type, and so when
+
+00:34:44.856 --> 00:34:46.606 A:middle
+return to string, it needs to be
+
+00:34:47.565 --> 00:34:48.996 A:middle
+bridged, graphing cluster by
+
+00:34:48.996 --> 00:34:51.295 A:middle
+graphing cluster, character by
+
+00:34:51.295 --> 00:34:51.775 A:middle
+character.
+
+00:34:51.775 --> 00:34:55.085 A:middle
+And bridging happens whether
+
+00:34:55.646 --> 00:34:57.596 A:middle
+it's a return type or a
+
+00:34:57.596 --> 00:34:58.000 A:middle
+parameter.
+
+00:35:01.246 --> 00:35:02.336 A:middle
+So now that we know those
+
+00:35:02.456 --> 00:35:04.706 A:middle
+details, we can make, now we can
+
+00:35:04.706 --> 00:35:06.176 A:middle
+actually make this a little bit
+
+00:35:06.176 --> 00:35:06.366 A:middle
+better.
+
+00:35:06.466 --> 00:35:07.526 A:middle
+Let's just bridge once.
+
+00:35:07.836 --> 00:35:11.116 A:middle
+And let's remeasure our code and
+
+00:35:11.116 --> 00:35:12.256 A:middle
+see that indeed we've improved
+
+00:35:12.256 --> 00:35:13.126 A:middle
+our performance by half.
+
+00:35:13.696 --> 00:35:14.996 A:middle
+But it turns out this year we
+
+00:35:14.996 --> 00:35:15.676 A:middle
+can do a little better.
+
+00:35:16.676 --> 00:35:18.286 A:middle
+Oh, and also, now we're not
+
+00:35:18.286 --> 00:35:19.076 A:middle
+bridging where we do that.
+
+00:35:19.546 --> 00:35:20.626 A:middle
+But this year we can do a little
+
+00:35:20.626 --> 00:35:21.036 A:middle
+bit better.
+
+00:35:21.616 --> 00:35:23.126 A:middle
+This year, if we actually
+
+00:35:23.266 --> 00:35:24.256 A:middle
+[inaudible] to an NSString when
+
+00:35:24.256 --> 00:35:25.436 A:middle
+we ask for the text.string's
+
+00:35:25.466 --> 00:35:26.356 A:middle
+property, when we get the
+
+00:35:26.356 --> 00:35:28.246 A:middle
+variable out, no bridging is
+
+00:35:28.246 --> 00:35:29.176 A:middle
+actually going to occur.
+
+00:35:30.656 --> 00:35:32.486 A:middle
+And further, by doing so, now
+
+00:35:32.486 --> 00:35:35.216 A:middle
+that string is an NSString, when
+
+00:35:35.216 --> 00:35:36.356 A:middle
+we call the range of property,
+
+00:35:36.436 --> 00:35:37.406 A:middle
+we're actually going to get an
+
+00:35:37.406 --> 00:35:39.996 A:middle
+NSRange out of it automatically.
+
+00:35:39.996 --> 00:35:40.956 A:middle
+We won't need to do any of the
+
+00:35:40.956 --> 00:35:42.116 A:middle
+range conversion between Swift
+
+00:35:42.116 --> 00:35:44.896 A:middle
+native types and the NS ranges,
+
+00:35:44.896 --> 00:35:46.466 A:middle
+which is pretty excellent.
+
+00:35:46.646 --> 00:35:47.526 A:middle
+So let's measure this code and
+
+00:35:47.526 --> 00:35:48.966 A:middle
+see how it is, and sure enough,
+
+00:35:49.206 --> 00:35:49.936 A:middle
+this looks pretty good.
+
+00:35:50.156 --> 00:35:51.226 A:middle
+Much, much faster than the, you
+
+00:35:51.226 --> 00:35:52.816 A:middle
+know, almost 800 milliseconds
+
+00:35:52.816 --> 00:35:53.516 A:middle
+that we were consuming
+
+00:35:53.516 --> 00:35:54.126 A:middle
+previously.
+
+00:35:54.346 --> 00:35:56.396 A:middle
+However, I do want to point out
+
+00:35:56.396 --> 00:35:57.366 A:middle
+that we're still bridging here.
+
+00:35:57.656 --> 00:35:58.896 A:middle
+And it's a teeny, tiny bridge,
+
+00:35:59.616 --> 00:36:00.346 A:middle
+but we're still bridging.
+
+00:35:59.616 --> 00:36:00.346 A:middle
+but we're still bridging.
+
+00:36:01.406 --> 00:36:03.456 A:middle
+Brown here is a Swift value type
+
+00:36:03.456 --> 00:36:03.786 A:middle
+string.
+
+00:36:04.956 --> 00:36:07.976 A:middle
+And every time we call into the
+
+00:36:07.976 --> 00:36:09.526 A:middle
+objective-C API range of
+
+00:36:09.606 --> 00:36:10.376 A:middle
+[inaudible] NSString, we're
+
+00:36:10.376 --> 00:36:11.896 A:middle
+actually going to bridge that
+
+00:36:11.896 --> 00:36:13.236 A:middle
+teeny, tiny string back to an
+
+00:36:13.236 --> 00:36:13.686 A:middle
+NSString.
+
+00:36:14.966 --> 00:36:15.886 A:middle
+This is inexpensive in this
+
+00:36:15.886 --> 00:36:16.066 A:middle
+case.
+
+00:36:16.066 --> 00:36:17.546 A:middle
+I'm only doing it once, but you
+
+00:36:17.606 --> 00:36:18.696 A:middle
+can imagine, if this was in a
+
+00:36:18.696 --> 00:36:20.206 A:middle
+loop, that small amount would
+
+00:36:20.206 --> 00:36:21.006 A:middle
+add up over time.
+
+00:36:21.156 --> 00:36:23.246 A:middle
+And so you want to take care to
+
+00:36:23.476 --> 00:36:24.486 A:middle
+avoid bridging the same small
+
+00:36:24.486 --> 00:36:25.246 A:middle
+strings repeatedly.
+
+00:36:25.546 --> 00:36:26.446 A:middle
+However, before you do such
+
+00:36:26.446 --> 00:36:28.056 A:middle
+optimizations, always measure.
+
+00:36:29.476 --> 00:36:30.516 A:middle
+And so now that we've seen the
+
+00:36:30.516 --> 00:36:31.406 A:middle
+details of bridging, I want to
+
+00:36:31.406 --> 00:36:32.346 A:middle
+offer a little bit of advice
+
+00:36:32.346 --> 00:36:33.616 A:middle
+about when to use Foundation
+
+00:36:33.616 --> 00:36:34.196 A:middle
+collections.
+
+00:36:34.686 --> 00:36:36.836 A:middle
+You should consider using them
+
+00:36:36.946 --> 00:36:38.106 A:middle
+explicitly when you need a
+
+00:36:38.106 --> 00:36:39.096 A:middle
+collection with reference
+
+00:36:39.096 --> 00:36:39.756 A:middle
+semantics.
+
+00:36:40.606 --> 00:36:41.496 A:middle
+Don't need to write one of those
+
+00:36:41.496 --> 00:36:42.596 A:middle
+for yourself, we already have
+
+00:36:42.666 --> 00:36:43.326 A:middle
+many great ones.
+
+00:36:43.326 --> 00:36:44.956 A:middle
+You should also use it when
+
+00:36:44.956 --> 00:36:45.796 A:middle
+you're working with types that
+
+00:36:45.796 --> 00:36:46.876 A:middle
+you know to be reference types.
+
+00:36:47.076 --> 00:36:48.636 A:middle
+Things like NS proxies or core
+
+00:36:48.636 --> 00:36:49.716 A:middle
+data managed objects.
+
+00:36:49.956 --> 00:36:52.066 A:middle
+And the final time to consider
+
+00:36:52.066 --> 00:36:53.386 A:middle
+using them is when you're round
+
+00:36:53.386 --> 00:36:54.816 A:middle
+tripping with objective-C code,
+
+00:36:55.216 --> 00:36:56.486 A:middle
+but I'd recommend strongly doing
+
+00:36:56.486 --> 00:36:58.416 A:middle
+this only after you've measured
+
+00:36:58.416 --> 00:36:59.506 A:middle
+and identified that bridging is
+
+00:36:59.506 --> 00:37:00.516 A:middle
+indeed the culprit for whatever
+
+00:36:59.506 --> 00:37:00.516 A:middle
+indeed the culprit for whatever
+
+00:37:00.516 --> 00:37:01.546 A:middle
+performance problems you may be
+
+00:37:01.546 --> 00:37:01.906 A:middle
+seeing.
+
+00:37:03.396 --> 00:37:05.076 A:middle
+And now, we've reached the end
+
+00:37:05.076 --> 00:37:06.416 A:middle
+of today's dive into the
+
+00:37:06.416 --> 00:37:07.906 A:middle
+incredible power of our world's
+
+00:37:07.906 --> 00:37:08.786 A:middle
+collections in Swift.
+
+00:37:08.836 --> 00:37:10.946 A:middle
+I want you to use this new-found
+
+00:37:10.946 --> 00:37:12.356 A:middle
+understanding to review your
+
+00:37:12.356 --> 00:37:13.656 A:middle
+existing use of collections.
+
+00:37:14.046 --> 00:37:15.086 A:middle
+Look for places where you can
+
+00:37:15.086 --> 00:37:16.316 A:middle
+improve your code through more
+
+00:37:16.316 --> 00:37:17.716 A:middle
+effective use of indices and
+
+00:37:17.716 --> 00:37:18.196 A:middle
+slices.
+
+00:37:18.926 --> 00:37:19.756 A:middle
+Measure your code.
+
+00:37:20.656 --> 00:37:21.716 A:middle
+And look for places where you
+
+00:37:21.716 --> 00:37:23.586 A:middle
+could benefit by being lazy or
+
+00:37:24.196 --> 00:37:25.786 A:middle
+by tuning how you bridge.
+
+00:37:26.966 --> 00:37:28.526 A:middle
+Use the thread sanitizer to help
+
+00:37:28.556 --> 00:37:30.766 A:middle
+audit your mutable state, and
+
+00:37:30.766 --> 00:37:31.866 A:middle
+further hone your mastery of
+
+00:37:31.866 --> 00:37:33.066 A:middle
+collections by apply all the
+
+00:37:33.066 --> 00:37:34.256 A:middle
+concepts discussed today in
+
+00:37:34.306 --> 00:37:36.646 A:middle
+Playgrounds and you own apps.
+
+00:37:37.876 --> 00:37:38.986 A:middle
+Be sure to visit our last few
+
+00:37:38.986 --> 00:37:39.946 A:middle
+labs today if you have any
+
+00:37:39.946 --> 00:37:41.016 A:middle
+questions about collections.
+
+00:37:41.166 --> 00:37:41.796 A:middle
+We're here to help.
+
+00:37:42.676 --> 00:37:43.666 A:middle
+Thank you so much for you time.
+
+00:37:43.836 --> 00:37:44.856 A:middle
+Now go out and be effective.
+
+00:37:45.508 --> 00:37:47.508 A:middle
+[ Applause ]

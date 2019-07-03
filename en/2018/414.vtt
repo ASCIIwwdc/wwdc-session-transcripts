@@ -1,1 +1,5572 @@
 WEBVTT
+
+00:00:07.016 --> 00:00:15.500 A:middle
+[ Music ]
+
+00:00:19.806 --> 00:00:22.956 A:middle
+&gt;&gt; Oh yeah, good morning, thank
+
+00:00:22.956 --> 00:00:23.606 A:middle
+you for coming.
+
+00:00:26.556 --> 00:00:27.876 A:middle
+I'm going to be joined by some
+
+00:00:27.876 --> 00:00:29.156 A:middle
+very bright people in a minute.
+
+00:00:29.636 --> 00:00:30.846 A:middle
+We have some very cool stuff
+
+00:00:30.846 --> 00:00:34.066 A:middle
+prepared for you today.
+
+00:00:34.406 --> 00:00:37.686 A:middle
+So let me start first by saying
+
+00:00:37.686 --> 00:00:39.616 A:middle
+if you never write code that
+
+00:00:39.616 --> 00:00:42.536 A:middle
+crashes this session is not for
+
+00:00:42.536 --> 00:00:42.736 A:middle
+you.
+
+00:00:43.926 --> 00:00:45.506 A:middle
+This is a talk for the rest of
+
+00:00:45.506 --> 00:00:47.406 A:middle
+us, for those of us who make
+
+00:00:47.406 --> 00:00:48.006 A:middle
+mistakes.
+
+00:00:49.536 --> 00:00:51.316 A:middle
+Today we're going to talk about
+
+00:00:51.316 --> 00:00:53.586 A:middle
+the tools and techniques that
+
+00:00:53.586 --> 00:00:55.006 A:middle
+you can use to stay on top of
+
+00:00:55.006 --> 00:00:56.646 A:middle
+your crashes if they're
+
+00:00:56.646 --> 00:00:57.596 A:middle
+affecting your users.
+
+00:00:58.336 --> 00:01:00.256 A:middle
+In particular I'm going to cover
+
+00:00:58.336 --> 00:01:00.256 A:middle
+In particular I'm going to cover
+
+00:01:00.256 --> 00:01:02.496 A:middle
+the fundamentals of crashes, why
+
+00:01:02.496 --> 00:01:03.736 A:middle
+do they happen, what do they
+
+00:01:03.736 --> 00:01:04.226 A:middle
+look like.
+
+00:01:05.816 --> 00:01:07.326 A:middle
+Then I'm going to show you some
+
+00:01:07.326 --> 00:01:08.646 A:middle
+of the tools that we have to
+
+00:01:08.646 --> 00:01:10.226 A:middle
+access crash logs when they're
+
+00:01:10.226 --> 00:01:11.026 A:middle
+occurring in the wild.
+
+00:01:12.496 --> 00:01:13.666 A:middle
+Then Greg is going to come up
+
+00:01:13.996 --> 00:01:15.876 A:middle
+and give you some more detail on
+
+00:01:16.006 --> 00:01:17.246 A:middle
+how to read the content of a
+
+00:01:17.246 --> 00:01:18.186 A:middle
+crash log.
+
+00:01:18.996 --> 00:01:21.026 A:middle
+And then he's going to go in
+
+00:01:21.026 --> 00:01:22.476 A:middle
+depth in how to read a tricky
+
+00:01:22.476 --> 00:01:24.036 A:middle
+memory issue with a crash log.
+
+00:01:24.036 --> 00:01:26.686 A:middle
+And then Kuba will show you how
+
+00:01:26.686 --> 00:01:28.426 A:middle
+to catch threading races early,
+
+00:01:28.426 --> 00:01:29.446 A:middle
+these threading races lead to
+
+00:01:29.446 --> 00:01:31.446 A:middle
+crashes, and these crashes are
+
+00:01:31.446 --> 00:01:33.866 A:middle
+very hard to reproduce.
+
+00:01:33.866 --> 00:01:35.856 A:middle
+So first we should define it,
+
+00:01:36.536 --> 00:01:37.316 A:middle
+what is a crash?
+
+00:01:38.836 --> 00:01:41.206 A:middle
+A crash is a sudden termination
+
+00:01:41.256 --> 00:01:43.406 A:middle
+of your app when it attempts to
+
+00:01:43.406 --> 00:01:44.596 A:middle
+do something that is not
+
+00:01:44.596 --> 00:01:44.986 A:middle
+allowed.
+
+00:01:44.986 --> 00:01:47.296 A:middle
+So what's not allowed?
+
+00:01:47.796 --> 00:01:49.386 A:middle
+Well, sometimes it's impossible
+
+00:01:49.386 --> 00:01:51.626 A:middle
+for the CPU to execute code, the
+
+00:01:51.626 --> 00:01:53.086 A:middle
+CPU won't divide by zero.
+
+00:01:54.126 --> 00:01:55.726 A:middle
+Or sometimes it's the operating
+
+00:01:55.726 --> 00:01:56.976 A:middle
+system that's enforcing some
+
+00:01:57.026 --> 00:01:57.516 A:middle
+policy.
+
+00:01:59.066 --> 00:02:00.216 A:middle
+The operating system will
+
+00:01:59.066 --> 00:02:00.216 A:middle
+The operating system will
+
+00:02:00.216 --> 00:02:01.986 A:middle
+preserve the user experience by
+
+00:02:01.986 --> 00:02:03.886 A:middle
+killing your app if it's taking
+
+00:02:03.886 --> 00:02:05.546 A:middle
+too long to launch or it's using
+
+00:02:05.546 --> 00:02:08.256 A:middle
+too much memory.
+
+00:02:08.256 --> 00:02:09.476 A:middle
+Sometimes the programming
+
+00:02:09.476 --> 00:02:11.476 A:middle
+language you're using is trying
+
+00:02:11.476 --> 00:02:13.006 A:middle
+to prevent a failure and will
+
+00:02:13.006 --> 00:02:13.896 A:middle
+trigger a crash.
+
+00:02:14.456 --> 00:02:16.596 A:middle
+A Swift array and NSArray will
+
+00:02:16.596 --> 00:02:18.156 A:middle
+halt your process if you attempt
+
+00:02:18.156 --> 00:02:19.146 A:middle
+to go outside of your array
+
+00:02:19.146 --> 00:02:19.586 A:middle
+bounds.
+
+00:02:21.006 --> 00:02:22.586 A:middle
+Or sometimes it's you, the
+
+00:02:22.586 --> 00:02:23.536 A:middle
+developer that's trying to
+
+00:02:23.536 --> 00:02:24.276 A:middle
+prevent a failure.
+
+00:02:24.856 --> 00:02:26.756 A:middle
+You may have an API where you
+
+00:02:26.756 --> 00:02:28.446 A:middle
+assert is a parameter is non nil
+
+00:02:28.446 --> 00:02:30.726 A:middle
+and that's perfectly all right.
+
+00:02:32.176 --> 00:02:33.546 A:middle
+So stop me if you've seen this
+
+00:02:33.546 --> 00:02:35.686 A:middle
+before, this is what it looks
+
+00:02:35.686 --> 00:02:38.396 A:middle
+like in Xcode in the debugger
+
+00:02:38.446 --> 00:02:39.786 A:middle
+when the debugger is attached to
+
+00:02:39.786 --> 00:02:41.806 A:middle
+your app and has paused the
+
+00:02:41.806 --> 00:02:43.346 A:middle
+process just before your app is
+
+00:02:43.346 --> 00:02:43.876 A:middle
+terminated.
+
+00:02:44.786 --> 00:02:46.396 A:middle
+And let's take a closer look at
+
+00:02:46.396 --> 00:02:47.566 A:middle
+this backtrace on the left.
+
+00:02:48.996 --> 00:02:51.386 A:middle
+You can see here how the app was
+
+00:02:51.386 --> 00:02:52.986 A:middle
+started by the operating system
+
+00:02:53.866 --> 00:02:55.446 A:middle
+and while we're paused we can
+
+00:02:55.446 --> 00:02:56.636 A:middle
+see how the main function was
+
+00:02:56.666 --> 00:02:58.466 A:middle
+called and functions are calling
+
+00:02:58.466 --> 00:02:59.756 A:middle
+other functions within your app
+
+00:03:00.596 --> 00:03:01.946 A:middle
+and eventually we get to this
+
+00:03:02.036 --> 00:03:04.756 A:middle
+point where we hit a point where
+
+00:03:04.756 --> 00:03:05.926 A:middle
+in your code where the only
+
+00:03:05.926 --> 00:03:07.236 A:middle
+option is to crash, something
+
+00:03:07.236 --> 00:03:08.006 A:middle
+has gone wrong.
+
+00:03:09.036 --> 00:03:10.516 A:middle
+And ultimately the debugger
+
+00:03:10.516 --> 00:03:12.126 A:middle
+receives a signal that this app
+
+00:03:12.126 --> 00:03:14.986 A:middle
+is about to crash and pauses the
+
+00:03:16.026 --> 00:03:16.106 A:middle
+app.
+
+00:03:16.366 --> 00:03:18.326 A:middle
+Now sometimes you're not always
+
+00:03:18.326 --> 00:03:19.686 A:middle
+conveniently attached with the
+
+00:03:19.686 --> 00:03:20.886 A:middle
+debugger like we are here.
+
+00:03:21.996 --> 00:03:23.006 A:middle
+When you're not attached with
+
+00:03:23.006 --> 00:03:24.736 A:middle
+the debugger the operating
+
+00:03:24.736 --> 00:03:25.846 A:middle
+system will capture this
+
+00:03:25.906 --> 00:03:28.666 A:middle
+backtrace in plaintext and save
+
+00:03:28.666 --> 00:03:29.976 A:middle
+it out to disk in a human
+
+00:03:29.976 --> 00:03:31.056 A:middle
+readable crash log.
+
+00:03:31.666 --> 00:03:34.906 A:middle
+Now the truth is one a release
+
+00:03:34.906 --> 00:03:36.226 A:middle
+build of your app crashes the
+
+00:03:36.226 --> 00:03:37.476 A:middle
+log doesn't actually look this
+
+00:03:37.546 --> 00:03:37.996 A:middle
+pretty.
+
+00:03:38.466 --> 00:03:39.726 A:middle
+What's actually written out is a
+
+00:03:39.726 --> 00:03:41.266 A:middle
+list of binary names and
+
+00:03:41.266 --> 00:03:41.636 A:middle
+addresses.
+
+00:03:41.636 --> 00:03:43.266 A:middle
+This is a snippet from a
+
+00:03:43.266 --> 00:03:44.626 A:middle
+unsymbolicated crash log.
+
+00:03:46.106 --> 00:03:47.566 A:middle
+Now thankfully Xcode takes care
+
+00:03:47.566 --> 00:03:49.146 A:middle
+of symbolicating crash logs so
+
+00:03:49.146 --> 00:03:50.256 A:middle
+that what you'll see are those
+
+00:03:50.506 --> 00:03:51.846 A:middle
+pretty function names, file
+
+00:03:51.846 --> 00:03:53.386 A:middle
+names and line numbers that
+
+00:03:53.386 --> 00:03:54.006 A:middle
+you're familiar with.
+
+00:03:54.626 --> 00:03:58.946 A:middle
+So there are a number of ways to
+
+00:03:58.946 --> 00:04:00.256 A:middle
+access these crash logs.
+
+00:03:58.946 --> 00:04:00.256 A:middle
+access these crash logs.
+
+00:04:00.996 --> 00:04:02.416 A:middle
+I'd like first to talk about how
+
+00:04:02.416 --> 00:04:03.926 A:middle
+you can access those crash logs
+
+00:04:03.926 --> 00:04:05.156 A:middle
+from your beta testers on
+
+00:04:05.156 --> 00:04:06.976 A:middle
+TestFlight and your customers on
+
+00:04:06.976 --> 00:04:07.476 A:middle
+the App Store.
+
+00:04:08.886 --> 00:04:10.326 A:middle
+You can download these crash
+
+00:04:10.326 --> 00:04:12.196 A:middle
+logs using a feature in Xcode
+
+00:04:12.196 --> 00:04:14.116 A:middle
+called the Crashes Organizer,
+
+00:04:14.426 --> 00:04:15.896 A:middle
+this is what it looks like a
+
+00:04:15.896 --> 00:04:16.786 A:middle
+beautiful dark mode.
+
+00:04:18.276 --> 00:04:19.226 A:middle
+And let's take a tour through
+
+00:04:19.226 --> 00:04:19.546 A:middle
+this UI.
+
+00:04:19.546 --> 00:04:22.816 A:middle
+On the left, you can see all of
+
+00:04:22.816 --> 00:04:24.336 A:middle
+your apps distributed over
+
+00:04:24.336 --> 00:04:25.756 A:middle
+TestFlight and the App Store and
+
+00:04:26.156 --> 00:04:27.676 A:middle
+we support all of our platforms
+
+00:04:27.676 --> 00:04:29.796 A:middle
+including watchOS and app
+
+00:04:29.796 --> 00:04:30.366 A:middle
+extensions.
+
+00:04:31.936 --> 00:04:33.586 A:middle
+On the right, for a given crash
+
+00:04:33.636 --> 00:04:35.266 A:middle
+point you can see the number of
+
+00:04:35.266 --> 00:04:38.196 A:middle
+unique devices affected and we
+
+00:04:38.196 --> 00:04:39.956 A:middle
+group crash logs by similar
+
+00:04:39.956 --> 00:04:41.886 A:middle
+issue, by similar crash point
+
+00:04:42.286 --> 00:04:43.536 A:middle
+and we rank them in the source
+
+00:04:43.536 --> 00:04:44.756 A:middle
+list by the number of unique
+
+00:04:44.756 --> 00:04:45.596 A:middle
+devices affected.
+
+00:04:46.986 --> 00:04:48.056 A:middle
+And you can page through a
+
+00:04:48.056 --> 00:04:49.626 A:middle
+sampling of the individual logs
+
+00:04:49.626 --> 00:04:50.536 A:middle
+down below.
+
+00:04:51.806 --> 00:04:52.596 A:middle
+And when you click on this
+
+00:04:52.636 --> 00:04:55.006 A:middle
+button you can open the crash
+
+00:04:55.006 --> 00:04:56.546 A:middle
+log in your project, in the
+
+00:04:56.546 --> 00:04:57.826 A:middle
+debug navigator and see it
+
+00:04:57.826 --> 00:04:59.076 A:middle
+alongside your source code.
+
+00:04:59.076 --> 00:05:00.216 A:middle
+This is very cool if you haven't
+
+00:04:59.076 --> 00:05:00.216 A:middle
+This is very cool if you haven't
+
+00:05:00.216 --> 00:05:01.756 A:middle
+seen it before, we'll see that
+
+00:05:01.756 --> 00:05:02.426 A:middle
+in a bit.
+
+00:05:03.306 --> 00:05:04.456 A:middle
+And in the detailed view of
+
+00:05:04.456 --> 00:05:05.686 A:middle
+course we show you a fully
+
+00:05:05.686 --> 00:05:07.636 A:middle
+symbolicated backtrace with the
+
+00:05:07.636 --> 00:05:08.606 A:middle
+crash point highlighted.
+
+00:05:09.786 --> 00:05:10.496 A:middle
+So now that we have the lay of
+
+00:05:10.496 --> 00:05:12.286 A:middle
+the land let's play with it.
+
+00:05:13.516 --> 00:05:16.866 A:middle
+So I have Xcode open here and
+
+00:05:16.866 --> 00:05:18.096 A:middle
+I'm going to open up the
+
+00:05:18.096 --> 00:05:21.396 A:middle
+Organizer window and you can see
+
+00:05:21.396 --> 00:05:22.716 A:middle
+that I've selected the Crashes
+
+00:05:22.716 --> 00:05:24.096 A:middle
+tab, that's the second tab here
+
+00:05:24.536 --> 00:05:26.276 A:middle
+and I've selected this chocolate
+
+00:05:26.276 --> 00:05:27.516 A:middle
+chip app that Kuba and I are
+
+00:05:27.516 --> 00:05:28.086 A:middle
+working on.
+
+00:05:28.896 --> 00:05:31.516 A:middle
+And I've uploaded this build to
+
+00:05:31.516 --> 00:05:32.916 A:middle
+TestFlight and you can see I'm
+
+00:05:32.916 --> 00:05:35.256 A:middle
+looking at build 5 right now and
+
+00:05:35.256 --> 00:05:36.526 A:middle
+a number of testers are
+
+00:05:36.526 --> 00:05:38.046 A:middle
+reporting crashes, so that's not
+
+00:05:38.046 --> 00:05:38.566 A:middle
+too good.
+
+00:05:38.566 --> 00:05:39.756 A:middle
+But I've worked on a couple of
+
+00:05:39.756 --> 00:05:41.766 A:middle
+these crashes you can see, but
+
+00:05:41.766 --> 00:05:42.996 A:middle
+this first one I haven't worked
+
+00:05:42.996 --> 00:05:44.296 A:middle
+on yet so let's try to resolve
+
+00:05:44.296 --> 00:05:45.246 A:middle
+that.
+
+00:05:45.876 --> 00:05:48.746 A:middle
+So this is affecting 242 devices
+
+00:05:49.036 --> 00:05:50.446 A:middle
+and I can see the backtrace that
+
+00:05:50.446 --> 00:05:51.846 A:middle
+was captured from the time that
+
+00:05:51.846 --> 00:05:53.136 A:middle
+the app crashed and the crash
+
+00:05:53.136 --> 00:05:53.956 A:middle
+point highlighted.
+
+00:05:55.056 --> 00:05:55.976 A:middle
+Now I'm not quite sure what's
+
+00:05:55.976 --> 00:05:58.136 A:middle
+going on yet but I bet if I open
+
+00:05:58.136 --> 00:06:00.216 A:middle
+this crash log in our source
+
+00:05:58.136 --> 00:06:00.216 A:middle
+this crash log in our source
+
+00:06:00.216 --> 00:06:01.406 A:middle
+code I can reason about what's
+
+00:06:01.406 --> 00:06:01.966 A:middle
+going on.
+
+00:06:02.336 --> 00:06:03.526 A:middle
+So I'm going to click the Open
+
+00:06:03.526 --> 00:06:05.796 A:middle
+in Project button, select the
+
+00:06:05.796 --> 00:06:07.286 A:middle
+project that matches build 5 of
+
+00:06:07.286 --> 00:06:10.126 A:middle
+my app and what I do, what you
+
+00:06:10.126 --> 00:06:12.146 A:middle
+can see is that this crash log
+
+00:06:12.146 --> 00:06:13.296 A:middle
+has opened up in the debug
+
+00:06:13.296 --> 00:06:15.096 A:middle
+navigator as if this app has
+
+00:06:15.096 --> 00:06:15.806 A:middle
+just crashed.
+
+00:06:16.776 --> 00:06:17.796 A:middle
+And you can see here that we're
+
+00:06:17.796 --> 00:06:19.296 A:middle
+stopped on this fatal error.
+
+00:06:20.556 --> 00:06:22.416 A:middle
+So a good question to ask myself
+
+00:06:22.416 --> 00:06:23.916 A:middle
+is, is this a valid use of fatal
+
+00:06:23.916 --> 00:06:25.106 A:middle
+error, I only want to be
+
+00:06:25.106 --> 00:06:26.366 A:middle
+crashing if it's absolutely
+
+00:06:26.366 --> 00:06:26.936 A:middle
+necessary.
+
+00:06:28.316 --> 00:06:31.136 A:middle
+So I can see that this is an
+
+00:06:31.136 --> 00:06:33.846 A:middle
+initializer of an enum from an
+
+00:06:33.896 --> 00:06:36.756 A:middle
+int and that enum can only be
+
+00:06:36.756 --> 00:06:38.886 A:middle
+zero or one, if it's not I'll
+
+00:06:38.886 --> 00:06:39.796 A:middle
+hit this fatal error.
+
+00:06:40.246 --> 00:06:41.126 A:middle
+So I think that this makes
+
+00:06:41.196 --> 00:06:42.136 A:middle
+sense, this should only be
+
+00:06:42.196 --> 00:06:43.796 A:middle
+crashing if there's some kind of
+
+00:06:43.796 --> 00:06:45.086 A:middle
+misuse by the programmer.
+
+00:06:45.796 --> 00:06:48.856 A:middle
+So I can see the caller of this
+
+00:06:48.856 --> 00:06:50.476 A:middle
+initializer if I navigate up the
+
+00:06:50.536 --> 00:06:53.076 A:middle
+call stack here and I can see
+
+00:06:53.076 --> 00:06:54.396 A:middle
+it's this tableView delegate
+
+00:06:54.396 --> 00:06:54.836 A:middle
+method.
+
+00:06:54.936 --> 00:06:56.666 A:middle
+This method is asking for a
+
+00:06:56.716 --> 00:06:58.226 A:middle
+title for a header in a given
+
+00:06:58.226 --> 00:06:58.886 A:middle
+section number.
+
+00:06:59.636 --> 00:07:00.776 A:middle
+So it must be that that section
+
+00:06:59.636 --> 00:07:00.776 A:middle
+So it must be that that section
+
+00:07:00.776 --> 00:07:01.996 A:middle
+number is not zero or one.
+
+00:07:02.856 --> 00:07:03.636 A:middle
+So I think I have a better
+
+00:07:03.636 --> 00:07:04.726 A:middle
+understanding of what's going
+
+00:07:04.726 --> 00:07:06.516 A:middle
+on, but let's try to reproduce
+
+00:07:06.516 --> 00:07:08.036 A:middle
+this issue in the app and see if
+
+00:07:08.036 --> 00:07:08.736 A:middle
+we can learn more.
+
+00:07:09.226 --> 00:07:11.606 A:middle
+So I've hit play.
+
+00:07:11.756 --> 00:07:13.386 A:middle
+And Chocolate Chip is a recipe
+
+00:07:13.386 --> 00:07:14.656 A:middle
+app I store all of my favorite
+
+00:07:14.656 --> 00:07:17.246 A:middle
+recipes and I've been testing
+
+00:07:17.246 --> 00:07:18.586 A:middle
+with this whipped cream recipe
+
+00:07:19.126 --> 00:07:19.996 A:middle
+and you can see everything's
+
+00:07:20.036 --> 00:07:21.386 A:middle
+fine, I can see my list of
+
+00:07:21.386 --> 00:07:22.866 A:middle
+ingredients, my list of steps.
+
+00:07:22.866 --> 00:07:23.796 A:middle
+These are the two recipe
+
+00:07:23.796 --> 00:07:25.376 A:middle
+sections, that's ingredients
+
+00:07:25.376 --> 00:07:26.886 A:middle
+that's section zero and steps
+
+00:07:26.886 --> 00:07:27.686 A:middle
+that's section one.
+
+00:07:28.636 --> 00:07:30.696 A:middle
+And if I click on another recipe
+
+00:07:30.696 --> 00:07:33.456 A:middle
+we've hit a crash and what I can
+
+00:07:33.546 --> 00:07:35.056 A:middle
+see is that we're stopped on the
+
+00:07:35.056 --> 00:07:37.296 A:middle
+same fatal error and the
+
+00:07:37.296 --> 00:07:39.016 A:middle
+backtrace looks very similar to
+
+00:07:39.016 --> 00:07:40.206 A:middle
+the crash log that we've been
+
+00:07:40.206 --> 00:07:40.716 A:middle
+looking at.
+
+00:07:40.716 --> 00:07:41.926 A:middle
+So that's a very good sign that
+
+00:07:41.926 --> 00:07:43.026 A:middle
+we're looking at the same issue.
+
+00:07:43.486 --> 00:07:44.676 A:middle
+So I'm going to clear this crash
+
+00:07:44.676 --> 00:07:47.416 A:middle
+log by hitting delete and let's
+
+00:07:47.416 --> 00:07:49.096 A:middle
+look at this debug session.
+
+00:07:50.136 --> 00:07:52.006 A:middle
+So in this fatal error I can see
+
+00:07:52.006 --> 00:07:53.626 A:middle
+that the message is nicely
+
+00:07:53.626 --> 00:07:55.166 A:middle
+printing out that the section
+
+00:07:55.166 --> 00:07:55.886 A:middle
+number is eight.
+
+00:07:56.126 --> 00:07:56.936 A:middle
+So that's the reason we're
+
+00:07:56.936 --> 00:07:58.456 A:middle
+crashing it's not zero or one.
+
+00:07:59.616 --> 00:08:00.666 A:middle
+And what's occurring to me now
+
+00:07:59.616 --> 00:08:00.666 A:middle
+And what's occurring to me now
+
+00:08:00.666 --> 00:08:02.936 A:middle
+is that this is my fault, when I
+
+00:08:02.936 --> 00:08:05.026 A:middle
+implemented this class I
+
+00:08:05.026 --> 00:08:06.246 A:middle
+implemented another delegate
+
+00:08:06.246 --> 00:08:08.086 A:middle
+method called numberOfSections.
+
+00:08:08.826 --> 00:08:10.696 A:middle
+And numberOfSections is saying
+
+00:08:10.696 --> 00:08:12.326 A:middle
+how many headers it should look
+
+00:08:12.326 --> 00:08:14.036 A:middle
+for and what I'm returning here
+
+00:08:14.036 --> 00:08:15.796 A:middle
+is the number of ingredients and
+
+00:08:15.796 --> 00:08:17.246 A:middle
+the ingredients count is eight.
+
+00:08:18.436 --> 00:08:19.576 A:middle
+But believe it or not I have a
+
+00:08:19.576 --> 00:08:21.216 A:middle
+clever way to solve this.
+
+00:08:21.216 --> 00:08:22.356 A:middle
+I know what I want to be
+
+00:08:22.356 --> 00:08:24.086 A:middle
+returning is the number of cases
+
+00:08:24.086 --> 00:08:26.186 A:middle
+in this recipe section enum and
+
+00:08:26.186 --> 00:08:28.396 A:middle
+I know that in Swift 4.2 some
+
+00:08:28.396 --> 00:08:30.736 A:middle
+new functionality was added by
+
+00:08:30.736 --> 00:08:32.035 A:middle
+the Swift Open Source Community,
+
+00:08:32.035 --> 00:08:33.885 A:middle
+thank you very much, a protocol
+
+00:08:33.885 --> 00:08:35.176 A:middle
+called CaseIterable.
+
+00:08:35.726 --> 00:08:37.236 A:middle
+If I have my recipe section
+
+00:08:37.236 --> 00:08:40.596 A:middle
+conformed to CaseIterable I can
+
+00:08:40.596 --> 00:08:41.655 A:middle
+reimplement this number of
+
+00:08:41.655 --> 00:08:43.956 A:middle
+sections to return the count of
+
+00:08:43.956 --> 00:08:46.266 A:middle
+all the cases in that recipe
+
+00:08:46.266 --> 00:08:47.186 A:middle
+section enum.
+
+00:08:47.586 --> 00:08:49.876 A:middle
+And that way what I'll be
+
+00:08:49.876 --> 00:08:51.876 A:middle
+returning is two, I'll be
+
+00:08:51.876 --> 00:08:53.376 A:middle
+returning the number of accurate
+
+00:08:53.376 --> 00:08:53.956 A:middle
+sections.
+
+00:08:53.956 --> 00:08:55.626 A:middle
+This is going to work out just
+
+00:08:56.756 --> 00:08:56.886 A:middle
+great.
+
+00:08:57.056 --> 00:08:59.226 A:middle
+So now if I check out this
+
+00:08:59.226 --> 00:09:00.986 A:middle
+chocolate chip cookies recipe no
+
+00:08:59.226 --> 00:09:00.986 A:middle
+chocolate chip cookies recipe no
+
+00:09:00.986 --> 00:09:02.736 A:middle
+crash, I see all of my
+
+00:09:02.736 --> 00:09:04.066 A:middle
+ingredients and my steps.
+
+00:09:04.066 --> 00:09:06.166 A:middle
+I did a very good job, I'm very
+
+00:09:06.206 --> 00:09:07.196 A:middle
+pleased with myself.
+
+00:09:08.206 --> 00:09:10.076 A:middle
+And I can go back to the
+
+00:09:10.076 --> 00:09:12.016 A:middle
+Organizer and mark this issue as
+
+00:09:12.016 --> 00:09:13.666 A:middle
+resolved, step away from the
+
+00:09:13.666 --> 00:09:15.296 A:middle
+computer and get back to my
+
+00:09:15.296 --> 00:09:15.636 A:middle
+baking.
+
+00:09:18.516 --> 00:09:22.646 A:middle
+[ Applause ]
+
+00:09:23.146 --> 00:09:24.816 A:middle
+Okay so you've just see how you
+
+00:09:24.816 --> 00:09:27.256 A:middle
+can use the Crashes Organizer to
+
+00:09:27.256 --> 00:09:28.666 A:middle
+download crash logs from
+
+00:09:28.666 --> 00:09:30.916 A:middle
+TestFlight, open the log in your
+
+00:09:30.916 --> 00:09:32.616 A:middle
+source code, and resolve an
+
+00:09:32.616 --> 00:09:32.876 A:middle
+issue.
+
+00:09:32.876 --> 00:09:35.546 A:middle
+So what do you need to do to get
+
+00:09:35.606 --> 00:09:36.056 A:middle
+started?
+
+00:09:36.826 --> 00:09:40.116 A:middle
+Very simple, your customers if
+
+00:09:40.116 --> 00:09:41.256 A:middle
+they opt into sharing with
+
+00:09:41.256 --> 00:09:42.676 A:middle
+third-party developers this just
+
+00:09:42.676 --> 00:09:43.896 A:middle
+works, their crash logs are
+
+00:09:43.896 --> 00:09:44.816 A:middle
+uploaded automatically.
+
+00:09:46.326 --> 00:09:47.966 A:middle
+All you need to do is sign into
+
+00:09:47.966 --> 00:09:50.026 A:middle
+Xcode with your Apple ID.
+
+00:09:50.856 --> 00:09:52.576 A:middle
+When you upload your app you
+
+00:09:52.576 --> 00:09:53.826 A:middle
+should include symbols so that
+
+00:09:53.826 --> 00:09:54.966 A:middle
+you get server-side
+
+00:09:54.966 --> 00:09:57.226 A:middle
+symbolication of your crash
+
+00:09:57.836 --> 00:09:57.976 A:middle
+logs.
+
+00:09:58.226 --> 00:09:59.926 A:middle
+And open up the Organizer window
+
+00:09:59.926 --> 00:10:01.106 A:middle
+to the Crashes tab to start
+
+00:09:59.926 --> 00:10:01.106 A:middle
+to the Crashes tab to start
+
+00:10:01.106 --> 00:10:01.976 A:middle
+viewing those crashes.
+
+00:10:05.106 --> 00:10:07.036 A:middle
+Okay so we have covered viewing
+
+00:10:07.036 --> 00:10:08.166 A:middle
+crashes in the Organizer.
+
+00:10:09.266 --> 00:10:10.736 A:middle
+But if you're not distributing
+
+00:10:10.736 --> 00:10:12.586 A:middle
+over TestFlight or the App Store
+
+00:10:12.586 --> 00:10:13.606 A:middle
+there are a couple of other
+
+00:10:13.606 --> 00:10:14.376 A:middle
+options for you.
+
+00:10:15.246 --> 00:10:17.246 A:middle
+There is the devices window.
+
+00:10:18.516 --> 00:10:19.996 A:middle
+When you have a device connected
+
+00:10:20.436 --> 00:10:21.576 A:middle
+you can click this View Logs
+
+00:10:21.576 --> 00:10:23.326 A:middle
+button and will show you all the
+
+00:10:23.326 --> 00:10:24.436 A:middle
+logs that are saved on that
+
+00:10:24.436 --> 00:10:25.936 A:middle
+device and these logs are
+
+00:10:25.936 --> 00:10:27.346 A:middle
+symbolicated using the local
+
+00:10:27.346 --> 00:10:29.306 A:middle
+symbol information on your Mac.
+
+00:10:30.816 --> 00:10:31.706 A:middle
+When you run your [inaudible]
+
+00:10:31.706 --> 00:10:34.796 A:middle
+tests with Xcode, Xcode Server
+
+00:10:34.796 --> 00:10:37.766 A:middle
+or Xcode Build the test results
+
+00:10:37.816 --> 00:10:39.196 A:middle
+bundle will include any of the
+
+00:10:39.196 --> 00:10:40.706 A:middle
+crash logs that come from your
+
+00:10:40.706 --> 00:10:42.346 A:middle
+app that are written out during
+
+00:10:42.346 --> 00:10:43.716 A:middle
+the execution of that test run
+
+00:10:43.936 --> 00:10:45.066 A:middle
+and that's very convenient and
+
+00:10:45.066 --> 00:10:46.676 A:middle
+these crash logs are also
+
+00:10:46.676 --> 00:10:47.316 A:middle
+symbolicated.
+
+00:10:47.816 --> 00:10:50.786 A:middle
+You can use the Mac Console app
+
+00:10:50.786 --> 00:10:53.096 A:middle
+to view any crash logs from your
+
+00:10:53.276 --> 00:10:54.226 A:middle
+Mac or from the Simulator.
+
+00:10:55.856 --> 00:10:57.336 A:middle
+And on the device under
+
+00:10:57.336 --> 00:10:59.816 A:middle
+Settings, Privacy, Analytics,
+
+00:10:59.816 --> 00:11:01.476 A:middle
+Analytics Data you can see all
+
+00:10:59.816 --> 00:11:01.476 A:middle
+Analytics Data you can see all
+
+00:11:01.476 --> 00:11:02.516 A:middle
+of the logs that are saved to
+
+00:11:02.516 --> 00:11:04.556 A:middle
+disk and your users can share a
+
+00:11:04.556 --> 00:11:08.506 A:middle
+log directly from this screen.
+
+00:11:08.696 --> 00:11:11.246 A:middle
+Okay so to ensure that
+
+00:11:11.246 --> 00:11:13.106 A:middle
+symbolication just works I have
+
+00:11:13.156 --> 00:11:14.766 A:middle
+three important best practices
+
+00:11:14.766 --> 00:11:15.066 A:middle
+for you.
+
+00:11:16.096 --> 00:11:18.816 A:middle
+Number one, if you use the
+
+00:11:18.816 --> 00:11:20.806 A:middle
+Crashes Organizer upload your
+
+00:11:20.806 --> 00:11:21.866 A:middle
+symbols with your app.
+
+00:11:22.146 --> 00:11:23.906 A:middle
+This is the default, this will
+
+00:11:23.906 --> 00:11:25.036 A:middle
+ensure that server-side
+
+00:11:25.036 --> 00:11:27.166 A:middle
+symbolication works, it's very
+
+00:11:27.706 --> 00:11:27.826 A:middle
+easy.
+
+00:11:28.366 --> 00:11:31.656 A:middle
+Number two, be sure to save your
+
+00:11:31.656 --> 00:11:32.546 A:middle
+app archives.
+
+00:11:33.096 --> 00:11:34.956 A:middle
+Your archive contains a copy of
+
+00:11:34.956 --> 00:11:37.736 A:middle
+your debug symbols, your .
+
+00:11:37.736 --> 00:11:39.576 A:middle
+Xcode uses Spotlight to find
+
+00:11:39.656 --> 00:11:41.236 A:middle
+these dSYMs and to perform local
+
+00:11:41.236 --> 00:11:42.426 A:middle
+symbolication when it's
+
+00:11:42.426 --> 00:11:43.486 A:middle
+necessary automatically.
+
+00:11:43.906 --> 00:11:47.526 A:middle
+And if you upload an app that
+
+00:11:47.526 --> 00:11:49.906 A:middle
+contains bitcode you should use
+
+00:11:49.906 --> 00:11:51.706 A:middle
+the Archives Organizer Download
+
+00:11:51.706 --> 00:11:53.916 A:middle
+Debug Symbols button to download
+
+00:11:53.916 --> 00:11:55.376 A:middle
+any dSYMs that come from a
+
+00:11:55.376 --> 00:11:56.916 A:middle
+store-side bitcode compilation.
+
+00:11:57.476 --> 00:12:01.416 A:middle
+Okay we've covered all the tools
+
+00:11:57.476 --> 00:12:01.416 A:middle
+Okay we've covered all the tools
+
+00:12:01.416 --> 00:12:02.876 A:middle
+that we offer for accessing
+
+00:12:02.876 --> 00:12:04.106 A:middle
+crash logs when they occur in
+
+00:12:04.106 --> 00:12:04.506 A:middle
+the field.
+
+00:12:05.356 --> 00:12:06.346 A:middle
+Now to give you an in-depth
+
+00:12:06.346 --> 00:12:07.916 A:middle
+guide into reading the content
+
+00:12:08.146 --> 00:12:09.716 A:middle
+of a crash log please give a
+
+00:12:09.716 --> 00:12:10.836 A:middle
+warm welcome to the helping,
+
+00:12:10.836 --> 00:12:11.936 A:middle
+friendly Greg Parker.
+
+00:12:12.516 --> 00:12:17.556 A:middle
+[ Applause ]
+
+00:12:18.056 --> 00:12:18.926 A:middle
+&gt;&gt; Thank you, Chris.
+
+00:12:19.346 --> 00:12:20.936 A:middle
+So we've just seen how you can
+
+00:12:20.936 --> 00:12:23.986 A:middle
+use Xcode to find crashes and to
+
+00:12:23.986 --> 00:12:26.356 A:middle
+examine them in the Xcode tools
+
+00:12:26.356 --> 00:12:27.086 A:middle
+in the debugger.
+
+00:12:28.026 --> 00:12:30.336 A:middle
+But the crash log file contains
+
+00:12:30.336 --> 00:12:32.276 A:middle
+more information, it contains
+
+00:12:32.276 --> 00:12:33.806 A:middle
+much more information than just
+
+00:12:33.806 --> 00:12:34.666 A:middle
+the stack trace.
+
+00:12:35.146 --> 00:12:37.306 A:middle
+It is frequently useful to look
+
+00:12:37.306 --> 00:12:39.096 A:middle
+at that extra information in
+
+00:12:39.096 --> 00:12:40.466 A:middle
+order to debug your problem.
+
+00:12:41.376 --> 00:12:43.626 A:middle
+So how can you get the full text
+
+00:12:43.626 --> 00:12:44.396 A:middle
+of a crash log?
+
+00:12:45.016 --> 00:12:47.166 A:middle
+Here's our Xcode Organizer, if
+
+00:12:47.166 --> 00:12:49.186 A:middle
+we bring up the contextual menu
+
+00:12:49.236 --> 00:12:51.096 A:middle
+there's a Show In Finder button.
+
+00:12:51.916 --> 00:12:53.216 A:middle
+The Show In Finder button will
+
+00:12:53.216 --> 00:12:54.816 A:middle
+bring up a text file which we
+
+00:12:54.816 --> 00:12:56.526 A:middle
+can open up in the Console app
+
+00:12:56.876 --> 00:12:58.706 A:middle
+or your favorite text editor, it
+
+00:12:58.706 --> 00:12:59.996 A:middle
+looks something like this.
+
+00:13:00.876 --> 00:13:02.576 A:middle
+So what's in this file, let's
+
+00:13:02.576 --> 00:13:03.116 A:middle
+take a look.
+
+00:13:03.826 --> 00:13:05.506 A:middle
+The top of the file starts with
+
+00:13:05.506 --> 00:13:07.866 A:middle
+some summary information, this
+
+00:13:07.866 --> 00:13:09.496 A:middle
+contains your app name, the
+
+00:13:09.496 --> 00:13:11.646 A:middle
+version number, the operating
+
+00:13:11.646 --> 00:13:13.096 A:middle
+system version it was running
+
+00:13:13.096 --> 00:13:14.846 A:middle
+on, and the date and time of the
+
+00:13:14.846 --> 00:13:15.386 A:middle
+crash.
+
+00:13:16.586 --> 00:13:18.496 A:middle
+Below that we have the reason
+
+00:13:18.496 --> 00:13:19.416 A:middle
+for the crash.
+
+00:13:19.756 --> 00:13:21.706 A:middle
+This was the specific error, the
+
+00:13:21.706 --> 00:13:23.436 A:middle
+specific signal that the
+
+00:13:23.436 --> 00:13:25.186 A:middle
+operating system sent to kill
+
+00:13:25.186 --> 00:13:25.936 A:middle
+the process.
+
+00:13:27.386 --> 00:13:29.856 A:middle
+We can also see some logging
+
+00:13:29.856 --> 00:13:30.856 A:middle
+information, the
+
+00:13:30.856 --> 00:13:33.016 A:middle
+application-specific information
+
+00:13:33.056 --> 00:13:33.626 A:middle
+section.
+
+00:13:34.286 --> 00:13:35.486 A:middle
+This section will include
+
+00:13:35.486 --> 00:13:38.146 A:middle
+console logs in some cases, if
+
+00:13:38.146 --> 00:13:39.786 A:middle
+you have an unhandled exception
+
+00:13:39.786 --> 00:13:41.056 A:middle
+it may include the exception
+
+00:13:41.056 --> 00:13:41.816 A:middle
+backtrace.
+
+00:13:42.916 --> 00:13:44.536 A:middle
+This section is not always
+
+00:13:44.536 --> 00:13:47.746 A:middle
+available, on iOS devices it is
+
+00:13:47.746 --> 00:13:49.516 A:middle
+often hidden for personal
+
+00:13:49.516 --> 00:13:50.706 A:middle
+privacy reasons.
+
+00:13:51.146 --> 00:13:53.296 A:middle
+But on Simulator to macOS this
+
+00:13:53.296 --> 00:13:55.226 A:middle
+section can include information
+
+00:13:55.226 --> 00:13:55.766 A:middle
+that is useful.
+
+00:13:57.556 --> 00:13:58.906 A:middle
+Below that we have the thread
+
+00:13:58.906 --> 00:14:00.306 A:middle
+stacks, these were the
+
+00:13:58.906 --> 00:14:00.306 A:middle
+stacks, these were the
+
+00:14:00.446 --> 00:14:02.166 A:middle
+backtraces of all the threads
+
+00:14:02.166 --> 00:14:03.276 A:middle
+that were running at the time of
+
+00:14:03.276 --> 00:14:03.906 A:middle
+the crash.
+
+00:14:04.506 --> 00:14:05.666 A:middle
+One of them is marked as the
+
+00:14:05.666 --> 00:14:08.436 A:middle
+crash thread and we also have
+
+00:14:08.436 --> 00:14:09.526 A:middle
+whatever other threads were
+
+00:14:09.526 --> 00:14:11.196 A:middle
+running at the time that the
+
+00:14:11.196 --> 00:14:12.056 A:middle
+process died.
+
+00:14:13.866 --> 00:14:15.676 A:middle
+Below that we have some
+
+00:14:15.676 --> 00:14:17.326 A:middle
+low-level information, we have
+
+00:14:17.376 --> 00:14:19.806 A:middle
+the register state of the thread
+
+00:14:19.806 --> 00:14:21.916 A:middle
+that crashed and we have the
+
+00:14:21.916 --> 00:14:23.816 A:middle
+binary images that were loaded
+
+00:14:23.816 --> 00:14:25.196 A:middle
+into the process.
+
+00:14:25.316 --> 00:14:27.046 A:middle
+This is the application
+
+00:14:27.046 --> 00:14:28.686 A:middle
+executable and all the other
+
+00:14:28.686 --> 00:14:29.666 A:middle
+libraries.
+
+00:14:30.276 --> 00:14:32.176 A:middle
+And Xcode uses this for
+
+00:14:32.176 --> 00:14:34.556 A:middle
+symbolication in order to look
+
+00:14:34.586 --> 00:14:37.306 A:middle
+up the symbols, the files and
+
+00:14:37.306 --> 00:14:38.866 A:middle
+line number information for the
+
+00:14:38.866 --> 00:14:39.656 A:middle
+stack traces.
+
+00:14:39.656 --> 00:14:42.576 A:middle
+So that's the content of a crash
+
+00:14:42.576 --> 00:14:43.156 A:middle
+log file.
+
+00:14:44.036 --> 00:14:45.696 A:middle
+So how do we debug this, how do
+
+00:14:45.696 --> 00:14:47.026 A:middle
+we read this, what do we look
+
+00:14:47.026 --> 00:14:47.306 A:middle
+at?
+
+00:14:48.446 --> 00:14:51.066 A:middle
+We start with the crash reason,
+
+00:14:51.176 --> 00:14:52.316 A:middle
+the exception type.
+
+00:14:53.156 --> 00:14:54.736 A:middle
+In this case, the exception type
+
+00:14:54.736 --> 00:14:56.796 A:middle
+is an EXC bad instruction
+
+00:14:56.856 --> 00:15:00.816 A:middle
+exception, the SIGILL signal was
+
+00:14:56.856 --> 00:15:00.816 A:middle
+exception, the SIGILL signal was
+
+00:15:00.816 --> 00:15:02.536 A:middle
+the illegal instruction signal.
+
+00:15:03.306 --> 00:15:05.396 A:middle
+That means the CPU was trying to
+
+00:15:05.396 --> 00:15:07.276 A:middle
+execute an instruction that does
+
+00:15:07.276 --> 00:15:09.546 A:middle
+not exist or is invalid for some
+
+00:15:09.546 --> 00:15:10.916 A:middle
+reason and that's why the
+
+00:15:10.916 --> 00:15:12.026 A:middle
+process died.
+
+00:15:12.546 --> 00:15:16.636 A:middle
+We can also look at the thread
+
+00:15:16.746 --> 00:15:18.946 A:middle
+that crashed, what code was
+
+00:15:18.946 --> 00:15:19.806 A:middle
+running at the time of the
+
+00:15:19.806 --> 00:15:20.196 A:middle
+crash.
+
+00:15:20.816 --> 00:15:22.966 A:middle
+Here we see the fatal error
+
+00:15:22.966 --> 00:15:25.076 A:middle
+message function in the Swift
+
+00:15:25.886 --> 00:15:26.426 A:middle
+runtime.
+
+00:15:26.426 --> 00:15:28.256 A:middle
+No guesses as to what the fatal
+
+00:15:28.256 --> 00:15:29.556 A:middle
+error message function does.
+
+00:15:30.876 --> 00:15:33.046 A:middle
+The error message in this case
+
+00:15:33.046 --> 00:15:33.986 A:middle
+is included in the
+
+00:15:33.986 --> 00:15:35.206 A:middle
+application-specific
+
+00:15:35.206 --> 00:15:37.696 A:middle
+information, so we can see what
+
+00:15:37.696 --> 00:15:39.726 A:middle
+the Swift runtime printed as the
+
+00:15:39.726 --> 00:15:40.836 A:middle
+process exited.
+
+00:15:45.356 --> 00:15:46.536 A:middle
+So let's take a closer look at
+
+00:15:46.536 --> 00:15:48.476 A:middle
+that stack trace.
+
+00:15:48.476 --> 00:15:50.276 A:middle
+We saw the fatal error message
+
+00:15:50.276 --> 00:15:53.806 A:middle
+function and that was called by
+
+00:15:53.966 --> 00:15:55.316 A:middle
+a function in our code.
+
+00:15:55.396 --> 00:15:57.736 A:middle
+We have a recipe class, an image
+
+00:15:57.736 --> 00:16:01.356 A:middle
+function being called and that
+
+00:15:57.736 --> 00:16:01.356 A:middle
+function being called and that
+
+00:16:01.356 --> 00:16:03.116 A:middle
+function in turn called fatal
+
+00:16:03.116 --> 00:16:04.736 A:middle
+error message as a result of
+
+00:16:04.736 --> 00:16:05.476 A:middle
+some error.
+
+00:16:06.806 --> 00:16:08.736 A:middle
+Because this is a symbolicated
+
+00:16:08.736 --> 00:16:10.426 A:middle
+stack trace with full debug
+
+00:16:10.426 --> 00:16:12.376 A:middle
+information we have a file and
+
+00:16:12.376 --> 00:16:14.856 A:middle
+line number in our code of what
+
+00:16:14.856 --> 00:16:15.566 A:middle
+the crash was.
+
+00:16:16.516 --> 00:16:17.856 A:middle
+So we can take a look at that
+
+00:16:17.856 --> 00:16:19.506 A:middle
+line, we can open up our
+
+00:16:19.506 --> 00:16:20.706 A:middle
+project, this is
+
+00:16:20.706 --> 00:16:24.316 A:middle
+RecipeImage.swift, line 26 was
+
+00:16:24.316 --> 00:16:25.276 A:middle
+the one that was marked in the
+
+00:16:25.276 --> 00:16:25.806 A:middle
+crash.
+
+00:16:26.716 --> 00:16:27.926 A:middle
+And those of you who are
+
+00:16:27.926 --> 00:16:29.436 A:middle
+experienced Swift programmers
+
+00:16:29.436 --> 00:16:31.066 A:middle
+will have a pretty good guess as
+
+00:16:31.066 --> 00:16:32.896 A:middle
+to why this line might crash.
+
+00:16:33.946 --> 00:16:36.836 A:middle
+We have a force unwrap operator.
+
+00:16:37.766 --> 00:16:40.076 A:middle
+We have a function, The UIImage
+
+00:16:40.076 --> 00:16:41.516 A:middle
+Constructor which returns an
+
+00:16:41.586 --> 00:16:42.746 A:middle
+optional value.
+
+00:16:43.536 --> 00:16:45.696 A:middle
+If the optional value is nil the
+
+00:16:45.696 --> 00:16:48.596 A:middle
+force unwrap operator will halt
+
+00:16:48.596 --> 00:16:50.726 A:middle
+the process, generate a crash
+
+00:16:50.726 --> 00:16:52.186 A:middle
+log and exit.
+
+00:16:53.796 --> 00:16:54.856 A:middle
+If we remember the
+
+00:16:54.856 --> 00:16:56.906 A:middle
+application-specific information
+
+00:16:57.216 --> 00:16:58.926 A:middle
+it included the error message
+
+00:16:59.046 --> 00:17:01.256 A:middle
+that the Swift runtime prints as
+
+00:16:59.046 --> 00:17:01.256 A:middle
+that the Swift runtime prints as
+
+00:17:01.256 --> 00:17:03.516 A:middle
+this error check fails and it
+
+00:17:03.516 --> 00:17:05.415 A:middle
+says, unexpectedly found nil
+
+00:17:05.516 --> 00:17:06.906 A:middle
+while unwrapping an optional
+
+00:17:06.906 --> 00:17:07.366 A:middle
+value.
+
+00:17:08.326 --> 00:17:10.076 A:middle
+So that's good, that's
+
+00:17:10.076 --> 00:17:12.685 A:middle
+consistent with the code.
+
+00:17:12.886 --> 00:17:14.705 A:middle
+We have a force unwrap operator
+
+00:17:14.705 --> 00:17:17.086 A:middle
+on line 26, we have an error
+
+00:17:17.086 --> 00:17:19.366 A:middle
+message in the crash log that
+
+00:17:19.366 --> 00:17:20.675 A:middle
+says we were unwrapping an
+
+00:17:20.675 --> 00:17:21.586 A:middle
+optional value.
+
+00:17:22.036 --> 00:17:23.036 A:middle
+This all makes sense as a
+
+00:17:23.036 --> 00:17:25.116 A:middle
+consistent story for what caused
+
+00:17:25.116 --> 00:17:25.856 A:middle
+this crash.
+
+00:17:28.376 --> 00:17:32.096 A:middle
+So a force unwrap failure is an
+
+00:17:32.096 --> 00:17:34.166 A:middle
+example of a precondition or an
+
+00:17:34.166 --> 00:17:35.576 A:middle
+assertion in the code.
+
+00:17:36.376 --> 00:17:38.156 A:middle
+Preconditions and assertions are
+
+00:17:38.156 --> 00:17:39.906 A:middle
+error checks that deliberately
+
+00:17:39.906 --> 00:17:41.946 A:middle
+stop the process when an error
+
+00:17:41.946 --> 00:17:42.366 A:middle
+occurs.
+
+00:17:43.456 --> 00:17:45.116 A:middle
+Some examples of this are of
+
+00:17:45.116 --> 00:17:47.056 A:middle
+course the force unwrap of an
+
+00:17:47.056 --> 00:17:48.176 A:middle
+optional that we just saw.
+
+00:17:48.656 --> 00:17:50.596 A:middle
+The Swift runtime will assert
+
+00:17:51.056 --> 00:17:53.506 A:middle
+that the optional is not nil and
+
+00:17:53.506 --> 00:17:54.386 A:middle
+crash if it is.
+
+00:17:55.686 --> 00:17:56.746 A:middle
+We have out-of-bounds
+
+00:17:56.746 --> 00:17:58.556 A:middle
+Swift.Array access is another
+
+00:17:58.596 --> 00:17:59.976 A:middle
+example.
+
+00:17:59.976 --> 00:18:02.146 A:middle
+If you access an array and your
+
+00:17:59.976 --> 00:18:02.146 A:middle
+If you access an array and your
+
+00:18:02.146 --> 00:18:04.156 A:middle
+index is out-of-bounds the Swift
+
+00:18:04.156 --> 00:18:06.096 A:middle
+runtime will fail, interim check
+
+00:18:06.096 --> 00:18:07.866 A:middle
+it will fail a precondition and
+
+00:18:07.866 --> 00:18:08.826 A:middle
+halt the process.
+
+00:18:10.076 --> 00:18:12.126 A:middle
+Swift arithmetic overflow also
+
+00:18:12.126 --> 00:18:14.106 A:middle
+contains assertions, if you're
+
+00:18:14.206 --> 00:18:15.866 A:middle
+adding two numbers together and
+
+00:18:15.866 --> 00:18:17.256 A:middle
+the result is too large for an
+
+00:18:17.256 --> 00:18:18.826 A:middle
+integer variable there is a
+
+00:18:18.826 --> 00:18:20.256 A:middle
+precondition for that, the
+
+00:18:20.256 --> 00:18:22.396 A:middle
+process will halt.
+
+00:18:22.906 --> 00:18:24.416 A:middle
+Uncaught exceptions are
+
+00:18:24.416 --> 00:18:25.936 A:middle
+frequently caused by
+
+00:18:26.586 --> 00:18:28.026 A:middle
+preconditions in the code.
+
+00:18:28.706 --> 00:18:30.216 A:middle
+There are many error checks
+
+00:18:30.216 --> 00:18:32.386 A:middle
+where if the precondition fails
+
+00:18:32.386 --> 00:18:34.446 A:middle
+it will throw an exception and
+
+00:18:34.446 --> 00:18:36.036 A:middle
+if the exception is not caught
+
+00:18:36.586 --> 00:18:38.046 A:middle
+the uncaught exception will
+
+00:18:38.046 --> 00:18:39.506 A:middle
+cause a crash log.
+
+00:18:39.706 --> 00:18:41.926 A:middle
+And of course you can write
+
+00:18:42.256 --> 00:18:43.886 A:middle
+assertions and preconditions in
+
+00:18:43.886 --> 00:18:46.336 A:middle
+your own code if you have errors
+
+00:18:46.576 --> 00:18:47.696 A:middle
+that you want to crash the
+
+00:18:47.696 --> 00:18:49.736 A:middle
+process and generate a crash log
+
+00:18:49.736 --> 00:18:50.556 A:middle
+in response.
+
+00:18:52.986 --> 00:18:54.716 A:middle
+Another example of a crash log
+
+00:18:54.756 --> 00:18:57.046 A:middle
+is a case where the operating
+
+00:18:57.046 --> 00:18:59.416 A:middle
+system kills your process from
+
+00:18:59.446 --> 00:19:00.146 A:middle
+the outside.
+
+00:18:59.446 --> 00:19:00.146 A:middle
+the outside.
+
+00:19:00.216 --> 00:19:03.786 A:middle
+An example of this are watchdog
+
+00:19:03.786 --> 00:19:05.836 A:middle
+events, such as timeouts.
+
+00:19:06.226 --> 00:19:07.716 A:middle
+If your application takes too
+
+00:19:07.716 --> 00:19:09.606 A:middle
+long to do something the
+
+00:19:09.606 --> 00:19:11.216 A:middle
+operating system may detect
+
+00:19:11.216 --> 00:19:13.206 A:middle
+that, kill the process of
+
+00:19:13.206 --> 00:19:15.056 A:middle
+generate a particular crash log
+
+00:19:15.056 --> 00:19:15.826 A:middle
+as it does so.
+
+00:19:17.206 --> 00:19:18.996 A:middle
+Environmental conditions can
+
+00:19:18.996 --> 00:19:20.746 A:middle
+also cause the operating system
+
+00:19:20.746 --> 00:19:21.786 A:middle
+to halt the process.
+
+00:19:21.886 --> 00:19:24.256 A:middle
+If the device is overheating the
+
+00:19:24.256 --> 00:19:25.506 A:middle
+operating system will kill
+
+00:19:25.506 --> 00:19:26.866 A:middle
+processes that are using too
+
+00:19:26.866 --> 00:19:27.726 A:middle
+much CPU.
+
+00:19:28.166 --> 00:19:29.336 A:middle
+If the device is running out of
+
+00:19:29.336 --> 00:19:31.196 A:middle
+memory the operating system will
+
+00:19:31.196 --> 00:19:32.656 A:middle
+kill processes that are using
+
+00:19:32.656 --> 00:19:33.406 A:middle
+lots of memory.
+
+00:19:34.936 --> 00:19:36.766 A:middle
+Another case is an invalid code
+
+00:19:36.766 --> 00:19:37.376 A:middle
+signature.
+
+00:19:37.816 --> 00:19:39.486 A:middle
+The operating system enforces
+
+00:19:39.726 --> 00:19:41.936 A:middle
+that code be signed and if a
+
+00:19:41.936 --> 00:19:43.686 A:middle
+signature is invalid or the code
+
+00:19:43.686 --> 00:19:45.646 A:middle
+is unsigned the operating system
+
+00:19:45.646 --> 00:19:47.176 A:middle
+will kill the process and
+
+00:19:47.176 --> 00:19:48.586 A:middle
+generate a particular type of
+
+00:19:48.586 --> 00:19:49.186 A:middle
+crash log.
+
+00:19:51.056 --> 00:19:52.226 A:middle
+These terminations by the
+
+00:19:52.226 --> 00:19:53.896 A:middle
+operating system can be found in
+
+00:19:53.896 --> 00:19:55.596 A:middle
+the Devices window in Xcode,
+
+00:19:55.766 --> 00:19:57.016 A:middle
+they can be found on the macOS
+
+00:19:57.016 --> 00:19:57.676 A:middle
+console.
+
+00:19:58.156 --> 00:20:00.296 A:middle
+They do not always appear in the
+
+00:19:58.156 --> 00:20:00.296 A:middle
+They do not always appear in the
+
+00:20:00.296 --> 00:20:02.446 A:middle
+Xcode Organizer, so be careful
+
+00:20:02.446 --> 00:20:02.726 A:middle
+of that.
+
+00:20:04.416 --> 00:20:06.706 A:middle
+In Apple's developer
+
+00:20:06.706 --> 00:20:09.186 A:middle
+documentation we have a technote
+
+00:20:09.186 --> 00:20:10.936 A:middle
+that describes many different
+
+00:20:11.206 --> 00:20:13.136 A:middle
+signatures and structures of
+
+00:20:13.136 --> 00:20:14.926 A:middle
+crash logs like these particular
+
+00:20:14.926 --> 00:20:16.976 A:middle
+examples, what they look like,
+
+00:20:16.976 --> 00:20:19.206 A:middle
+how you can recognize them, and
+
+00:20:19.206 --> 00:20:20.536 A:middle
+it goes into much more detail
+
+00:20:20.536 --> 00:20:21.796 A:middle
+than we have time for here.
+
+00:20:23.026 --> 00:20:24.676 A:middle
+But let's look at one example,
+
+00:20:25.426 --> 00:20:27.236 A:middle
+here's another crash log file
+
+00:20:27.776 --> 00:20:29.896 A:middle
+and again in order to understand
+
+00:20:29.896 --> 00:20:31.166 A:middle
+the crash log we start with the
+
+00:20:31.166 --> 00:20:32.216 A:middle
+crash reason.
+
+00:20:32.866 --> 00:20:34.426 A:middle
+In this case the crash reason is
+
+00:20:34.426 --> 00:20:37.226 A:middle
+in EXC crash exception with the
+
+00:20:37.226 --> 00:20:38.836 A:middle
+SIGKILL signal.
+
+00:20:39.796 --> 00:20:41.766 A:middle
+The SIGKILL signal is commonly
+
+00:20:41.766 --> 00:20:43.836 A:middle
+used when the operating system
+
+00:20:43.836 --> 00:20:45.466 A:middle
+wants to stop your process.
+
+00:20:46.016 --> 00:20:48.386 A:middle
+It sends the SIGKILL signal, the
+
+00:20:48.526 --> 00:20:50.056 A:middle
+SIGKILL signal cannot be
+
+00:20:50.056 --> 00:20:51.706 A:middle
+handled, it cannot be caught by
+
+00:20:51.706 --> 00:20:53.846 A:middle
+your process, it will die in
+
+00:20:53.846 --> 00:20:54.856 A:middle
+response to this signal.
+
+00:20:56.666 --> 00:20:58.446 A:middle
+We can also see the reason the
+
+00:20:58.446 --> 00:21:00.086 A:middle
+operating system sent the signal
+
+00:20:58.446 --> 00:21:00.086 A:middle
+operating system sent the signal
+
+00:21:00.086 --> 00:21:00.986 A:middle
+in the crash log.
+
+00:21:01.396 --> 00:21:02.656 A:middle
+In this case we have a
+
+00:21:02.826 --> 00:21:04.626 A:middle
+termination reason with a code
+
+00:21:04.676 --> 00:21:05.966 A:middle
+ate bad food.
+
+00:21:06.566 --> 00:21:08.126 A:middle
+If you look in the developer
+
+00:21:08.126 --> 00:21:09.986 A:middle
+technote I mentioned earlier, it
+
+00:21:09.986 --> 00:21:11.976 A:middle
+will describe what ate bad food
+
+00:21:11.976 --> 00:21:12.566 A:middle
+means.
+
+00:21:13.126 --> 00:21:14.186 A:middle
+And we have a textual
+
+00:21:14.186 --> 00:21:16.506 A:middle
+description that says exhausted
+
+00:21:16.506 --> 00:21:18.596 A:middle
+real clock time allowance of
+
+00:21:18.656 --> 00:21:20.506 A:middle
+19.95 seconds.
+
+00:21:20.866 --> 00:21:22.276 A:middle
+So if we combine this
+
+00:21:22.276 --> 00:21:23.936 A:middle
+information with the information
+
+00:21:23.936 --> 00:21:25.416 A:middle
+in the technote it will tell us
+
+00:21:25.836 --> 00:21:28.526 A:middle
+our application took too long to
+
+00:21:28.526 --> 00:21:29.076 A:middle
+launch.
+
+00:21:29.356 --> 00:21:31.546 A:middle
+We had 20 seconds to launch, we
+
+00:21:31.546 --> 00:21:32.966 A:middle
+weren't done in that much time,
+
+00:21:33.386 --> 00:21:34.606 A:middle
+the operating system killed the
+
+00:21:34.606 --> 00:21:35.266 A:middle
+process.
+
+00:21:36.686 --> 00:21:38.916 A:middle
+Below we can see the crash logs
+
+00:21:39.046 --> 00:21:40.716 A:middle
+at the time the process died.
+
+00:21:41.256 --> 00:21:42.826 A:middle
+It's possible that those crash
+
+00:21:42.826 --> 00:21:44.626 A:middle
+logs were the code that took too
+
+00:21:44.626 --> 00:21:45.946 A:middle
+long, maybe were stuck in an
+
+00:21:45.946 --> 00:21:48.426 A:middle
+infinite loop, maybe were stuck
+
+00:21:48.426 --> 00:21:49.896 A:middle
+waiting for network I/O and
+
+00:21:49.896 --> 00:21:51.006 A:middle
+that's why we took too long to
+
+00:21:51.006 --> 00:21:51.506 A:middle
+launch.
+
+00:21:52.296 --> 00:21:54.026 A:middle
+Or on the other hand, maybe this
+
+00:21:54.026 --> 00:21:55.916 A:middle
+code is innocent and there's
+
+00:21:55.916 --> 00:21:57.426 A:middle
+something earlier in the launch
+
+00:21:57.426 --> 00:21:59.076 A:middle
+process that was too slow and
+
+00:21:59.076 --> 00:22:00.466 A:middle
+that's why the process died.
+
+00:21:59.076 --> 00:22:00.466 A:middle
+that's why the process died.
+
+00:22:03.456 --> 00:22:06.366 A:middle
+So launch timeouts, how can you
+
+00:22:06.366 --> 00:22:06.886 A:middle
+avoid them.
+
+00:22:07.306 --> 00:22:08.716 A:middle
+We want you to avoid them,
+
+00:22:08.816 --> 00:22:10.626 A:middle
+launch timeouts are a common
+
+00:22:10.626 --> 00:22:13.166 A:middle
+reason for app rejection during
+
+00:22:13.166 --> 00:22:14.536 A:middle
+Apple's app review.
+
+00:22:15.756 --> 00:22:17.256 A:middle
+So how do you avoid this?
+
+00:22:17.256 --> 00:22:19.516 A:middle
+Well test your app of course.
+
+00:22:19.626 --> 00:22:23.316 A:middle
+But there's a catch, the launch
+
+00:22:23.316 --> 00:22:26.016 A:middle
+timeout watchdog is disabled in
+
+00:22:26.016 --> 00:22:27.986 A:middle
+the Simulator and it's disabled
+
+00:22:27.986 --> 00:22:29.586 A:middle
+in the debugger so if you're
+
+00:22:29.586 --> 00:22:30.766 A:middle
+doing all your testing in the
+
+00:22:30.766 --> 00:22:32.076 A:middle
+Simulator and the debugger
+
+00:22:32.076 --> 00:22:33.356 A:middle
+you'll never see watchdog
+
+00:22:33.356 --> 00:22:33.976 A:middle
+timeouts.
+
+00:22:35.206 --> 00:22:37.596 A:middle
+So when you test your app be
+
+00:22:37.596 --> 00:22:39.336 A:middle
+sure to test without the
+
+00:22:39.336 --> 00:22:39.906 A:middle
+debugger.
+
+00:22:40.346 --> 00:22:42.416 A:middle
+If you're a macOS app launch
+
+00:22:42.416 --> 00:22:43.406 A:middle
+your app in the Finder.
+
+00:22:43.786 --> 00:22:46.456 A:middle
+If you're an iOS app run in
+
+00:22:46.456 --> 00:22:48.776 A:middle
+TestFlight or launch your app
+
+00:22:49.026 --> 00:22:50.726 A:middle
+using the iOS App Launcher.
+
+00:22:51.016 --> 00:22:52.656 A:middle
+All of these will run your app
+
+00:22:52.656 --> 00:22:54.526 A:middle
+outside the debugger and the
+
+00:22:54.526 --> 00:22:56.286 A:middle
+launch timeouts will be enabled
+
+00:22:56.286 --> 00:22:57.026 A:middle
+and enforced.
+
+00:22:58.426 --> 00:22:59.966 A:middle
+When you test, test on a real
+
+00:22:59.966 --> 00:23:01.566 A:middle
+device of course, test outside
+
+00:22:59.966 --> 00:23:01.566 A:middle
+device of course, test outside
+
+00:23:01.566 --> 00:23:02.376 A:middle
+of Simulators.
+
+00:23:02.986 --> 00:23:06.096 A:middle
+And test your devices with older
+
+00:23:06.096 --> 00:23:08.026 A:middle
+hardware, whatever's the oldest
+
+00:23:08.026 --> 00:23:09.826 A:middle
+hardware you want your app to
+
+00:23:09.826 --> 00:23:10.386 A:middle
+support.
+
+00:23:11.026 --> 00:23:12.636 A:middle
+If you test only on newer
+
+00:23:12.636 --> 00:23:14.076 A:middle
+hardware you might find that
+
+00:23:14.076 --> 00:23:16.236 A:middle
+your app launches fast enough on
+
+00:23:16.306 --> 00:23:18.636 A:middle
+a faster device, but slower
+
+00:23:18.636 --> 00:23:20.306 A:middle
+devices might take too much
+
+00:23:20.306 --> 00:23:20.646 A:middle
+time.
+
+00:23:23.376 --> 00:23:25.296 A:middle
+So let's talk about another
+
+00:23:25.296 --> 00:23:27.326 A:middle
+class of errors, let's talk
+
+00:23:27.326 --> 00:23:28.836 A:middle
+about memory errors and what
+
+00:23:28.836 --> 00:23:31.116 A:middle
+they look like in crash logs.
+
+00:23:32.466 --> 00:23:34.306 A:middle
+When I say memory error I mean
+
+00:23:34.306 --> 00:23:37.076 A:middle
+cases like reference counting of
+
+00:23:37.076 --> 00:23:40.576 A:middle
+an object being over-released or
+
+00:23:40.726 --> 00:23:42.446 A:middle
+using an object after it has
+
+00:23:42.446 --> 00:23:45.936 A:middle
+been freed or a buffer overflow
+
+00:23:45.936 --> 00:23:48.286 A:middle
+where you have a byte array or
+
+00:23:48.286 --> 00:23:50.476 A:middle
+another C array and you access
+
+00:23:50.476 --> 00:23:51.926 A:middle
+that array out-of-bounds.
+
+00:23:53.156 --> 00:23:55.316 A:middle
+So let's look at another crash
+
+00:23:55.316 --> 00:23:57.926 A:middle
+log and spoiler alert this one
+
+00:23:57.926 --> 00:23:58.746 A:middle
+is a memory error.
+
+00:23:59.846 --> 00:24:01.226 A:middle
+We start again with the
+
+00:23:59.846 --> 00:24:01.226 A:middle
+We start again with the
+
+00:24:01.226 --> 00:24:02.716 A:middle
+exception type.
+
+00:24:03.436 --> 00:24:06.086 A:middle
+This is an EXC bad access
+
+00:24:06.086 --> 00:24:09.096 A:middle
+exception, the SEG violation
+
+00:24:09.096 --> 00:24:09.606 A:middle
+signal.
+
+00:24:10.236 --> 00:24:12.306 A:middle
+This is typically caused by a
+
+00:24:12.306 --> 00:24:13.266 A:middle
+memory error.
+
+00:24:13.706 --> 00:24:15.396 A:middle
+The bad access exception means
+
+00:24:15.396 --> 00:24:17.666 A:middle
+one of two things, either we
+
+00:24:17.666 --> 00:24:19.586 A:middle
+were writing to memory that is
+
+00:24:19.586 --> 00:24:21.896 A:middle
+read-only or we were reading
+
+00:24:21.896 --> 00:24:23.436 A:middle
+from memory that does not exist
+
+00:24:23.436 --> 00:24:23.896 A:middle
+at all.
+
+00:24:24.106 --> 00:24:25.936 A:middle
+Either of those will cause a bad
+
+00:24:25.936 --> 00:24:27.976 A:middle
+access exception and the process
+
+00:24:27.976 --> 00:24:28.516 A:middle
+will stop.
+
+00:24:29.806 --> 00:24:32.256 A:middle
+We see here the address that we
+
+00:24:32.256 --> 00:24:34.256 A:middle
+were accessing at the time of
+
+00:24:35.076 --> 00:24:36.366 A:middle
+the crash.
+
+00:24:36.626 --> 00:24:38.416 A:middle
+We can look at the stack trace,
+
+00:24:38.416 --> 00:24:39.346 A:middle
+this is the function that
+
+00:24:39.346 --> 00:24:40.946 A:middle
+performed the bad access of
+
+00:24:40.946 --> 00:24:41.376 A:middle
+course.
+
+00:24:41.896 --> 00:24:43.736 A:middle
+This is the objc release
+
+00:24:43.736 --> 00:24:45.286 A:middle
+function, it's part of the
+
+00:24:45.286 --> 00:24:47.106 A:middle
+implementation of reference
+
+00:24:47.106 --> 00:24:49.316 A:middle
+counting in Objective-C and some
+
+00:24:49.316 --> 00:24:50.386 A:middle
+Swift objects.
+
+00:24:50.946 --> 00:24:52.836 A:middle
+So that again sounds like it's
+
+00:24:52.836 --> 00:24:54.456 A:middle
+likely to have been a memory
+
+00:24:54.456 --> 00:24:55.646 A:middle
+error that caused the bug.
+
+00:24:57.126 --> 00:24:59.856 A:middle
+So what code caused objc
+
+00:24:59.856 --> 00:25:00.486 A:middle
+release?
+
+00:24:59.856 --> 00:25:00.486 A:middle
+release?
+
+00:25:00.956 --> 00:25:01.806 A:middle
+We can look at the rest of the
+
+00:25:01.806 --> 00:25:02.636 A:middle
+stack trace.
+
+00:25:03.226 --> 00:25:05.286 A:middle
+We have the object dispose
+
+00:25:05.286 --> 00:25:07.526 A:middle
+function, this is a function in
+
+00:25:07.526 --> 00:25:09.376 A:middle
+the Objective-C runtime that is
+
+00:25:09.376 --> 00:25:11.176 A:middle
+used to deallocate objects.
+
+00:25:12.516 --> 00:25:14.086 A:middle
+The object dispose function
+
+00:25:14.086 --> 00:25:16.426 A:middle
+called a function called ivar
+
+00:25:16.426 --> 00:25:18.716 A:middle
+destroyer on one of our classes,
+
+00:25:18.716 --> 00:25:20.956 A:middle
+our LoginViewController class.
+
+00:25:21.846 --> 00:25:24.176 A:middle
+The ivar destroyer function is
+
+00:25:24.176 --> 00:25:26.166 A:middle
+part of Swift code, this is a
+
+00:25:26.166 --> 00:25:27.516 A:middle
+function that cleans up the
+
+00:25:27.516 --> 00:25:29.466 A:middle
+properties, that cleans up the
+
+00:25:29.466 --> 00:25:31.776 A:middle
+ivar storage of an object as it
+
+00:25:31.776 --> 00:25:32.686 A:middle
+is deallocated.
+
+00:25:33.766 --> 00:25:35.386 A:middle
+So that gives us part of the
+
+00:25:35.386 --> 00:25:36.966 A:middle
+story as to what caused this
+
+00:25:36.966 --> 00:25:37.446 A:middle
+crash.
+
+00:25:37.956 --> 00:25:39.856 A:middle
+We were deallocating an object
+
+00:25:39.946 --> 00:25:41.956 A:middle
+of our login view controller
+
+00:25:41.956 --> 00:25:42.526 A:middle
+class.
+
+00:25:43.536 --> 00:25:46.156 A:middle
+That class in its d init code
+
+00:25:46.356 --> 00:25:47.556 A:middle
+was trying to clean up its
+
+00:25:47.556 --> 00:25:49.816 A:middle
+properties and its ivars and
+
+00:25:49.816 --> 00:25:51.536 A:middle
+while releasing one of those
+
+00:25:51.536 --> 00:25:53.266 A:middle
+properties we crashed.
+
+00:25:53.266 --> 00:25:55.716 A:middle
+So that gives us a little bit of
+
+00:25:55.716 --> 00:25:56.876 A:middle
+detail as to what went wrong.
+
+00:25:56.906 --> 00:25:58.826 A:middle
+Can we do better, is there more
+
+00:25:58.826 --> 00:26:00.206 A:middle
+information in the crash log
+
+00:25:58.826 --> 00:26:00.206 A:middle
+information in the crash log
+
+00:26:00.206 --> 00:26:01.226 A:middle
+that will tell us more about
+
+00:26:01.226 --> 00:26:02.906 A:middle
+what happened?
+
+00:26:03.516 --> 00:26:05.256 A:middle
+We can look at the invalid
+
+00:26:05.256 --> 00:26:08.356 A:middle
+address itself, sometimes the
+
+00:26:08.356 --> 00:26:10.966 A:middle
+actual bad address value will
+
+00:26:10.966 --> 00:26:12.856 A:middle
+contain useful information in
+
+00:26:13.506 --> 00:26:13.586 A:middle
+it.
+
+00:26:13.926 --> 00:26:16.006 A:middle
+And this particular bad address
+
+00:26:16.006 --> 00:26:18.556 A:middle
+I can tell you looks like a use
+
+00:26:18.606 --> 00:26:19.536 A:middle
+after free.
+
+00:26:20.446 --> 00:26:21.566 A:middle
+Well how do I know that?
+
+00:26:21.706 --> 00:26:22.946 A:middle
+Partly it's just long
+
+00:26:22.946 --> 00:26:24.336 A:middle
+experience, when you read enough
+
+00:26:24.336 --> 00:26:26.246 A:middle
+crash logs you start to learn
+
+00:26:26.246 --> 00:26:28.316 A:middle
+patterns of what the bad values
+
+00:26:28.396 --> 00:26:28.736 A:middle
+are.
+
+00:26:29.856 --> 00:26:32.886 A:middle
+This particular bad value looks
+
+00:26:32.886 --> 00:26:35.296 A:middle
+very much like the address range
+
+00:26:35.296 --> 00:26:37.906 A:middle
+for the malloc memory allocator
+
+00:26:38.246 --> 00:26:39.416 A:middle
+which we happen to have
+
+00:26:39.416 --> 00:26:40.966 A:middle
+available in this crash log.
+
+00:26:41.616 --> 00:26:43.196 A:middle
+So we have the address range
+
+00:26:43.196 --> 00:26:44.486 A:middle
+that was used by the memory
+
+00:26:44.486 --> 00:26:46.656 A:middle
+allocator and our invalid
+
+00:26:46.656 --> 00:26:49.526 A:middle
+address looks like it's inside
+
+00:26:49.526 --> 00:26:51.836 A:middle
+the malloc range, but it's been
+
+00:26:51.836 --> 00:26:53.756 A:middle
+shifted by 4 bits, it's been
+
+00:26:53.756 --> 00:26:55.386 A:middle
+rotated by 4 bits.
+
+00:26:55.906 --> 00:26:57.566 A:middle
+So it looks like it was a valid
+
+00:26:57.566 --> 00:26:59.686 A:middle
+malloc address rotated.
+
+00:27:01.426 --> 00:27:03.936 A:middle
+That is a clue from the memory
+
+00:27:03.936 --> 00:27:05.266 A:middle
+allocator itself.
+
+00:27:05.266 --> 00:27:06.766 A:middle
+Let me show you why that is.
+
+00:27:07.556 --> 00:27:08.776 A:middle
+Here's what our object looked
+
+00:27:08.776 --> 00:27:10.756 A:middle
+like when it was still valid.
+
+00:27:11.466 --> 00:27:13.226 A:middle
+An object starts with an isa
+
+00:27:13.226 --> 00:27:15.516 A:middle
+field, the isa field points to
+
+00:27:15.516 --> 00:27:16.566 A:middle
+the object's class.
+
+00:27:17.326 --> 00:27:19.146 A:middle
+This is how Objective-C objects
+
+00:27:19.146 --> 00:27:20.536 A:middle
+are laid out, this is how some
+
+00:27:20.536 --> 00:27:22.096 A:middle
+swift objects are laid out.
+
+00:27:22.736 --> 00:27:24.766 A:middle
+So what does the objc release
+
+00:27:24.766 --> 00:27:25.486 A:middle
+function do?
+
+00:27:26.226 --> 00:27:28.776 A:middle
+It reads the isa field and then
+
+00:27:28.776 --> 00:27:30.796 A:middle
+dreferences the isa field so it
+
+00:27:30.796 --> 00:27:32.556 A:middle
+can get to the class object and
+
+00:27:32.556 --> 00:27:33.806 A:middle
+perform method lookups.
+
+00:27:35.186 --> 00:27:37.206 A:middle
+Ordinarily of course this works,
+
+00:27:37.206 --> 00:27:38.176 A:middle
+this is how it's supposed to
+
+00:27:38.176 --> 00:27:38.456 A:middle
+work.
+
+00:27:39.346 --> 00:27:40.886 A:middle
+What happens if our object has
+
+00:27:40.956 --> 00:27:42.396 A:middle
+already been freed.
+
+00:27:42.676 --> 00:27:46.416 A:middle
+When the free function deletes
+
+00:27:46.416 --> 00:27:49.826 A:middle
+an object it inserts it into a
+
+00:27:49.826 --> 00:27:52.556 A:middle
+free list of other dead objects.
+
+00:27:53.206 --> 00:27:55.496 A:middle
+And it writes a free list
+
+00:27:55.496 --> 00:27:57.296 A:middle
+pointer to the next object in
+
+00:27:57.296 --> 00:27:59.356 A:middle
+the list where the isa field
+
+00:27:59.356 --> 00:28:00.036 A:middle
+used to be.
+
+00:27:59.356 --> 00:28:00.036 A:middle
+used to be.
+
+00:28:01.356 --> 00:28:03.836 A:middle
+With one slight twist, it does
+
+00:28:03.836 --> 00:28:05.146 A:middle
+not write a pointer into that
+
+00:28:05.146 --> 00:28:07.536 A:middle
+field it writes a rotated
+
+00:28:07.676 --> 00:28:08.986 A:middle
+pointer into that field.
+
+00:28:09.586 --> 00:28:10.956 A:middle
+It wants to make sure that the
+
+00:28:10.956 --> 00:28:13.506 A:middle
+value written there is not a
+
+00:28:13.506 --> 00:28:16.016 A:middle
+valid memory address precisely
+
+00:28:16.016 --> 00:28:17.786 A:middle
+so that bad use of the object
+
+00:28:18.016 --> 00:28:18.756 A:middle
+will crash.
+
+00:28:19.986 --> 00:28:22.366 A:middle
+So when objc release goes to
+
+00:28:22.366 --> 00:28:24.366 A:middle
+read the isa field it instead
+
+00:28:24.416 --> 00:28:26.246 A:middle
+gets a rotated free list
+
+00:28:26.246 --> 00:28:26.736 A:middle
+pointer.
+
+00:28:27.396 --> 00:28:29.056 A:middle
+When it dreferences the rotated
+
+00:28:29.056 --> 00:28:30.926 A:middle
+free list pointer it crashes.
+
+00:28:31.926 --> 00:28:33.296 A:middle
+The memory allocator did that
+
+00:28:33.296 --> 00:28:34.986 A:middle
+for us, it deliberately rotated
+
+00:28:34.986 --> 00:28:36.716 A:middle
+that pointer to make sure we
+
+00:28:36.716 --> 00:28:38.166 A:middle
+would crash if we tried to use
+
+00:28:38.166 --> 00:28:38.616 A:middle
+it again.
+
+00:28:39.836 --> 00:28:42.146 A:middle
+So that is the signature we see
+
+00:28:42.146 --> 00:28:43.196 A:middle
+in this crash log.
+
+00:28:43.606 --> 00:28:45.716 A:middle
+We had the invalid address field
+
+00:28:46.056 --> 00:28:48.536 A:middle
+looks like a pointer in the
+
+00:28:48.536 --> 00:28:50.686 A:middle
+malloc region but rotated the
+
+00:28:50.686 --> 00:28:52.626 A:middle
+same way that malloc rotates its
+
+00:28:52.626 --> 00:28:53.566 A:middle
+free list pointers.
+
+00:28:54.186 --> 00:28:56.076 A:middle
+So that's a strong sign that
+
+00:28:56.976 --> 00:28:58.706 A:middle
+whatever object we are trying to
+
+00:28:58.706 --> 00:29:00.056 A:middle
+release at this point in the
+
+00:28:58.706 --> 00:29:00.056 A:middle
+release at this point in the
+
+00:29:00.056 --> 00:29:01.656 A:middle
+code has already been
+
+00:29:01.656 --> 00:29:03.606 A:middle
+deallocated, that's the memory
+
+00:29:03.606 --> 00:29:04.486 A:middle
+error that occurred.
+
+00:29:06.226 --> 00:29:08.006 A:middle
+So that's additional detail of
+
+00:29:08.186 --> 00:29:09.496 A:middle
+what our story is.
+
+00:29:09.546 --> 00:29:10.476 A:middle
+We have our object being
+
+00:29:10.476 --> 00:29:12.336 A:middle
+deallocated, we're cleaning up
+
+00:29:12.336 --> 00:29:14.916 A:middle
+its ivars, one of those ivars
+
+00:29:15.386 --> 00:29:17.116 A:middle
+was already a freed object and
+
+00:29:17.116 --> 00:29:18.266 A:middle
+that's what caused our crash.
+
+00:29:19.506 --> 00:29:20.566 A:middle
+Can we do better?
+
+00:29:20.566 --> 00:29:23.736 A:middle
+Can we figure out which object
+
+00:29:23.736 --> 00:29:25.876 A:middle
+was being released by objc
+
+00:29:25.876 --> 00:29:26.566 A:middle
+release?
+
+00:29:27.636 --> 00:29:29.806 A:middle
+Ordinarily, the function calling
+
+00:29:29.806 --> 00:29:31.276 A:middle
+objc release would give us a
+
+00:29:31.326 --> 00:29:32.926 A:middle
+clue as to what that was.
+
+00:29:33.516 --> 00:29:35.166 A:middle
+But the problem with the ivar
+
+00:29:35.166 --> 00:29:37.186 A:middle
+destroyer function is it is a
+
+00:29:37.186 --> 00:29:39.306 A:middle
+compiler generated function.
+
+00:29:39.876 --> 00:29:41.016 A:middle
+We didn't write a function
+
+00:29:41.016 --> 00:29:42.826 A:middle
+called ivar destroyer, which
+
+00:29:42.826 --> 00:29:44.476 A:middle
+means there's no filename or
+
+00:29:44.476 --> 00:29:46.816 A:middle
+line number associated with this
+
+00:29:46.816 --> 00:29:48.006 A:middle
+point in the crash, we don't
+
+00:29:48.006 --> 00:29:50.436 A:middle
+know which of our properties was
+
+00:29:50.436 --> 00:29:52.346 A:middle
+being deallocated at that point.
+
+00:29:53.326 --> 00:29:55.156 A:middle
+Here's our class, we have three
+
+00:29:55.156 --> 00:29:56.696 A:middle
+properties in this class, we
+
+00:29:56.696 --> 00:29:58.916 A:middle
+have a username, a database, and
+
+00:29:58.916 --> 00:29:59.976 A:middle
+an array of views.
+
+00:30:00.706 --> 00:30:02.536 A:middle
+And at this point in our story
+
+00:30:02.536 --> 00:30:03.846 A:middle
+we don't know which of these
+
+00:30:03.846 --> 00:30:05.876 A:middle
+objects was the one being
+
+00:30:05.876 --> 00:30:06.926 A:middle
+released, it could've been any
+
+00:30:06.926 --> 00:30:08.316 A:middle
+of them.
+
+00:30:08.476 --> 00:30:10.396 A:middle
+Can we do better, can we work
+
+00:30:10.396 --> 00:30:13.146 A:middle
+out which of those objects was
+
+00:30:13.196 --> 00:30:14.966 A:middle
+the one being released from the
+
+00:30:14.966 --> 00:30:16.486 A:middle
+information in the crash log
+
+00:30:16.876 --> 00:30:18.206 A:middle
+because of course if we can't
+
+00:30:18.206 --> 00:30:19.856 A:middle
+reproduce it in the debugger the
+
+00:30:19.856 --> 00:30:21.306 A:middle
+crash log is all we have to go
+
+00:30:21.306 --> 00:30:21.426 A:middle
+on?
+
+00:30:22.326 --> 00:30:24.686 A:middle
+In this case we can do better.
+
+00:30:25.606 --> 00:30:30.006 A:middle
+We can see a +42 where the file
+
+00:30:30.006 --> 00:30:31.126 A:middle
+and line number would've been.
+
+00:30:31.126 --> 00:30:35.306 A:middle
+And the +42 is our clue because
+
+00:30:35.306 --> 00:30:37.616 A:middle
+the +42 is an offset in the
+
+00:30:37.616 --> 00:30:39.446 A:middle
+assembly code of the function.
+
+00:30:40.266 --> 00:30:41.936 A:middle
+We can disassemble the ivar
+
+00:30:41.936 --> 00:30:43.876 A:middle
+destroyer function, look at the
+
+00:30:43.876 --> 00:30:46.636 A:middle
+code and work out which property
+
+00:30:46.636 --> 00:30:49.206 A:middle
+was being accessed at offset 42.
+
+00:30:50.376 --> 00:30:51.526 A:middle
+So how does that work?
+
+00:30:51.956 --> 00:30:53.926 A:middle
+We go into the debugger, into
+
+00:30:53.926 --> 00:30:55.096 A:middle
+the debugger console.
+
+00:30:55.796 --> 00:30:58.026 A:middle
+We can run lldb at a terminal.
+
+00:30:58.426 --> 00:31:01.336 A:middle
+We can run lldb in the Xcode
+
+00:30:58.426 --> 00:31:01.336 A:middle
+We can run lldb in the Xcode
+
+00:31:01.526 --> 00:31:02.886 A:middle
+debug terminal.
+
+00:31:04.306 --> 00:31:06.996 A:middle
+The debugger has commands to
+
+00:31:07.126 --> 00:31:09.856 A:middle
+import a crash log a little bit
+
+00:31:09.856 --> 00:31:13.396 A:middle
+as if it crashed inside the
+
+00:31:13.396 --> 00:31:14.056 A:middle
+debugger.
+
+00:31:14.626 --> 00:31:16.616 A:middle
+So we run this command to load
+
+00:31:16.896 --> 00:31:18.266 A:middle
+the crash log interpretation
+
+00:31:18.266 --> 00:31:21.026 A:middle
+commands and then we run another
+
+00:31:21.026 --> 00:31:23.756 A:middle
+command to import our crash into
+
+00:31:23.756 --> 00:31:24.356 A:middle
+the debugger.
+
+00:31:25.286 --> 00:31:27.196 A:middle
+So we want three things to make
+
+00:31:27.196 --> 00:31:27.796 A:middle
+this work.
+
+00:31:28.076 --> 00:31:30.346 A:middle
+We want a copy of our crash log
+
+00:31:30.396 --> 00:31:33.176 A:middle
+on the Mac, we also want a copy
+
+00:31:33.176 --> 00:31:36.606 A:middle
+of our app, and a copy of the
+
+00:31:36.606 --> 00:31:38.246 A:middle
+dSYM file that went with the
+
+00:31:38.246 --> 00:31:41.076 A:middle
+app, all of them matching this
+
+00:31:41.076 --> 00:31:43.006 A:middle
+crash log, all the same version
+
+00:31:43.006 --> 00:31:43.566 A:middle
+of our app.
+
+00:31:43.906 --> 00:31:45.646 A:middle
+So this is why we want you to
+
+00:31:45.646 --> 00:31:47.596 A:middle
+keep your app archives.
+
+00:31:48.316 --> 00:31:49.796 A:middle
+If we have all these files on
+
+00:31:49.796 --> 00:31:51.716 A:middle
+the Mac, we run the crash log
+
+00:31:51.716 --> 00:31:54.956 A:middle
+command, lldb uses Spotlight to
+
+00:31:54.956 --> 00:31:56.656 A:middle
+find the matching executable,
+
+00:31:56.816 --> 00:31:58.426 A:middle
+find the matching symbols, and
+
+00:31:58.426 --> 00:31:59.956 A:middle
+load it into the debugger.
+
+00:32:00.886 --> 00:32:02.696 A:middle
+So we see the stack trace of our
+
+00:32:02.696 --> 00:32:04.876 A:middle
+crash thread, we see the file
+
+00:32:04.876 --> 00:32:06.036 A:middle
+and line number information
+
+00:32:06.036 --> 00:32:07.926 A:middle
+where available, and now we can
+
+00:32:07.926 --> 00:32:08.526 A:middle
+go to work.
+
+00:32:09.076 --> 00:32:10.776 A:middle
+Now we can find the address of
+
+00:32:10.776 --> 00:32:13.036 A:middle
+the ivar destroyer function and
+
+00:32:13.036 --> 00:32:15.306 A:middle
+disassemble it.
+
+00:32:15.476 --> 00:32:17.336 A:middle
+This shows us the assembly code
+
+00:32:17.616 --> 00:32:18.636 A:middle
+of our function.
+
+00:32:20.066 --> 00:32:21.646 A:middle
+Now I don't have time to teach
+
+00:32:21.646 --> 00:32:22.946 A:middle
+you how to read assembly code,
+
+00:32:23.436 --> 00:32:25.556 A:middle
+but luckily for crash logs you
+
+00:32:25.556 --> 00:32:26.846 A:middle
+don't actually have to be
+
+00:32:27.006 --> 00:32:29.436 A:middle
+completely fluent in reading
+
+00:32:29.436 --> 00:32:30.346 A:middle
+assembly code.
+
+00:32:30.656 --> 00:32:32.146 A:middle
+It often is sufficient to be
+
+00:32:32.146 --> 00:32:33.996 A:middle
+able to skim the assembly code
+
+00:32:33.996 --> 00:32:35.486 A:middle
+and get a general idea of what
+
+00:32:35.486 --> 00:32:37.016 A:middle
+is going on, you don't have to
+
+00:32:37.016 --> 00:32:38.286 A:middle
+understand every single
+
+00:32:38.286 --> 00:32:39.966 A:middle
+instruction to be able to get
+
+00:32:39.966 --> 00:32:41.656 A:middle
+useful information out of a
+
+00:32:41.656 --> 00:32:42.296 A:middle
+crash log.
+
+00:32:43.456 --> 00:32:45.626 A:middle
+If we read through this function
+
+00:32:46.006 --> 00:32:47.776 A:middle
+and we know about the call
+
+00:32:47.906 --> 00:32:50.106 A:middle
+instruction and the jump
+
+00:32:50.106 --> 00:32:51.876 A:middle
+instruction which are how you
+
+00:32:51.876 --> 00:32:54.486 A:middle
+call functions, we can separate
+
+00:32:54.486 --> 00:32:56.606 A:middle
+this code into three blocks.
+
+00:32:57.476 --> 00:33:00.566 A:middle
+We have this top section which
+
+00:32:57.476 --> 00:33:00.566 A:middle
+We have this top section which
+
+00:33:00.566 --> 00:33:03.506 A:middle
+is making a function call into a
+
+00:33:03.506 --> 00:33:04.766 A:middle
+reference count releasing
+
+00:33:04.766 --> 00:33:06.446 A:middle
+function and this one is
+
+00:33:06.446 --> 00:33:08.656 A:middle
+releasing our username property.
+
+00:33:10.076 --> 00:33:12.346 A:middle
+The next region is releasing the
+
+00:33:12.346 --> 00:33:13.636 A:middle
+database property.
+
+00:33:14.166 --> 00:33:16.566 A:middle
+And the next region is releasing
+
+00:33:16.566 --> 00:33:17.876 A:middle
+the views property.
+
+00:33:18.966 --> 00:33:21.186 A:middle
+So we don't understand what all
+
+00:33:21.186 --> 00:33:22.766 A:middle
+these instructions mean, but we
+
+00:33:22.766 --> 00:33:24.576 A:middle
+have a general sense of what
+
+00:33:24.626 --> 00:33:26.026 A:middle
+each region in the code is
+
+00:33:26.026 --> 00:33:26.326 A:middle
+doing.
+
+00:33:26.326 --> 00:33:27.826 A:middle
+It's a little bit like having a
+
+00:33:27.826 --> 00:33:30.266 A:middle
+line number associated with the
+
+00:33:30.266 --> 00:33:30.556 A:middle
+code.
+
+00:33:31.756 --> 00:33:33.546 A:middle
+So now we go back to the
+
+00:33:33.546 --> 00:33:35.106 A:middle
+information in our crash log.
+
+00:33:35.516 --> 00:33:37.956 A:middle
+We had the ivar destroyer
+
+00:33:37.956 --> 00:33:41.416 A:middle
+function +42 calling objc
+
+00:33:41.416 --> 00:33:42.026 A:middle
+release.
+
+00:33:43.416 --> 00:33:46.346 A:middle
+So there is instruction at +42,
+
+00:33:47.266 --> 00:33:48.946 A:middle
+but there is one more catch.
+
+00:33:49.496 --> 00:33:51.736 A:middle
+The catch is in a stack trace
+
+00:33:52.126 --> 00:33:54.086 A:middle
+the assembly level offset of
+
+00:33:54.086 --> 00:33:56.436 A:middle
+most stack frames is the return
+
+00:33:56.476 --> 00:33:58.436 A:middle
+address, it is the instruction
+
+00:33:58.636 --> 00:34:00.226 A:middle
+after the function call.
+
+00:33:58.636 --> 00:34:00.226 A:middle
+after the function call.
+
+00:34:00.886 --> 00:34:02.146 A:middle
+So the instruction of the called
+
+00:34:02.146 --> 00:34:04.346 A:middle
+objc release was the previous
+
+00:34:04.346 --> 00:34:05.436 A:middle
+instruction, it's this
+
+00:34:05.436 --> 00:34:05.986 A:middle
+instruction.
+
+00:34:06.916 --> 00:34:09.786 A:middle
+If we read this it's the call of
+
+00:34:09.786 --> 00:34:11.815 A:middle
+objc release which is good,
+
+00:34:11.906 --> 00:34:13.746 A:middle
+that's consistent with what we
+
+00:34:13.746 --> 00:34:15.286 A:middle
+saw in the stack trace in the
+
+00:34:15.286 --> 00:34:16.755 A:middle
+crash log which was a call to
+
+00:34:16.755 --> 00:34:19.295 A:middle
+objc release at this offset.
+
+00:34:20.156 --> 00:34:22.606 A:middle
+And this release function is
+
+00:34:22.606 --> 00:34:24.916 A:middle
+releasing the database property.
+
+00:34:25.646 --> 00:34:28.085 A:middle
+So now we have more detail about
+
+00:34:28.085 --> 00:34:29.146 A:middle
+what our crash is doing.
+
+00:34:29.735 --> 00:34:31.295 A:middle
+We released the username
+
+00:34:31.295 --> 00:34:32.396 A:middle
+property and that was
+
+00:34:32.396 --> 00:34:33.056 A:middle
+successful.
+
+00:34:33.795 --> 00:34:35.596 A:middle
+We have not yet gotten to the
+
+00:34:35.596 --> 00:34:37.366 A:middle
+views property, it might be
+
+00:34:37.366 --> 00:34:38.896 A:middle
+valid, it might be invalid we
+
+00:34:38.896 --> 00:34:39.416 A:middle
+don't know.
+
+00:34:39.866 --> 00:34:41.966 A:middle
+What we do know is we tried to
+
+00:34:41.966 --> 00:34:43.696 A:middle
+release the database property
+
+00:34:44.166 --> 00:34:46.206 A:middle
+and that object looked like it
+
+00:34:46.206 --> 00:34:49.186 A:middle
+was already freed object based
+
+00:34:49.186 --> 00:34:50.676 A:middle
+on the malloc free list pointer
+
+00:34:50.676 --> 00:34:51.156 A:middle
+signature.
+
+00:34:52.315 --> 00:34:53.456 A:middle
+So that gives us a pretty good
+
+00:34:53.456 --> 00:34:55.416 A:middle
+story of what caused this crash.
+
+00:34:56.025 --> 00:34:57.936 A:middle
+We were freeing a login view
+
+00:34:57.936 --> 00:34:59.996 A:middle
+controller object and the
+
+00:34:59.996 --> 00:35:02.026 A:middle
+database property was invalid.
+
+00:34:59.996 --> 00:35:02.026 A:middle
+database property was invalid.
+
+00:35:04.446 --> 00:35:06.496 A:middle
+So we haven't actually found a
+
+00:35:06.566 --> 00:35:08.036 A:middle
+bug yet, none of this code is
+
+00:35:08.036 --> 00:35:09.706 A:middle
+incorrect, the ivar destroyer
+
+00:35:09.706 --> 00:35:11.656 A:middle
+function is not wrong, something
+
+00:35:11.656 --> 00:35:13.716 A:middle
+else was buggy in our code.
+
+00:35:14.376 --> 00:35:15.856 A:middle
+But from the crash log we have
+
+00:35:15.856 --> 00:35:17.966 A:middle
+been able to narrow down where
+
+00:35:17.966 --> 00:35:20.326 A:middle
+our testing should go, where our
+
+00:35:20.326 --> 00:35:22.036 A:middle
+attempts to reproduce the bug
+
+00:35:22.036 --> 00:35:22.596 A:middle
+should go.
+
+00:35:22.596 --> 00:35:24.086 A:middle
+We should be exercising this
+
+00:35:24.086 --> 00:35:26.396 A:middle
+class, we should be exercising
+
+00:35:26.396 --> 00:35:27.876 A:middle
+the database field, we should be
+
+00:35:27.876 --> 00:35:30.176 A:middle
+reading the code that uses that
+
+00:35:30.176 --> 00:35:32.246 A:middle
+database object and try and find
+
+00:35:32.246 --> 00:35:32.616 A:middle
+the bug.
+
+00:35:32.996 --> 00:35:36.206 A:middle
+So what have we just done?
+
+00:35:37.036 --> 00:35:38.296 A:middle
+We read a crash log from
+
+00:35:38.296 --> 00:35:38.886 A:middle
+scratch.
+
+00:35:38.886 --> 00:35:40.096 A:middle
+We started with the crash
+
+00:35:40.156 --> 00:35:42.396 A:middle
+reason, we read the exception
+
+00:35:42.396 --> 00:35:43.606 A:middle
+type, we understand what the
+
+00:35:43.606 --> 00:35:44.886 A:middle
+exception type means.
+
+00:35:45.996 --> 00:35:48.656 A:middle
+We examined the stack trace of
+
+00:35:48.656 --> 00:35:49.986 A:middle
+the thread that crashed,
+
+00:35:50.246 --> 00:35:51.806 A:middle
+understand what it was doing,
+
+00:35:52.186 --> 00:35:54.146 A:middle
+and what the actual error that
+
+00:35:54.146 --> 00:35:55.126 A:middle
+failed was.
+
+00:35:55.126 --> 00:35:57.426 A:middle
+And we looked for clues
+
+00:35:57.516 --> 00:35:59.466 A:middle
+elsewhere in the crash log, in
+
+00:35:59.466 --> 00:36:00.716 A:middle
+this case we used the bad
+
+00:35:59.466 --> 00:36:00.716 A:middle
+this case we used the bad
+
+00:36:00.716 --> 00:36:03.056 A:middle
+address of the memory error and
+
+00:36:03.056 --> 00:36:05.006 A:middle
+we used the disassembly of the
+
+00:36:05.006 --> 00:36:06.026 A:middle
+crashing function.
+
+00:36:07.836 --> 00:36:12.506 A:middle
+So memory errors are a wide
+
+00:36:12.506 --> 00:36:14.556 A:middle
+variety of crashes, there are
+
+00:36:14.556 --> 00:36:16.186 A:middle
+many different signatures in
+
+00:36:16.186 --> 00:36:18.076 A:middle
+crash logs that can be caused by
+
+00:36:18.076 --> 00:36:18.986 A:middle
+memory errors.
+
+00:36:19.826 --> 00:36:21.936 A:middle
+Here are some examples for you.
+
+00:36:22.456 --> 00:36:24.476 A:middle
+Crashes in the Objective-C
+
+00:36:24.476 --> 00:36:26.856 A:middle
+message send function or in the
+
+00:36:26.856 --> 00:36:28.486 A:middle
+reference counting machinery or
+
+00:36:28.486 --> 00:36:31.086 A:middle
+deallocation machinery in Swift
+
+00:36:31.086 --> 00:36:32.966 A:middle
+and Objective-C are very
+
+00:36:32.966 --> 00:36:34.966 A:middle
+commonly caused by memory
+
+00:36:34.966 --> 00:36:35.396 A:middle
+errors.
+
+00:36:37.116 --> 00:36:38.866 A:middle
+Another common memory error
+
+00:36:38.866 --> 00:36:40.766 A:middle
+symptom is an unrecognized
+
+00:36:40.766 --> 00:36:42.266 A:middle
+selector exception.
+
+00:36:43.216 --> 00:36:45.126 A:middle
+These are often caused when you
+
+00:36:45.126 --> 00:36:47.656 A:middle
+have an object of some type, a
+
+00:36:47.656 --> 00:36:49.806 A:middle
+code that is using that object,
+
+00:36:50.426 --> 00:36:51.486 A:middle
+and then the object gets
+
+00:36:51.606 --> 00:36:53.586 A:middle
+deallocated and used again.
+
+00:36:54.416 --> 00:36:55.496 A:middle
+But instead of getting the
+
+00:36:55.496 --> 00:36:57.696 A:middle
+malloc free list signature that
+
+00:36:57.696 --> 00:36:59.356 A:middle
+we saw in that previous crash
+
+00:36:59.356 --> 00:37:02.306 A:middle
+log, instead a new object is
+
+00:36:59.356 --> 00:37:02.306 A:middle
+log, instead a new object is
+
+00:37:02.306 --> 00:37:04.636 A:middle
+allocated at the same address
+
+00:37:04.636 --> 00:37:06.106 A:middle
+where the old object used to be.
+
+00:37:06.906 --> 00:37:09.196 A:middle
+So when the code tries to use
+
+00:37:09.196 --> 00:37:11.176 A:middle
+the old object, call a function
+
+00:37:11.176 --> 00:37:13.046 A:middle
+on the old object, we have a
+
+00:37:13.146 --> 00:37:14.966 A:middle
+different object of a different
+
+00:37:14.966 --> 00:37:17.656 A:middle
+type at that same address and it
+
+00:37:17.656 --> 00:37:19.206 A:middle
+doesn't recognize that function
+
+00:37:19.206 --> 00:37:20.516 A:middle
+at all and we get an
+
+00:37:20.516 --> 00:37:22.326 A:middle
+unrecognized selector exception.
+
+00:37:24.636 --> 00:37:27.046 A:middle
+One other common symptom of
+
+00:37:27.046 --> 00:37:30.006 A:middle
+memory errors is an abort inside
+
+00:37:30.006 --> 00:37:31.696 A:middle
+the memory allocator itself,
+
+00:37:31.726 --> 00:37:33.226 A:middle
+inside the malloc and free
+
+00:37:33.226 --> 00:37:33.796 A:middle
+functions.
+
+00:37:33.796 --> 00:37:35.976 A:middle
+This is an example of a
+
+00:37:35.976 --> 00:37:37.966 A:middle
+precondition like we saw
+
+00:37:37.966 --> 00:37:39.456 A:middle
+earlier, this is a precondition
+
+00:37:39.566 --> 00:37:41.366 A:middle
+inside the memory allocator.
+
+00:37:42.016 --> 00:37:44.206 A:middle
+It may be identifying cases
+
+00:37:44.206 --> 00:37:47.776 A:middle
+where the heap data structure of
+
+00:37:47.776 --> 00:37:49.616 A:middle
+the malloc memory itself has
+
+00:37:49.616 --> 00:37:51.366 A:middle
+been corrupted by a memory error
+
+00:37:51.606 --> 00:37:52.826 A:middle
+and it halts the process and
+
+00:37:52.826 --> 00:37:53.546 A:middle
+response.
+
+00:37:54.106 --> 00:37:56.426 A:middle
+Or it may be detecting incorrect
+
+00:37:56.426 --> 00:37:59.056 A:middle
+use of the malloc APIs.
+
+00:37:59.056 --> 00:38:01.096 A:middle
+For example, if you free an
+
+00:37:59.056 --> 00:38:01.096 A:middle
+For example, if you free an
+
+00:38:01.096 --> 00:38:03.676 A:middle
+object twice in a row the malloc
+
+00:38:03.676 --> 00:38:04.946 A:middle
+allocator can sometimes
+
+00:38:04.946 --> 00:38:06.816 A:middle
+recognize that as a double free
+
+00:38:07.136 --> 00:38:08.396 A:middle
+and immediately halt the
+
+00:38:08.396 --> 00:38:09.106 A:middle
+process.
+
+00:38:11.136 --> 00:38:13.006 A:middle
+So let me give you some final
+
+00:38:13.006 --> 00:38:15.656 A:middle
+tips for analyzing crash logs in
+
+00:38:15.656 --> 00:38:17.446 A:middle
+general and analyzing memory
+
+00:38:17.446 --> 00:38:18.486 A:middle
+errors in particular.
+
+00:38:20.756 --> 00:38:22.186 A:middle
+In the crash we just looked at
+
+00:38:22.186 --> 00:38:23.286 A:middle
+we spent most of our time
+
+00:38:23.286 --> 00:38:24.286 A:middle
+looking at the code that
+
+00:38:24.366 --> 00:38:26.266 A:middle
+crashed, the specific lines of
+
+00:38:26.266 --> 00:38:27.646 A:middle
+code that crashed, and the
+
+00:38:27.646 --> 00:38:28.736 A:middle
+thread that crashed.
+
+00:38:29.296 --> 00:38:31.006 A:middle
+It is important to look at the
+
+00:38:31.006 --> 00:38:33.636 A:middle
+other code in your process
+
+00:38:33.636 --> 00:38:35.006 A:middle
+related to the code that
+
+00:38:35.006 --> 00:38:35.536 A:middle
+crashed.
+
+00:38:35.656 --> 00:38:39.016 A:middle
+For example, in this crash the
+
+00:38:39.016 --> 00:38:40.736 A:middle
+ivar destroyer function is not
+
+00:38:40.786 --> 00:38:42.046 A:middle
+wrong, that's not where the bug
+
+00:38:42.166 --> 00:38:42.636 A:middle
+is.
+
+00:38:42.936 --> 00:38:45.246 A:middle
+The bug is somewhere else, some
+
+00:38:45.246 --> 00:38:47.376 A:middle
+other code is incorrect.
+
+00:38:49.286 --> 00:38:50.286 A:middle
+You should also look at the
+
+00:38:50.286 --> 00:38:52.696 A:middle
+stack traces in the crash log
+
+00:38:52.966 --> 00:38:54.846 A:middle
+other than the crashed thread.
+
+00:38:55.586 --> 00:38:58.046 A:middle
+The crash log contains all the
+
+00:38:58.046 --> 00:38:59.826 A:middle
+stack traces in the process and
+
+00:38:59.826 --> 00:39:01.016 A:middle
+that can contain useful
+
+00:38:59.826 --> 00:39:01.016 A:middle
+that can contain useful
+
+00:39:01.016 --> 00:39:03.116 A:middle
+information and clues for
+
+00:39:03.116 --> 00:39:04.326 A:middle
+helping you puzzle out what the
+
+00:39:04.326 --> 00:39:05.386 A:middle
+process was doing.
+
+00:39:06.006 --> 00:39:07.856 A:middle
+Perhaps the other threads show
+
+00:39:08.276 --> 00:39:10.266 A:middle
+more details about where in the
+
+00:39:10.266 --> 00:39:11.666 A:middle
+application it was running,
+
+00:39:11.766 --> 00:39:13.196 A:middle
+maybe it was performing network
+
+00:39:13.256 --> 00:39:14.716 A:middle
+code and that's visible on one
+
+00:39:14.716 --> 00:39:16.556 A:middle
+of the other stack traces.
+
+00:39:17.136 --> 00:39:18.086 A:middle
+Or perhaps there's a
+
+00:39:18.086 --> 00:39:20.416 A:middle
+multithreading error and the
+
+00:39:20.416 --> 00:39:22.346 A:middle
+other threads may provide clues
+
+00:39:22.346 --> 00:39:25.116 A:middle
+as to what the thread race was.
+
+00:39:26.796 --> 00:39:28.916 A:middle
+You should also look at more
+
+00:39:28.916 --> 00:39:31.006 A:middle
+than one crash log for a
+
+00:39:31.006 --> 00:39:32.816 A:middle
+particular crash cause.
+
+00:39:33.676 --> 00:39:35.676 A:middle
+The Xcode Organizer helpfully
+
+00:39:35.676 --> 00:39:37.866 A:middle
+groups your crashes based on
+
+00:39:37.866 --> 00:39:39.466 A:middle
+where in the code they crashed.
+
+00:39:40.346 --> 00:39:43.506 A:middle
+And sometimes there will be
+
+00:39:43.506 --> 00:39:45.636 A:middle
+multiple crashes at a same crash
+
+00:39:45.706 --> 00:39:47.826 A:middle
+point, but some of the logs will
+
+00:39:47.826 --> 00:39:49.726 A:middle
+contain more information than
+
+00:39:49.806 --> 00:39:50.416 A:middle
+others.
+
+00:39:50.756 --> 00:39:52.386 A:middle
+For example, the malloc free
+
+00:39:52.386 --> 00:39:54.286 A:middle
+list signature that we just saw
+
+00:39:54.796 --> 00:39:56.666 A:middle
+that might appear in some crash
+
+00:39:56.666 --> 00:39:57.976 A:middle
+logs but not in others.
+
+00:39:58.176 --> 00:40:00.436 A:middle
+So it is useful to browse
+
+00:39:58.176 --> 00:40:00.436 A:middle
+So it is useful to browse
+
+00:40:00.436 --> 00:40:02.606 A:middle
+through multiple crashes in the
+
+00:40:02.606 --> 00:40:04.876 A:middle
+same crash set to see if some of
+
+00:40:04.876 --> 00:40:06.136 A:middle
+them have information that is
+
+00:40:06.136 --> 00:40:07.456 A:middle
+more useful than others.
+
+00:40:08.326 --> 00:40:11.296 A:middle
+In addition, the Organizer as a
+
+00:40:11.396 --> 00:40:13.596 A:middle
+group crashes together will
+
+00:40:13.596 --> 00:40:15.586 A:middle
+sometimes put crashes with
+
+00:40:15.856 --> 00:40:18.086 A:middle
+different causes together in the
+
+00:40:18.086 --> 00:40:18.916 A:middle
+same group.
+
+00:40:19.396 --> 00:40:21.466 A:middle
+There may be other threads or
+
+00:40:21.546 --> 00:40:22.936 A:middle
+the backtrace of a crashed
+
+00:40:22.936 --> 00:40:26.016 A:middle
+thread that identify to you, to
+
+00:40:26.016 --> 00:40:28.246 A:middle
+a human eye you will recognize
+
+00:40:28.246 --> 00:40:29.766 A:middle
+that there are multiple causes
+
+00:40:29.806 --> 00:40:31.956 A:middle
+of this group of crashes even
+
+00:40:31.956 --> 00:40:33.296 A:middle
+though the Xcode Organizer put
+
+00:40:33.296 --> 00:40:34.036 A:middle
+them all together.
+
+00:40:34.856 --> 00:40:36.486 A:middle
+If you only looked at one crash
+
+00:40:36.486 --> 00:40:38.686 A:middle
+log you might not even know that
+
+00:40:38.686 --> 00:40:40.436 A:middle
+that second crash is occurring
+
+00:40:40.826 --> 00:40:42.886 A:middle
+until you fix the first one and
+
+00:40:42.886 --> 00:40:44.896 A:middle
+ship it and start getting crash
+
+00:40:44.896 --> 00:40:45.986 A:middle
+logs from your users.
+
+00:40:48.616 --> 00:40:50.036 A:middle
+Once you've done some analysis
+
+00:40:50.036 --> 00:40:51.056 A:middle
+of your crash, once you've
+
+00:40:51.056 --> 00:40:53.416 A:middle
+narrowed down where in your
+
+00:40:53.416 --> 00:40:55.146 A:middle
+process it might be occurring or
+
+00:40:55.146 --> 00:40:56.476 A:middle
+which objects it might've been
+
+00:40:56.476 --> 00:40:58.896 A:middle
+using you can use tools like the
+
+00:40:58.896 --> 00:41:00.546 A:middle
+Address Sanitizer and the
+
+00:40:58.896 --> 00:41:00.546 A:middle
+Address Sanitizer and the
+
+00:41:00.546 --> 00:41:02.576 A:middle
+Zombies instrument to try and
+
+00:41:02.576 --> 00:41:03.726 A:middle
+reproduce the crash.
+
+00:41:04.116 --> 00:41:05.976 A:middle
+Because even though we did a
+
+00:41:05.976 --> 00:41:07.636 A:middle
+good job with the malloc free
+
+00:41:07.636 --> 00:41:09.936 A:middle
+list crash log of narrowing down
+
+00:41:09.936 --> 00:41:11.996 A:middle
+what happened it's a lot easier
+
+00:41:11.996 --> 00:41:13.636 A:middle
+to debug crashes when they occur
+
+00:41:13.716 --> 00:41:16.456 A:middle
+in a debugger, in a test with
+
+00:41:16.456 --> 00:41:18.396 A:middle
+Sanitization error messages
+
+00:41:18.396 --> 00:41:19.546 A:middle
+telling you what went on.
+
+00:41:20.066 --> 00:41:23.106 A:middle
+So a moment ago I mentioned
+
+00:41:23.106 --> 00:41:24.586 A:middle
+looking up multiple stack
+
+00:41:24.586 --> 00:41:26.826 A:middle
+traces, multiple thread stacks
+
+00:41:27.066 --> 00:41:28.286 A:middle
+in order to diagnose
+
+00:41:28.286 --> 00:41:29.516 A:middle
+multithreading errors.
+
+00:41:30.066 --> 00:41:32.616 A:middle
+And to talk more about debugging
+
+00:41:32.616 --> 00:41:34.156 A:middle
+multithreading errors let me
+
+00:41:34.156 --> 00:41:34.976 A:middle
+introduce Kuba.
+
+00:41:35.516 --> 00:41:40.696 A:middle
+[ Applause ]
+
+00:41:41.196 --> 00:41:41.466 A:middle
+&gt;&gt; Thank you.
+
+00:41:43.646 --> 00:41:44.076 A:middle
+Thank you.
+
+00:41:45.236 --> 00:41:47.356 A:middle
+As Greg mentioned, some memory
+
+00:41:47.356 --> 00:41:49.036 A:middle
+corruptions can be caused by
+
+00:41:49.036 --> 00:41:50.126 A:middle
+multithreading issues.
+
+00:41:51.146 --> 00:41:52.906 A:middle
+Multithreading bugs are often
+
+00:41:52.906 --> 00:41:54.496 A:middle
+one of the hardest types of bugs
+
+00:41:54.646 --> 00:41:56.436 A:middle
+to diagnose and reproduce.
+
+00:41:57.236 --> 00:41:58.436 A:middle
+They get especially hard to
+
+00:41:58.436 --> 00:41:59.866 A:middle
+reproduce because they only
+
+00:41:59.866 --> 00:42:01.296 A:middle
+cause crashes once in a while,
+
+00:41:59.866 --> 00:42:01.296 A:middle
+cause crashes once in a while,
+
+00:42:01.546 --> 00:42:03.506 A:middle
+so your code might seem to work
+
+00:42:03.506 --> 00:42:05.546 A:middle
+fine in 99% of cases.
+
+00:42:06.016 --> 00:42:08.056 A:middle
+And these bugs can go unnoticed
+
+00:42:08.056 --> 00:42:10.146 A:middle
+for a very long time.
+
+00:42:11.306 --> 00:42:12.996 A:middle
+Often monitoring bugs cause
+
+00:42:13.236 --> 00:42:14.446 A:middle
+memory corruptions and what
+
+00:42:14.446 --> 00:42:16.076 A:middle
+you'll see in crash logs looks
+
+00:42:16.076 --> 00:42:17.506 A:middle
+just like memory corruptions as
+
+00:42:17.506 --> 00:42:19.676 A:middle
+well and we've seen examples of
+
+00:42:19.676 --> 00:42:20.856 A:middle
+those in the previous section.
+
+00:42:21.316 --> 00:42:22.186 A:middle
+So when you're dealing with
+
+00:42:22.186 --> 00:42:23.706 A:middle
+crashes inside the malloc or
+
+00:42:23.706 --> 00:42:25.516 A:middle
+free or retained counting
+
+00:42:25.516 --> 00:42:27.466 A:middle
+operations those are typical
+
+00:42:27.466 --> 00:42:29.176 A:middle
+symptoms of memory corruptions.
+
+00:42:30.556 --> 00:42:31.966 A:middle
+There's specific symptoms of
+
+00:42:31.966 --> 00:42:32.996 A:middle
+multithreading bugs as well.
+
+00:42:33.916 --> 00:42:35.546 A:middle
+The crashing thread often
+
+00:42:35.806 --> 00:42:37.566 A:middle
+contains, sorry the crash log
+
+00:42:37.566 --> 00:42:39.136 A:middle
+often contains multiple threads
+
+00:42:39.576 --> 00:42:41.416 A:middle
+that are executing related parts
+
+00:42:41.416 --> 00:42:41.956 A:middle
+of your code.
+
+00:42:42.436 --> 00:42:44.046 A:middle
+So if a particular class or a
+
+00:42:44.046 --> 00:42:45.996 A:middle
+method shows up in a crash log
+
+00:42:45.996 --> 00:42:48.006 A:middle
+in multiple threads that's an
+
+00:42:48.006 --> 00:42:49.256 A:middle
+indication of a potential
+
+00:42:49.256 --> 00:42:50.136 A:middle
+multithreading bug.
+
+00:42:51.646 --> 00:42:53.576 A:middle
+The memory corruptions that are
+
+00:42:53.576 --> 00:42:55.036 A:middle
+caused by multithreading issues
+
+00:42:55.186 --> 00:42:56.436 A:middle
+are often very random.
+
+00:42:56.616 --> 00:42:58.486 A:middle
+So you might see crashes
+
+00:42:58.486 --> 00:43:00.016 A:middle
+happening at slightly different
+
+00:42:58.486 --> 00:43:00.016 A:middle
+happening at slightly different
+
+00:43:00.096 --> 00:43:01.606 A:middle
+lines of code or slightly
+
+00:43:01.606 --> 00:43:02.406 A:middle
+different addresses.
+
+00:43:02.836 --> 00:43:04.556 A:middle
+And as Greg mentioned, you can
+
+00:43:04.556 --> 00:43:06.956 A:middle
+see those show up as different
+
+00:43:07.946 --> 00:43:09.716 A:middle
+crash points in Xcode even
+
+00:43:09.716 --> 00:43:10.746 A:middle
+though it's the same bug.
+
+00:43:12.086 --> 00:43:13.696 A:middle
+And also the crashing thread
+
+00:43:13.756 --> 00:43:14.836 A:middle
+might not actually be the
+
+00:43:14.836 --> 00:43:15.966 A:middle
+culprit of the bug, so it's
+
+00:43:15.966 --> 00:43:18.016 A:middle
+important to look at the stack
+
+00:43:18.016 --> 00:43:19.406 A:middle
+traces of the other threads in a
+
+00:43:19.406 --> 00:43:19.856 A:middle
+crash log.
+
+00:43:20.546 --> 00:43:22.286 A:middle
+So now let's take a closer look
+
+00:43:22.376 --> 00:43:23.436 A:middle
+at an example of a
+
+00:43:23.436 --> 00:43:24.746 A:middle
+multithreading bug and I will
+
+00:43:24.746 --> 00:43:26.056 A:middle
+show you how we can diagnose
+
+00:43:26.056 --> 00:43:27.856 A:middle
+such a bug using a tool called
+
+00:43:27.856 --> 00:43:29.296 A:middle
+Thread Sanitizer which is part
+
+00:43:29.296 --> 00:43:29.886 A:middle
+of Xcode.
+
+00:43:39.046 --> 00:43:40.066 A:middle
+So let's take another look at
+
+00:43:40.066 --> 00:43:41.716 A:middle
+our cookies recipe app that
+
+00:43:41.886 --> 00:43:43.416 A:middle
+Chris and I made and let's look
+
+00:43:43.416 --> 00:43:44.766 A:middle
+at some more crash logs that we
+
+00:43:44.766 --> 00:43:46.066 A:middle
+received from our users.
+
+00:43:46.666 --> 00:43:49.116 A:middle
+Let's focus on this second app
+
+00:43:49.116 --> 00:43:50.546 A:middle
+crasher of our app, this one.
+
+00:43:52.066 --> 00:43:53.476 A:middle
+This crash log indicates that
+
+00:43:53.476 --> 00:43:54.746 A:middle
+there's something wrong going on
+
+00:43:54.746 --> 00:43:56.256 A:middle
+when we're doing with a class
+
+00:43:56.256 --> 00:43:58.066 A:middle
+called LazyImageView, which is a
+
+00:43:58.066 --> 00:43:59.836 A:middle
+class that I wrote and we'll
+
+00:43:59.836 --> 00:44:00.996 A:middle
+look at it in just a second.
+
+00:43:59.836 --> 00:44:00.996 A:middle
+look at it in just a second.
+
+00:44:01.516 --> 00:44:02.706 A:middle
+But let's try to understand more
+
+00:44:02.706 --> 00:44:03.836 A:middle
+from the crash logs first.
+
+00:44:03.916 --> 00:44:07.116 A:middle
+Let's look at the entire stack
+
+00:44:07.116 --> 00:44:08.466 A:middle
+of this thread which I can do by
+
+00:44:08.466 --> 00:44:09.606 A:middle
+clicking this button right here
+
+00:44:09.966 --> 00:44:11.296 A:middle
+that also shows all other
+
+00:44:11.296 --> 00:44:11.636 A:middle
+threads.
+
+00:44:13.026 --> 00:44:14.906 A:middle
+And if we focus at the top most
+
+00:44:14.906 --> 00:44:16.566 A:middle
+frames here we'll see that
+
+00:44:16.566 --> 00:44:18.246 A:middle
+what's really going on is that
+
+00:44:18.246 --> 00:44:19.776 A:middle
+the free function is calling
+
+00:44:19.776 --> 00:44:21.556 A:middle
+abort which indicates a heap
+
+00:44:21.556 --> 00:44:22.966 A:middle
+corruption, a type of memory
+
+00:44:22.966 --> 00:44:23.166 A:middle
+error.
+
+00:44:23.166 --> 00:44:26.396 A:middle
+If we look at the stack traces
+
+00:44:26.396 --> 00:44:27.756 A:middle
+of some other threads, like
+
+00:44:27.756 --> 00:44:30.076 A:middle
+thread 5 here, we'll see that
+
+00:44:30.076 --> 00:44:31.856 A:middle
+it's executing also some code
+
+00:44:31.946 --> 00:44:33.256 A:middle
+inside LazyImageView.
+
+00:44:33.256 --> 00:44:36.786 A:middle
+Let's look at another crash in
+
+00:44:36.786 --> 00:44:39.606 A:middle
+this group of crashes and we'll
+
+00:44:39.606 --> 00:44:41.016 A:middle
+see that this a common theme in
+
+00:44:41.016 --> 00:44:41.906 A:middle
+all these crash logs.
+
+00:44:42.376 --> 00:44:44.226 A:middle
+One thread is reporting a heap
+
+00:44:44.226 --> 00:44:45.506 A:middle
+corruption when the free
+
+00:44:45.506 --> 00:44:47.666 A:middle
+function is calling abort and a
+
+00:44:47.666 --> 00:44:50.246 A:middle
+secondary thread is processing
+
+00:44:50.886 --> 00:44:52.476 A:middle
+in a very related part of the
+
+00:44:52.476 --> 00:44:53.516 A:middle
+code, actually in the same
+
+00:44:53.516 --> 00:44:55.026 A:middle
+class, inside LazyImageView
+
+00:44:55.026 --> 00:44:55.366 A:middle
+again.
+
+00:44:55.996 --> 00:44:57.156 A:middle
+That's most likely not a
+
+00:44:57.156 --> 00:44:59.166 A:middle
+coincidence, I highly suspect
+
+00:44:59.166 --> 00:45:00.136 A:middle
+that this is a multithreading
+
+00:44:59.166 --> 00:45:00.136 A:middle
+that this is a multithreading
+
+00:45:00.136 --> 00:45:00.496 A:middle
+issue.
+
+00:45:01.656 --> 00:45:04.096 A:middle
+So let's actually take a look at
+
+00:45:04.096 --> 00:45:05.156 A:middle
+our LazyImageView class.
+
+00:45:05.156 --> 00:45:07.256 A:middle
+So I'll click this button right
+
+00:45:07.256 --> 00:45:08.656 A:middle
+here to jump straight to this
+
+00:45:08.656 --> 00:45:10.006 A:middle
+line of code and open it in our
+
+00:45:10.006 --> 00:45:10.436 A:middle
+project.
+
+00:45:11.866 --> 00:45:13.126 A:middle
+And you can see the source of
+
+00:45:13.126 --> 00:45:14.816 A:middle
+LazyImageView right here.
+
+00:45:15.306 --> 00:45:17.396 A:middle
+It's a subclass of UIImageView,
+
+00:45:17.706 --> 00:45:19.116 A:middle
+but it has an extra feature
+
+00:45:19.116 --> 00:45:21.036 A:middle
+because it loads images lazily
+
+00:45:21.036 --> 00:45:22.136 A:middle
+and asynchronously.
+
+00:45:22.776 --> 00:45:24.096 A:middle
+And we can the logic for this
+
+00:45:24.096 --> 00:45:25.196 A:middle
+right here in the initializer.
+
+00:45:25.826 --> 00:45:28.026 A:middle
+What we do is we dispatch a job
+
+00:45:28.026 --> 00:45:30.106 A:middle
+to a background queue where we
+
+00:45:30.106 --> 00:45:31.476 A:middle
+will create the image on a
+
+00:45:31.476 --> 00:45:33.356 A:middle
+background thread and once that
+
+00:45:33.356 --> 00:45:35.206 A:middle
+is done we will dispatch back to
+
+00:45:35.206 --> 00:45:36.876 A:middle
+the main queue to actually
+
+00:45:36.876 --> 00:45:37.956 A:middle
+display the image on the screen.
+
+00:45:39.046 --> 00:45:40.976 A:middle
+The crash log points us to this
+
+00:45:40.976 --> 00:45:43.096 A:middle
+line of code here where we are
+
+00:45:43.286 --> 00:45:45.986 A:middle
+accessing an image cache which
+
+00:45:45.986 --> 00:45:47.506 A:middle
+we are using to make sure that
+
+00:45:47.506 --> 00:45:49.156 A:middle
+we don't unnecessarily create
+
+00:45:49.376 --> 00:45:50.806 A:middle
+the same image multiple times.
+
+00:45:51.346 --> 00:45:52.616 A:middle
+So maybe there is some bug in
+
+00:45:52.616 --> 00:45:54.246 A:middle
+the way my cache is implemented.
+
+00:45:54.896 --> 00:45:56.146 A:middle
+Let's try to avoid guessing,
+
+00:45:56.246 --> 00:45:58.246 A:middle
+instead I'll run the app in the
+
+00:45:58.246 --> 00:45:59.496 A:middle
+Simulator and we will try to
+
+00:45:59.496 --> 00:46:00.336 A:middle
+reproduce this crash.
+
+00:45:59.496 --> 00:46:00.336 A:middle
+reproduce this crash.
+
+00:46:00.656 --> 00:46:02.496 A:middle
+And let me close the crash log
+
+00:46:02.496 --> 00:46:03.076 A:middle
+session first.
+
+00:46:03.076 --> 00:46:05.616 A:middle
+All right, so this is our
+
+00:46:05.616 --> 00:46:07.386 A:middle
+cookies recipe again and you'll
+
+00:46:07.386 --> 00:46:09.256 A:middle
+notice that if I try to add a
+
+00:46:09.256 --> 00:46:11.256 A:middle
+new recipe by clicking this +
+
+00:46:11.256 --> 00:46:14.076 A:middle
+button right here we get asked
+
+00:46:14.246 --> 00:46:16.166 A:middle
+to select an image for our new
+
+00:46:16.166 --> 00:46:16.536 A:middle
+recipe.
+
+00:46:17.266 --> 00:46:18.876 A:middle
+So this controller which is on
+
+00:46:18.876 --> 00:46:20.726 A:middle
+the screen right now displays
+
+00:46:20.786 --> 00:46:22.186 A:middle
+all these images using
+
+00:46:22.186 --> 00:46:23.046 A:middle
+LazyImageView.
+
+00:46:23.566 --> 00:46:25.346 A:middle
+So just showing it up on the
+
+00:46:25.346 --> 00:46:27.146 A:middle
+screen and scrolling through the
+
+00:46:27.146 --> 00:46:29.216 A:middle
+content already exercises all of
+
+00:46:29.216 --> 00:46:31.296 A:middle
+the code inside LazyImageView,
+
+00:46:31.506 --> 00:46:32.606 A:middle
+but I don't see any crashes.
+
+00:46:33.546 --> 00:46:34.766 A:middle
+Unfortunately, it's a very
+
+00:46:34.766 --> 00:46:35.666 A:middle
+common problem with
+
+00:46:35.666 --> 00:46:37.196 A:middle
+multithreading bugs, they are
+
+00:46:37.196 --> 00:46:38.566 A:middle
+notoriously hard to reproduce.
+
+00:46:38.566 --> 00:46:40.886 A:middle
+So even when you repeatedly test
+
+00:46:41.016 --> 00:46:43.016 A:middle
+the code that has such a bug you
+
+00:46:43.016 --> 00:46:44.326 A:middle
+might not actually see a crush.
+
+00:46:45.126 --> 00:46:46.706 A:middle
+Let's try actually doing that,
+
+00:46:46.706 --> 00:46:48.706 A:middle
+let's try closing and opening
+
+00:46:48.706 --> 00:46:50.476 A:middle
+this controller a couple times
+
+00:46:50.476 --> 00:46:51.646 A:middle
+and let's see if maybe
+
+00:46:51.646 --> 00:46:53.426 A:middle
+eventually we will be lucky and
+
+00:46:53.746 --> 00:46:54.816 A:middle
+we will be able to trigger this
+
+00:46:54.816 --> 00:46:54.956 A:middle
+crash.
+
+00:47:00.176 --> 00:47:01.976 A:middle
+All right here we go, the
+
+00:47:01.976 --> 00:47:04.406 A:middle
+debugger has stopped because it
+
+00:47:04.406 --> 00:47:05.936 A:middle
+has crashed, but even when you
+
+00:47:05.936 --> 00:47:07.806 A:middle
+actually do catch this crash in
+
+00:47:07.806 --> 00:47:08.826 A:middle
+the debugger it doesn't really
+
+00:47:08.826 --> 00:47:09.806 A:middle
+help us.
+
+00:47:10.256 --> 00:47:11.536 A:middle
+All the debugger provides is
+
+00:47:11.536 --> 00:47:13.636 A:middle
+that this is some sort of XC bad
+
+00:47:13.636 --> 00:47:15.906 A:middle
+excess but it does not what
+
+00:47:15.906 --> 00:47:17.646 A:middle
+caused the corruption or why did
+
+00:47:17.646 --> 00:47:19.036 A:middle
+it actually happen.
+
+00:47:19.806 --> 00:47:21.866 A:middle
+Luckily Xcode has a tool that's
+
+00:47:21.916 --> 00:47:23.356 A:middle
+perfect just for this situation
+
+00:47:23.356 --> 00:47:24.616 A:middle
+and it's called Thread Sanitizer
+
+00:47:24.616 --> 00:47:25.676 A:middle
+and that's what I'm going to use
+
+00:47:25.676 --> 00:47:25.876 A:middle
+here.
+
+00:47:26.266 --> 00:47:27.816 A:middle
+So let's open up the scheme
+
+00:47:27.816 --> 00:47:29.206 A:middle
+editor of our project which I
+
+00:47:29.206 --> 00:47:30.446 A:middle
+can do by clicking the name of
+
+00:47:30.446 --> 00:47:32.066 A:middle
+our app here and choosing Edit
+
+00:47:32.066 --> 00:47:32.426 A:middle
+Scheme.
+
+00:47:33.336 --> 00:47:35.536 A:middle
+And if I then switch over to the
+
+00:47:35.786 --> 00:47:37.576 A:middle
+tab called Diagnostics you'll
+
+00:47:37.576 --> 00:47:40.006 A:middle
+see that we have several runtime
+
+00:47:40.006 --> 00:47:41.426 A:middle
+diagnostic tools here, like
+
+00:47:41.426 --> 00:47:42.676 A:middle
+Address Sanitizer which is great
+
+00:47:42.676 --> 00:47:44.136 A:middle
+at finding buffer overflows.
+
+00:47:45.486 --> 00:47:46.746 A:middle
+Let me choose Thread Sanitizer
+
+00:47:46.746 --> 00:47:48.396 A:middle
+and I'll also select Pause on
+
+00:47:48.396 --> 00:47:49.876 A:middle
+Issues which means that the
+
+00:47:49.876 --> 00:47:51.206 A:middle
+debugger will break every time
+
+00:47:51.446 --> 00:47:52.826 A:middle
+that Sanitizer detects a bug.
+
+00:47:54.636 --> 00:47:56.086 A:middle
+Let's run the app in the
+
+00:47:56.086 --> 00:47:57.556 A:middle
+Simulator with Thread Sanitizer
+
+00:47:57.556 --> 00:47:58.566 A:middle
+enabled and let's see what
+
+00:47:58.566 --> 00:48:00.366 A:middle
+happens now if I try to add a
+
+00:47:58.566 --> 00:48:00.366 A:middle
+happens now if I try to add a
+
+00:48:00.366 --> 00:48:00.986 A:middle
+new recipe.
+
+00:48:03.056 --> 00:48:05.056 A:middle
+If I click the + button now
+
+00:48:05.926 --> 00:48:06.796 A:middle
+you'll see that he app gets
+
+00:48:06.796 --> 00:48:07.966 A:middle
+immediately stopped because
+
+00:48:08.056 --> 00:48:09.246 A:middle
+Thread Sanitizer found the bug.
+
+00:48:09.636 --> 00:48:11.056 A:middle
+And notice that I didn't have to
+
+00:48:11.056 --> 00:48:12.776 A:middle
+try multiple times, Thread
+
+00:48:12.776 --> 00:48:14.056 A:middle
+Sanitizer reproduces
+
+00:48:14.056 --> 00:48:15.706 A:middle
+multithreading issues extremely
+
+00:48:15.706 --> 00:48:16.226 A:middle
+reliably.
+
+00:48:16.406 --> 00:48:18.616 A:middle
+So let's look at some details of
+
+00:48:18.616 --> 00:48:18.986 A:middle
+this bug.
+
+00:48:20.056 --> 00:48:22.106 A:middle
+We see that it's a Swift access
+
+00:48:22.106 --> 00:48:22.456 A:middle
+race.
+
+00:48:22.686 --> 00:48:25.306 A:middle
+And if we look at the left side
+
+00:48:25.306 --> 00:48:27.106 A:middle
+into the debug navigator we get
+
+00:48:27.106 --> 00:48:28.556 A:middle
+even some more details about
+
+00:48:28.556 --> 00:48:28.976 A:middle
+this bug.
+
+00:48:29.556 --> 00:48:31.606 A:middle
+We see that there's two accesses
+
+00:48:31.996 --> 00:48:33.076 A:middle
+performed by two different
+
+00:48:33.076 --> 00:48:34.976 A:middle
+threads, here is thread 2 and
+
+00:48:34.976 --> 00:48:37.086 A:middle
+thread 4, that are both trying
+
+00:48:37.086 --> 00:48:38.306 A:middle
+to access the same memory
+
+00:48:38.306 --> 00:48:40.266 A:middle
+location at the same time, which
+
+00:48:40.266 --> 00:48:40.926 A:middle
+is not allowed.
+
+00:48:41.446 --> 00:48:44.286 A:middle
+So if we take a look at these
+
+00:48:44.336 --> 00:48:45.756 A:middle
+two lines of code that are
+
+00:48:45.756 --> 00:48:47.686 A:middle
+forming the race we see that
+
+00:48:47.686 --> 00:48:49.486 A:middle
+they are both accessing the
+
+00:48:49.576 --> 00:48:50.526 A:middle
+image cache again.
+
+00:48:51.396 --> 00:48:52.806 A:middle
+So since this is a data
+
+00:48:52.806 --> 00:48:54.826 A:middle
+structure that is shared between
+
+00:48:54.826 --> 00:48:56.266 A:middle
+multiple threads as we see here
+
+00:48:56.536 --> 00:48:57.696 A:middle
+it needs to be a thread data
+
+00:48:57.696 --> 00:48:58.136 A:middle
+structure.
+
+00:48:58.866 --> 00:49:00.136 A:middle
+So let's look at how it's
+
+00:48:58.866 --> 00:49:00.136 A:middle
+So let's look at how it's
+
+00:49:00.136 --> 00:49:01.826 A:middle
+implemented, let's jump to
+
+00:49:01.956 --> 00:49:03.016 A:middle
+storage here which is what we're
+
+00:49:03.016 --> 00:49:04.036 A:middle
+using and let's see if it
+
+00:49:04.036 --> 00:49:06.326 A:middle
+actually is thread safe.
+
+00:49:06.436 --> 00:49:08.466 A:middle
+So here's the source of image
+
+00:49:08.466 --> 00:49:09.656 A:middle
+cache, right here at the top of
+
+00:49:09.656 --> 00:49:11.326 A:middle
+the file and we can immediately
+
+00:49:11.326 --> 00:49:12.196 A:middle
+spot what's wrong.
+
+00:49:12.696 --> 00:49:14.306 A:middle
+This is just a plain Swift
+
+00:49:14.306 --> 00:49:16.196 A:middle
+dictionary so that's not good.
+
+00:49:16.446 --> 00:49:17.886 A:middle
+Swift dictionaries are not
+
+00:49:17.886 --> 00:49:19.156 A:middle
+thread safe by default.
+
+00:49:19.636 --> 00:49:21.586 A:middle
+So if we want to share a mutable
+
+00:49:21.676 --> 00:49:22.866 A:middle
+Swift dictionary between
+
+00:49:22.866 --> 00:49:25.146 A:middle
+multiple threads we have to
+
+00:49:25.146 --> 00:49:26.926 A:middle
+protect it with synchronization,
+
+00:49:27.476 --> 00:49:28.656 A:middle
+which means we have to make sure
+
+00:49:28.656 --> 00:49:30.336 A:middle
+that only one thread accesses it
+
+00:49:30.336 --> 00:49:30.876 A:middle
+at a time.
+
+00:49:31.846 --> 00:49:33.326 A:middle
+So now let's actually work on
+
+00:49:33.326 --> 00:49:34.656 A:middle
+fixing this problem and making
+
+00:49:34.656 --> 00:49:36.876 A:middle
+the class thread safe and I'll
+
+00:49:36.876 --> 00:49:37.806 A:middle
+do that in two steps.
+
+00:49:37.806 --> 00:49:41.186 A:middle
+First, I'll refactor this code a
+
+00:49:41.186 --> 00:49:42.836 A:middle
+little bit so that we have more
+
+00:49:42.836 --> 00:49:44.886 A:middle
+control over storage and then in
+
+00:49:44.886 --> 00:49:46.366 A:middle
+a second step I will use a
+
+00:49:46.366 --> 00:49:47.696 A:middle
+dispatch queue to actually make
+
+00:49:47.696 --> 00:49:48.696 A:middle
+this class thread safe.
+
+00:49:50.006 --> 00:49:52.106 A:middle
+So first of all what I don't
+
+00:49:52.106 --> 00:49:53.506 A:middle
+like here is that storage is
+
+00:49:53.506 --> 00:49:54.916 A:middle
+declared as a public variable.
+
+00:49:55.396 --> 00:49:56.896 A:middle
+That means that potentially any
+
+00:49:56.896 --> 00:49:58.496 A:middle
+code inside my app can be
+
+00:49:58.496 --> 00:49:58.976 A:middle
+accessing it.
+
+00:49:59.566 --> 00:50:01.056 A:middle
+And it will be really hard to
+
+00:49:59.566 --> 00:50:01.056 A:middle
+And it will be really hard to
+
+00:50:01.056 --> 00:50:02.246 A:middle
+make sure that all the code in
+
+00:50:02.246 --> 00:50:04.466 A:middle
+my app does it correctly, so
+
+00:50:04.466 --> 00:50:06.316 A:middle
+let's change it to private
+
+00:50:06.316 --> 00:50:06.686 A:middle
+instead.
+
+00:50:07.116 --> 00:50:09.536 A:middle
+And let me introduce a different
+
+00:50:09.536 --> 00:50:11.726 A:middle
+way of accessing image cache and
+
+00:50:11.726 --> 00:50:13.536 A:middle
+I'll do that by introducing a
+
+00:50:13.536 --> 00:50:14.076 A:middle
+subscript.
+
+00:50:15.206 --> 00:50:16.806 A:middle
+That means that users of image
+
+00:50:16.806 --> 00:50:19.056 A:middle
+cache can use brackets to load
+
+00:50:19.056 --> 00:50:20.236 A:middle
+and store data from the cache.
+
+00:50:21.596 --> 00:50:24.546 A:middle
+So subscripting needs a getter,
+
+00:50:25.846 --> 00:50:27.086 A:middle
+like this one and a setter.
+
+00:50:28.446 --> 00:50:30.016 A:middle
+And for now let's just implement
+
+00:50:30.016 --> 00:50:31.986 A:middle
+these by directly accessing the
+
+00:50:31.986 --> 00:50:32.896 A:middle
+underlying storage.
+
+00:50:34.586 --> 00:50:36.206 A:middle
+And to make the rest of this
+
+00:50:36.456 --> 00:50:37.936 A:middle
+file actually build I need to
+
+00:50:37.936 --> 00:50:39.976 A:middle
+update the users, so instead of
+
+00:50:40.456 --> 00:50:41.876 A:middle
+accessing the storage property
+
+00:50:42.056 --> 00:50:43.646 A:middle
+we should be using brackets and
+
+00:50:43.646 --> 00:50:45.526 A:middle
+index into image cache directly
+
+00:50:46.226 --> 00:50:47.216 A:middle
+like this.
+
+00:50:47.436 --> 00:50:49.886 A:middle
+So if I hit Build Now you'll see
+
+00:50:49.886 --> 00:50:52.176 A:middle
+that the code will compile fine
+
+00:50:52.176 --> 00:50:53.586 A:middle
+now, but I didn't really fix any
+
+00:50:53.586 --> 00:50:54.176 A:middle
+bugs yet.
+
+00:50:55.006 --> 00:50:56.716 A:middle
+But I did achieve something, I
+
+00:50:56.716 --> 00:50:59.276 A:middle
+now have direct control over all
+
+00:50:59.276 --> 00:51:00.476 A:middle
+the code that can access
+
+00:50:59.276 --> 00:51:00.476 A:middle
+the code that can access
+
+00:51:00.536 --> 00:51:00.946 A:middle
+storage.
+
+00:51:01.146 --> 00:51:02.676 A:middle
+It's either going to be code in
+
+00:51:02.676 --> 00:51:04.536 A:middle
+this getter or the setter, no
+
+00:51:04.536 --> 00:51:06.066 A:middle
+other code in my app has access
+
+00:51:06.116 --> 00:51:06.336 A:middle
+to it.
+
+00:51:06.646 --> 00:51:08.046 A:middle
+So I'm in a very good position
+
+00:51:08.046 --> 00:51:09.696 A:middle
+to actually fix this Swift
+
+00:51:09.696 --> 00:51:10.436 A:middle
+access race.
+
+00:51:11.796 --> 00:51:13.216 A:middle
+And let me do that by using a
+
+00:51:13.216 --> 00:51:13.856 A:middle
+dispatch queue.
+
+00:51:14.066 --> 00:51:15.976 A:middle
+So let's create a new private
+
+00:51:15.976 --> 00:51:17.766 A:middle
+variable called queue and let's
+
+00:51:17.766 --> 00:51:19.976 A:middle
+assign a new dispatch queue into
+
+00:51:19.976 --> 00:51:20.076 A:middle
+it.
+
+00:51:21.346 --> 00:51:23.296 A:middle
+Dispatch queues are serial by
+
+00:51:23.296 --> 00:51:24.446 A:middle
+default, so this one is also
+
+00:51:24.446 --> 00:51:25.886 A:middle
+serial, which means that it will
+
+00:51:25.886 --> 00:51:28.136 A:middle
+only allow one piece of code to
+
+00:51:28.136 --> 00:51:30.336 A:middle
+execute inside that queue at a
+
+00:51:30.336 --> 00:51:30.726 A:middle
+time.
+
+00:51:31.046 --> 00:51:32.556 A:middle
+So that's perfect, that's
+
+00:51:32.556 --> 00:51:33.776 A:middle
+exactly what we need here.
+
+00:51:34.676 --> 00:51:36.236 A:middle
+How do we actually execute code
+
+00:51:36.236 --> 00:51:37.406 A:middle
+inside a dispatch queue?
+
+00:51:37.766 --> 00:51:40.066 A:middle
+We can use queue.sync and
+
+00:51:40.066 --> 00:51:42.076 A:middle
+whatever code I move into
+
+00:51:42.186 --> 00:51:45.756 A:middle
+queue.sync will be executed
+
+00:51:45.856 --> 00:51:47.246 A:middle
+inside that serial queue and
+
+00:51:47.246 --> 00:51:48.146 A:middle
+only one at a time.
+
+00:51:48.676 --> 00:51:50.256 A:middle
+And I can return a value here
+
+00:51:50.256 --> 00:51:51.446 A:middle
+because I need to return
+
+00:51:51.446 --> 00:51:52.316 A:middle
+something from the getter.
+
+00:51:53.476 --> 00:51:55.406 A:middle
+And I can fix the same thing in
+
+00:51:55.406 --> 00:51:56.146 A:middle
+the setter as well.
+
+00:51:56.316 --> 00:51:58.926 A:middle
+And if I move this line of code
+
+00:51:59.126 --> 00:52:01.296 A:middle
+into this queue.sync it will be
+
+00:51:59.126 --> 00:52:01.296 A:middle
+into this queue.sync it will be
+
+00:52:01.296 --> 00:52:02.456 A:middle
+executed as part of that
+
+00:52:02.696 --> 00:52:03.286 A:middle
+dispatch queue.
+
+00:52:03.796 --> 00:52:06.076 A:middle
+So this way the code is now
+
+00:52:06.076 --> 00:52:07.856 A:middle
+thread safe because every single
+
+00:52:08.096 --> 00:52:09.316 A:middle
+line of code that accesses
+
+00:52:09.316 --> 00:52:11.576 A:middle
+storage is always executed
+
+00:52:11.666 --> 00:52:13.426 A:middle
+inside a serial dispatch queue,
+
+00:52:13.546 --> 00:52:15.126 A:middle
+which means it will only be
+
+00:52:15.126 --> 00:52:16.706 A:middle
+executed one at a time and is
+
+00:52:16.706 --> 00:52:18.376 A:middle
+[inaudible] thread safe.
+
+00:52:18.376 --> 00:52:20.286 A:middle
+Now it might be tempting to only
+
+00:52:20.286 --> 00:52:22.596 A:middle
+use the synchronization in the
+
+00:52:22.596 --> 00:52:24.736 A:middle
+setter where we are modifying
+
+00:52:24.736 --> 00:52:26.686 A:middle
+the storage and avoiding it in
+
+00:52:26.686 --> 00:52:27.546 A:middle
+the getter like this.
+
+00:52:28.496 --> 00:52:29.866 A:middle
+But that's not correct, that can
+
+00:52:29.866 --> 00:52:31.286 A:middle
+still cause memory corruptions
+
+00:52:31.286 --> 00:52:32.316 A:middle
+and still cause crashes.
+
+00:52:32.586 --> 00:52:33.956 A:middle
+Let me actually prove that to
+
+00:52:33.956 --> 00:52:35.706 A:middle
+you by running this version of
+
+00:52:35.706 --> 00:52:37.466 A:middle
+the code in the Simulator and
+
+00:52:37.466 --> 00:52:39.146 A:middle
+let's see if the Sanitizer finds
+
+00:52:39.146 --> 00:52:40.766 A:middle
+this little more subtle bug now.
+
+00:52:41.316 --> 00:52:44.926 A:middle
+As I expected it does.
+
+00:52:45.246 --> 00:52:47.056 A:middle
+We really have to protect both
+
+00:52:47.056 --> 00:52:49.046 A:middle
+the getter and the setter with
+
+00:52:49.046 --> 00:52:49.866 A:middle
+the synchronization.
+
+00:52:50.036 --> 00:52:52.596 A:middle
+So let me run my app one last
+
+00:52:52.596 --> 00:52:53.716 A:middle
+time in the Simulator and you
+
+00:52:53.716 --> 00:52:55.706 A:middle
+will see it if I try to a new
+
+00:52:55.706 --> 00:52:56.586 A:middle
+recipe this time.
+
+00:52:57.076 --> 00:52:58.406 A:middle
+The controller loads up just
+
+00:52:58.406 --> 00:52:59.866 A:middle
+fine and we don't get any more
+
+00:52:59.866 --> 00:53:01.206 A:middle
+warnings because the class is
+
+00:52:59.866 --> 00:53:01.206 A:middle
+warnings because the class is
+
+00:53:01.206 --> 00:53:02.806 A:middle
+now correctly thread safe.
+
+00:53:02.846 --> 00:53:04.126 A:middle
+So I can actually go back to our
+
+00:53:04.126 --> 00:53:06.476 A:middle
+Organizer window and mark this
+
+00:53:07.576 --> 00:53:08.756 A:middle
+crash as resolved because we
+
+00:53:08.756 --> 00:53:10.486 A:middle
+have found, identified, and
+
+00:53:10.486 --> 00:53:10.976 A:middle
+fixed this bug.
+
+00:53:11.516 --> 00:53:18.500 A:middle
+[ Applause ]
+
+00:53:21.286 --> 00:53:23.446 A:middle
+All right so what we've just
+
+00:53:23.446 --> 00:53:25.426 A:middle
+seen is that I've started with a
+
+00:53:25.426 --> 00:53:27.256 A:middle
+set of crash logs that all have
+
+00:53:27.256 --> 00:53:28.746 A:middle
+symptoms of a multithreading
+
+00:53:28.746 --> 00:53:28.946 A:middle
+bug.
+
+00:53:29.436 --> 00:53:30.596 A:middle
+And then I've used this tool
+
+00:53:30.636 --> 00:53:32.056 A:middle
+called Thread Sanitizer to
+
+00:53:32.056 --> 00:53:34.186 A:middle
+identify and eventually fix this
+
+00:53:34.186 --> 00:53:34.436 A:middle
+bug.
+
+00:53:35.576 --> 00:53:36.756 A:middle
+Thread Sanitizer not only
+
+00:53:36.756 --> 00:53:38.406 A:middle
+detects multithreading issues,
+
+00:53:38.456 --> 00:53:40.626 A:middle
+but it also makes them reproduce
+
+00:53:40.626 --> 00:53:41.626 A:middle
+much more reliably.
+
+00:53:42.276 --> 00:53:43.866 A:middle
+Notice that in the demo I didn't
+
+00:53:43.866 --> 00:53:45.356 A:middle
+have to invoke the controller
+
+00:53:45.356 --> 00:53:46.256 A:middle
+multiple times.
+
+00:53:47.436 --> 00:53:49.386 A:middle
+This tool works on macOS and in
+
+00:53:49.386 --> 00:53:51.846 A:middle
+the Simulator, but just like all
+
+00:53:51.846 --> 00:53:53.446 A:middle
+other runtime diagnostic tools
+
+00:53:53.506 --> 00:53:56.176 A:middle
+it only finds bugs in codes that
+
+00:53:56.176 --> 00:53:57.786 A:middle
+you exercise by actually running
+
+00:53:57.786 --> 00:53:57.906 A:middle
+it.
+
+00:53:58.536 --> 00:54:00.126 A:middle
+So you should keep that in mind
+
+00:53:58.536 --> 00:54:00.126 A:middle
+So you should keep that in mind
+
+00:54:00.126 --> 00:54:01.356 A:middle
+and make sure that your
+
+00:54:01.686 --> 00:54:03.966 A:middle
+automated or manual testing uses
+
+00:54:03.966 --> 00:54:05.366 A:middle
+Thread Sanitizer, especially on
+
+00:54:05.366 --> 00:54:06.996 A:middle
+any code that is using threading
+
+00:54:06.996 --> 00:54:07.356 A:middle
+or GCD.
+
+00:54:07.356 --> 00:54:10.846 A:middle
+And if you'd like to know more I
+
+00:54:10.846 --> 00:54:12.366 A:middle
+recommend that you watch a video
+
+00:54:12.366 --> 00:54:15.486 A:middle
+from my WWDC 2016 session called
+
+00:54:15.486 --> 00:54:16.786 A:middle
+Thread Sanitizer and Static
+
+00:54:16.786 --> 00:54:18.206 A:middle
+Analysis where we have
+
+00:54:18.336 --> 00:54:20.346 A:middle
+introduced this tool and we also
+
+00:54:20.486 --> 00:54:21.936 A:middle
+talked about how it works under
+
+00:54:21.936 --> 00:54:22.226 A:middle
+the hood.
+
+00:54:22.596 --> 00:54:25.566 A:middle
+As a reminder, Thread Sanitizer
+
+00:54:25.566 --> 00:54:26.926 A:middle
+can be found in the Scheme
+
+00:54:26.926 --> 00:54:27.206 A:middle
+Editor.
+
+00:54:27.686 --> 00:54:29.686 A:middle
+So if you go to Product, Scheme
+
+00:54:29.956 --> 00:54:32.006 A:middle
+and Edit Scheme that will bring
+
+00:54:32.006 --> 00:54:32.956 A:middle
+up the Scheme Editor.
+
+00:54:32.956 --> 00:54:34.646 A:middle
+And then we can switch over to
+
+00:54:34.646 --> 00:54:36.026 A:middle
+the Diagnostics tab where you
+
+00:54:36.026 --> 00:54:37.836 A:middle
+can find Thread Sanitizer among
+
+00:54:37.836 --> 00:54:39.536 A:middle
+the other runtime diagnostic
+
+00:54:39.586 --> 00:54:39.976 A:middle
+tools.
+
+00:54:41.216 --> 00:54:43.546 A:middle
+I have one more debugging tip
+
+00:54:43.546 --> 00:54:44.516 A:middle
+that I would like to share with
+
+00:54:44.516 --> 00:54:46.136 A:middle
+you that's useful when dealing
+
+00:54:46.176 --> 00:54:46.986 A:middle
+with multithreading.
+
+00:54:48.046 --> 00:54:49.686 A:middle
+When you are creating dispatch
+
+00:54:49.686 --> 00:54:51.906 A:middle
+queues you can provide a custom
+
+00:54:51.906 --> 00:54:53.216 A:middle
+label in the initializer.
+
+00:54:54.576 --> 00:54:56.266 A:middle
+You can assign a custom name to
+
+00:54:56.266 --> 00:54:58.566 A:middle
+an operation queue and if you're
+
+00:54:58.566 --> 00:55:00.326 A:middle
+working with threads you can use
+
+00:54:58.566 --> 00:55:00.326 A:middle
+working with threads you can use
+
+00:55:00.326 --> 00:55:01.646 A:middle
+custom names with threads as
+
+00:55:01.646 --> 00:55:01.876 A:middle
+well.
+
+00:55:03.086 --> 00:55:04.406 A:middle
+These names and labels are
+
+00:55:04.406 --> 00:55:05.756 A:middle
+displayed in the debugger but
+
+00:55:05.756 --> 00:55:07.606 A:middle
+they also appear in some types
+
+00:55:07.606 --> 00:55:09.646 A:middle
+of crash logs and that can help
+
+00:55:09.646 --> 00:55:11.306 A:middle
+you often narrow down possible
+
+00:55:11.306 --> 00:55:14.616 A:middle
+causes of multithreading bugs.
+
+00:55:15.556 --> 00:55:16.896 A:middle
+Okay so to stay on top of
+
+00:55:16.896 --> 00:55:19.116 A:middle
+crashes I have three takeaway
+
+00:55:19.116 --> 00:55:19.776 A:middle
+points for you.
+
+00:55:20.556 --> 00:55:22.656 A:middle
+Number one, always test your
+
+00:55:22.656 --> 00:55:25.276 A:middle
+apps on real devices before
+
+00:55:25.276 --> 00:55:26.356 A:middle
+submitting them to the App
+
+00:55:26.356 --> 00:55:28.626 A:middle
+Store, that will help you avoid
+
+00:55:28.626 --> 00:55:30.506 A:middle
+getting rejected in App Review.
+
+00:55:31.796 --> 00:55:33.416 A:middle
+Number two, when you do get
+
+00:55:33.606 --> 00:55:35.386 A:middle
+crashes from your users you
+
+00:55:35.386 --> 00:55:36.686 A:middle
+should always try to reproduce
+
+00:55:36.686 --> 00:55:36.866 A:middle
+them.
+
+00:55:37.506 --> 00:55:39.126 A:middle
+Look at the crash logs and look
+
+00:55:39.126 --> 00:55:40.356 A:middle
+at the stack traces and try to
+
+00:55:40.356 --> 00:55:41.846 A:middle
+figure out which parts of your
+
+00:55:41.846 --> 00:55:43.886 A:middle
+app do you need to exercise to
+
+00:55:43.886 --> 00:55:45.456 A:middle
+trigger a crash or to try to
+
+00:55:45.456 --> 00:55:46.336 A:middle
+reproduce the crash.
+
+00:55:46.906 --> 00:55:49.166 A:middle
+And finally, for crashes that
+
+00:55:49.166 --> 00:55:50.936 A:middle
+are hard to reproduce I
+
+00:55:50.936 --> 00:55:52.446 A:middle
+recommend using bug finding
+
+00:55:52.446 --> 00:55:54.216 A:middle
+tools, such as Address Sanitizer
+
+00:55:54.216 --> 00:55:56.486 A:middle
+or Thread Sanitizer which work
+
+00:55:56.486 --> 00:55:58.096 A:middle
+for editing memory corruption
+
+00:55:58.096 --> 00:55:59.216 A:middle
+bugs and multithreading
+
+00:55:59.216 --> 00:55:59.706 A:middle
+problems.
+
+00:56:00.396 --> 00:56:04.056 A:middle
+So now let's recap what we've
+
+00:56:04.056 --> 00:56:04.706 A:middle
+learned today.
+
+00:56:05.786 --> 00:56:07.636 A:middle
+Chris has showed us how we can
+
+00:56:07.636 --> 00:56:08.976 A:middle
+and should use the Organizer
+
+00:56:08.976 --> 00:56:10.796 A:middle
+window in Xcode to get
+
+00:56:11.126 --> 00:56:12.466 A:middle
+statistics and also details
+
+00:56:12.466 --> 00:56:13.186 A:middle
+about crash logs.
+
+00:56:14.286 --> 00:56:15.996 A:middle
+Greg showed us how to read and
+
+00:56:15.996 --> 00:56:17.926 A:middle
+analyze the text of crash logs.
+
+00:56:18.736 --> 00:56:19.756 A:middle
+In many cases, they can be
+
+00:56:19.756 --> 00:56:21.386 A:middle
+reproduced like if you are
+
+00:56:21.386 --> 00:56:22.826 A:middle
+dealing with app lunch timeouts.
+
+00:56:24.076 --> 00:56:26.716 A:middle
+Then we've crash log crashes
+
+00:56:26.716 --> 00:56:27.796 A:middle
+that are hard to reproduce
+
+00:56:27.796 --> 00:56:28.966 A:middle
+because they happen randomly
+
+00:56:28.966 --> 00:56:30.096 A:middle
+like memory corruptions.
+
+00:56:30.486 --> 00:56:32.466 A:middle
+And we have mentioned what signs
+
+00:56:32.846 --> 00:56:33.936 A:middle
+they leave in crash logs.
+
+00:56:34.796 --> 00:56:36.646 A:middle
+And finally, I've shown how bug
+
+00:56:36.646 --> 00:56:37.486 A:middle
+finding tools like the
+
+00:56:37.486 --> 00:56:39.106 A:middle
+Sanitizers can help you
+
+00:56:39.106 --> 00:56:41.606 A:middle
+reproduce issues that are memory
+
+00:56:41.606 --> 00:56:42.916 A:middle
+corruptions and threading issues
+
+00:56:43.026 --> 00:56:44.116 A:middle
+and I recommend that you use
+
+00:56:44.116 --> 00:56:45.006 A:middle
+these tools as well.
+
+00:56:45.956 --> 00:56:47.576 A:middle
+For more information please
+
+00:56:47.576 --> 00:56:49.466 A:middle
+visit our session's webpage
+
+00:56:49.466 --> 00:56:51.006 A:middle
+where we will also include links
+
+00:56:51.056 --> 00:56:52.036 A:middle
+to the technotes that we
+
+00:56:52.036 --> 00:56:53.366 A:middle
+mentioned and also the other
+
+00:56:53.366 --> 00:56:54.406 A:middle
+documents that provides
+
+00:56:54.466 --> 00:56:55.966 A:middle
+debugging tips that are helpful
+
+00:56:56.196 --> 00:56:57.076 A:middle
+when dealing with crashes.
+
+00:56:57.596 --> 00:56:58.846 A:middle
+And I'd like to remind you that
+
+00:56:58.846 --> 00:57:00.166 A:middle
+there is a crash logs lab
+
+00:56:58.846 --> 00:57:00.166 A:middle
+there is a crash logs lab
+
+00:57:00.166 --> 00:57:01.496 A:middle
+starting right after this
+
+00:57:01.496 --> 00:57:03.736 A:middle
+session at 12 p.m. in Technology
+
+00:57:03.736 --> 00:57:05.256 A:middle
+Lab 8, so please stop by if you
+
+00:57:05.256 --> 00:57:06.636 A:middle
+have any questions about crashes
+
+00:57:06.636 --> 00:57:07.206 A:middle
+and crash logs.
+
+00:57:07.636 --> 00:57:09.026 A:middle
+And enjoy the rest of WWDC,
+
+00:57:09.026 --> 00:57:09.936 A:middle
+thank you very much.
+
+00:57:10.508 --> 00:57:12.508 A:middle
+[ Applause ]

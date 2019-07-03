@@ -1,434 +1,4309 @@
-  Well, good afternoon and welcome to a tour of UICollectionView.
- My name is Steve Breen-- I'll set this over here-- and I'm a frameworks engineer on the UIKit team.
- And I'm joined on stage today with my colleague, Mohammed Jisrawi, also on the UIKit team.
- So today we're going to do something a little bit different.
- We're going to build an app from some specs we receive from our designer, Breanka [phonetic], and this is going to leverage many of the capabilities of UICollectionView.
- Now, while we work through all the tasks required to build our app, we're going to touch on a wide range of topics regarding UICollectionView including layouts, updates, and animations.
- So we've got a ton of ground to cover, so let's jump right in.
- All right, so here's the first spec we got from our designer.
- It looks like a friends feed, imagine that.
- A great little columnar layout.
- It looks pretty straightforward, okay.
- Okay, this looks great.
- So here we've got this really fancy looking mosaic layout, which is the contents of our friends feed.
- Okay, so Mohammed, since you're going to be writing all the code for us and walking us through how to use these features, what are your thoughts on these designs?  Well, you know, I'm seeing these for the first time, but they seem like great candidates for collection view.
- I think we can have a lot of fun with this one, especially.
- Yeah, this one looks great.
- All right.
- So before we dive into code, and Mohammed starts walking us through this, we need to cover three core concepts we need to understand about CollectionView before we dive right into that code.
- So let's do these now, and we're going to talk about the layout, data source, and the delegate.
- Okay.
- So, first of all, let's chat a little bit about the layout.
- So if you open up the definition for UICollectionView for the very first time, and you're familiar with UITableView, you notice right away that there's a lot of familiarity in the API.
- You got a delegate and a data source.
- All these things look pretty familiar, but the layout concept, that's pretty unique and distinct to UICollectionView.
- You can really think of it as UICollectionView's super power.
- It allows CollectionView to abstract away the visual arrangement from your content separate from the content itself.
- Layout is all about the where content is displayed.
- Now, each individual item is specified by the UICollectionView layout attributes, for attributes like such as bound, center, and frame, things like that.
- You can think of it as a set of properties you can use to define these items that are displayed.
- You can even customize these by printing your own subclasses of UICollectionView layout attributes and include these in your designs.
- Okay.
- So as the user is scrolling through the content on screen, the layout is considered to be immutable.
- Now if you need to change this, like for example you're going to change the appearance of the layout, you would use the invalidation mechanism, which Mohammed will walk us through in a little bit.
- Okay.
- Now, one great thing about layout being a separate abstraction is we can transition from one layout to another layout and get a great animated effect when you move between layouts, and layout A doesn't need to know anything about layout B.
- They just declare what the layout is going to be, and the transitions occur.
- Okay.
- So CollectionViewLayout is an abstract class, and as such, it's not meant to be used directly, but rather subclasses of CollectionViewLayout are meant to be used.
- Fortunately, we provide one.
- UICollectionViewFlowLayout, and you're probably familiar with this class if you used CollectionView before.
- Now there's a lot of customization points on CollectionViewLayout including some properties that we'll talk about in a little bit, but you can also customize it using a delegate, and we'll talk about the CollectionViewDelegate in a moment, but CollectionViewFlowLayout will specify additional things that extend that CollectionViewDelegate.
- Okay, so what's Flow all about? Well it's a line-based layout system, and because of this, it can cover a wide range of different designs that you might receive.
- All right, so what does line base mean? Well let's go through this.
- So the best way to explain what a line based system is like is to give an example, so let's do that.
- Okay.
- So here we see, we've got a vertical scrolling collection view, and we're going to mimic what flow layout does when it lays out this content.
- All right.
- So here's our first item, and we start at the top leading edge, and we start laying out our items along a line.
- Now look at this line.
- This line is orthogonal to the scroll axis.
- We're scrolling vertically, so the line is horizontal.
- Okay, now notice here, we filled up the available space for items on that line, so now we're going to drop to the next line and continue laying out our content.
- And finally, we drop to that last line, and bingo, we got all our content.
- Now if I dropped some guides on here to show highlight where those lines are horizontal, let's talk about some definitions that we have for ways to customize flow.
- First up is the notion of line spacing.
- And as you see the arrows here, the line spacing is going to be the space between these horizontal lines.
- Similarly, inter-item spacing is the space between the items along the layout line.
- And we have two properties on flow layout that let you specify the minimums for both of these.
- Okay.
- So let's cement our intuition a little bit and rotate the whole thing, pi over 2, and let's start over at the top leading edge.
- Now, this one is scrolling horizontally, right, so we're going to have a vertical layout line, and when we get to the bottom of this area, we filled out that line, back up to the top.
- Okay.
- This pattern is pretty familiar now, right.
- There we go.
- There's all our content.
- Now we have our vertical layout lines.
- So now in this orientation, our line spacing is this.
- And our inter-item spacing is this.
- It's key to remember when you're working with flow layout.
- Okay, so that's layout.
- Let's talk a little bit about the data source, and if you work with TableView, this should look very familiar.
- It's a very similar pattern.
- They share very similar APIs.
- Okay, so if the layout is all about the where content goes, the data source is the what.
- The content itself.
- Three core methods to think about here.
- The first one is optional, number of sections in CollectionView, and this one if you don't provide it, we'll just assume you mean one.
- Similarly, we have number of items in section, and this is going to tell you the number of items in each individual section, because they can all have different numbers of items.
- And then the last one, sell for item index path is where you provide the actually content you're going to display to your users.
- Okay.
- So that's the data source.
- Okay, the final of our three topics we're going to talk about before we dive into code with Mohammed is the Delegate.
- Okay.
- So use of the Delegate is optional.
- Now, CollectionView is a subclass of UIScrollView.
- So we use the same Delegate that's provided by the ScrollView superclass, but we extend it.
- So if you need to modify scrolling behavior, you can do it also against this same Delegate and also work with some of the UICollectionViewDelegate methods that provide things like fine-grained control over highlighting and selection as the user interacts with your content.
- And we also got an API that let's you know, hey, something came on screen.
- WillDisplayItem and DidEndDisplayingItem.
- Okay.
- So those are the three core concepts we really need to talk about before we dive into code to get started with UICollectionView.
- So let's switch over to the dev box with Mohammed and have him show us how it works.
- Mohammed.
- All right, so the first of our two screens that column layout is a great use case for using CollectionViewFlowLayout.
- We can probably accomplish everything we need there, and it would be a great way to get us started using UICollectionView.
- So now while we could accomplish the entire goal of our design with a flow layout, I'm actually going to subclass CollectionViewFlowLayout because we're going to do a little bit of extra customization.
- So I'm going to start out by creating an instance of my ColumnFlowLayout class, which I've already prepared.
- I'm going to use that instance to create my CollectionView.
- I'm going to take that CollectionView, and I'm going to set some view properties, like auto resizing mask, background color, and since it's the ScrollView, I can set some of it's ScrollView properties as well.
- This is all just to get it to look and feel the way I want it to look in our app.
- After adding the CollectionView to my view hierarchy, I'm going to register my PersonCell class using its unique identifier with CollectionView so we can get our cell design to app.
- And then I'm going to set the view controller as the CollectionView's data source so we can give it some information about how many cells it's going to display and what sort of data it's going to display in it's cells.
- And then I'm going to set it as it's delegate as well, so we can handle cell selection.
- So now that we've gotten set up, we need to actually conform to these two protocols.
- So let's start out by conforming to the data source, and we have two required methods we need to implement here.
- The first of these is number of items in section where we can just return the number of people or the number of items in our people array to get our data model objects displayed.
- The second method we'll need to implement is CellForItemAtIndexPath where we'll dequeue a cell from the CollectionView using our unique identifier, pass a person and object that we get out of our people array, to the cell to actually display our data, and then return the cell.
- And to wrap things up here, we'll just need to implement one optional method from the Delegate protocol, so we can handle selection.
- So I'm just going to add DidSelectItemAtIndexPath where we'll just instantiate our FeedView controller, which is going to be our second screen if we don't already have an instance, and then we're going to pass it a person object so we know whose images to display, and then we'll push it onto our navigation controller.
- Okay.
- So let's build this and switch to the simulator to see.
- All right.
- [ Applause and Cheering ] Okay.
- So we have our CollectionView on screen here, and we have some cells.
- You can see them, though they're kind of squished.
- They're not the right size, so we're going to have to do some of that customization we thought we might need to do.
- So let's go back to Xcode, and let's pop open our column of class here, our ColumnFlowLayout class that we've put together, and let's take a look at what we need to do here.
- So I already have a stub override of the layouts prepare method.
- Now, UICollectionViewLayoutsPrepare method is called whenever the layout is invalidated, and in the case of UICollectionFlowLayout, our layout is invalidated whenever the CollectionView's bounds of size changes.
- So if our app rotates on a phone or if our app is resized on an iPad.
- So this is a great place to do any customization that takes the size of the CollectionView into account.
- In our case, we want our cells to be some function of the CollectionView's width.
- And we can let the CollectionView know how big we want our items to be by saying it's item sized properties.
- So I'm going to go ahead and do that here.
- So I'm just going to set my CollectionView's item size to a CG size with a width that is the width of the CollectionView's bounds, inset by its layout margins, and then we're going to give it a height of 70 points just to match our design.
- And since we're already here, I'm going to do a couple of other little things here just to get things to look nice.
- I'm going to apply a section inset with some padding at the top that matches our inter-item spacing, and I'm going to set the layout section inset reference property to from safe area so everything is neatly tucked within the CollectionView safe area insets.
- Okay.
- So let's go back to the simulator one more time and see what our properly constructed layout looks like.
- All right.
- That looks great.
- That looks just like our spec.
- I think our designer is going to be really happy.
- And if we rotate to landscape, we see that our cell is a great size, and so we know that our invalidation code is getting called again in prepare.
- Now while this is okay, you might be thinking, it's not the best that we can do here.
- It doesn't look as great as it can.
- We might want to do something more interesting here like display multiple columns since we have the space available to us.
- Now flow layout makes it really easy to do this.
- If you remember during Steve's explanation of how flow layout performs it's layout earlier, flow layout will automatically try to fit in as many items as it can within a line before it wraps to the next one.
- So using that, we can kind of figure out that layout-- that we can get multiple columns if we change our item size.
- So if we head back to Xcode, to our layout here, and if we just change how we're calculating our item size here.
- So I'm just going to remove this fit here, and I'm going to replace it with something that does a little bit of extra math.
- So I'm just starting out with the same available width that I had before.
- This is the bounds inset by the margins, and some arbitrary definition of what a minimum column width is, it's 300 points.
- And then taking both of those values and using them to calculate a maximum number of column that I think I can fit within the available space, and I'm taking that and dividing the available width by it to calculate an optimal cell width, which might be more than our 300 points.
- I'm then passing that to the CT size that I'm using as my item size.
- Okay.
- So let's go back to our simulator again and see what our updated layout looks like.
- Okay.
- So everything is the same here.
- We didn't break it.
- It's a good start, and if we go to portrait, there are our multiple columns side by side, just what we want.
- What do you think, Steve?  That looks great.
- We got a great adaptable columnar base layout.
- Not a lot of work.
- No.
- What's next in our design?  Well, now that we've eased ourselves in with our friends list, it's time to start thinking about that fancy mosaic layout for [inaudible].
- Oh, yeah.
- That's going to be great.
- Yeah.
- Let's switch back over slides, and let's chat a little bit about that.
- Okay.
- So let's take a look at this layout or design here and see what we can do.
- So our first inclination, I don't know about yours, but mine would be can I use Flow.
- I've got it.
- It's ready to go.
- Let's try to use it.
- So let's zero in on this design a little bit and see if Flow is going to make sense for us.
- And this particular region where these three photos are, I'm going to zoom in on that real quick.
- All right.
- So now in this instance we have a very large photo on the left and then a vertical stack on the right.
- So in the flow universe, since it's line based, we're going to lay out that large left item, move over to the next item where it's got room, try to lay out another item, and then jump to the next line.
- But we're not done.
- We've got that vertical stack to contend with.
- So this really is not going to work for Flow because it turns out it's not really a line-based layout, this fancy layout of ours.
- But going through this exercise is useful, so, you know, let's start with flow first.
- Okay.
- So in this instance, we're going to create our own custom layout.
- Oh, no, we're scared, right.
- Nope, it's not complicated.
- We've got four basic methods to deal with here, and I'm going to bring up one additional method that gets an honorable mention.
- Okay.
- So four methods.
- Here we go.
- Our first method I want to talk about is the CollectionView Content Size.
- Now, recall before we mentioned CollectionView is a subclass of UIScrollView, and one of the features of UIScrollView is that you have a visible region with a large content area, and you get that great iOS experience of moving your content around inside that, and so CollectionView needs to know how to tell the ScrollView, hey, here's how big my content is.
- Okay.
- So how do we get this size? Well, if you imagine a rectangle that encompassed all the content that the layout is going to define for your CollectionView, we want the size of that.
- Okay, so that's CollectionView Content Size.
- Next up we have two methods that are in the business of providing layout attributes.
- The first one is LayoutAttributesForElements (in Rect).
- Now this is called periodically by CollectionView when it needs to know what is needed to display on screen as the user scrolls through your content or displays for the first time.
- So this query is by a geometric region.
- Okay.
- It's companion API, LayoutAttributesForItem AtIndexPath, as you can imagine, it's just looking for a single item.
- Give me the attributes for that.
- Okay, so we're going to see more when Mohammed walks us through this, but for these two APIs, it's important to note that performance matters.
- Okay, so the fourth of our four core custom layout subclass items is going to be the Prepare method.
- Now Mohammed has already chatted about this a little bit.
- This is called every time the layout is invalidated.
- So this is a great time to compute anything, such as your layout attributes you might want to cache and also your content size, which is going to be asked for pretty soon afterwards.
- Okay.
- So our honorable mention APIs, so let's talk about this one.
- This is a Should Invalidate Layout For Bounds Change.
- So this is called every time the bounds in the CollectionView changes.
- Okay, so again, it's a CollectionView is a UIScrollView subclass.
- So what do we mean by a bounds change? Well, when a ScrollView bounds change, the origin can change during a scrolling, and also the size can change when the application size changes or the CollectionView size changes.
- So this is going to be called during scrolling.
- Hence the oh yeah emoji.
- This is called very often.
- So making the right decision here is important.
- Okay, so the default implementation in UICollectionViewLayout returns false.
- So if you need this to do something different, here's your chance.
- And as a way of an example, UICollectionViewLayout will return false if the origin changes.
- Okay, so if the user is just scrolling through your content, we won't invalidate.
- Let it by default.
- But if the iPad rotates, the phone rotates, and your app changes to a different size, it'll return true.
- Now a slight exception to this is things like floating headers and footers, right.
- We have to recompute those while you're scrolling your content.
- That'll do a custom invalidation to take care of those things.
- Okay.
- So enough theory.
- Let's switch back to our development machine and have Mohammed walk us through what this is going to look like in code building this fancy custom, UICollectionViewLayout.
- All right, let's dive right in.
- So I've already put together another layout subclass that we're going to use for this layout, and you might notice that it's a subclass of UICollectionViewLayout directly, not a subclass of CollectionViewLayout, and this is for the reasons that Steve explained to us earlier are UICollectionViewLayout doesn't really meet the needs of our custom mosaic design.
- So the first thing I'm doing here is I'm setting up a couple of instance variables that I'm going to use to hold onto some key pieces of information that I can refer to later.
- The first of these is a content bound CG rect, which I'm going to use to keep a representative bounds of all the items within my CollectionView.
- And the second is a cached attributes array, which I'm going to use to hold onto my layout attributes so I can refer to them quickly when performance matters.
- So we're going to start out by implementing our prepare method again for this layout.
- Prepare is the ideal place to do the bulk of our layout work because it's getting called once per invalidation.
- We can set up our layout here and then avoid having to do any heavy layout work or any heavy layout math in the methods that are called much more frequently.
- So we're doing a couple of things here.
- First, we're resetting our cached attributes and our content bounds just to clear out any stale information from previous invalidations.
- Next, we're doing a few things for every item in our CollectionView.
- The first of these is actually preparing the attributes, and now I'm not going to go too deeply into what that entails for our specific layout because this is going to be different for you.
- This is where you are going to calculate the sizes and positions and transforms, etc.
-, for your cells to match your design needs.
- But there are a couple of key things that we're going to do here after we are done with the attributes.
- The first is, we're going to cache them.
- We're going to put them in our cached attributes array so we can grab them quickly later on.
- And the second is, we're going to union their frame with our content bounds rect so that our content bounds are kept up to date.
- So now that our prepare is up and running, we need to implement the remaining methods in our layout that we need to get everything working.
- So the first of these is CollectionView Content Size where if we had done our job right in Prepare, we can just return our Content Bounds as size.
- Next is should invalidate layout for bounds change.
- Now since our layout doesn't have any elements that require us to invalidate while we're scrolling, so no floating headers, no floating footers or anything like that.
- We only really want to invalidate when our CollectionView's bounds of size changes.
- So we'll just return true if our new bounds of size is not equal to our CollectionView's bounds of size, our current bounds of size.
- After that, we'll implement LayoutAttributesForItem AtIndexPath where, again, since we've prepared all the attributes in our Prepare method, we can just grab the specific attributes that correspond to the RequestAtIndexPath from our array.
- And finally, we're going to implement LayoutAttributesForElements InRect.
- Now this method is called periodically by the CollectionView with different query rects, which may be bigger than our CollectionView.
- Our CollectionView is just asking for a set of attributes that match a certain region.
- It's our job to return an array that contains all the attributes that correspond to all the items that are going to appear within that rect in our CollectionView.
- So we can answer that question here simply by filtering our cached attributes array on the frame of the attributes.
- So if our attributes have a frame that intersects our query rect, we can return them.
- Okay.
- So let's switch back to the sim and see what our layout looks like.
- So I'm going to select one of these feeds, and there you go.
- We have our layout.
- Our images are nicely loaded in this fancy mosaic configuration, and if we rotate to landscape, you can see that our cells have resized so we've updated everything correctly, we've invalidated, which is great.
- So this looks like our spec, but that scrolling performance isn't great, is it?  No.
- No, it's pretty bad, huh.
- So you might already have an idea of what's going on here.
- Let's switch back to the code and see what might be happening.
- So if we take a look at our layout attributes or elements in rect here, remember that this method gets called frequently during scrolling.
- So this function here, which is filtering our entire array, you might imagine can get really expensive as the number of items in our CollectionView increases.
- So the more photos we have in our app, the slower our scrolling performance is going to be.
- So if you find yourself in a situation like this, it helps to step back and think about the nature of your layout and think about whether you can find any optimization opportunities.
- So our layout kind of demands that every cell apps next to or below it's preceding cell.
- So this means that our attributes are already sorted within our cached attributes array by their frame's minimum y value.
- So we have a sorted array, so we can speed up our search by doing something like a binary search as opposed to our linear filter that we're doing now.
- So let's remove our slow implementation here, and let's replace it with something that should be much faster.
- So I'm going to step through this bit by bit, don't worry.
- So the first thing we're doing here is we're calling into binary search function that we've already prepared, which takes in a range of indices within our array and our query rect.
- If it finds a set of attributes with a frame that sits within our rect, it'll return the attributes as index within our array.
- Then starting from that index, we can build up the set of the rest of attributes for our query rect simply by looping up and down in our array and picking up attributes until we exit our query rect, until we find attributes that are outside our rect.
- And this should be much faster.
- You have thousands of items in your array.
- You're not going to loop through the array thousands of items, thousands of times.
- Okay, so let's go back to the sim again and let's see what our faster scrolling algorithm looks like.
- Let's pop this open and give it a flick.
- It's way faster.
- What do you think, Steve?  Much better.
- Okay, great.
- So we've got these two great layouts.
- What's next?  So we have our two screens.
- That just leaves our update animations for our friends list here.
- Oh, great.
- All right.
- Well let's switch back over to slides, and let's walk through that totally cool update animation I think our designer called it.
- All right, so we've got a video here.
- Let's run through this and see what this totally cool update animation looks like.
- Okay.
- So we have some elements here.
- We see that last item is getting refreshed.
- I guess somebody posted a picture, and then we got another item there, it looks like, yeah, that third item smears is not going to be here.
- Okay.
- So we've got three basic operations happening, right.
- We've got a reload, a move, and a delete.
- Why don't we switch back over to the dev machine, and Mohammed, why don't you show us how this works?  Sure thing.
- Okay, so we're doing multiple animated updates at the same time.
- So you might be aware of a great tool that UICollectionView and UITableView provide us, and it's the Perform Batch Updates API, which basically allows us to pass the collection view a set of updates that can be performed at the same time with animation.
- So I'm going to add a call to CollectionView PerformBatchUpdates, and note that I'm doing both my data source updates and my CollectionView updates in the closure here.
- This is really the best way that I have of coordinating my updates and keeping things neatly in sync and avoiding inconsistencies.
- So, first I'm just updating my last item in my data source.
- I'm removing the second to last item, picking up the last item, moving it to the top, and then I'm asking the CollectionView to perform the animations that I want.
- Okay.
- Let's go back to the sim again and see what our update looks like.
- So I have wired our update code through this update button at the top right corner, and uh oh.
- What's going on?  Oh, that's embarrassing.
- What's going on here.
- You know, I've been writing iOS for a long time.
- I've seen this movie before.
- Yeah, it sucks when it happens on stage though.
- You know, we're running out of time here, so why don't we just call reload data, and we can come back and do the animations for V2.
- Really?  You know, we could do that, but then we'd lose that totally cool update animation, and our users expect these lively interfaces, right?  Yeah, yeah, you're right.
- You know what? They deserve better.
- Ah, I like the way you think.
- All right, let's switch back over to slides real quick, and let's see if we can save our totally cool update animation.
- You've seen this before.
- All right.
- So first of all, let's dig into this debug exception and see what it's trying to tell us.
- All right.
- So it's saying here we're attempting to perform a delete and a move from the same index path, 0-3.
- So if I remember right, that was the fourth item.
- We did a reload and a move on that.
- We didn't delete it, we deleted the third item, 0-2, right.
- I don't remember deleting them.
- So, yeah, what's up with that? All right, but before we do this, let's go back and take a peek at the PerformBatchUpdates API and talk about some high-level principles.
- All right.
- So as Mohammed mentioned earlier when he introduced this API, the purpose of this API is that we can commit multiple updates at the same time and have anything animate together and get that great experience.
- And as he also mentioned, it's super important to perform your data source updates alongside your CollectionView updates inside that CollectionView update closure.
- Now, what I'm saying for CollectionView also applies for TableView.
- So if you got TableViews in your apps, all this information is going the same direction.
- Okay.
- So let's make some observations here.
- The CollectionView updates, when you do inserts, moves, and deletes, the ordering of those do not matter in your update's closure.
- Put them anywhere you want.
- Now however your data source updates, when you're changing the structure offer your data source, which is backing that data source, or does matter.
- Okay, so this is best served by showing an example, so I'm going to take a example of two arrays that have three elements in them, and we're going to strengthen our intuition on this and show a delete and an insert, but we're going to do the first run through with the delete first and the second delete second.
- We're going to reverse the order, just to kind of strengthen our intuition.
- I do this all the time, draw pictures, right.
- All right.
- So we deleted the first item, and now we're going to insert at index one.
- Okay, on the second example, we reverse the order and do the insert first and then the delete.
- So our intuition holds, indeed we get a different result.
- This is probably not a good thing, right.
- So let's contrast this with the CollectionView updates.
- Now here I have two sets of CollectionView updates on a submit via batch updates, and I've left out the data source updates, just to keep the slide tidy.
- But I've got an insert and a delete on the first one, and the second one has a delete and a insert, and the order is different.
- This will give you the exact same result.
- We're all engineers.
- We want to know why, why is that? Well, let's talk about that.
- How does this happen? Why is the ordering not important for the update sent to the CollectionView, and of course it is for your data source.
- Okay.
- So let's walk through these operation by operation.
- So the first one to delete, this is process in descending index path order.
- Now let's talk about the index paths.
- So first of all, if you can think about what's happening on a PerformBatchUpdate, before the batch update starts, your data source is in a before state.
- Now once everything is done in the batch updates, you'll be an after state.
- Okay.
- So for delete, the index paths always referred to the before stage.
- So that's delete.
- So insert is processed in ascending index path order paths.
- So the index paths refer to in the insert are always referring to the final state or the after updates stage.
- Okay, a move is this mixture of the two, right.
- You have a from and a to index path, and the from is in the before state, right, and the to is in the after state.
- Reload.
- Now reload is a little bit of a super command if you will, right.
- It actually decomposes down into a delete and an insert.
- And the index path specified in a reload is speaking about the before state.
- Okay.
- So this insight now that we understand what reload is really doing can kind of tell us a little bit of what's going on with our error in our app because of the delete on the reload on the last one is conflicting internally with the notion of moving that item, okay.
- So we can address this in a minute when we get back to code.
- Okay, so I'm not going to go through these, but you can reason about these later.
- Just put it up here as reference that these are the things that'll cause CollectionView to go bonkers.
- Don't do it.
- And how can we take all this knowledge and simplify it, distill it in such a way that we can always apply our data source updates from a given set of CollectionView or TableView updates and make sure everything is in sync.
- All right.
- So these four basic rules.
- So first of all you want to decompose those moves and to delete and inserts.
- Easy.
- And then combine all your deletes and inserts into two separate lists, process the deletes first in descending order on the index paths, and then finally apply those inserts in the ascending index path order.
- Do this, and you're good to go.
- What about reload data? And I know Mohammed said we could just hit that and we're done, and everybody laughed so I'm pretty sure I yelled and that's the case, but the thing about reloaded data is you don't get those great animations, and this is really a sledge hammer approach.
- So, and we really prefer the apps to be lively and animated and feel great for our customers.
- So, and this is used in special cases.
- Okay, Mohammed, let's switch back over real quick and see if we can get this fixed in code and save that totally cool update animation.
- All right, time to redeem myself.
- Yes.
- So let's use the guidelines that Steve just shared with us to fix our update animation.
- So let's remove our existing implementation here.
- And if you recall, our update consisted of a reload, a delete and a move, and our reload and the move were at the same index path.
- They started at the same one.
- So that's really where our conflict is.
- So we'll need to start out by separating those two.
- So let's take our reload out into its own call to perform batch updates, and here I'm just updating my data source, again, same as before, and calling reload items on the CollectionView.
- I'm just performing it in a UI view performed without animation closure because if you look closely at our spec, it's actually nonanimated, that initial reload.
- Okay.
- So next up, we have to take care of our remaining updates, that delete and the move.
- And let's reason about them for a second.
- We have a delete at index two, and then we're moving the item at index three to index zero.
- So if we break down our move using the guidelines that we just learned about, that becomes a delete at index 2, a delete at index 3, and an insertion of the item from index 3 at index 0.
- So now we have two sets of operations.
- We have deletions and insertions.
- We can process them accordingly.
- First, we'll perform our deletions in descending order.
- So we'll do our deletion at index 3 first, and will hold onto the person from there so we can insert them later on.
- And then we'll delete the item at index 2.
- Then we'll need to process our insertions in ascending order.
- We just have one, so we can just go ahead and insert it.
- And finally, we'll ask the CollectionView to perform the animations that we want.
- Now, note, I'm still calling move here.
- I didn't break it down into it's component actions because we still want the collection view to play the right animations, and if we've done the right thing with our data source, the CollectionView will do the right think in terms of animations.
- All right.
- Let's go back to the simulator and see what our update looks like when it works.
- All right.
- Here goes nothing.
- Wow.
- Great!  I'm going to reload and take a slow-mo victory lap just to-- there we go.
- That looks exactly like our spec, doesn't it.
- That's great, awesome.
- All right.
- Well let's wrap it up.
- We covered a ton of content.
- Can you switch it back to slides? And I'd like to issue a bit of a call to action.
- So if you've been nervous or anxiety building that custom layout, take the stuff we just applied today and go back and dive in and create those custom layouts and build really great CollectionView solutions.
- And if you got a lot of reload data sprinkled all throughout your apps and you're losing out on these gray animations.
- They'll inspect those things and see maybe why you didn't understand or something wasn't quite jived about why it was happening and fix those spots.
- Okay, so more information, you can see the link on the slide here.
- And we also have a CollectionView lab tomorrow morning at 9.
- If you have any questions or comments about your CollectionViews, please swing on by and chat.
- Mohammed and I will both be there.
- And thanks very much for coming out, and I hope you enjoy the rest of your conference.
- 
+WEBVTT
+
+00:00:07.516 --> 00:00:15.500 A:middle
+[ Music ]
+
+00:00:22.516 --> 00:00:29.546 A:middle
+[ Applause ]
+
+00:00:30.046 --> 00:00:30.906 A:middle
+&gt;&gt; Well, good afternoon and
+
+00:00:30.906 --> 00:00:32.576 A:middle
+welcome to a tour of
+
+00:00:32.576 --> 00:00:33.536 A:middle
+UICollectionView.
+
+00:00:34.336 --> 00:00:35.556 A:middle
+My name is Steve Breen-- I'll
+
+00:00:35.556 --> 00:00:36.726 A:middle
+set this over here-- and I'm a
+
+00:00:36.726 --> 00:00:38.356 A:middle
+frameworks engineer on the UIKit
+
+00:00:38.356 --> 00:00:38.686 A:middle
+team.
+
+00:00:39.766 --> 00:00:41.516 A:middle
+And I'm joined on stage today
+
+00:00:41.516 --> 00:00:42.896 A:middle
+with my colleague, Mohammed
+
+00:00:42.896 --> 00:00:45.636 A:middle
+Jisrawi, also on the UIKit team.
+
+00:00:48.906 --> 00:00:49.836 A:middle
+So today we're going to do
+
+00:00:49.836 --> 00:00:50.446 A:middle
+something a little bit
+
+00:00:50.516 --> 00:00:50.936 A:middle
+different.
+
+00:00:51.516 --> 00:00:52.966 A:middle
+We're going to build an app from
+
+00:00:52.966 --> 00:00:54.296 A:middle
+some specs we receive from our
+
+00:00:54.296 --> 00:00:55.496 A:middle
+designer, Breanka [phonetic],
+
+00:00:56.006 --> 00:00:57.166 A:middle
+and this is going to leverage
+
+00:00:57.166 --> 00:00:58.876 A:middle
+many of the capabilities of
+
+00:00:58.876 --> 00:00:59.756 A:middle
+UICollectionView.
+
+00:01:00.156 --> 00:01:02.086 A:middle
+Now, while we work through all
+
+00:01:02.086 --> 00:01:03.916 A:middle
+the tasks required to build our
+
+00:01:03.916 --> 00:01:05.266 A:middle
+app, we're going to touch on a
+
+00:01:05.266 --> 00:01:07.466 A:middle
+wide range of topics regarding
+
+00:01:07.466 --> 00:01:08.616 A:middle
+UICollectionView including
+
+00:01:08.886 --> 00:01:10.916 A:middle
+layouts, updates, and
+
+00:01:10.916 --> 00:01:11.606 A:middle
+animations.
+
+00:01:12.356 --> 00:01:14.026 A:middle
+So we've got a ton of ground to
+
+00:01:14.026 --> 00:01:15.326 A:middle
+cover, so let's jump right in.
+
+00:01:17.116 --> 00:01:19.106 A:middle
+All right, so here's the first
+
+00:01:19.106 --> 00:01:20.526 A:middle
+spec we got from our designer.
+
+00:01:20.716 --> 00:01:21.916 A:middle
+It looks like a friends feed,
+
+00:01:21.916 --> 00:01:22.406 A:middle
+imagine that.
+
+00:01:22.406 --> 00:01:24.336 A:middle
+A great little columnar layout.
+
+00:01:24.996 --> 00:01:28.826 A:middle
+It looks pretty straightforward,
+
+00:01:28.826 --> 00:01:28.976 A:middle
+okay.
+
+00:01:29.076 --> 00:01:30.086 A:middle
+Okay, this looks great.
+
+00:01:30.526 --> 00:01:31.526 A:middle
+So here we've got this really
+
+00:01:31.626 --> 00:01:33.296 A:middle
+fancy looking mosaic layout,
+
+00:01:33.446 --> 00:01:34.786 A:middle
+which is the contents of our
+
+00:01:34.786 --> 00:01:35.436 A:middle
+friends feed.
+
+00:01:36.176 --> 00:01:37.966 A:middle
+Okay, so Mohammed, since you're
+
+00:01:37.966 --> 00:01:38.826 A:middle
+going to be writing all the code
+
+00:01:38.826 --> 00:01:39.936 A:middle
+for us and walking us through
+
+00:01:39.936 --> 00:01:41.806 A:middle
+how to use these features, what
+
+00:01:41.806 --> 00:01:42.476 A:middle
+are your thoughts on these
+
+00:01:42.516 --> 00:01:43.046 A:middle
+designs?
+
+00:01:43.256 --> 00:01:44.096 A:middle
+&gt;&gt; Well, you know, I'm seeing
+
+00:01:44.096 --> 00:01:45.526 A:middle
+these for the first time, but
+
+00:01:45.716 --> 00:01:47.346 A:middle
+they seem like great candidates
+
+00:01:47.346 --> 00:01:48.096 A:middle
+for collection view.
+
+00:01:48.166 --> 00:01:49.186 A:middle
+I think we can have a lot of fun
+
+00:01:49.186 --> 00:01:50.146 A:middle
+with this one, especially.
+
+00:01:50.146 --> 00:01:50.956 A:middle
+&gt;&gt; Yeah, this one looks great.
+
+00:01:51.716 --> 00:01:52.746 A:middle
+All right.
+
+00:01:52.746 --> 00:01:55.626 A:middle
+So before we dive into code, and
+
+00:01:55.626 --> 00:01:56.686 A:middle
+Mohammed starts walking us
+
+00:01:56.686 --> 00:01:58.566 A:middle
+through this, we need to cover
+
+00:01:58.786 --> 00:02:00.196 A:middle
+three core concepts we need to
+
+00:01:58.786 --> 00:02:00.196 A:middle
+three core concepts we need to
+
+00:02:00.196 --> 00:02:01.596 A:middle
+understand about CollectionView
+
+00:02:01.596 --> 00:02:02.526 A:middle
+before we dive right into that
+
+00:02:02.606 --> 00:02:02.766 A:middle
+code.
+
+00:02:02.766 --> 00:02:04.236 A:middle
+So let's do these now, and we're
+
+00:02:04.236 --> 00:02:05.896 A:middle
+going to talk about the layout,
+
+00:02:06.006 --> 00:02:09.936 A:middle
+data source, and the delegate.
+
+00:02:10.036 --> 00:02:11.496 A:middle
+Okay. So, first of all, let's
+
+00:02:11.496 --> 00:02:12.506 A:middle
+chat a little bit about the
+
+00:02:12.506 --> 00:02:13.086 A:middle
+layout.
+
+00:02:13.646 --> 00:02:15.566 A:middle
+So if you open up the definition
+
+00:02:15.566 --> 00:02:16.706 A:middle
+for UICollectionView for the
+
+00:02:16.706 --> 00:02:18.876 A:middle
+very first time, and you're
+
+00:02:18.876 --> 00:02:20.546 A:middle
+familiar with UITableView, you
+
+00:02:20.546 --> 00:02:21.716 A:middle
+notice right away that there's a
+
+00:02:21.716 --> 00:02:22.936 A:middle
+lot of familiarity in the API.
+
+00:02:22.936 --> 00:02:25.266 A:middle
+You got a delegate and a data
+
+00:02:25.266 --> 00:02:25.676 A:middle
+source.
+
+00:02:25.676 --> 00:02:26.686 A:middle
+All these things look pretty
+
+00:02:26.686 --> 00:02:28.856 A:middle
+familiar, but the layout
+
+00:02:28.856 --> 00:02:30.796 A:middle
+concept, that's pretty unique
+
+00:02:30.846 --> 00:02:32.306 A:middle
+and distinct to
+
+00:02:32.306 --> 00:02:33.176 A:middle
+UICollectionView.
+
+00:02:33.176 --> 00:02:34.146 A:middle
+You can really think of it as
+
+00:02:34.146 --> 00:02:35.656 A:middle
+UICollectionView's super power.
+
+00:02:36.846 --> 00:02:38.146 A:middle
+It allows CollectionView to
+
+00:02:38.146 --> 00:02:39.746 A:middle
+abstract away the visual
+
+00:02:39.746 --> 00:02:40.936 A:middle
+arrangement from your content
+
+00:02:41.336 --> 00:02:42.636 A:middle
+separate from the content
+
+00:02:42.636 --> 00:02:43.326 A:middle
+itself.
+
+00:02:44.416 --> 00:02:45.816 A:middle
+Layout is all about the where
+
+00:02:46.146 --> 00:02:47.216 A:middle
+content is displayed.
+
+00:02:48.946 --> 00:02:52.206 A:middle
+Now, each individual item is
+
+00:02:52.206 --> 00:02:53.046 A:middle
+specified by the
+
+00:02:53.046 --> 00:02:54.066 A:middle
+UICollectionView layout
+
+00:02:54.066 --> 00:02:56.646 A:middle
+attributes, for attributes like
+
+00:02:56.646 --> 00:02:58.046 A:middle
+such as bound, center, and
+
+00:02:58.046 --> 00:02:59.116 A:middle
+frame, things like that.
+
+00:02:59.656 --> 00:03:00.716 A:middle
+You can think of it as a set of
+
+00:02:59.656 --> 00:03:00.716 A:middle
+You can think of it as a set of
+
+00:03:00.716 --> 00:03:02.566 A:middle
+properties you can use to define
+
+00:03:02.566 --> 00:03:03.866 A:middle
+these items that are displayed.
+
+00:03:03.896 --> 00:03:06.206 A:middle
+You can even customize these by
+
+00:03:06.206 --> 00:03:07.886 A:middle
+printing your own subclasses of
+
+00:03:07.886 --> 00:03:08.826 A:middle
+UICollectionView layout
+
+00:03:08.826 --> 00:03:10.676 A:middle
+attributes and include these in
+
+00:03:10.676 --> 00:03:11.546 A:middle
+your designs.
+
+00:03:12.876 --> 00:03:14.996 A:middle
+Okay. So as the user is
+
+00:03:14.996 --> 00:03:16.496 A:middle
+scrolling through the content on
+
+00:03:16.496 --> 00:03:18.646 A:middle
+screen, the layout is considered
+
+00:03:18.646 --> 00:03:19.636 A:middle
+to be immutable.
+
+00:03:20.266 --> 00:03:22.186 A:middle
+Now if you need to change this,
+
+00:03:22.186 --> 00:03:23.716 A:middle
+like for example you're going to
+
+00:03:23.716 --> 00:03:24.916 A:middle
+change the appearance of the
+
+00:03:24.916 --> 00:03:26.616 A:middle
+layout, you would use the
+
+00:03:26.616 --> 00:03:28.116 A:middle
+invalidation mechanism, which
+
+00:03:28.116 --> 00:03:29.256 A:middle
+Mohammed will walk us through in
+
+00:03:29.256 --> 00:03:31.526 A:middle
+a little bit.
+
+00:03:31.526 --> 00:03:33.936 A:middle
+Okay. Now, one great thing about
+
+00:03:33.996 --> 00:03:35.066 A:middle
+layout being a separate
+
+00:03:35.066 --> 00:03:37.226 A:middle
+abstraction is we can transition
+
+00:03:37.226 --> 00:03:38.306 A:middle
+from one layout to another
+
+00:03:38.306 --> 00:03:40.616 A:middle
+layout and get a great animated
+
+00:03:40.616 --> 00:03:42.026 A:middle
+effect when you move between
+
+00:03:42.026 --> 00:03:44.526 A:middle
+layouts, and layout A doesn't
+
+00:03:44.526 --> 00:03:46.156 A:middle
+need to know anything about
+
+00:03:46.446 --> 00:03:47.076 A:middle
+layout B.
+
+00:03:47.286 --> 00:03:48.056 A:middle
+They just declare what the
+
+00:03:48.056 --> 00:03:49.526 A:middle
+layout is going to be, and the
+
+00:03:49.526 --> 00:03:50.396 A:middle
+transitions occur.
+
+00:03:51.986 --> 00:03:54.926 A:middle
+Okay. So CollectionViewLayout is
+
+00:03:54.926 --> 00:03:56.656 A:middle
+an abstract class, and as such,
+
+00:03:56.656 --> 00:03:58.686 A:middle
+it's not meant to be used
+
+00:03:58.686 --> 00:04:00.976 A:middle
+directly, but rather subclasses
+
+00:03:58.686 --> 00:04:00.976 A:middle
+directly, but rather subclasses
+
+00:04:00.976 --> 00:04:01.806 A:middle
+of CollectionViewLayout are
+
+00:04:01.806 --> 00:04:02.726 A:middle
+meant to be used.
+
+00:04:04.036 --> 00:04:05.646 A:middle
+Fortunately, we provide one.
+
+00:04:06.556 --> 00:04:08.896 A:middle
+UICollectionViewFlowLayout, and
+
+00:04:08.896 --> 00:04:09.736 A:middle
+you're probably familiar with
+
+00:04:09.736 --> 00:04:10.566 A:middle
+this class if you used
+
+00:04:10.566 --> 00:04:11.376 A:middle
+CollectionView before.
+
+00:04:11.986 --> 00:04:13.736 A:middle
+Now there's a lot of
+
+00:04:13.736 --> 00:04:15.026 A:middle
+customization points on
+
+00:04:15.026 --> 00:04:16.776 A:middle
+CollectionViewLayout including
+
+00:04:16.776 --> 00:04:17.906 A:middle
+some properties that we'll talk
+
+00:04:17.906 --> 00:04:19.666 A:middle
+about in a little bit, but you
+
+00:04:19.666 --> 00:04:21.176 A:middle
+can also customize it using a
+
+00:04:21.176 --> 00:04:23.646 A:middle
+delegate, and we'll talk about
+
+00:04:23.646 --> 00:04:24.616 A:middle
+the CollectionViewDelegate in a
+
+00:04:24.616 --> 00:04:25.346 A:middle
+moment, but
+
+00:04:25.436 --> 00:04:27.656 A:middle
+CollectionViewFlowLayout will
+
+00:04:28.216 --> 00:04:30.156 A:middle
+specify additional things that
+
+00:04:30.156 --> 00:04:31.086 A:middle
+extend that
+
+00:04:31.086 --> 00:04:32.026 A:middle
+CollectionViewDelegate.
+
+00:04:34.496 --> 00:04:35.986 A:middle
+Okay, so what's Flow all about?
+
+00:04:35.986 --> 00:04:37.746 A:middle
+Well it's a line-based layout
+
+00:04:37.746 --> 00:04:39.946 A:middle
+system, and because of this, it
+
+00:04:39.946 --> 00:04:41.796 A:middle
+can cover a wide range of
+
+00:04:41.796 --> 00:04:43.146 A:middle
+different designs that you might
+
+00:04:43.146 --> 00:04:43.666 A:middle
+receive.
+
+00:04:46.436 --> 00:04:47.786 A:middle
+All right, so what does line
+
+00:04:47.786 --> 00:04:48.286 A:middle
+base mean?
+
+00:04:48.286 --> 00:04:49.176 A:middle
+Well let's go through this.
+
+00:04:49.176 --> 00:04:51.406 A:middle
+So the best way to explain what
+
+00:04:51.476 --> 00:04:54.416 A:middle
+a line based system is like is
+
+00:04:54.416 --> 00:04:55.636 A:middle
+to give an example, so let's do
+
+00:04:55.636 --> 00:04:55.856 A:middle
+that.
+
+00:04:56.556 --> 00:04:57.936 A:middle
+Okay. So here we see, we've got
+
+00:04:57.936 --> 00:04:59.486 A:middle
+a vertical scrolling collection
+
+00:04:59.486 --> 00:05:01.396 A:middle
+view, and we're going to mimic
+
+00:04:59.486 --> 00:05:01.396 A:middle
+view, and we're going to mimic
+
+00:05:01.396 --> 00:05:02.786 A:middle
+what flow layout does when it
+
+00:05:02.786 --> 00:05:04.086 A:middle
+lays out this content.
+
+00:05:04.606 --> 00:05:04.936 A:middle
+All right.
+
+00:05:05.866 --> 00:05:07.806 A:middle
+So here's our first item, and we
+
+00:05:07.806 --> 00:05:10.036 A:middle
+start at the top leading edge,
+
+00:05:10.416 --> 00:05:12.126 A:middle
+and we start laying out our
+
+00:05:12.126 --> 00:05:14.326 A:middle
+items along a line.
+
+00:05:14.326 --> 00:05:15.216 A:middle
+Now look at this line.
+
+00:05:15.216 --> 00:05:17.106 A:middle
+This line is orthogonal to the
+
+00:05:17.106 --> 00:05:18.006 A:middle
+scroll axis.
+
+00:05:18.006 --> 00:05:18.976 A:middle
+We're scrolling vertically, so
+
+00:05:18.976 --> 00:05:20.126 A:middle
+the line is horizontal.
+
+00:05:21.366 --> 00:05:22.796 A:middle
+Okay, now notice here, we filled
+
+00:05:22.796 --> 00:05:24.266 A:middle
+up the available space for items
+
+00:05:24.266 --> 00:05:25.646 A:middle
+on that line, so now we're going
+
+00:05:25.756 --> 00:05:28.046 A:middle
+to drop to the next line and
+
+00:05:28.046 --> 00:05:29.696 A:middle
+continue laying out our content.
+
+00:05:30.216 --> 00:05:32.306 A:middle
+And finally, we drop to that
+
+00:05:32.306 --> 00:05:34.846 A:middle
+last line, and bingo, we got all
+
+00:05:34.846 --> 00:05:35.366 A:middle
+our content.
+
+00:05:36.756 --> 00:05:38.596 A:middle
+Now if I dropped some guides on
+
+00:05:38.596 --> 00:05:39.976 A:middle
+here to show highlight where
+
+00:05:39.976 --> 00:05:41.556 A:middle
+those lines are horizontal,
+
+00:05:42.496 --> 00:05:43.256 A:middle
+let's talk about some
+
+00:05:43.256 --> 00:05:44.926 A:middle
+definitions that we have for
+
+00:05:45.206 --> 00:05:46.586 A:middle
+ways to customize flow.
+
+00:05:47.306 --> 00:05:49.436 A:middle
+First up is the notion of line
+
+00:05:49.436 --> 00:05:49.986 A:middle
+spacing.
+
+00:05:50.906 --> 00:05:52.076 A:middle
+And as you see the arrows here,
+
+00:05:52.076 --> 00:05:53.586 A:middle
+the line spacing is going to be
+
+00:05:53.586 --> 00:05:54.656 A:middle
+the space between these
+
+00:05:54.656 --> 00:05:55.536 A:middle
+horizontal lines.
+
+00:05:56.676 --> 00:06:00.166 A:middle
+Similarly, inter-item spacing is
+
+00:05:56.676 --> 00:06:00.166 A:middle
+Similarly, inter-item spacing is
+
+00:06:00.166 --> 00:06:01.726 A:middle
+the space between the items
+
+00:06:02.066 --> 00:06:03.426 A:middle
+along the layout line.
+
+00:06:03.616 --> 00:06:04.766 A:middle
+And we have two properties on
+
+00:06:04.766 --> 00:06:06.176 A:middle
+flow layout that let you specify
+
+00:06:06.496 --> 00:06:07.996 A:middle
+the minimums for both of these.
+
+00:06:08.536 --> 00:06:11.006 A:middle
+Okay. So let's cement our
+
+00:06:11.006 --> 00:06:12.156 A:middle
+intuition a little bit and
+
+00:06:12.156 --> 00:06:13.736 A:middle
+rotate the whole thing, pi over
+
+00:06:13.736 --> 00:06:15.786 A:middle
+2, and let's start over at the
+
+00:06:15.786 --> 00:06:17.276 A:middle
+top leading edge.
+
+00:06:17.956 --> 00:06:19.096 A:middle
+Now, this one is scrolling
+
+00:06:19.096 --> 00:06:20.756 A:middle
+horizontally, right, so we're
+
+00:06:20.756 --> 00:06:22.346 A:middle
+going to have a vertical layout
+
+00:06:22.346 --> 00:06:24.496 A:middle
+line, and when we get to the
+
+00:06:24.496 --> 00:06:25.606 A:middle
+bottom of this area, we filled
+
+00:06:25.606 --> 00:06:27.396 A:middle
+out that line, back up to the
+
+00:06:27.396 --> 00:06:27.716 A:middle
+top.
+
+00:06:28.646 --> 00:06:29.906 A:middle
+Okay. This pattern is pretty
+
+00:06:29.906 --> 00:06:30.676 A:middle
+familiar now, right.
+
+00:06:31.526 --> 00:06:32.196 A:middle
+There we go.
+
+00:06:32.196 --> 00:06:33.386 A:middle
+There's all our content.
+
+00:06:34.116 --> 00:06:35.736 A:middle
+Now we have our vertical layout
+
+00:06:35.736 --> 00:06:36.236 A:middle
+lines.
+
+00:06:36.926 --> 00:06:38.856 A:middle
+So now in this orientation, our
+
+00:06:39.226 --> 00:06:40.596 A:middle
+line spacing is this.
+
+00:06:41.876 --> 00:06:44.046 A:middle
+And our inter-item spacing is
+
+00:06:44.046 --> 00:06:44.426 A:middle
+this.
+
+00:06:45.266 --> 00:06:46.186 A:middle
+It's key to remember when you're
+
+00:06:46.186 --> 00:06:47.086 A:middle
+working with flow layout.
+
+00:06:48.426 --> 00:06:49.636 A:middle
+Okay, so that's layout.
+
+00:06:50.366 --> 00:06:52.316 A:middle
+Let's talk a little bit about
+
+00:06:52.316 --> 00:06:54.996 A:middle
+the data source, and if you work
+
+00:06:54.996 --> 00:06:56.746 A:middle
+with TableView, this should look
+
+00:06:56.746 --> 00:06:57.486 A:middle
+very familiar.
+
+00:06:57.486 --> 00:06:58.606 A:middle
+It's a very similar pattern.
+
+00:06:59.436 --> 00:07:00.936 A:middle
+They share very similar APIs.
+
+00:06:59.436 --> 00:07:00.936 A:middle
+They share very similar APIs.
+
+00:07:00.936 --> 00:07:03.416 A:middle
+Okay, so if the layout is all
+
+00:07:03.416 --> 00:07:05.766 A:middle
+about the where content goes,
+
+00:07:06.276 --> 00:07:07.756 A:middle
+the data source is the what.
+
+00:07:07.916 --> 00:07:08.986 A:middle
+The content itself.
+
+00:07:09.836 --> 00:07:11.136 A:middle
+Three core methods to think
+
+00:07:11.136 --> 00:07:11.816 A:middle
+about here.
+
+00:07:11.816 --> 00:07:12.746 A:middle
+The first one is optional,
+
+00:07:12.846 --> 00:07:13.686 A:middle
+number of sections in
+
+00:07:13.686 --> 00:07:16.026 A:middle
+CollectionView, and this one if
+
+00:07:16.026 --> 00:07:16.986 A:middle
+you don't provide it, we'll just
+
+00:07:16.986 --> 00:07:18.086 A:middle
+assume you mean one.
+
+00:07:19.336 --> 00:07:21.446 A:middle
+Similarly, we have number of
+
+00:07:21.446 --> 00:07:22.966 A:middle
+items in section, and this is
+
+00:07:22.966 --> 00:07:24.556 A:middle
+going to tell you the number of
+
+00:07:24.556 --> 00:07:25.346 A:middle
+items in each individual
+
+00:07:25.346 --> 00:07:26.116 A:middle
+section, because they can all
+
+00:07:26.116 --> 00:07:26.986 A:middle
+have different numbers of items.
+
+00:07:27.536 --> 00:07:29.026 A:middle
+And then the last one, sell for
+
+00:07:29.026 --> 00:07:30.206 A:middle
+item index path is where you
+
+00:07:30.206 --> 00:07:31.546 A:middle
+provide the actually content
+
+00:07:31.546 --> 00:07:32.456 A:middle
+you're going to display to your
+
+00:07:32.456 --> 00:07:32.836 A:middle
+users.
+
+00:07:33.506 --> 00:07:35.686 A:middle
+Okay. So that's the data source.
+
+00:07:36.076 --> 00:07:37.736 A:middle
+Okay, the final of our three
+
+00:07:37.736 --> 00:07:38.846 A:middle
+topics we're going to talk about
+
+00:07:39.086 --> 00:07:40.356 A:middle
+before we dive into code with
+
+00:07:40.356 --> 00:07:42.086 A:middle
+Mohammed is the Delegate.
+
+00:07:42.726 --> 00:07:45.346 A:middle
+Okay. So use of the Delegate is
+
+00:07:45.346 --> 00:07:45.786 A:middle
+optional.
+
+00:07:47.226 --> 00:07:48.576 A:middle
+Now, CollectionView is a
+
+00:07:48.576 --> 00:07:50.036 A:middle
+subclass of UIScrollView.
+
+00:07:50.476 --> 00:07:52.256 A:middle
+So we use the same Delegate
+
+00:07:52.686 --> 00:07:54.276 A:middle
+that's provided by the
+
+00:07:54.276 --> 00:07:56.116 A:middle
+ScrollView superclass, but we
+
+00:07:56.116 --> 00:07:56.696 A:middle
+extend it.
+
+00:07:57.526 --> 00:07:58.646 A:middle
+So if you need to modify
+
+00:07:58.906 --> 00:08:00.116 A:middle
+scrolling behavior, you can do
+
+00:07:58.906 --> 00:08:00.116 A:middle
+scrolling behavior, you can do
+
+00:08:00.116 --> 00:08:01.426 A:middle
+it also against this same
+
+00:08:01.426 --> 00:08:03.826 A:middle
+Delegate and also work with some
+
+00:08:03.826 --> 00:08:06.216 A:middle
+of the UICollectionViewDelegate
+
+00:08:06.216 --> 00:08:08.496 A:middle
+methods that provide things like
+
+00:08:08.616 --> 00:08:09.686 A:middle
+fine-grained control over
+
+00:08:09.686 --> 00:08:11.176 A:middle
+highlighting and selection as
+
+00:08:11.176 --> 00:08:12.186 A:middle
+the user interacts with your
+
+00:08:12.186 --> 00:08:12.686 A:middle
+content.
+
+00:08:13.206 --> 00:08:15.796 A:middle
+And we also got an API that
+
+00:08:15.796 --> 00:08:17.086 A:middle
+let's you know, hey, something
+
+00:08:17.086 --> 00:08:18.016 A:middle
+came on screen.
+
+00:08:18.016 --> 00:08:19.426 A:middle
+WillDisplayItem and
+
+00:08:19.426 --> 00:08:20.636 A:middle
+DidEndDisplayingItem.
+
+00:08:21.116 --> 00:08:24.816 A:middle
+Okay. So those are the three
+
+00:08:24.816 --> 00:08:26.196 A:middle
+core concepts we really need to
+
+00:08:26.196 --> 00:08:28.156 A:middle
+talk about before we dive into
+
+00:08:28.266 --> 00:08:30.016 A:middle
+code to get started with
+
+00:08:30.016 --> 00:08:30.936 A:middle
+UICollectionView.
+
+00:08:30.936 --> 00:08:32.775 A:middle
+So let's switch over to the dev
+
+00:08:32.775 --> 00:08:34.226 A:middle
+box with Mohammed and have him
+
+00:08:34.496 --> 00:08:35.395 A:middle
+show us how it works.
+
+00:08:35.556 --> 00:08:35.846 A:middle
+Mohammed.
+
+00:08:35.846 --> 00:08:38.746 A:middle
+&gt;&gt; All right, so the first of
+
+00:08:38.746 --> 00:08:40.596 A:middle
+our two screens that column
+
+00:08:40.596 --> 00:08:42.706 A:middle
+layout is a great use case for
+
+00:08:42.706 --> 00:08:44.626 A:middle
+using CollectionViewFlowLayout.
+
+00:08:45.106 --> 00:08:46.376 A:middle
+We can probably accomplish
+
+00:08:46.376 --> 00:08:47.896 A:middle
+everything we need there, and it
+
+00:08:47.896 --> 00:08:49.996 A:middle
+would be a great way to get us
+
+00:08:50.106 --> 00:08:52.036 A:middle
+started using UICollectionView.
+
+00:08:54.596 --> 00:08:56.686 A:middle
+So now while we could accomplish
+
+00:08:56.686 --> 00:08:58.896 A:middle
+the entire goal of our design
+
+00:08:58.896 --> 00:09:00.216 A:middle
+with a flow layout, I'm actually
+
+00:08:58.896 --> 00:09:00.216 A:middle
+with a flow layout, I'm actually
+
+00:09:00.216 --> 00:09:01.036 A:middle
+going to subclass
+
+00:09:01.036 --> 00:09:02.566 A:middle
+CollectionViewFlowLayout because
+
+00:09:02.566 --> 00:09:03.346 A:middle
+we're going to do a little bit
+
+00:09:03.346 --> 00:09:04.576 A:middle
+of extra customization.
+
+00:09:04.756 --> 00:09:06.596 A:middle
+So I'm going to start out by
+
+00:09:07.646 --> 00:09:10.436 A:middle
+creating an instance of my
+
+00:09:10.436 --> 00:09:12.066 A:middle
+ColumnFlowLayout class, which
+
+00:09:12.066 --> 00:09:12.916 A:middle
+I've already prepared.
+
+00:09:13.756 --> 00:09:15.276 A:middle
+I'm going to use that instance
+
+00:09:15.276 --> 00:09:17.276 A:middle
+to create my CollectionView.
+
+00:09:17.276 --> 00:09:18.946 A:middle
+I'm going to take that
+
+00:09:18.946 --> 00:09:19.956 A:middle
+CollectionView, and I'm going to
+
+00:09:19.956 --> 00:09:21.576 A:middle
+set some view properties, like
+
+00:09:21.576 --> 00:09:23.356 A:middle
+auto resizing mask, background
+
+00:09:23.356 --> 00:09:25.356 A:middle
+color, and since it's the
+
+00:09:25.356 --> 00:09:26.876 A:middle
+ScrollView, I can set some of
+
+00:09:26.876 --> 00:09:28.066 A:middle
+it's ScrollView properties as
+
+00:09:28.066 --> 00:09:28.296 A:middle
+well.
+
+00:09:28.296 --> 00:09:29.406 A:middle
+This is all just to get it to
+
+00:09:29.406 --> 00:09:31.126 A:middle
+look and feel the way I want it
+
+00:09:31.276 --> 00:09:33.086 A:middle
+to look in our app.
+
+00:09:33.426 --> 00:09:34.786 A:middle
+After adding the CollectionView
+
+00:09:34.786 --> 00:09:36.596 A:middle
+to my view hierarchy, I'm going
+
+00:09:36.596 --> 00:09:38.816 A:middle
+to register my PersonCell class
+
+00:09:38.816 --> 00:09:40.706 A:middle
+using its unique identifier with
+
+00:09:40.706 --> 00:09:42.536 A:middle
+CollectionView so we can get our
+
+00:09:42.536 --> 00:09:45.126 A:middle
+cell design to app.
+
+00:09:45.126 --> 00:09:46.696 A:middle
+And then I'm going to set the
+
+00:09:46.696 --> 00:09:47.866 A:middle
+view controller as the
+
+00:09:47.866 --> 00:09:49.586 A:middle
+CollectionView's data source so
+
+00:09:49.586 --> 00:09:51.186 A:middle
+we can give it some information
+
+00:09:51.186 --> 00:09:52.496 A:middle
+about how many cells it's going
+
+00:09:52.496 --> 00:09:54.616 A:middle
+to display and what sort of data
+
+00:09:54.616 --> 00:09:55.556 A:middle
+it's going to display in it's
+
+00:09:55.556 --> 00:09:56.146 A:middle
+cells.
+
+00:09:56.516 --> 00:09:59.346 A:middle
+And then I'm going to set it as
+
+00:09:59.346 --> 00:10:00.956 A:middle
+it's delegate as well, so we can
+
+00:09:59.346 --> 00:10:00.956 A:middle
+it's delegate as well, so we can
+
+00:10:00.956 --> 00:10:02.066 A:middle
+handle cell selection.
+
+00:10:02.986 --> 00:10:04.196 A:middle
+So now that we've gotten set up,
+
+00:10:04.196 --> 00:10:05.976 A:middle
+we need to actually conform to
+
+00:10:05.976 --> 00:10:07.216 A:middle
+these two protocols.
+
+00:10:07.876 --> 00:10:10.036 A:middle
+So let's start out by conforming
+
+00:10:10.036 --> 00:10:12.606 A:middle
+to the data source, and we have
+
+00:10:12.676 --> 00:10:14.176 A:middle
+two required methods we need to
+
+00:10:14.176 --> 00:10:14.816 A:middle
+implement here.
+
+00:10:14.946 --> 00:10:17.906 A:middle
+The first of these is number of
+
+00:10:17.976 --> 00:10:20.656 A:middle
+items in section where we can
+
+00:10:20.656 --> 00:10:22.696 A:middle
+just return the number of people
+
+00:10:22.816 --> 00:10:23.926 A:middle
+or the number of items in our
+
+00:10:23.926 --> 00:10:26.956 A:middle
+people array to get our data
+
+00:10:26.956 --> 00:10:27.996 A:middle
+model objects displayed.
+
+00:10:28.666 --> 00:10:30.586 A:middle
+The second method we'll need to
+
+00:10:30.586 --> 00:10:31.566 A:middle
+implement is
+
+00:10:32.106 --> 00:10:34.456 A:middle
+CellForItemAtIndexPath where
+
+00:10:34.456 --> 00:10:36.226 A:middle
+we'll dequeue a cell from the
+
+00:10:36.226 --> 00:10:37.726 A:middle
+CollectionView using our unique
+
+00:10:37.726 --> 00:10:41.106 A:middle
+identifier, pass a person and
+
+00:10:41.106 --> 00:10:42.526 A:middle
+object that we get out of our
+
+00:10:42.526 --> 00:10:43.976 A:middle
+people array, to the cell to
+
+00:10:44.136 --> 00:10:47.126 A:middle
+actually display our data, and
+
+00:10:47.126 --> 00:10:48.576 A:middle
+then return the cell.
+
+00:10:50.426 --> 00:10:52.566 A:middle
+And to wrap things up here,
+
+00:10:52.566 --> 00:10:54.686 A:middle
+we'll just need to implement one
+
+00:10:54.756 --> 00:10:56.396 A:middle
+optional method from the
+
+00:10:56.396 --> 00:10:58.066 A:middle
+Delegate protocol, so we can
+
+00:10:58.066 --> 00:10:58.836 A:middle
+handle selection.
+
+00:10:59.336 --> 00:11:00.826 A:middle
+So I'm just going to add
+
+00:10:59.336 --> 00:11:00.826 A:middle
+So I'm just going to add
+
+00:11:00.926 --> 00:11:04.226 A:middle
+DidSelectItemAtIndexPath where
+
+00:11:04.226 --> 00:11:06.186 A:middle
+we'll just instantiate our
+
+00:11:06.186 --> 00:11:07.716 A:middle
+FeedView controller, which is
+
+00:11:07.716 --> 00:11:09.246 A:middle
+going to be our second screen if
+
+00:11:09.246 --> 00:11:10.056 A:middle
+we don't already have an
+
+00:11:10.056 --> 00:11:11.886 A:middle
+instance, and then we're going
+
+00:11:12.136 --> 00:11:14.406 A:middle
+to pass it a person object so we
+
+00:11:14.406 --> 00:11:16.566 A:middle
+know whose images to display,
+
+00:11:17.116 --> 00:11:19.386 A:middle
+and then we'll push it onto our
+
+00:11:19.386 --> 00:11:20.366 A:middle
+navigation controller.
+
+00:11:21.256 --> 00:11:24.136 A:middle
+Okay. So let's build this and
+
+00:11:24.176 --> 00:11:27.006 A:middle
+switch to the simulator to see.
+
+00:11:29.256 --> 00:11:29.976 A:middle
+All right.
+
+00:11:30.516 --> 00:11:33.606 A:middle
+[ Applause and Cheering ]
+
+00:11:34.106 --> 00:11:35.836 A:middle
+Okay. So we have our
+
+00:11:35.836 --> 00:11:37.446 A:middle
+CollectionView on screen here,
+
+00:11:37.546 --> 00:11:39.816 A:middle
+and we have some cells.
+
+00:11:39.816 --> 00:11:41.196 A:middle
+You can see them, though they're
+
+00:11:41.196 --> 00:11:42.096 A:middle
+kind of squished.
+
+00:11:42.146 --> 00:11:44.026 A:middle
+They're not the right size, so
+
+00:11:44.026 --> 00:11:45.116 A:middle
+we're going to have to do some
+
+00:11:45.116 --> 00:11:46.786 A:middle
+of that customization we thought
+
+00:11:46.786 --> 00:11:47.656 A:middle
+we might need to do.
+
+00:11:47.996 --> 00:11:51.066 A:middle
+So let's go back to Xcode, and
+
+00:11:51.066 --> 00:11:55.916 A:middle
+let's pop open our column of
+
+00:11:55.996 --> 00:11:59.906 A:middle
+class here, our ColumnFlowLayout
+
+00:12:00.046 --> 00:12:01.936 A:middle
+class that we've put together,
+
+00:12:03.106 --> 00:12:06.536 A:middle
+and let's take a look at what we
+
+00:12:06.536 --> 00:12:07.176 A:middle
+need to do here.
+
+00:12:07.176 --> 00:12:10.236 A:middle
+So I already have a stub
+
+00:12:10.236 --> 00:12:12.376 A:middle
+override of the layouts prepare
+
+00:12:12.456 --> 00:12:12.916 A:middle
+method.
+
+00:12:13.506 --> 00:12:13.686 A:middle
+Now,
+
+00:12:14.076 --> 00:12:15.756 A:middle
+UICollectionViewLayoutsPrepare
+
+00:12:15.756 --> 00:12:17.266 A:middle
+method is called whenever the
+
+00:12:17.266 --> 00:12:19.406 A:middle
+layout is invalidated, and in
+
+00:12:19.406 --> 00:12:19.906 A:middle
+the case of
+
+00:12:19.906 --> 00:12:22.476 A:middle
+UICollectionFlowLayout, our
+
+00:12:22.636 --> 00:12:24.646 A:middle
+layout is invalidated whenever
+
+00:12:24.646 --> 00:12:26.416 A:middle
+the CollectionView's bounds of
+
+00:12:26.416 --> 00:12:27.336 A:middle
+size changes.
+
+00:12:27.336 --> 00:12:29.626 A:middle
+So if our app rotates on a phone
+
+00:12:29.626 --> 00:12:31.956 A:middle
+or if our app is resized on an
+
+00:12:32.076 --> 00:12:32.446 A:middle
+iPad.
+
+00:12:33.996 --> 00:12:35.976 A:middle
+So this is a great place to do
+
+00:12:35.976 --> 00:12:39.366 A:middle
+any customization that takes the
+
+00:12:39.366 --> 00:12:41.026 A:middle
+size of the CollectionView into
+
+00:12:41.026 --> 00:12:41.506 A:middle
+account.
+
+00:12:41.506 --> 00:12:42.986 A:middle
+In our case, we want our cells
+
+00:12:42.986 --> 00:12:45.456 A:middle
+to be some function of the
+
+00:12:45.456 --> 00:12:46.756 A:middle
+CollectionView's width.
+
+00:12:47.266 --> 00:12:48.886 A:middle
+And we can let the
+
+00:12:48.886 --> 00:12:51.236 A:middle
+CollectionView know how big we
+
+00:12:51.236 --> 00:12:53.146 A:middle
+want our items to be by saying
+
+00:12:53.146 --> 00:12:54.436 A:middle
+it's item sized properties.
+
+00:12:54.516 --> 00:12:55.876 A:middle
+So I'm going to go ahead and do
+
+00:12:55.876 --> 00:12:56.296 A:middle
+that here.
+
+00:12:57.426 --> 00:12:58.586 A:middle
+So I'm just going to set my
+
+00:12:58.586 --> 00:13:01.086 A:middle
+CollectionView's item size to a
+
+00:12:58.586 --> 00:13:01.086 A:middle
+CollectionView's item size to a
+
+00:13:01.276 --> 00:13:03.586 A:middle
+CG size with a width that is the
+
+00:13:03.586 --> 00:13:04.886 A:middle
+width of the CollectionView's
+
+00:13:04.886 --> 00:13:07.206 A:middle
+bounds, inset by its layout
+
+00:13:07.206 --> 00:13:08.996 A:middle
+margins, and then we're going to
+
+00:13:08.996 --> 00:13:10.946 A:middle
+give it a height of 70 points
+
+00:13:10.946 --> 00:13:12.736 A:middle
+just to match our design.
+
+00:13:14.046 --> 00:13:14.856 A:middle
+And since we're already here,
+
+00:13:14.856 --> 00:13:15.746 A:middle
+I'm going to do a couple of
+
+00:13:15.836 --> 00:13:17.536 A:middle
+other little things here just to
+
+00:13:17.536 --> 00:13:18.816 A:middle
+get things to look nice.
+
+00:13:19.296 --> 00:13:21.326 A:middle
+I'm going to apply a section
+
+00:13:21.326 --> 00:13:22.816 A:middle
+inset with some padding at the
+
+00:13:22.896 --> 00:13:24.526 A:middle
+top that matches our inter-item
+
+00:13:24.646 --> 00:13:26.636 A:middle
+spacing, and I'm going to set
+
+00:13:26.776 --> 00:13:28.216 A:middle
+the layout section inset
+
+00:13:28.216 --> 00:13:30.106 A:middle
+reference property to from safe
+
+00:13:30.106 --> 00:13:32.256 A:middle
+area so everything is neatly
+
+00:13:32.256 --> 00:13:33.846 A:middle
+tucked within the CollectionView
+
+00:13:33.846 --> 00:13:34.956 A:middle
+safe area insets.
+
+00:13:35.616 --> 00:13:37.526 A:middle
+Okay. So let's go back to the
+
+00:13:37.526 --> 00:13:39.546 A:middle
+simulator one more time and see
+
+00:13:39.546 --> 00:13:40.746 A:middle
+what our properly constructed
+
+00:13:40.746 --> 00:13:41.546 A:middle
+layout looks like.
+
+00:13:41.816 --> 00:13:42.086 A:middle
+All right.
+
+00:13:43.656 --> 00:13:44.926 A:middle
+That looks great.
+
+00:13:44.926 --> 00:13:47.056 A:middle
+That looks just like our spec. I
+
+00:13:47.056 --> 00:13:47.916 A:middle
+think our designer is going to
+
+00:13:47.916 --> 00:13:48.626 A:middle
+be really happy.
+
+00:13:48.626 --> 00:13:52.316 A:middle
+And if we rotate to landscape,
+
+00:13:52.396 --> 00:13:53.426 A:middle
+we see that our cell is a great
+
+00:13:53.426 --> 00:13:54.866 A:middle
+size, and so we know that our
+
+00:13:55.206 --> 00:13:56.956 A:middle
+invalidation code is getting
+
+00:13:56.956 --> 00:13:58.166 A:middle
+called again in prepare.
+
+00:13:59.756 --> 00:14:01.176 A:middle
+Now while this is okay, you
+
+00:13:59.756 --> 00:14:01.176 A:middle
+Now while this is okay, you
+
+00:14:01.176 --> 00:14:03.106 A:middle
+might be thinking, it's not the
+
+00:14:03.106 --> 00:14:04.316 A:middle
+best that we can do here.
+
+00:14:04.316 --> 00:14:06.886 A:middle
+It doesn't look as great as it
+
+00:14:07.736 --> 00:14:07.976 A:middle
+can.
+
+00:14:08.486 --> 00:14:09.736 A:middle
+We might want to do something
+
+00:14:09.736 --> 00:14:10.696 A:middle
+more interesting here like
+
+00:14:10.696 --> 00:14:12.216 A:middle
+display multiple columns since
+
+00:14:12.216 --> 00:14:14.546 A:middle
+we have the space available to
+
+00:14:14.546 --> 00:14:14.806 A:middle
+us.
+
+00:14:15.336 --> 00:14:16.936 A:middle
+Now flow layout makes it really
+
+00:14:16.936 --> 00:14:17.876 A:middle
+easy to do this.
+
+00:14:18.166 --> 00:14:19.926 A:middle
+If you remember during Steve's
+
+00:14:19.926 --> 00:14:21.366 A:middle
+explanation of how flow layout
+
+00:14:21.486 --> 00:14:22.666 A:middle
+performs it's layout earlier,
+
+00:14:22.746 --> 00:14:24.536 A:middle
+flow layout will automatically
+
+00:14:24.536 --> 00:14:26.656 A:middle
+try to fit in as many items as
+
+00:14:26.656 --> 00:14:28.876 A:middle
+it can within a line before it
+
+00:14:28.876 --> 00:14:29.946 A:middle
+wraps to the next one.
+
+00:14:30.526 --> 00:14:33.396 A:middle
+So using that, we can kind of
+
+00:14:33.876 --> 00:14:36.086 A:middle
+figure out that layout-- that we
+
+00:14:36.086 --> 00:14:37.626 A:middle
+can get multiple columns if we
+
+00:14:37.626 --> 00:14:38.826 A:middle
+change our item size.
+
+00:14:39.506 --> 00:14:41.996 A:middle
+So if we head back to Xcode, to
+
+00:14:41.996 --> 00:14:44.446 A:middle
+our layout here, and if we just
+
+00:14:44.446 --> 00:14:46.986 A:middle
+change how we're calculating our
+
+00:14:46.986 --> 00:14:47.976 A:middle
+item size here.
+
+00:14:47.976 --> 00:14:50.886 A:middle
+So I'm just going to remove this
+
+00:14:50.886 --> 00:14:52.156 A:middle
+fit here, and I'm going to
+
+00:14:52.906 --> 00:14:54.216 A:middle
+replace it with something that
+
+00:14:54.296 --> 00:14:55.336 A:middle
+does a little bit of extra math.
+
+00:14:56.336 --> 00:14:57.926 A:middle
+So I'm just starting out with
+
+00:14:58.006 --> 00:14:59.896 A:middle
+the same available width that I
+
+00:14:59.896 --> 00:15:00.536 A:middle
+had before.
+
+00:14:59.896 --> 00:15:00.536 A:middle
+had before.
+
+00:15:00.536 --> 00:15:02.466 A:middle
+This is the bounds inset by the
+
+00:15:02.466 --> 00:15:05.546 A:middle
+margins, and some arbitrary
+
+00:15:05.546 --> 00:15:07.726 A:middle
+definition of what a minimum
+
+00:15:07.856 --> 00:15:10.726 A:middle
+column width is, it's 300
+
+00:15:10.726 --> 00:15:11.156 A:middle
+points.
+
+00:15:11.696 --> 00:15:14.106 A:middle
+And then taking both of those
+
+00:15:14.106 --> 00:15:15.796 A:middle
+values and using them to
+
+00:15:15.796 --> 00:15:17.476 A:middle
+calculate a maximum number of
+
+00:15:17.476 --> 00:15:18.986 A:middle
+column that I think I can fit
+
+00:15:18.986 --> 00:15:21.146 A:middle
+within the available space, and
+
+00:15:21.146 --> 00:15:23.096 A:middle
+I'm taking that and dividing the
+
+00:15:23.096 --> 00:15:24.536 A:middle
+available width by it to
+
+00:15:24.536 --> 00:15:26.546 A:middle
+calculate an optimal cell width,
+
+00:15:26.546 --> 00:15:29.446 A:middle
+which might be more than our 300
+
+00:15:29.446 --> 00:15:29.816 A:middle
+points.
+
+00:15:30.626 --> 00:15:32.346 A:middle
+I'm then passing that to the CT
+
+00:15:32.346 --> 00:15:33.636 A:middle
+size that I'm using as my item
+
+00:15:33.636 --> 00:15:33.966 A:middle
+size.
+
+00:15:34.886 --> 00:15:37.166 A:middle
+Okay. So let's go back to our
+
+00:15:37.166 --> 00:15:39.546 A:middle
+simulator again and see what our
+
+00:15:39.546 --> 00:15:40.676 A:middle
+updated layout looks like.
+
+00:15:42.246 --> 00:15:43.596 A:middle
+Okay. So everything is the same
+
+00:15:43.596 --> 00:15:43.806 A:middle
+here.
+
+00:15:43.806 --> 00:15:44.466 A:middle
+We didn't break it.
+
+00:15:44.736 --> 00:15:47.756 A:middle
+It's a good start, and if we go
+
+00:15:47.756 --> 00:15:50.146 A:middle
+to portrait, there are our
+
+00:15:50.146 --> 00:15:51.416 A:middle
+multiple columns side by side,
+
+00:15:51.536 --> 00:15:52.136 A:middle
+just what we want.
+
+00:15:53.436 --> 00:15:55.186 A:middle
+What do you think, Steve?
+
+00:15:55.656 --> 00:15:56.306 A:middle
+&gt;&gt; That looks great.
+
+00:15:56.306 --> 00:15:57.596 A:middle
+We got a great adaptable
+
+00:15:57.596 --> 00:15:58.706 A:middle
+columnar base layout.
+
+00:15:58.706 --> 00:15:59.726 A:middle
+Not a lot of work.
+
+00:16:00.266 --> 00:16:00.436 A:middle
+&gt;&gt; No.
+
+00:16:00.536 --> 00:16:01.486 A:middle
+&gt;&gt; What's next in our design?
+
+00:16:02.036 --> 00:16:02.906 A:middle
+&gt;&gt; Well, now that we've eased
+
+00:16:02.906 --> 00:16:04.366 A:middle
+ourselves in with our friends
+
+00:16:04.366 --> 00:16:05.446 A:middle
+list, it's time to start
+
+00:16:05.446 --> 00:16:07.846 A:middle
+thinking about that fancy mosaic
+
+00:16:07.846 --> 00:16:08.306 A:middle
+layout for [inaudible].
+
+00:16:08.336 --> 00:16:08.686 A:middle
+&gt;&gt; Oh, yeah.
+
+00:16:08.686 --> 00:16:09.566 A:middle
+That's going to be great.
+
+00:16:09.566 --> 00:16:09.676 A:middle
+&gt;&gt; Yeah.
+
+00:16:09.676 --> 00:16:10.816 A:middle
+&gt;&gt; Let's switch back over
+
+00:16:10.816 --> 00:16:13.076 A:middle
+slides, and let's chat a little
+
+00:16:13.076 --> 00:16:16.926 A:middle
+bit about that.
+
+00:16:17.136 --> 00:16:19.726 A:middle
+Okay. So let's take a look at
+
+00:16:19.726 --> 00:16:21.686 A:middle
+this layout or design here and
+
+00:16:21.686 --> 00:16:22.506 A:middle
+see what we can do.
+
+00:16:22.506 --> 00:16:23.816 A:middle
+So our first inclination, I
+
+00:16:23.816 --> 00:16:25.006 A:middle
+don't know about yours, but mine
+
+00:16:25.006 --> 00:16:25.956 A:middle
+would be can I use Flow.
+
+00:16:26.206 --> 00:16:26.626 A:middle
+I've got it.
+
+00:16:26.626 --> 00:16:27.216 A:middle
+It's ready to go.
+
+00:16:27.276 --> 00:16:28.036 A:middle
+Let's try to use it.
+
+00:16:29.256 --> 00:16:30.796 A:middle
+So let's zero in on this design
+
+00:16:30.796 --> 00:16:32.786 A:middle
+a little bit and see if Flow is
+
+00:16:32.786 --> 00:16:33.946 A:middle
+going to make sense for us.
+
+00:16:34.966 --> 00:16:36.726 A:middle
+And this particular region where
+
+00:16:36.726 --> 00:16:37.886 A:middle
+these three photos are, I'm
+
+00:16:37.886 --> 00:16:39.266 A:middle
+going to zoom in on that real
+
+00:16:39.266 --> 00:16:39.626 A:middle
+quick.
+
+00:16:40.276 --> 00:16:40.626 A:middle
+All right.
+
+00:16:41.756 --> 00:16:43.496 A:middle
+So now in this instance we have
+
+00:16:43.496 --> 00:16:45.206 A:middle
+a very large photo on the left
+
+00:16:45.276 --> 00:16:47.306 A:middle
+and then a vertical stack on the
+
+00:16:47.306 --> 00:16:47.656 A:middle
+right.
+
+00:16:48.446 --> 00:16:49.836 A:middle
+So in the flow universe, since
+
+00:16:49.836 --> 00:16:50.886 A:middle
+it's line based, we're going to
+
+00:16:50.886 --> 00:16:52.446 A:middle
+lay out that large left item,
+
+00:16:53.076 --> 00:16:54.186 A:middle
+move over to the next item where
+
+00:16:54.186 --> 00:16:55.306 A:middle
+it's got room, try to lay out
+
+00:16:55.306 --> 00:16:57.386 A:middle
+another item, and then jump to
+
+00:16:57.386 --> 00:16:58.116 A:middle
+the next line.
+
+00:16:58.606 --> 00:16:59.686 A:middle
+But we're not done.
+
+00:16:59.686 --> 00:17:00.686 A:middle
+We've got that vertical stack to
+
+00:16:59.686 --> 00:17:00.686 A:middle
+We've got that vertical stack to
+
+00:17:00.686 --> 00:17:01.296 A:middle
+contend with.
+
+00:17:01.296 --> 00:17:03.056 A:middle
+So this really is not going to
+
+00:17:03.056 --> 00:17:04.326 A:middle
+work for Flow because it turns
+
+00:17:04.326 --> 00:17:07.226 A:middle
+out it's not really a line-based
+
+00:17:07.226 --> 00:17:08.656 A:middle
+layout, this fancy layout of
+
+00:17:08.656 --> 00:17:08.986 A:middle
+ours.
+
+00:17:09.796 --> 00:17:10.766 A:middle
+But going through this exercise
+
+00:17:10.766 --> 00:17:12.205 A:middle
+is useful, so, you know, let's
+
+00:17:12.205 --> 00:17:13.566 A:middle
+start with flow first.
+
+00:17:15.096 --> 00:17:16.776 A:middle
+Okay. So in this instance, we're
+
+00:17:16.776 --> 00:17:18.136 A:middle
+going to create our own custom
+
+00:17:18.136 --> 00:17:18.506 A:middle
+layout.
+
+00:17:19.685 --> 00:17:20.796 A:middle
+Oh, no, we're scared, right.
+
+00:17:20.796 --> 00:17:21.876 A:middle
+Nope, it's not complicated.
+
+00:17:21.876 --> 00:17:23.925 A:middle
+We've got four basic methods to
+
+00:17:23.925 --> 00:17:25.356 A:middle
+deal with here, and I'm going to
+
+00:17:25.356 --> 00:17:27.056 A:middle
+bring up one additional method
+
+00:17:27.056 --> 00:17:28.276 A:middle
+that gets an honorable mention.
+
+00:17:29.676 --> 00:17:31.156 A:middle
+Okay. So four methods.
+
+00:17:31.156 --> 00:17:31.566 A:middle
+Here we go.
+
+00:17:32.836 --> 00:17:34.076 A:middle
+Our first method I want to talk
+
+00:17:34.076 --> 00:17:35.106 A:middle
+about is the CollectionView
+
+00:17:35.106 --> 00:17:36.346 A:middle
+Content Size.
+
+00:17:37.306 --> 00:17:39.286 A:middle
+Now, recall before we mentioned
+
+00:17:39.286 --> 00:17:40.736 A:middle
+CollectionView is a subclass of
+
+00:17:40.736 --> 00:17:42.126 A:middle
+UIScrollView, and one of the
+
+00:17:42.126 --> 00:17:44.036 A:middle
+features of UIScrollView is that
+
+00:17:44.036 --> 00:17:45.576 A:middle
+you have a visible region with a
+
+00:17:45.576 --> 00:17:47.636 A:middle
+large content area, and you get
+
+00:17:47.636 --> 00:17:49.096 A:middle
+that great iOS experience of
+
+00:17:49.096 --> 00:17:50.596 A:middle
+moving your content around
+
+00:17:50.596 --> 00:17:52.666 A:middle
+inside that, and so
+
+00:17:52.756 --> 00:17:53.896 A:middle
+CollectionView needs to know how
+
+00:17:53.896 --> 00:17:55.396 A:middle
+to tell the ScrollView, hey,
+
+00:17:55.396 --> 00:17:56.836 A:middle
+here's how big my content is.
+
+00:17:57.276 --> 00:17:59.256 A:middle
+Okay. So how do we get this
+
+00:17:59.256 --> 00:17:59.856 A:middle
+size?
+
+00:18:00.656 --> 00:18:01.986 A:middle
+Well, if you imagine a rectangle
+
+00:18:01.986 --> 00:18:03.546 A:middle
+that encompassed all the content
+
+00:18:03.546 --> 00:18:04.646 A:middle
+that the layout is going to
+
+00:18:04.646 --> 00:18:06.196 A:middle
+define for your CollectionView,
+
+00:18:06.626 --> 00:18:09.406 A:middle
+we want the size of that.
+
+00:18:09.406 --> 00:18:11.596 A:middle
+Okay, so that's CollectionView
+
+00:18:11.596 --> 00:18:12.436 A:middle
+Content Size.
+
+00:18:13.556 --> 00:18:15.326 A:middle
+Next up we have two methods that
+
+00:18:15.326 --> 00:18:17.176 A:middle
+are in the business of providing
+
+00:18:17.176 --> 00:18:18.246 A:middle
+layout attributes.
+
+00:18:19.376 --> 00:18:20.516 A:middle
+The first one is
+
+00:18:20.516 --> 00:18:21.826 A:middle
+LayoutAttributesForElements (in
+
+00:18:21.826 --> 00:18:22.116 A:middle
+Rect).
+
+00:18:23.186 --> 00:18:24.606 A:middle
+Now this is called periodically
+
+00:18:24.606 --> 00:18:25.996 A:middle
+by CollectionView when it needs
+
+00:18:25.996 --> 00:18:26.856 A:middle
+to know what is needed to
+
+00:18:26.856 --> 00:18:28.336 A:middle
+display on screen as the user
+
+00:18:28.336 --> 00:18:29.696 A:middle
+scrolls through your content or
+
+00:18:29.696 --> 00:18:30.916 A:middle
+displays for the first time.
+
+00:18:31.906 --> 00:18:33.516 A:middle
+So this query is by a geometric
+
+00:18:33.516 --> 00:18:33.966 A:middle
+region.
+
+00:18:35.686 --> 00:18:38.166 A:middle
+Okay. It's companion API,
+
+00:18:38.276 --> 00:18:39.596 A:middle
+LayoutAttributesForItem
+
+00:18:39.596 --> 00:18:42.046 A:middle
+AtIndexPath, as you can imagine,
+
+00:18:42.046 --> 00:18:43.096 A:middle
+it's just looking for a single
+
+00:18:43.096 --> 00:18:43.366 A:middle
+item.
+
+00:18:43.496 --> 00:18:44.876 A:middle
+Give me the attributes for that.
+
+00:18:45.876 --> 00:18:47.416 A:middle
+Okay, so we're going to see more
+
+00:18:47.416 --> 00:18:48.446 A:middle
+when Mohammed walks us through
+
+00:18:48.446 --> 00:18:50.116 A:middle
+this, but for these two APIs,
+
+00:18:50.116 --> 00:18:51.326 A:middle
+it's important to note that
+
+00:18:51.326 --> 00:18:52.936 A:middle
+performance matters.
+
+00:18:57.136 --> 00:18:58.956 A:middle
+Okay, so the fourth of our four
+
+00:18:59.136 --> 00:19:01.906 A:middle
+core custom layout subclass
+
+00:18:59.136 --> 00:19:01.906 A:middle
+core custom layout subclass
+
+00:19:01.976 --> 00:19:03.766 A:middle
+items is going to be the Prepare
+
+00:19:03.766 --> 00:19:04.106 A:middle
+method.
+
+00:19:04.106 --> 00:19:05.396 A:middle
+Now Mohammed has already chatted
+
+00:19:05.396 --> 00:19:06.706 A:middle
+about this a little bit.
+
+00:19:06.706 --> 00:19:08.266 A:middle
+This is called every time the
+
+00:19:08.266 --> 00:19:09.346 A:middle
+layout is invalidated.
+
+00:19:09.406 --> 00:19:11.226 A:middle
+So this is a great time to
+
+00:19:11.226 --> 00:19:12.436 A:middle
+compute anything, such as your
+
+00:19:12.436 --> 00:19:13.486 A:middle
+layout attributes you might want
+
+00:19:13.486 --> 00:19:16.206 A:middle
+to cache and also your content
+
+00:19:16.206 --> 00:19:17.496 A:middle
+size, which is going to be asked
+
+00:19:17.496 --> 00:19:18.976 A:middle
+for pretty soon afterwards.
+
+00:19:23.456 --> 00:19:25.326 A:middle
+Okay. So our honorable mention
+
+00:19:25.326 --> 00:19:26.876 A:middle
+APIs, so let's talk about this
+
+00:19:26.876 --> 00:19:27.066 A:middle
+one.
+
+00:19:27.066 --> 00:19:28.316 A:middle
+This is a Should Invalidate
+
+00:19:28.316 --> 00:19:29.856 A:middle
+Layout For Bounds Change.
+
+00:19:30.766 --> 00:19:33.046 A:middle
+So this is called every time the
+
+00:19:33.046 --> 00:19:34.126 A:middle
+bounds in the CollectionView
+
+00:19:34.126 --> 00:19:34.876 A:middle
+changes.
+
+00:19:35.066 --> 00:19:36.366 A:middle
+Okay, so again, it's a
+
+00:19:36.366 --> 00:19:37.926 A:middle
+CollectionView is a UIScrollView
+
+00:19:37.926 --> 00:19:38.566 A:middle
+subclass.
+
+00:19:38.566 --> 00:19:40.676 A:middle
+So what do we mean by a bounds
+
+00:19:40.676 --> 00:19:41.216 A:middle
+change?
+
+00:19:41.216 --> 00:19:43.206 A:middle
+Well, when a ScrollView bounds
+
+00:19:43.206 --> 00:19:45.406 A:middle
+change, the origin can change
+
+00:19:45.406 --> 00:19:47.246 A:middle
+during a scrolling, and also the
+
+00:19:47.246 --> 00:19:48.546 A:middle
+size can change when the
+
+00:19:48.546 --> 00:19:50.366 A:middle
+application size changes or the
+
+00:19:50.366 --> 00:19:51.726 A:middle
+CollectionView size changes.
+
+00:19:51.726 --> 00:19:53.256 A:middle
+So this is going to be called
+
+00:19:53.256 --> 00:19:53.996 A:middle
+during scrolling.
+
+00:19:55.116 --> 00:19:56.996 A:middle
+Hence the oh yeah emoji.
+
+00:19:56.996 --> 00:19:58.196 A:middle
+This is called very often.
+
+00:19:58.196 --> 00:20:00.126 A:middle
+So making the right decision
+
+00:19:58.196 --> 00:20:00.126 A:middle
+So making the right decision
+
+00:20:00.126 --> 00:20:00.906 A:middle
+here is important.
+
+00:20:01.466 --> 00:20:03.176 A:middle
+Okay, so the default
+
+00:20:03.176 --> 00:20:04.296 A:middle
+implementation in
+
+00:20:04.296 --> 00:20:06.626 A:middle
+UICollectionViewLayout returns
+
+00:20:06.626 --> 00:20:07.056 A:middle
+false.
+
+00:20:07.746 --> 00:20:08.666 A:middle
+So if you need this to do
+
+00:20:08.666 --> 00:20:10.456 A:middle
+something different, here's your
+
+00:20:10.456 --> 00:20:10.906 A:middle
+chance.
+
+00:20:11.906 --> 00:20:13.576 A:middle
+And as a way of an example,
+
+00:20:13.906 --> 00:20:16.106 A:middle
+UICollectionViewLayout will
+
+00:20:16.106 --> 00:20:18.166 A:middle
+return false if the origin
+
+00:20:18.166 --> 00:20:18.876 A:middle
+changes.
+
+00:20:18.876 --> 00:20:19.706 A:middle
+Okay, so if the user is just
+
+00:20:19.706 --> 00:20:20.636 A:middle
+scrolling through your content,
+
+00:20:20.636 --> 00:20:21.606 A:middle
+we won't invalidate.
+
+00:20:21.606 --> 00:20:22.726 A:middle
+Let it by default.
+
+00:20:23.366 --> 00:20:25.446 A:middle
+But if the iPad rotates, the
+
+00:20:25.446 --> 00:20:26.856 A:middle
+phone rotates, and your app
+
+00:20:26.856 --> 00:20:28.136 A:middle
+changes to a different size,
+
+00:20:28.436 --> 00:20:29.316 A:middle
+it'll return true.
+
+00:20:30.566 --> 00:20:32.596 A:middle
+Now a slight exception to this
+
+00:20:32.596 --> 00:20:33.786 A:middle
+is things like floating headers
+
+00:20:33.786 --> 00:20:34.346 A:middle
+and footers, right.
+
+00:20:34.346 --> 00:20:35.606 A:middle
+We have to recompute those while
+
+00:20:35.606 --> 00:20:37.056 A:middle
+you're scrolling your content.
+
+00:20:37.376 --> 00:20:39.146 A:middle
+That'll do a custom invalidation
+
+00:20:39.146 --> 00:20:40.196 A:middle
+to take care of those things.
+
+00:20:40.826 --> 00:20:41.846 A:middle
+Okay. So enough theory.
+
+00:20:42.536 --> 00:20:44.936 A:middle
+Let's switch back to our
+
+00:20:44.936 --> 00:20:47.116 A:middle
+development machine and have
+
+00:20:47.116 --> 00:20:48.616 A:middle
+Mohammed walk us through what
+
+00:20:48.616 --> 00:20:49.376 A:middle
+this is going to look like in
+
+00:20:49.406 --> 00:20:51.316 A:middle
+code building this fancy custom,
+
+00:20:51.316 --> 00:20:52.206 A:middle
+UICollectionViewLayout.
+
+00:20:53.916 --> 00:20:55.486 A:middle
+&gt;&gt; All right, let's dive right
+
+00:20:55.486 --> 00:20:55.746 A:middle
+in.
+
+00:20:56.136 --> 00:20:57.886 A:middle
+So I've already put together
+
+00:20:58.156 --> 00:21:00.506 A:middle
+another layout subclass that
+
+00:20:58.156 --> 00:21:00.506 A:middle
+another layout subclass that
+
+00:21:00.506 --> 00:21:01.416 A:middle
+we're going to use for this
+
+00:21:01.416 --> 00:21:03.336 A:middle
+layout, and you might notice
+
+00:21:03.336 --> 00:21:04.426 A:middle
+that it's a subclass of
+
+00:21:04.426 --> 00:21:06.276 A:middle
+UICollectionViewLayout directly,
+
+00:21:06.276 --> 00:21:07.736 A:middle
+not a subclass of
+
+00:21:07.736 --> 00:21:09.906 A:middle
+CollectionViewLayout, and this
+
+00:21:09.906 --> 00:21:11.596 A:middle
+is for the reasons that Steve
+
+00:21:11.636 --> 00:21:13.786 A:middle
+explained to us earlier are
+
+00:21:14.146 --> 00:21:16.006 A:middle
+UICollectionViewLayout doesn't
+
+00:21:16.006 --> 00:21:17.356 A:middle
+really meet the needs of our
+
+00:21:17.356 --> 00:21:19.446 A:middle
+custom mosaic design.
+
+00:21:20.906 --> 00:21:22.076 A:middle
+So the first thing I'm doing
+
+00:21:22.076 --> 00:21:23.626 A:middle
+here is I'm setting up a couple
+
+00:21:23.626 --> 00:21:25.246 A:middle
+of instance variables that I'm
+
+00:21:25.246 --> 00:21:26.646 A:middle
+going to use to hold onto some
+
+00:21:26.646 --> 00:21:28.176 A:middle
+key pieces of information that I
+
+00:21:28.176 --> 00:21:29.366 A:middle
+can refer to later.
+
+00:21:30.706 --> 00:21:32.946 A:middle
+The first of these is a content
+
+00:21:32.946 --> 00:21:34.816 A:middle
+bound CG rect, which I'm going
+
+00:21:34.816 --> 00:21:37.476 A:middle
+to use to keep a representative
+
+00:21:37.516 --> 00:21:39.396 A:middle
+bounds of all the items within
+
+00:21:39.396 --> 00:21:40.226 A:middle
+my CollectionView.
+
+00:21:40.776 --> 00:21:43.366 A:middle
+And the second is a cached
+
+00:21:43.366 --> 00:21:44.636 A:middle
+attributes array, which I'm
+
+00:21:44.636 --> 00:21:46.106 A:middle
+going to use to hold onto my
+
+00:21:46.516 --> 00:21:48.336 A:middle
+layout attributes so I can refer
+
+00:21:48.336 --> 00:21:49.606 A:middle
+to them quickly when performance
+
+00:21:49.606 --> 00:21:50.086 A:middle
+matters.
+
+00:21:51.496 --> 00:21:52.916 A:middle
+So we're going to start out by
+
+00:21:52.916 --> 00:21:54.396 A:middle
+implementing our prepare method
+
+00:21:54.396 --> 00:21:55.836 A:middle
+again for this layout.
+
+00:21:56.846 --> 00:21:59.776 A:middle
+Prepare is the ideal place to do
+
+00:21:59.776 --> 00:22:01.116 A:middle
+the bulk of our layout work
+
+00:21:59.776 --> 00:22:01.116 A:middle
+the bulk of our layout work
+
+00:22:01.326 --> 00:22:03.086 A:middle
+because it's getting called once
+
+00:22:03.146 --> 00:22:04.086 A:middle
+per invalidation.
+
+00:22:04.686 --> 00:22:06.616 A:middle
+We can set up our layout here
+
+00:22:06.756 --> 00:22:08.696 A:middle
+and then avoid having to do any
+
+00:22:08.696 --> 00:22:10.626 A:middle
+heavy layout work or any heavy
+
+00:22:10.626 --> 00:22:12.776 A:middle
+layout math in the methods that
+
+00:22:12.776 --> 00:22:13.976 A:middle
+are called much more frequently.
+
+00:22:18.486 --> 00:22:19.226 A:middle
+So we're doing a couple of
+
+00:22:19.226 --> 00:22:19.696 A:middle
+things here.
+
+00:22:19.956 --> 00:22:21.836 A:middle
+First, we're resetting our
+
+00:22:21.836 --> 00:22:23.086 A:middle
+cached attributes and our
+
+00:22:23.086 --> 00:22:24.816 A:middle
+content bounds just to clear out
+
+00:22:24.816 --> 00:22:26.956 A:middle
+any stale information from
+
+00:22:26.956 --> 00:22:28.276 A:middle
+previous invalidations.
+
+00:22:29.576 --> 00:22:32.196 A:middle
+Next, we're doing a few things
+
+00:22:32.196 --> 00:22:33.426 A:middle
+for every item in our
+
+00:22:33.426 --> 00:22:34.056 A:middle
+CollectionView.
+
+00:22:35.346 --> 00:22:36.736 A:middle
+The first of these is actually
+
+00:22:36.786 --> 00:22:38.536 A:middle
+preparing the attributes, and
+
+00:22:38.536 --> 00:22:39.626 A:middle
+now I'm not going to go too
+
+00:22:39.626 --> 00:22:41.506 A:middle
+deeply into what that entails
+
+00:22:41.506 --> 00:22:42.836 A:middle
+for our specific layout because
+
+00:22:42.836 --> 00:22:43.676 A:middle
+this is going to be different
+
+00:22:43.676 --> 00:22:44.076 A:middle
+for you.
+
+00:22:44.466 --> 00:22:46.376 A:middle
+This is where you are going to
+
+00:22:46.376 --> 00:22:47.606 A:middle
+calculate the sizes and
+
+00:22:47.606 --> 00:22:49.506 A:middle
+positions and transforms, etc.,
+
+00:22:49.506 --> 00:22:52.116 A:middle
+for your cells to match your
+
+00:22:52.116 --> 00:22:52.976 A:middle
+design needs.
+
+00:22:53.746 --> 00:22:54.886 A:middle
+But there are a couple of key
+
+00:22:54.886 --> 00:22:55.646 A:middle
+things that we're going to do
+
+00:22:55.646 --> 00:22:57.076 A:middle
+here after we are done with the
+
+00:22:57.076 --> 00:22:57.706 A:middle
+attributes.
+
+00:22:58.176 --> 00:22:59.266 A:middle
+The first is, we're going to
+
+00:22:59.266 --> 00:22:59.676 A:middle
+cache them.
+
+00:22:59.786 --> 00:23:00.576 A:middle
+We're going to put them in our
+
+00:22:59.786 --> 00:23:00.576 A:middle
+We're going to put them in our
+
+00:23:00.576 --> 00:23:01.936 A:middle
+cached attributes array so we
+
+00:23:01.936 --> 00:23:03.536 A:middle
+can grab them quickly later on.
+
+00:23:04.086 --> 00:23:06.486 A:middle
+And the second is, we're going
+
+00:23:06.486 --> 00:23:08.406 A:middle
+to union their frame with our
+
+00:23:08.406 --> 00:23:10.426 A:middle
+content bounds rect so that our
+
+00:23:10.426 --> 00:23:11.726 A:middle
+content bounds are kept up to
+
+00:23:11.726 --> 00:23:11.996 A:middle
+date.
+
+00:23:13.896 --> 00:23:15.266 A:middle
+So now that our prepare is up
+
+00:23:15.266 --> 00:23:16.366 A:middle
+and running, we need to
+
+00:23:16.366 --> 00:23:18.546 A:middle
+implement the remaining methods
+
+00:23:18.546 --> 00:23:20.206 A:middle
+in our layout that we need to
+
+00:23:20.406 --> 00:23:21.536 A:middle
+get everything working.
+
+00:23:22.416 --> 00:23:25.686 A:middle
+So the first of these is
+
+00:23:25.686 --> 00:23:27.186 A:middle
+CollectionView Content Size
+
+00:23:27.596 --> 00:23:29.036 A:middle
+where if we had done our job
+
+00:23:29.036 --> 00:23:30.986 A:middle
+right in Prepare, we can just
+
+00:23:30.986 --> 00:23:32.466 A:middle
+return our Content Bounds as
+
+00:23:32.466 --> 00:23:33.006 A:middle
+size.
+
+00:23:35.556 --> 00:23:37.286 A:middle
+Next is should invalidate layout
+
+00:23:37.286 --> 00:23:38.306 A:middle
+for bounds change.
+
+00:23:39.576 --> 00:23:40.876 A:middle
+Now since our layout doesn't
+
+00:23:40.876 --> 00:23:43.036 A:middle
+have any elements that require
+
+00:23:43.036 --> 00:23:44.946 A:middle
+us to invalidate while we're
+
+00:23:44.946 --> 00:23:47.486 A:middle
+scrolling, so no floating
+
+00:23:47.486 --> 00:23:48.966 A:middle
+headers, no floating footers or
+
+00:23:48.966 --> 00:23:49.566 A:middle
+anything like that.
+
+00:23:50.106 --> 00:23:50.916 A:middle
+We only really want to
+
+00:23:50.916 --> 00:23:51.896 A:middle
+invalidate when our
+
+00:23:51.896 --> 00:23:53.706 A:middle
+CollectionView's bounds of size
+
+00:23:53.706 --> 00:23:54.276 A:middle
+changes.
+
+00:23:54.706 --> 00:23:56.276 A:middle
+So we'll just return true if our
+
+00:23:56.276 --> 00:23:58.076 A:middle
+new bounds of size is not equal
+
+00:23:58.076 --> 00:23:59.606 A:middle
+to our CollectionView's bounds
+
+00:23:59.606 --> 00:24:01.486 A:middle
+of size, our current bounds of
+
+00:23:59.606 --> 00:24:01.486 A:middle
+of size, our current bounds of
+
+00:24:01.486 --> 00:24:01.856 A:middle
+size.
+
+00:24:03.876 --> 00:24:05.366 A:middle
+After that, we'll implement
+
+00:24:05.366 --> 00:24:06.616 A:middle
+LayoutAttributesForItem
+
+00:24:06.616 --> 00:24:08.846 A:middle
+AtIndexPath where, again, since
+
+00:24:08.846 --> 00:24:09.886 A:middle
+we've prepared all the
+
+00:24:09.886 --> 00:24:10.906 A:middle
+attributes in our Prepare
+
+00:24:10.906 --> 00:24:12.846 A:middle
+method, we can just grab the
+
+00:24:12.846 --> 00:24:14.526 A:middle
+specific attributes that
+
+00:24:14.526 --> 00:24:15.616 A:middle
+correspond to the
+
+00:24:15.786 --> 00:24:17.626 A:middle
+RequestAtIndexPath from our
+
+00:24:17.626 --> 00:24:17.936 A:middle
+array.
+
+00:24:18.116 --> 00:24:20.756 A:middle
+And finally, we're going to
+
+00:24:20.756 --> 00:24:21.236 A:middle
+implement
+
+00:24:22.256 --> 00:24:23.786 A:middle
+LayoutAttributesForElements
+
+00:24:23.786 --> 00:24:24.166 A:middle
+InRect.
+
+00:24:25.316 --> 00:24:26.776 A:middle
+Now this method is called
+
+00:24:26.776 --> 00:24:27.656 A:middle
+periodically by the
+
+00:24:27.656 --> 00:24:29.096 A:middle
+CollectionView with different
+
+00:24:29.096 --> 00:24:31.676 A:middle
+query rects, which may be bigger
+
+00:24:31.676 --> 00:24:32.486 A:middle
+than our CollectionView.
+
+00:24:32.616 --> 00:24:34.136 A:middle
+Our CollectionView is just
+
+00:24:34.136 --> 00:24:36.566 A:middle
+asking for a set of attributes
+
+00:24:36.566 --> 00:24:37.926 A:middle
+that match a certain region.
+
+00:24:38.676 --> 00:24:41.746 A:middle
+It's our job to return an array
+
+00:24:41.896 --> 00:24:44.386 A:middle
+that contains all the attributes
+
+00:24:44.786 --> 00:24:46.266 A:middle
+that correspond to all the items
+
+00:24:46.306 --> 00:24:47.576 A:middle
+that are going to appear within
+
+00:24:47.576 --> 00:24:48.866 A:middle
+that rect in our CollectionView.
+
+00:24:50.296 --> 00:24:52.766 A:middle
+So we can answer that question
+
+00:24:52.846 --> 00:24:54.836 A:middle
+here simply by filtering our
+
+00:24:54.836 --> 00:24:57.616 A:middle
+cached attributes array on the
+
+00:24:57.616 --> 00:25:00.216 A:middle
+frame of the attributes.
+
+00:24:57.616 --> 00:25:00.216 A:middle
+frame of the attributes.
+
+00:25:00.216 --> 00:25:02.396 A:middle
+So if our attributes have a
+
+00:25:02.476 --> 00:25:04.466 A:middle
+frame that intersects our query
+
+00:25:04.466 --> 00:25:06.566 A:middle
+rect, we can return them.
+
+00:25:06.566 --> 00:25:08.826 A:middle
+Okay. So let's switch back to
+
+00:25:08.826 --> 00:25:11.206 A:middle
+the sim and see what our layout
+
+00:25:11.206 --> 00:25:11.786 A:middle
+looks like.
+
+00:25:12.626 --> 00:25:14.106 A:middle
+So I'm going to select one of
+
+00:25:14.106 --> 00:25:15.806 A:middle
+these feeds, and there you go.
+
+00:25:15.806 --> 00:25:17.586 A:middle
+We have our layout.
+
+00:25:17.586 --> 00:25:19.086 A:middle
+Our images are nicely loaded in
+
+00:25:19.086 --> 00:25:21.146 A:middle
+this fancy mosaic configuration,
+
+00:25:21.146 --> 00:25:23.706 A:middle
+and if we rotate to landscape,
+
+00:25:23.706 --> 00:25:25.246 A:middle
+you can see that our cells have
+
+00:25:25.246 --> 00:25:26.996 A:middle
+resized so we've updated
+
+00:25:26.996 --> 00:25:28.036 A:middle
+everything correctly, we've
+
+00:25:28.036 --> 00:25:29.466 A:middle
+invalidated, which is great.
+
+00:25:32.286 --> 00:25:36.876 A:middle
+So this looks like our spec, but
+
+00:25:36.876 --> 00:25:38.516 A:middle
+that scrolling performance isn't
+
+00:25:38.516 --> 00:25:39.306 A:middle
+great, is it?
+
+00:25:39.436 --> 00:25:39.636 A:middle
+&gt;&gt; No.
+
+00:25:39.636 --> 00:25:40.786 A:middle
+&gt;&gt; No, it's pretty bad, huh.
+
+00:25:41.826 --> 00:25:43.116 A:middle
+So you might already have an
+
+00:25:43.116 --> 00:25:44.286 A:middle
+idea of what's going on here.
+
+00:25:44.386 --> 00:25:45.536 A:middle
+Let's switch back to the code
+
+00:25:45.536 --> 00:25:47.946 A:middle
+and see what might be happening.
+
+00:25:49.176 --> 00:25:50.386 A:middle
+So if we take a look at our
+
+00:25:50.386 --> 00:25:51.666 A:middle
+layout attributes or elements in
+
+00:25:51.666 --> 00:25:54.386 A:middle
+rect here, remember that this
+
+00:25:54.386 --> 00:25:55.946 A:middle
+method gets called frequently
+
+00:25:55.946 --> 00:25:56.836 A:middle
+during scrolling.
+
+00:25:58.616 --> 00:26:01.376 A:middle
+So this function here, which is
+
+00:25:58.616 --> 00:26:01.376 A:middle
+So this function here, which is
+
+00:26:01.376 --> 00:26:03.656 A:middle
+filtering our entire array, you
+
+00:26:03.656 --> 00:26:05.036 A:middle
+might imagine can get really
+
+00:26:05.036 --> 00:26:06.666 A:middle
+expensive as the number of items
+
+00:26:06.666 --> 00:26:08.096 A:middle
+in our CollectionView increases.
+
+00:26:08.416 --> 00:26:09.476 A:middle
+So the more photos we have in
+
+00:26:09.476 --> 00:26:11.106 A:middle
+our app, the slower our
+
+00:26:11.106 --> 00:26:12.316 A:middle
+scrolling performance is going
+
+00:26:12.316 --> 00:26:13.096 A:middle
+to be.
+
+00:26:14.296 --> 00:26:15.506 A:middle
+So if you find yourself in a
+
+00:26:15.506 --> 00:26:17.146 A:middle
+situation like this, it helps to
+
+00:26:17.146 --> 00:26:18.766 A:middle
+step back and think about the
+
+00:26:18.766 --> 00:26:20.776 A:middle
+nature of your layout and think
+
+00:26:20.776 --> 00:26:21.976 A:middle
+about whether you can find any
+
+00:26:21.976 --> 00:26:23.466 A:middle
+optimization opportunities.
+
+00:26:24.296 --> 00:26:28.476 A:middle
+So our layout kind of demands
+
+00:26:28.476 --> 00:26:31.226 A:middle
+that every cell apps next to or
+
+00:26:31.226 --> 00:26:32.856 A:middle
+below it's preceding cell.
+
+00:26:33.536 --> 00:26:34.976 A:middle
+So this means that our
+
+00:26:34.976 --> 00:26:37.926 A:middle
+attributes are already sorted
+
+00:26:37.926 --> 00:26:39.126 A:middle
+within our cached attributes
+
+00:26:39.126 --> 00:26:41.376 A:middle
+array by their frame's minimum y
+
+00:26:41.376 --> 00:26:41.736 A:middle
+value.
+
+00:26:43.456 --> 00:26:45.736 A:middle
+So we have a sorted array, so we
+
+00:26:45.736 --> 00:26:48.006 A:middle
+can speed up our search by doing
+
+00:26:48.006 --> 00:26:49.206 A:middle
+something like a binary search
+
+00:26:49.206 --> 00:26:51.826 A:middle
+as opposed to our linear filter
+
+00:26:51.826 --> 00:26:52.506 A:middle
+that we're doing now.
+
+00:26:53.386 --> 00:26:57.786 A:middle
+So let's remove our slow
+
+00:26:57.786 --> 00:27:00.216 A:middle
+implementation here, and let's
+
+00:26:57.786 --> 00:27:00.216 A:middle
+implementation here, and let's
+
+00:27:00.216 --> 00:27:01.026 A:middle
+replace it with something that
+
+00:27:01.026 --> 00:27:01.936 A:middle
+should be much faster.
+
+00:27:03.856 --> 00:27:06.196 A:middle
+So I'm going to step through
+
+00:27:06.196 --> 00:27:07.226 A:middle
+this bit by bit, don't worry.
+
+00:27:08.216 --> 00:27:10.066 A:middle
+So the first thing we're doing
+
+00:27:10.066 --> 00:27:12.606 A:middle
+here is we're calling into
+
+00:27:13.476 --> 00:27:15.136 A:middle
+binary search function that
+
+00:27:15.316 --> 00:27:16.656 A:middle
+we've already prepared, which
+
+00:27:16.656 --> 00:27:17.986 A:middle
+takes in a range of indices
+
+00:27:17.986 --> 00:27:20.526 A:middle
+within our array and our query
+
+00:27:20.526 --> 00:27:20.806 A:middle
+rect.
+
+00:27:22.276 --> 00:27:25.956 A:middle
+If it finds a set of attributes
+
+00:27:25.956 --> 00:27:27.086 A:middle
+with a frame that sits within
+
+00:27:27.086 --> 00:27:28.706 A:middle
+our rect, it'll return the
+
+00:27:28.706 --> 00:27:30.586 A:middle
+attributes as index within our
+
+00:27:30.586 --> 00:27:30.806 A:middle
+array.
+
+00:27:32.716 --> 00:27:34.616 A:middle
+Then starting from that index,
+
+00:27:34.616 --> 00:27:36.856 A:middle
+we can build up the set of the
+
+00:27:36.856 --> 00:27:39.016 A:middle
+rest of attributes for our query
+
+00:27:39.016 --> 00:27:41.736 A:middle
+rect simply by looping up and
+
+00:27:41.736 --> 00:27:43.736 A:middle
+down in our array and picking up
+
+00:27:43.736 --> 00:27:46.376 A:middle
+attributes until we exit our
+
+00:27:46.376 --> 00:27:47.506 A:middle
+query rect, until we find
+
+00:27:47.506 --> 00:27:49.016 A:middle
+attributes that are outside our
+
+00:27:49.016 --> 00:27:49.176 A:middle
+rect.
+
+00:27:49.886 --> 00:27:51.466 A:middle
+And this should be much faster.
+
+00:27:51.946 --> 00:27:53.056 A:middle
+You have thousands of items in
+
+00:27:53.056 --> 00:27:53.416 A:middle
+your array.
+
+00:27:53.416 --> 00:27:55.276 A:middle
+You're not going to loop through
+
+00:27:55.276 --> 00:27:56.566 A:middle
+the array thousands of items,
+
+00:27:56.566 --> 00:27:57.886 A:middle
+thousands of times.
+
+00:27:58.576 --> 00:28:00.626 A:middle
+Okay, so let's go back to the
+
+00:27:58.576 --> 00:28:00.626 A:middle
+Okay, so let's go back to the
+
+00:28:00.626 --> 00:28:02.436 A:middle
+sim again and let's see what our
+
+00:28:02.436 --> 00:28:03.946 A:middle
+faster scrolling algorithm looks
+
+00:28:03.946 --> 00:28:04.196 A:middle
+like.
+
+00:28:07.056 --> 00:28:09.306 A:middle
+Let's pop this open and give it
+
+00:28:09.306 --> 00:28:09.676 A:middle
+a flick.
+
+00:28:10.116 --> 00:28:11.096 A:middle
+It's way faster.
+
+00:28:11.816 --> 00:28:13.206 A:middle
+What do you think, Steve?
+
+00:28:13.826 --> 00:28:14.326 A:middle
+&gt;&gt; Much better.
+
+00:28:14.326 --> 00:28:14.906 A:middle
+Okay, great.
+
+00:28:14.906 --> 00:28:16.216 A:middle
+So we've got these two great
+
+00:28:16.216 --> 00:28:16.906 A:middle
+layouts.
+
+00:28:17.246 --> 00:28:17.936 A:middle
+What's next?
+
+00:28:18.776 --> 00:28:20.426 A:middle
+&gt;&gt; So we have our two screens.
+
+00:28:20.426 --> 00:28:22.756 A:middle
+That just leaves our update
+
+00:28:22.756 --> 00:28:24.366 A:middle
+animations for our friends list
+
+00:28:24.366 --> 00:28:24.516 A:middle
+here.
+
+00:28:24.936 --> 00:28:25.446 A:middle
+&gt;&gt; Oh, great.
+
+00:28:25.496 --> 00:28:25.706 A:middle
+All right.
+
+00:28:25.706 --> 00:28:26.676 A:middle
+Well let's switch back over to
+
+00:28:27.096 --> 00:28:28.836 A:middle
+slides, and let's walk through
+
+00:28:28.836 --> 00:28:30.786 A:middle
+that totally cool update
+
+00:28:30.786 --> 00:28:32.036 A:middle
+animation I think our designer
+
+00:28:32.036 --> 00:28:32.426 A:middle
+called it.
+
+00:28:33.266 --> 00:28:34.766 A:middle
+All right, so we've got a video
+
+00:28:34.766 --> 00:28:35.046 A:middle
+here.
+
+00:28:35.046 --> 00:28:36.446 A:middle
+Let's run through this and see
+
+00:28:36.946 --> 00:28:38.176 A:middle
+what this totally cool update
+
+00:28:38.176 --> 00:28:39.086 A:middle
+animation looks like.
+
+00:28:39.536 --> 00:28:41.656 A:middle
+Okay. So we have some elements
+
+00:28:41.656 --> 00:28:41.756 A:middle
+here.
+
+00:28:41.756 --> 00:28:44.186 A:middle
+We see that last item is getting
+
+00:28:44.186 --> 00:28:44.966 A:middle
+refreshed.
+
+00:28:44.966 --> 00:28:46.246 A:middle
+I guess somebody posted a
+
+00:28:46.246 --> 00:28:48.136 A:middle
+picture, and then we got another
+
+00:28:48.136 --> 00:28:49.656 A:middle
+item there, it looks like, yeah,
+
+00:28:49.656 --> 00:28:51.706 A:middle
+that third item smears is not
+
+00:28:51.706 --> 00:28:52.546 A:middle
+going to be here.
+
+00:28:52.686 --> 00:28:55.316 A:middle
+Okay. So we've got three basic
+
+00:28:55.316 --> 00:28:56.696 A:middle
+operations happening, right.
+
+00:28:56.696 --> 00:28:59.006 A:middle
+We've got a reload, a move, and
+
+00:28:59.006 --> 00:28:59.586 A:middle
+a delete.
+
+00:29:00.216 --> 00:29:01.386 A:middle
+Why don't we switch back over to
+
+00:29:01.386 --> 00:29:03.616 A:middle
+the dev machine, and Mohammed,
+
+00:29:03.776 --> 00:29:04.686 A:middle
+why don't you show us how this
+
+00:29:04.686 --> 00:29:04.996 A:middle
+works?
+
+00:29:06.096 --> 00:29:08.416 A:middle
+&gt;&gt; Sure thing.
+
+00:29:08.636 --> 00:29:11.226 A:middle
+Okay, so we're doing multiple
+
+00:29:11.226 --> 00:29:12.746 A:middle
+animated updates at the same
+
+00:29:12.746 --> 00:29:13.216 A:middle
+time.
+
+00:29:14.036 --> 00:29:15.606 A:middle
+So you might be aware of a great
+
+00:29:15.606 --> 00:29:17.206 A:middle
+tool that UICollectionView and
+
+00:29:17.206 --> 00:29:19.576 A:middle
+UITableView provide us, and it's
+
+00:29:19.576 --> 00:29:21.236 A:middle
+the Perform Batch Updates API,
+
+00:29:21.936 --> 00:29:24.266 A:middle
+which basically allows us to
+
+00:29:24.266 --> 00:29:26.636 A:middle
+pass the collection view a set
+
+00:29:26.636 --> 00:29:28.036 A:middle
+of updates that can be performed
+
+00:29:28.036 --> 00:29:29.736 A:middle
+at the same time with animation.
+
+00:29:30.606 --> 00:29:33.226 A:middle
+So I'm going to add a call to
+
+00:29:33.486 --> 00:29:34.126 A:middle
+CollectionView
+
+00:29:34.186 --> 00:29:36.426 A:middle
+PerformBatchUpdates, and note
+
+00:29:36.426 --> 00:29:37.646 A:middle
+that I'm doing both my data
+
+00:29:37.646 --> 00:29:38.896 A:middle
+source updates and my
+
+00:29:38.896 --> 00:29:40.126 A:middle
+CollectionView updates in the
+
+00:29:40.126 --> 00:29:40.856 A:middle
+closure here.
+
+00:29:41.256 --> 00:29:43.196 A:middle
+This is really the best way that
+
+00:29:43.196 --> 00:29:45.486 A:middle
+I have of coordinating my
+
+00:29:45.606 --> 00:29:47.576 A:middle
+updates and keeping things
+
+00:29:47.576 --> 00:29:48.806 A:middle
+neatly in sync and avoiding
+
+00:29:48.806 --> 00:29:49.676 A:middle
+inconsistencies.
+
+00:29:50.836 --> 00:29:53.356 A:middle
+So, first I'm just updating my
+
+00:29:53.356 --> 00:29:57.586 A:middle
+last item in my data source.
+
+00:29:57.666 --> 00:29:59.476 A:middle
+I'm removing the second to last
+
+00:29:59.476 --> 00:30:01.316 A:middle
+item, picking up the last item,
+
+00:29:59.476 --> 00:30:01.316 A:middle
+item, picking up the last item,
+
+00:30:01.316 --> 00:30:02.416 A:middle
+moving it to the top, and then
+
+00:30:02.416 --> 00:30:04.086 A:middle
+I'm asking the CollectionView to
+
+00:30:04.086 --> 00:30:05.736 A:middle
+perform the animations that I
+
+00:30:05.736 --> 00:30:05.926 A:middle
+want.
+
+00:30:06.766 --> 00:30:08.706 A:middle
+Okay. Let's go back to the sim
+
+00:30:08.706 --> 00:30:10.336 A:middle
+again and see what our update
+
+00:30:10.336 --> 00:30:10.846 A:middle
+looks like.
+
+00:30:10.846 --> 00:30:13.166 A:middle
+So I have wired our update code
+
+00:30:13.166 --> 00:30:14.426 A:middle
+through this update button at
+
+00:30:14.426 --> 00:30:17.856 A:middle
+the top right corner, and uh oh.
+
+00:30:18.056 --> 00:30:19.556 A:middle
+&gt;&gt; What's going on?
+
+00:30:20.876 --> 00:30:23.526 A:middle
+&gt;&gt; Oh, that's embarrassing.
+
+00:30:23.556 --> 00:30:25.456 A:middle
+What's going on here.
+
+00:30:25.456 --> 00:30:26.126 A:middle
+&gt;&gt; You know, I've been writing
+
+00:30:26.126 --> 00:30:27.026 A:middle
+iOS for a long time.
+
+00:30:27.026 --> 00:30:28.596 A:middle
+I've seen this movie before.
+
+00:30:29.076 --> 00:30:31.396 A:middle
+&gt;&gt; Yeah, it sucks when it
+
+00:30:31.596 --> 00:30:34.586 A:middle
+happens on stage though.
+
+00:30:34.586 --> 00:30:36.096 A:middle
+You know, we're running out of
+
+00:30:36.096 --> 00:30:37.756 A:middle
+time here, so why don't we just
+
+00:30:37.756 --> 00:30:39.256 A:middle
+call reload data, and we can
+
+00:30:39.636 --> 00:30:41.806 A:middle
+come back and do the animations
+
+00:30:41.806 --> 00:30:41.966 A:middle
+for V2.
+
+00:30:41.966 --> 00:30:42.396 A:middle
+&gt;&gt; Really?
+
+00:30:43.516 --> 00:30:47.816 A:middle
+[ Applause ]
+
+00:30:48.316 --> 00:30:50.756 A:middle
+You know, we could do that, but
+
+00:30:50.756 --> 00:30:51.846 A:middle
+then we'd lose that totally cool
+
+00:30:51.846 --> 00:30:53.426 A:middle
+update animation, and our users
+
+00:30:53.426 --> 00:30:55.036 A:middle
+expect these lively interfaces,
+
+00:30:56.016 --> 00:30:56.206 A:middle
+right?
+
+00:30:56.666 --> 00:30:57.766 A:middle
+&gt;&gt; Yeah, yeah, you're right.
+
+00:30:57.766 --> 00:30:58.286 A:middle
+You know what?
+
+00:30:58.286 --> 00:30:58.996 A:middle
+They deserve better.
+
+00:30:59.446 --> 00:31:00.526 A:middle
+&gt;&gt; Ah, I like the way you think.
+
+00:30:59.446 --> 00:31:00.526 A:middle
+&gt;&gt; Ah, I like the way you think.
+
+00:31:00.676 --> 00:31:01.426 A:middle
+All right, let's switch back
+
+00:31:01.426 --> 00:31:03.256 A:middle
+over to slides real quick, and
+
+00:31:03.256 --> 00:31:04.426 A:middle
+let's see if we can save our
+
+00:31:04.876 --> 00:31:06.736 A:middle
+totally cool update animation.
+
+00:31:07.846 --> 00:31:08.736 A:middle
+You've seen this before.
+
+00:31:08.876 --> 00:31:09.246 A:middle
+All right.
+
+00:31:09.246 --> 00:31:11.286 A:middle
+So first of all, let's dig into
+
+00:31:11.286 --> 00:31:12.596 A:middle
+this debug exception and see
+
+00:31:12.596 --> 00:31:14.446 A:middle
+what it's trying to tell us.
+
+00:31:14.446 --> 00:31:14.706 A:middle
+All right.
+
+00:31:15.566 --> 00:31:16.436 A:middle
+So it's saying here we're
+
+00:31:16.436 --> 00:31:18.276 A:middle
+attempting to perform a delete
+
+00:31:18.576 --> 00:31:20.716 A:middle
+and a move from the same index
+
+00:31:20.716 --> 00:31:21.766 A:middle
+path, 0-3.
+
+00:31:21.766 --> 00:31:22.756 A:middle
+So if I remember right, that was
+
+00:31:22.756 --> 00:31:23.656 A:middle
+the fourth item.
+
+00:31:23.656 --> 00:31:24.826 A:middle
+We did a reload and a move on
+
+00:31:24.826 --> 00:31:25.046 A:middle
+that.
+
+00:31:25.046 --> 00:31:27.806 A:middle
+We didn't delete it, we deleted
+
+00:31:27.806 --> 00:31:29.386 A:middle
+the third item, 0-2, right.
+
+00:31:30.186 --> 00:31:31.306 A:middle
+&gt;&gt; I don't remember deleting
+
+00:31:31.306 --> 00:31:31.396 A:middle
+them.
+
+00:31:31.396 --> 00:31:32.786 A:middle
+&gt;&gt; So, yeah, what's up with
+
+00:31:32.786 --> 00:31:33.026 A:middle
+that?
+
+00:31:33.026 --> 00:31:34.326 A:middle
+All right, but before we do
+
+00:31:34.326 --> 00:31:36.876 A:middle
+this, let's go back and take a
+
+00:31:36.876 --> 00:31:38.146 A:middle
+peek at the PerformBatchUpdates
+
+00:31:38.146 --> 00:31:39.826 A:middle
+API and talk about some
+
+00:31:40.126 --> 00:31:41.196 A:middle
+high-level principles.
+
+00:31:41.196 --> 00:31:41.456 A:middle
+All right.
+
+00:31:41.456 --> 00:31:43.496 A:middle
+So as Mohammed mentioned earlier
+
+00:31:43.496 --> 00:31:45.356 A:middle
+when he introduced this API, the
+
+00:31:45.356 --> 00:31:47.156 A:middle
+purpose of this API is that we
+
+00:31:47.156 --> 00:31:48.826 A:middle
+can commit multiple updates at
+
+00:31:48.826 --> 00:31:50.486 A:middle
+the same time and have anything
+
+00:31:50.486 --> 00:31:51.786 A:middle
+animate together and get that
+
+00:31:51.786 --> 00:31:53.526 A:middle
+great experience.
+
+00:31:54.296 --> 00:31:55.646 A:middle
+And as he also mentioned, it's
+
+00:31:55.646 --> 00:31:57.556 A:middle
+super important to perform your
+
+00:31:57.606 --> 00:31:59.516 A:middle
+data source updates alongside
+
+00:31:59.516 --> 00:32:00.466 A:middle
+your CollectionView updates
+
+00:31:59.516 --> 00:32:00.466 A:middle
+your CollectionView updates
+
+00:32:00.526 --> 00:32:01.606 A:middle
+inside that CollectionView
+
+00:32:01.606 --> 00:32:02.466 A:middle
+update closure.
+
+00:32:03.276 --> 00:32:04.566 A:middle
+Now, what I'm saying for
+
+00:32:04.566 --> 00:32:05.826 A:middle
+CollectionView also applies for
+
+00:32:05.826 --> 00:32:06.316 A:middle
+TableView.
+
+00:32:06.316 --> 00:32:07.386 A:middle
+So if you got TableViews in your
+
+00:32:07.386 --> 00:32:09.136 A:middle
+apps, all this information is
+
+00:32:09.136 --> 00:32:10.256 A:middle
+going the same direction.
+
+00:32:11.496 --> 00:32:12.916 A:middle
+Okay. So let's make some
+
+00:32:12.916 --> 00:32:13.856 A:middle
+observations here.
+
+00:32:14.406 --> 00:32:16.136 A:middle
+The CollectionView updates, when
+
+00:32:16.136 --> 00:32:16.976 A:middle
+you do inserts, moves, and
+
+00:32:16.976 --> 00:32:19.186 A:middle
+deletes, the ordering of those
+
+00:32:19.246 --> 00:32:20.586 A:middle
+do not matter in your update's
+
+00:32:20.586 --> 00:32:21.016 A:middle
+closure.
+
+00:32:21.736 --> 00:32:22.556 A:middle
+Put them anywhere you want.
+
+00:32:23.666 --> 00:32:25.046 A:middle
+Now however your data source
+
+00:32:25.046 --> 00:32:26.176 A:middle
+updates, when you're changing
+
+00:32:26.176 --> 00:32:27.176 A:middle
+the structure offer your data
+
+00:32:27.176 --> 00:32:28.636 A:middle
+source, which is backing that
+
+00:32:28.816 --> 00:32:31.306 A:middle
+data source, or does matter.
+
+00:32:32.456 --> 00:32:34.906 A:middle
+Okay, so this is best served by
+
+00:32:34.906 --> 00:32:36.146 A:middle
+showing an example, so I'm going
+
+00:32:36.146 --> 00:32:38.086 A:middle
+to take a example of two arrays
+
+00:32:38.086 --> 00:32:39.106 A:middle
+that have three elements in
+
+00:32:39.106 --> 00:32:40.566 A:middle
+them, and we're going to
+
+00:32:40.566 --> 00:32:41.946 A:middle
+strengthen our intuition on this
+
+00:32:41.946 --> 00:32:43.796 A:middle
+and show a delete and an insert,
+
+00:32:44.006 --> 00:32:45.406 A:middle
+but we're going to do the first
+
+00:32:45.406 --> 00:32:46.916 A:middle
+run through with the delete
+
+00:32:46.996 --> 00:32:48.416 A:middle
+first and the second delete
+
+00:32:48.416 --> 00:32:48.846 A:middle
+second.
+
+00:32:48.846 --> 00:32:49.666 A:middle
+We're going to reverse the
+
+00:32:49.666 --> 00:32:51.196 A:middle
+order, just to kind of
+
+00:32:51.196 --> 00:32:52.156 A:middle
+strengthen our intuition.
+
+00:32:52.266 --> 00:32:53.076 A:middle
+I do this all the time, draw
+
+00:32:53.076 --> 00:32:53.646 A:middle
+pictures, right.
+
+00:32:53.826 --> 00:32:54.786 A:middle
+All right.
+
+00:32:54.786 --> 00:32:56.056 A:middle
+So we deleted the first item,
+
+00:32:57.246 --> 00:32:59.216 A:middle
+and now we're going to insert at
+
+00:32:59.296 --> 00:33:00.346 A:middle
+index one.
+
+00:32:59.296 --> 00:33:00.346 A:middle
+index one.
+
+00:33:01.186 --> 00:33:02.526 A:middle
+Okay, on the second example, we
+
+00:33:02.526 --> 00:33:03.846 A:middle
+reverse the order and do the
+
+00:33:03.846 --> 00:33:05.246 A:middle
+insert first and then the
+
+00:33:05.246 --> 00:33:05.626 A:middle
+delete.
+
+00:33:06.526 --> 00:33:08.436 A:middle
+So our intuition holds, indeed
+
+00:33:08.436 --> 00:33:09.356 A:middle
+we get a different result.
+
+00:33:09.456 --> 00:33:10.426 A:middle
+This is probably not a good
+
+00:33:10.496 --> 00:33:10.936 A:middle
+thing, right.
+
+00:33:12.376 --> 00:33:14.776 A:middle
+So let's contrast this with the
+
+00:33:14.776 --> 00:33:15.986 A:middle
+CollectionView updates.
+
+00:33:16.126 --> 00:33:17.806 A:middle
+Now here I have two sets of
+
+00:33:17.806 --> 00:33:18.816 A:middle
+CollectionView updates on a
+
+00:33:18.816 --> 00:33:21.256 A:middle
+submit via batch updates, and
+
+00:33:21.256 --> 00:33:22.396 A:middle
+I've left out the data source
+
+00:33:22.396 --> 00:33:23.526 A:middle
+updates, just to keep the slide
+
+00:33:23.636 --> 00:33:23.926 A:middle
+tidy.
+
+00:33:24.996 --> 00:33:25.906 A:middle
+But I've got an insert and a
+
+00:33:25.906 --> 00:33:27.206 A:middle
+delete on the first one, and the
+
+00:33:27.206 --> 00:33:28.766 A:middle
+second one has a delete and a
+
+00:33:28.766 --> 00:33:30.026 A:middle
+insert, and the order is
+
+00:33:30.056 --> 00:33:30.406 A:middle
+different.
+
+00:33:30.406 --> 00:33:31.696 A:middle
+This will give you the exact
+
+00:33:31.696 --> 00:33:32.326 A:middle
+same result.
+
+00:33:33.426 --> 00:33:34.376 A:middle
+We're all engineers.
+
+00:33:34.376 --> 00:33:35.956 A:middle
+We want to know why, why is
+
+00:33:35.956 --> 00:33:36.286 A:middle
+that?
+
+00:33:36.286 --> 00:33:38.066 A:middle
+Well, let's talk about that.
+
+00:33:38.676 --> 00:33:39.796 A:middle
+How does this happen?
+
+00:33:39.796 --> 00:33:40.766 A:middle
+Why is the ordering not
+
+00:33:40.766 --> 00:33:42.166 A:middle
+important for the update sent to
+
+00:33:42.166 --> 00:33:43.106 A:middle
+the CollectionView, and of
+
+00:33:43.106 --> 00:33:44.096 A:middle
+course it is for your data
+
+00:33:44.096 --> 00:33:44.296 A:middle
+source.
+
+00:33:44.296 --> 00:33:46.446 A:middle
+Okay. So let's walk through
+
+00:33:46.446 --> 00:33:47.926 A:middle
+these operation by operation.
+
+00:33:47.926 --> 00:33:50.346 A:middle
+So the first one to delete, this
+
+00:33:50.346 --> 00:33:52.506 A:middle
+is process in descending index
+
+00:33:52.586 --> 00:33:53.196 A:middle
+path order.
+
+00:33:53.196 --> 00:33:55.146 A:middle
+Now let's talk about the index
+
+00:33:55.146 --> 00:33:55.536 A:middle
+paths.
+
+00:33:55.716 --> 00:33:57.576 A:middle
+So first of all, if you can
+
+00:33:57.576 --> 00:33:58.586 A:middle
+think about what's happening on
+
+00:33:58.586 --> 00:33:59.946 A:middle
+a PerformBatchUpdate, before the
+
+00:33:59.946 --> 00:34:01.206 A:middle
+batch update starts, your data
+
+00:33:59.946 --> 00:34:01.206 A:middle
+batch update starts, your data
+
+00:34:01.206 --> 00:34:02.786 A:middle
+source is in a before state.
+
+00:34:04.046 --> 00:34:05.466 A:middle
+Now once everything is done in
+
+00:34:05.466 --> 00:34:07.156 A:middle
+the batch updates, you'll be an
+
+00:34:07.276 --> 00:34:08.025 A:middle
+after state.
+
+00:34:08.606 --> 00:34:10.906 A:middle
+Okay. So for delete, the index
+
+00:34:10.966 --> 00:34:12.346 A:middle
+paths always referred to the
+
+00:34:12.346 --> 00:34:13.275 A:middle
+before stage.
+
+00:34:13.686 --> 00:34:15.326 A:middle
+So that's delete.
+
+00:34:15.326 --> 00:34:18.226 A:middle
+So insert is processed in
+
+00:34:18.335 --> 00:34:19.886 A:middle
+ascending index path order
+
+00:34:19.886 --> 00:34:20.255 A:middle
+paths.
+
+00:34:20.846 --> 00:34:23.346 A:middle
+So the index paths refer to in
+
+00:34:23.346 --> 00:34:25.376 A:middle
+the insert are always referring
+
+00:34:25.446 --> 00:34:27.116 A:middle
+to the final state or the after
+
+00:34:27.255 --> 00:34:28.206 A:middle
+updates stage.
+
+00:34:29.636 --> 00:34:30.946 A:middle
+Okay, a move is this mixture of
+
+00:34:30.946 --> 00:34:31.436 A:middle
+the two, right.
+
+00:34:31.436 --> 00:34:33.485 A:middle
+You have a from and a to index
+
+00:34:33.485 --> 00:34:35.235 A:middle
+path, and the from is in the
+
+00:34:35.235 --> 00:34:37.916 A:middle
+before state, right, and the to
+
+00:34:38.416 --> 00:34:39.366 A:middle
+is in the after state.
+
+00:34:39.806 --> 00:34:42.545 A:middle
+Reload. Now reload is a little
+
+00:34:42.545 --> 00:34:43.846 A:middle
+bit of a super command if you
+
+00:34:43.846 --> 00:34:44.186 A:middle
+will, right.
+
+00:34:44.186 --> 00:34:46.096 A:middle
+It actually decomposes down into
+
+00:34:46.096 --> 00:34:47.876 A:middle
+a delete and an insert.
+
+00:34:48.416 --> 00:34:51.266 A:middle
+And the index path specified in
+
+00:34:51.266 --> 00:34:54.045 A:middle
+a reload is speaking about the
+
+00:34:54.045 --> 00:34:55.016 A:middle
+before state.
+
+00:34:56.126 --> 00:34:57.776 A:middle
+Okay. So this insight now that
+
+00:34:57.776 --> 00:34:59.106 A:middle
+we understand what reload is
+
+00:34:59.106 --> 00:35:00.946 A:middle
+really doing can kind of tell us
+
+00:34:59.106 --> 00:35:00.946 A:middle
+really doing can kind of tell us
+
+00:35:00.946 --> 00:35:02.426 A:middle
+a little bit of what's going on
+
+00:35:02.756 --> 00:35:04.466 A:middle
+with our error in our app
+
+00:35:05.476 --> 00:35:06.516 A:middle
+because of the delete on the
+
+00:35:06.516 --> 00:35:07.696 A:middle
+reload on the last one is
+
+00:35:07.696 --> 00:35:09.026 A:middle
+conflicting internally with the
+
+00:35:09.026 --> 00:35:10.376 A:middle
+notion of moving that item,
+
+00:35:10.476 --> 00:35:10.796 A:middle
+okay.
+
+00:35:10.846 --> 00:35:12.006 A:middle
+So we can address this in a
+
+00:35:12.006 --> 00:35:14.396 A:middle
+minute when we get back to code.
+
+00:35:14.396 --> 00:35:15.906 A:middle
+Okay, so I'm not going to go
+
+00:35:15.906 --> 00:35:16.856 A:middle
+through these, but you can
+
+00:35:16.856 --> 00:35:17.866 A:middle
+reason about these later.
+
+00:35:17.866 --> 00:35:18.996 A:middle
+Just put it up here as reference
+
+00:35:18.996 --> 00:35:19.706 A:middle
+that these are the things
+
+00:35:19.706 --> 00:35:21.596 A:middle
+that'll cause CollectionView to
+
+00:35:21.596 --> 00:35:22.346 A:middle
+go bonkers.
+
+00:35:22.726 --> 00:35:23.576 A:middle
+Don't do it.
+
+00:35:23.716 --> 00:35:27.486 A:middle
+And how can we take all this
+
+00:35:27.486 --> 00:35:29.176 A:middle
+knowledge and simplify it,
+
+00:35:29.176 --> 00:35:30.746 A:middle
+distill it in such a way that we
+
+00:35:30.746 --> 00:35:32.456 A:middle
+can always apply our data source
+
+00:35:32.456 --> 00:35:34.016 A:middle
+updates from a given set of
+
+00:35:34.016 --> 00:35:35.026 A:middle
+CollectionView or TableView
+
+00:35:35.026 --> 00:35:36.366 A:middle
+updates and make sure everything
+
+00:35:36.366 --> 00:35:36.826 A:middle
+is in sync.
+
+00:35:37.056 --> 00:35:37.426 A:middle
+All right.
+
+00:35:37.496 --> 00:35:38.796 A:middle
+So these four basic rules.
+
+00:35:39.446 --> 00:35:40.176 A:middle
+So first of all you want to
+
+00:35:40.176 --> 00:35:41.466 A:middle
+decompose those moves and to
+
+00:35:41.466 --> 00:35:42.336 A:middle
+delete and inserts.
+
+00:35:42.556 --> 00:35:44.776 A:middle
+Easy. And then combine all your
+
+00:35:44.776 --> 00:35:45.796 A:middle
+deletes and inserts into two
+
+00:35:45.796 --> 00:35:48.536 A:middle
+separate lists, process the
+
+00:35:48.536 --> 00:35:50.546 A:middle
+deletes first in descending
+
+00:35:50.546 --> 00:35:52.396 A:middle
+order on the index paths, and
+
+00:35:52.396 --> 00:35:54.176 A:middle
+then finally apply those inserts
+
+00:35:54.246 --> 00:35:55.356 A:middle
+in the ascending index path
+
+00:35:55.356 --> 00:35:55.636 A:middle
+order.
+
+00:35:55.776 --> 00:35:59.586 A:middle
+Do this, and you're good to go.
+
+00:35:59.816 --> 00:36:00.826 A:middle
+What about reload data?
+
+00:35:59.816 --> 00:36:00.826 A:middle
+What about reload data?
+
+00:36:00.826 --> 00:36:02.466 A:middle
+And I know Mohammed said we
+
+00:36:02.466 --> 00:36:03.396 A:middle
+could just hit that and we're
+
+00:36:03.396 --> 00:36:04.676 A:middle
+done, and everybody laughed so
+
+00:36:04.676 --> 00:36:05.586 A:middle
+I'm pretty sure I yelled and
+
+00:36:05.586 --> 00:36:07.456 A:middle
+that's the case, but the thing
+
+00:36:07.456 --> 00:36:08.606 A:middle
+about reloaded data is you don't
+
+00:36:08.606 --> 00:36:09.926 A:middle
+get those great animations, and
+
+00:36:09.926 --> 00:36:11.236 A:middle
+this is really a sledge hammer
+
+00:36:11.236 --> 00:36:11.826 A:middle
+approach.
+
+00:36:12.516 --> 00:36:13.816 A:middle
+So, and we really prefer the
+
+00:36:13.816 --> 00:36:15.286 A:middle
+apps to be lively and animated
+
+00:36:15.286 --> 00:36:16.146 A:middle
+and feel great for our
+
+00:36:16.146 --> 00:36:16.686 A:middle
+customers.
+
+00:36:16.686 --> 00:36:19.036 A:middle
+So, and this is used in special
+
+00:36:19.036 --> 00:36:19.496 A:middle
+cases.
+
+00:36:20.356 --> 00:36:21.576 A:middle
+Okay, Mohammed, let's switch
+
+00:36:21.576 --> 00:36:23.416 A:middle
+back over real quick and see if
+
+00:36:23.416 --> 00:36:24.536 A:middle
+we can get this fixed in code
+
+00:36:24.536 --> 00:36:26.046 A:middle
+and save that totally cool
+
+00:36:26.566 --> 00:36:27.236 A:middle
+update animation.
+
+00:36:27.676 --> 00:36:28.546 A:middle
+&gt;&gt; All right, time to redeem
+
+00:36:28.546 --> 00:36:29.666 A:middle
+myself.
+
+00:36:29.666 --> 00:36:29.766 A:middle
+&gt;&gt; Yes.
+
+00:36:29.766 --> 00:36:32.066 A:middle
+&gt;&gt; So let's use the guidelines
+
+00:36:32.066 --> 00:36:33.446 A:middle
+that Steve just shared with us
+
+00:36:33.446 --> 00:36:34.966 A:middle
+to fix our update animation.
+
+00:36:35.156 --> 00:36:36.756 A:middle
+So let's remove our existing
+
+00:36:36.756 --> 00:36:37.556 A:middle
+implementation here.
+
+00:36:37.746 --> 00:36:40.456 A:middle
+And if you recall, our update
+
+00:36:40.456 --> 00:36:44.066 A:middle
+consisted of a reload, a delete
+
+00:36:44.066 --> 00:36:46.916 A:middle
+and a move, and our reload and
+
+00:36:46.916 --> 00:36:48.876 A:middle
+the move were at the same index
+
+00:36:48.876 --> 00:36:49.086 A:middle
+path.
+
+00:36:49.296 --> 00:36:50.386 A:middle
+They started at the same one.
+
+00:36:50.386 --> 00:36:51.286 A:middle
+So that's really where our
+
+00:36:51.286 --> 00:36:52.326 A:middle
+conflict is.
+
+00:36:52.796 --> 00:36:54.316 A:middle
+So we'll need to start out by
+
+00:36:54.436 --> 00:36:55.396 A:middle
+separating those two.
+
+00:36:55.956 --> 00:36:57.926 A:middle
+So let's take our reload out
+
+00:36:57.926 --> 00:36:59.706 A:middle
+into its own call to perform
+
+00:36:59.706 --> 00:37:03.546 A:middle
+batch updates, and here I'm just
+
+00:36:59.706 --> 00:37:03.546 A:middle
+batch updates, and here I'm just
+
+00:37:04.506 --> 00:37:06.176 A:middle
+updating my data source, again,
+
+00:37:06.496 --> 00:37:07.966 A:middle
+same as before, and calling
+
+00:37:08.156 --> 00:37:09.216 A:middle
+reload items on the
+
+00:37:09.216 --> 00:37:09.806 A:middle
+CollectionView.
+
+00:37:10.336 --> 00:37:12.496 A:middle
+I'm just performing it in a UI
+
+00:37:12.496 --> 00:37:14.156 A:middle
+view performed without animation
+
+00:37:14.686 --> 00:37:16.376 A:middle
+closure because if you look
+
+00:37:16.376 --> 00:37:18.336 A:middle
+closely at our spec, it's
+
+00:37:18.336 --> 00:37:19.716 A:middle
+actually nonanimated, that
+
+00:37:19.716 --> 00:37:20.436 A:middle
+initial reload.
+
+00:37:22.026 --> 00:37:24.236 A:middle
+Okay. So next up, we have to
+
+00:37:24.236 --> 00:37:25.266 A:middle
+take care of our remaining
+
+00:37:25.266 --> 00:37:27.496 A:middle
+updates, that delete and the
+
+00:37:29.616 --> 00:37:29.716 A:middle
+move.
+
+00:37:29.936 --> 00:37:31.866 A:middle
+And let's reason about them for
+
+00:37:31.866 --> 00:37:32.386 A:middle
+a second.
+
+00:37:32.386 --> 00:37:35.766 A:middle
+We have a delete at index two,
+
+00:37:35.766 --> 00:37:38.176 A:middle
+and then we're moving the item
+
+00:37:38.176 --> 00:37:40.376 A:middle
+at index three to index zero.
+
+00:37:41.386 --> 00:37:43.256 A:middle
+So if we break down our move
+
+00:37:43.256 --> 00:37:44.886 A:middle
+using the guidelines that we
+
+00:37:44.886 --> 00:37:47.146 A:middle
+just learned about, that becomes
+
+00:37:47.146 --> 00:37:50.046 A:middle
+a delete at index 2, a delete at
+
+00:37:50.046 --> 00:37:53.506 A:middle
+index 3, and an insertion of the
+
+00:37:53.506 --> 00:37:56.066 A:middle
+item from index 3 at index 0.
+
+00:37:57.496 --> 00:37:59.576 A:middle
+So now we have two sets of
+
+00:38:00.196 --> 00:38:00.836 A:middle
+operations.
+
+00:38:00.836 --> 00:38:01.926 A:middle
+We have deletions and
+
+00:38:01.926 --> 00:38:02.766 A:middle
+insertions.
+
+00:38:03.146 --> 00:38:04.826 A:middle
+We can process them accordingly.
+
+00:38:05.566 --> 00:38:07.246 A:middle
+First, we'll perform our
+
+00:38:07.246 --> 00:38:08.776 A:middle
+deletions in descending order.
+
+00:38:08.946 --> 00:38:11.516 A:middle
+So we'll do our deletion at
+
+00:38:11.656 --> 00:38:13.756 A:middle
+index 3 first, and will hold
+
+00:38:13.756 --> 00:38:15.546 A:middle
+onto the person from there so we
+
+00:38:15.546 --> 00:38:16.476 A:middle
+can insert them later on.
+
+00:38:17.376 --> 00:38:19.956 A:middle
+And then we'll delete the item
+
+00:38:19.956 --> 00:38:22.876 A:middle
+at index 2.
+
+00:38:23.126 --> 00:38:24.756 A:middle
+Then we'll need to process our
+
+00:38:24.756 --> 00:38:26.366 A:middle
+insertions in ascending order.
+
+00:38:26.526 --> 00:38:27.916 A:middle
+We just have one, so we can just
+
+00:38:27.916 --> 00:38:30.266 A:middle
+go ahead and insert it.
+
+00:38:30.266 --> 00:38:31.586 A:middle
+And finally, we'll ask the
+
+00:38:31.586 --> 00:38:34.296 A:middle
+CollectionView to perform the
+
+00:38:34.296 --> 00:38:35.446 A:middle
+animations that we want.
+
+00:38:35.816 --> 00:38:38.466 A:middle
+Now, note, I'm still calling
+
+00:38:38.466 --> 00:38:39.116 A:middle
+move here.
+
+00:38:39.116 --> 00:38:40.966 A:middle
+I didn't break it down into it's
+
+00:38:40.966 --> 00:38:42.726 A:middle
+component actions because we
+
+00:38:42.726 --> 00:38:43.836 A:middle
+still want the collection view
+
+00:38:44.046 --> 00:38:45.476 A:middle
+to play the right animations,
+
+00:38:45.476 --> 00:38:46.296 A:middle
+and if we've done the right
+
+00:38:46.386 --> 00:38:47.906 A:middle
+thing with our data source, the
+
+00:38:47.906 --> 00:38:49.086 A:middle
+CollectionView will do the right
+
+00:38:49.156 --> 00:38:50.616 A:middle
+think in terms of animations.
+
+00:38:51.376 --> 00:38:51.756 A:middle
+All right.
+
+00:38:51.846 --> 00:38:53.826 A:middle
+Let's go back to the simulator
+
+00:38:53.826 --> 00:38:56.826 A:middle
+and see what our update looks
+
+00:38:56.826 --> 00:38:58.066 A:middle
+like when it works.
+
+00:38:58.936 --> 00:38:59.966 A:middle
+All right.
+
+00:39:00.536 --> 00:39:01.146 A:middle
+Here goes nothing.
+
+00:39:01.986 --> 00:39:02.176 A:middle
+&gt;&gt; Wow.
+
+00:39:02.826 --> 00:39:02.976 A:middle
+&gt;&gt; Great!
+
+00:39:03.516 --> 00:39:07.716 A:middle
+[ Applause ]
+
+00:39:08.216 --> 00:39:09.296 A:middle
+I'm going to reload and take a
+
+00:39:09.296 --> 00:39:11.126 A:middle
+slow-mo victory lap just to--
+
+00:39:11.126 --> 00:39:13.696 A:middle
+there we go.
+
+00:39:13.946 --> 00:39:15.446 A:middle
+That looks exactly like our
+
+00:39:15.446 --> 00:39:16.356 A:middle
+spec, doesn't it.
+
+00:39:16.356 --> 00:39:17.956 A:middle
+&gt;&gt; That's great, awesome.
+
+00:39:17.986 --> 00:39:18.206 A:middle
+All right.
+
+00:39:18.906 --> 00:39:19.766 A:middle
+Well let's wrap it up.
+
+00:39:19.766 --> 00:39:21.496 A:middle
+We covered a ton of content.
+
+00:39:21.496 --> 00:39:22.236 A:middle
+Can you switch it back to
+
+00:39:22.236 --> 00:39:22.796 A:middle
+slides?
+
+00:39:23.906 --> 00:39:24.986 A:middle
+And I'd like to issue a bit of a
+
+00:39:24.986 --> 00:39:25.716 A:middle
+call to action.
+
+00:39:25.716 --> 00:39:28.576 A:middle
+So if you've been nervous or
+
+00:39:29.036 --> 00:39:30.636 A:middle
+anxiety building that custom
+
+00:39:30.636 --> 00:39:32.106 A:middle
+layout, take the stuff we just
+
+00:39:32.106 --> 00:39:33.586 A:middle
+applied today and go back and
+
+00:39:33.906 --> 00:39:35.196 A:middle
+dive in and create those custom
+
+00:39:35.196 --> 00:39:36.376 A:middle
+layouts and build really great
+
+00:39:36.806 --> 00:39:38.016 A:middle
+CollectionView solutions.
+
+00:39:38.016 --> 00:39:39.806 A:middle
+And if you got a lot of reload
+
+00:39:39.806 --> 00:39:41.016 A:middle
+data sprinkled all throughout
+
+00:39:41.016 --> 00:39:42.396 A:middle
+your apps and you're losing out
+
+00:39:42.396 --> 00:39:43.596 A:middle
+on these gray animations.
+
+00:39:44.016 --> 00:39:45.046 A:middle
+They'll inspect those things and
+
+00:39:45.046 --> 00:39:46.376 A:middle
+see maybe why you didn't
+
+00:39:46.376 --> 00:39:47.596 A:middle
+understand or something wasn't
+
+00:39:47.686 --> 00:39:48.966 A:middle
+quite jived about why it was
+
+00:39:48.966 --> 00:39:52.376 A:middle
+happening and fix those spots.
+
+00:39:52.546 --> 00:39:54.056 A:middle
+Okay, so more information, you
+
+00:39:54.056 --> 00:39:55.286 A:middle
+can see the link on the slide
+
+00:39:55.286 --> 00:39:55.536 A:middle
+here.
+
+00:39:56.266 --> 00:39:57.236 A:middle
+And we also have a
+
+00:39:57.236 --> 00:39:58.156 A:middle
+CollectionView lab tomorrow
+
+00:39:58.156 --> 00:39:59.346 A:middle
+morning at 9.
+
+00:39:59.346 --> 00:40:00.746 A:middle
+If you have any questions or
+
+00:39:59.346 --> 00:40:00.746 A:middle
+If you have any questions or
+
+00:40:00.746 --> 00:40:01.476 A:middle
+comments about your
+
+00:40:01.476 --> 00:40:02.706 A:middle
+CollectionViews, please swing on
+
+00:40:02.706 --> 00:40:03.316 A:middle
+by and chat.
+
+00:40:03.316 --> 00:40:04.896 A:middle
+Mohammed and I will both be
+
+00:40:04.896 --> 00:40:05.096 A:middle
+there.
+
+00:40:05.666 --> 00:40:07.376 A:middle
+And thanks very much for coming
+
+00:40:07.376 --> 00:40:08.386 A:middle
+out, and I hope you enjoy the
+
+00:40:08.386 --> 00:40:08.976 A:middle
+rest of your conference.
+
+00:40:09.516 --> 00:40:13.500 A:middle
+[ Applause ]

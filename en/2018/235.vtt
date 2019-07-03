@@ -1,375 +1,4285 @@
-  My name is David Duncan.
- I'll be joined on stage by my colleague Tyler Fox and Russell Ladd.
- And we're here to talk to you about building apps for every size and shape.
- So I don't know how many of you were here back when we released iOS2 on the original iPhone.
- But you had one screen size to work with then.
- But today, we've got iPhones.
- We've got iPads.
- Multiple sizes.
- We've got the iPhone 10, the brilliant new screen, and a new shape for you to build your apps to.
- For this talk we're going to be using our Bagel Times app as an example of a design that adapts beautifully to iPhone 10 and iPhone 8.
- And so these are the three things we're going to be talking to you about today.
- I'll be speaking about safe area and layout margins.
- How you can use them in your application to adapt to various screen sizes and shapes.
- Then Tyler will come up and talk to you about scroll views.
- How they interact with safe area, layout margins, and other UIKit technologies.
- And finally, Russell will get up and talk to you about using all UIKit tools to build adaptive applications.
- And so with that, let's get to talking about safe area and layout margins.
- So what is a safe area, and what does it look like on the devices that you've come to know and love? Well, on an iPhone 8 with a rectangular screen, the entire screen is a safe area.
- All of it's there, no overlaps on your content.
- On iPhone 10, there's a little extra space that's taken up on the top and bottom by the hardware that will be taken away from the safe area for your application.
- And in landscape, you've got something kind of similar where we've given you a symmetric layout with space on the bottom for the home indicator for you to lay your content in safely.
- But what other devices might have a safe area that's not the entire screen? Well, Apple TV actually might give you the situation because certain TVs will have a screen that actually extends past what's visible to the user.
- And those will represent their information based on something called overscan compensation.
- And that overscan will be represented as a safe area in any apps that you build for Apple TV.
- So now that we've seen a few examples of what the safe area looks like at the screen of a device, how does that get to your views? And how do you use that in your own applications to build adaptive applications? So let's just pick up an arbitrary view.
- Whole thing.
- There are four insets on the top, bottom, and left and right that represent areas that might have some kind of overlay or other thing that might occlude your content if you placed it there.
- You can access this on your UI views using the safe area insets property.
- A UI edge inset that has those four values.
- Now if you're doing layout with Auto Layout, you actually might want to just see the entire rec that's safe.
- And you can get that by looking at the safe area layout guide.
- Which is a UI layout guide that represents that information.
- It has layout anchors for you to do Auto Layout with.
- And a layout frame if you just want to see the actual rectangle.
- So now that we've seen how that's represented on our view, let's take a look at how it gets from one view to the next.
- So we'll just take away the text and add a subview.
- And this is going to cover most of the bottom edge of that view.
- Now, how does the safe area get calculated for this? Well, as we saw, that subview that we just added, it intrudes on the unsafe parts of the view on the left, right, and bottom of its superview.
- And so those are the values that you will see in the UI edge insets represented by the safe area insets property on that subview.
- And similarly, you'll see a safe area layout guide whose layout frame looks kind of like this.
- Now once you've seen this, and you've got a view, you might want to actually add additional insets for your UI.
- You might decide that you want to add controls through your view controllers that will then add to the safe area or subtract from the safe area for your subviews.
- So we'll go ahead and add another subview here.
- And along with that, it will have a view controller because a view controller is where we actually have the property that allows you to add additional insets.
- And that property is called additional safe area insets.
- We're going to go ahead and inherit the insets we got from our parent.
- Add those additional safe area insets to this view.
- And finally construct the final safe area that let-- , layout guide.
- What other things might you want to know about how safe area behaves in your application? Well, let's take a look at another example.
- Here we've got one view safely inside of the safe area of its parent.
- So that view safe area, of course, encapsulates the entire region of that view.
- And we'll move it closer to one edge and as you might expect, we're not going to gain a safe area because we haven't left the safe area of our parent yet.
- We'll move a little bit further out, and you'll see that the bottom inset on that safe area now grows a little bit.
- It takes up a part where it overlaps, where it extends outside of the safe area of its parent.
- And as we move closer to the edge there, it continues to extend.
- Now what might you expect to happen if we move this view further off the bottom edge of its parent? Well, how about that? The safe area did not grow any further as the view moved outside of its parent.
- No matter how far outside of the parent that view might go.
- And you might be asking yourself, "Why would that, why would we do that? What's the purpose here?" And the answer is animation.
- In this particular case, we're moving this subview out of its parent.
- We wouldn't want the content to stay inside of the safe area because then it wouldn't move with its own parent.
- And as an example, we can see this app.
- Where we're going to pull up a view on the bottom.
- If that view had been laid out against the safe area of the parent, or its parent, and that parent's safe area would extend the farther it grew off the bottom of the screen, then this area would have stayed on screen during the entire transition, which would have meant that you would have not seen the background come up with it.
- And so that's why the safe area never grows larger on any dimension than what its parent provides.
- So to summarize that safe area part, let's took a look at how you can interact with it.
- Again, we've already mentioned the safe area insets property and the safe area layout guide property.
- But if your view needs to react to when safe area insets change, then you can override the safe area insets did change method.
- Typical thing you might do is just call set needs layout.
- But if there's any additional logic you need to run, that's okay too.
- If your view controller needs to respond to its view safe area layout changing, then you can override view safe area insets did change on your view controller.
- And finally, if you're doing your interface in IB, you can use that safe area property that's shown in the view list to build your constraints against the safe area.
- And so a safe area is explained.
- Let's talk a little bit about layout margins.
- So layout margins are padding.
- They're a property that, in general, you have full control over and allows you to specify a space from the edges of the view.
- Just like with safe areas, they're represented by a UI edge insets property, this time called layout margins.
- Now last year, we also added directional layout margins.
- These differ from layout margins in that layout margins use a UI Edge Insets value while directional layout margins uses an NS directional edge insets.
- And the primary difference between those two structures is that directional insets use leading and trailing instead of left and right, which makes it really easy for you to create layout margins that adapt to RTL layouts.
- So you don't have to do the swapping between left and right when you use directional layout margins.
- Now, just as with safe area, we provide a margins guide as well called a layout margins guide that you can use with Auto Layout to layout content against that margin.
- And then we go ahead and put our content inside of that view.
- Now the next question you might be asking since we're talking about layout margins and safe areas together is how do the two interact? Well let's go ahead and bring those markers back.
- Oh yeah, I meant to talk about how you can change those [inaudible] layout.
- So with safe area, by default, we build the safe area, and then we build the layout margins with respect to the safe area.
- And we do this for the perfectly obvious answer that by default, you probably actually want this.
- You want your layout margins inside of the safe area because they represent additional padding against the layout that you want to do.
- But we thought to ourselves, "Hey, some people may not actually want this.
-" And so we made it very easy for you to flip this default.
- And so if you just change the insets layout margins from safe area property from true to false, then we'll go ahead and move layout margins back to the bounds of the view.
- As a [inaudible] instead of being encapsulated inside.
- So what else can you do with layout margins? Well, we already saw that by default, safe area margins propagate down the hierarchy.
- But with layout margins, they go by default.
- Because by default, your layout probably wants to be fairly independent with margins as opposed to safe area, which represents a concept that really is for the entire view hierarchy.
- But if you want to have propagation, you can flip this on view by view by changing preserve super view layout margins from false to true.
- And we'll go ahead and line up those margins that are smaller than the parents in order to make sure that everything lines up naturally between a child and its parent view.
- Now in years past, you've probably also tried to change layout margins of your view controller views.
- And if you look at what we do by default.
- That this margin that you'll see against that view.
- Now we additionally added a property last year called system minimum layout margins and these margins are the minimum margins that we've combined against any margins you provide now to create the final margin.
- So if you wanted to add to the top and bottom of this, you can do that without disturbing the left and right margins that UIKit provides.
- But again, you might want a little bit more control.
- And so there's another property called view respects system minimum layout margins.
- If you want your margins to be completely underneath your control, flip this to false, and we'll use your margins as you describe them, no questions asked.
- And so to wrap up with layout margins, the properties you have on UI View are the layout margins property, edge insets, left, right, top, bottom.
- Directional layout margins.
- Great for your RTL layouts.
- Top, bottom, leading, and trailing.
- The Layout Margins Guide that you can use with Auto Layout to do all this there.
- And finally, if you have logic for when the layout margins change in your view, you can override layout margins did change and do whatever logic you need to do there.
- In Interface Builder to create a constraint that ties against the margin, just check that constraints to margins box.
- And so with that, I'll bring up Tyler Fox to talk to you about scroll views.
-  Thanks, David.
- Good afternoon.
- And as David mentioned I'd like to talk a little bit about scroll views today.
- So scroll views are a really key part of the iOS experience.
- And they show up all across the system.
- You have them in table views, collection views, UI text view, and of course in all of the custom application in all of your apps.
- And so in our app, Bagel Times that we've been working really hard on as you can tell, this is our news article screen.
- And everything as you can see is sort of centered around a scroll view with the article.
- And this is we want to you know really showcase the high-quality content our writers are putting together.
- Like, you know, exploring the true inspiration for, you know, Apple Park.
- And we want to review some of the basics about how you can use scroll views in your apps to understand how they can help you adapt your content to devices of different shapes and sizes.
- So to do that, we're going to walk through an example here, and we'll start with a full-screen scroll view.
- And on the left I'm going to show you what things look like on more or less a real device.
- And on the right, we're going to look at kind of things behind the scenes.
- Understanding what's happening in a diagram.
- So everything that we talk about today is going to apply in-- we're going to talk about the y axis of everything vertically.
- But everything also applies equally to the x axis.
- And we're also going to use some simple values for illustration.
- So in this case we'll say that our scroll view has a height of 400 points.
- Now inside of your scroll view, you'll have some content.
- And you can think of the scroll view a lot like a metaphorical picture frame.
- The scroll view size represents kind of the fixed frame of the picture frame.
- And then inside of that, the picture is your content.
- And the content can kind of slide around as if it's on ball bearings.
- Now in this case, our content is vertically scrollable.
- And that happens because our content has a taller height via the content size than the scroll view's height.
- And here I've turned off clipping on this diagram on the right so we can kind of peek behind the scenes at what's going on.
- So scroll views use content offset as a way to represent the current scroll position of the scroll view.
- Right now, we're scrolled to the very top.
- So our content offset is at zero, meaning our top edge of the content is aligned with the top edge of the scroll view.
- Now, if we go ahead and scroll the scroll view down, that will slide our content up.
- So let's scroll to the bottom and watch that happens here.
- And as you can see, the content offset increases and goes all the way to 100 in our example when we reach the bottom.
- That's because the top edge of the sc-- the scroll view is now 100 points below the top edge of that content area.
- If we set a content offset of zero on the scroll view, that will put us all the way back up to the top.
- And we're back where we started.
- So that's pretty much just the basics of scrolling a simple scroll view around.
- Now let's talk about a very important concept about extending the scrollable area of the scroll view.
- And we do that through a property called content inset.
- So content inset is a mechanism for you to provide insets that you can specify from the edges of the scrollable area of the scroll view to the content inside.
- So adding content inset increases the scrollable area and makes the scroll view able to scroll to a larger area.
- So let's set a content inset on the top edge here and see what happens.
- So here we've set a content inset of 20.
- And as you can see, that extends that top edge of the scroll view so that the scrollable area is now larger.
- Now when our content offset is sitting at zero, our content is still aligned with the top of the scroll view.
- But the scroll view could actually scroll even farther towards the top now.
- So let's scroll around like we did before and watch how things have changed.
- We'll scroll to the bottom and just like before, we're still here at a content offset of 100.
- That's because we didn't change anything on the bottom edge.
- And we still have a bottom content inset of zero.
- But if we now go ahead and scroll back all the way to the very top, we end up with a content offset that actually goes negative.
- That's because we are now able to scroll beyond the top edge of our content.
- And so we can scroll as far as the negative content inset on the top edge.
- Now starting in iOS 7, this content inset technique became really important and that's because with iOS 7, translucent bars became really common across the system.
- And the idea was that you would display your content edge to edge.
- And it would underlap the bars so that you could get these nice colorful blurs with your content through the bars, right? Tool bars, navigation bars, and so forth.
- So because this was so common, we wanted a way to help automatically set the content inset on your scroll views to make this easier in your apps.
- And to do this, we had a property on UI View Controller.
- And this was called automatically adjust scroll view insets.
- And the intent, intent again was to automatically set the content inset on your scroll view whenever it had overlapping bars coming from a navigation bar or a tool bar.
- And that was whenever your scroll view was inside of a view controller.
- Which itself was contained inside of a navigation controller.
- Now this worked pretty well for some common cases.
- But if your app had a more custom or advanced usage of UI scroll view, sometimes having your code setting content inset and also UIKit setting that same content inset property could create some challenges.
- And so starting in iOS 11, we have a much more explicit and powerful way for you to get the same automatic behavior.
- And the mechanism for doing this is a new property on UI scroll view which we'll talk about now called adjusted content inset.
- So starting in iOS 11, we introduced a new property on UI scroll view.
- It's read only.
- It's adjust content inset.
- And this basically describes how the scroll view is actually going to behave.
- Well you're probably asking what's the difference between this adjusted content inset and the content inset that we just talked about? Great question.
- Here's how it breaks down.
- Adjusted content inset is equal to the content inset that your app provides plus any automatic insets coming from the system or UIKit.
- And so because we now separate these two, it's a lot easier to reason about what's happening.
- Of course you might be wondering where and when would I get a system inset on my scroll view.
- Well, one most common case will be safe area insets.
- Let's look at how this works.
- So we're back to our basic diagram here.
- But we're going to bring some safe area insets into the mix.
- So if we go ahead and start out right now we have no safe area insets on any edge.
- But we'll go ahead and add some safe area insets to the top edge of our scroll view.
- And what you'll see is that by default, the scroll view is automatically absorbing those safe area insets on its top edge into its adjusted content insets.
- And that's because our scroll view's vertically scrollable.
- And so what this does is this automatically increases the scrollable area and makes it so content can scroll out from underneath anything covering up the top edge like a bar or even the edge of the display.
- So take a look at an example here where we have the same scroll view on two different devices.
- iPhone 10 on the left, iPhone 8 on the right.
- And you can see this is a real example, the top safe area inset is larger on the iPhone 10 because of the larger status bar height and the sensor housing.
- And as a result, the scroll view has a larger top inset-- that's the gray region that's shaded at the top here.
- So this is one way that scroll view helps automatically adapt to any device that it's running on.
- Now let's go back to our diagram and talk about something else.
- When we have a scroll view like this where we have top safe area insets, let's go ahead and add a subview to our scroll view.
- And we'll put this right in the content area.
- And so right now this-- this subview is sitting fully inside of the safe area in the scroll view.
- But what if we start to scroll the scroll view down which will move that content up? Just like this so that part of that subview is now sitting outside of the scroll view safe area? Based on the safe area inset propagation that David just talked to you about, you might be thinking, okay, that means the subview is going to start seeing its own top edge safe area inset.
- That's actually not what happens.
- The reason why is because when a scroll view absorbs safe area insets into its adjusted content inset, it will no longer propagate those same insets down to its subviews on that same edge.
- This is really important.
- Scroll views use scrolling to move content around and move it out into the safe area.
- And if a scroll view were to also propagate safe area insets that it was using to extend its scrollable area, it would almost be like double accounting for those same insets in two different places.
- And so as a result, the subviews on the scrollable axis are kind of completely unaware that there are safe area insets on the edges that the scroll view is absorbing them into its adjusted content inset.
- So now that we understand how scroll views work together with safe areas, let's cover the options that we've exposed to let you control this behavior.
- The mechanism that you have to do this is a property on UI scroll view called content inset adjusted behavior.
- And it also is available on interface builder as you can see here.
- Now the default value for this is automatic.
- And most of the time, if not all the time, you're really going to want to leave this at its default value.
- But we want to walk through the options so that you understand what they do and know that they're available.
- And so you can make the right choice in your apps.
- So we'll start with the first one.
- The first one is the always behavior.
- This is pretty straightforward as you might expect.
- Scroll view is going to always incorporate any system inset like safe area insets into its adjusted content inset on any edge.
- And this works fine in our particular example here.
- We only have a top and bottom safe area inset on our scroll view.
- And so it will incorporate those and the content gets to move out from underneath the bars.
- We don't have any horizontal insets on the left or right.
- So no problems.
- But be careful with this one because if you have something like let's say a table view on the iPhone 10 in landscape, there are left and right safe area insets.
- Using this behavior the table view is going to incorporate those into its adjusted content inset, which increases the scrollable area, which is going to make a table view horizontally scrollable.
- You're not going to want that behavior.
- That's why we have the next behavior which is scrollable axes.
- For this one, the scroll view is going to independently consider things on the vertical axis and the horizontal axis.
- For each of those, if the content size exceeds the width or the height as appropriate, or if you set the always bounce horizontal or always bounce vertical properties to true, then the scroll view considers that axis scrollable.
- And it will go ahead and incorporate in the system inset into its adjusted content inset.
- So in this example right behind me we have a long article that's scrollable.
- And so we're getting those automatic insets incorporated.
- But what if we had a shorter article? Let's take a look.
- Okay.
- Here's a shorter article.
- What's going on here? Let's take a look under the nav bar and see what's going on.
- Ah.
- Looks like we've lost our system inset because it's not scrollable anymore.
- So our title's stuck all the way up underneath the status bar.
- So let's put back the nav bar and talk about how we fix this.
- Well, one way could be you could set always bounce vertical on this scroll view if that's the behavior you want.
- That will make the scroll view always vertically scrollable.
- Or we'll get to our next behavior, which is automatic.
- And so automatic works basically the same as scrollable axes, which we just talked about.
- But it has one additional behavior as part of it that is when the scroll view is inside of a navigation controller, the scroll view will go ahead and adjust its top and bottom content inset even if it's not vertically scrollable to account for top and bottom bars.
- So, even in this case where we have a very short article, it still means that we're getting the right insets.
- And this is generally the behavior you're going to want.
- And that's why we have it as the default.
- Just one quick heads up though.
- If you are setting the deprecated automatically adjust scroll view inset property to false, that will disable this behavior.
- And so it's going to behave basically like scrollable axes.
- Alright, that brings us to our last behavior.
- Never.
- Now with this one, as you expect, that means the scroll view is never going to adjust its content inset.
- However, that has some side effects.
- For one, that means that the scroll view will end up propagating safe area insets on all of its edges just like a regular view.
- And as we talked about before, that might end up giving you some behavior you don't really want.
- For example, if you recall your layout margins are relative to the safe area, which means your layout margins might end up increasing or changing as a result of this.
- This is also going to disable some very helpful automatic behaviors that scroll view provides like automatic scroll indicator insets.
- And so if you do a search online and you see a favorite, you know, question and answer website suggesting that you set your scroll view's content inset adjustment behavior to never, consider instead using additional safe area insets to increase the safe area insets.
- If your goal is to try to express to the system that you've added let's say a toolbar or some sort of other overlay.
- Or you could consider just modifying the content inset directly, the property that we talked about in the very beginning.
- That's for you to control.
- And you can use that to add or subtract from the effective adjusted content inset that the scroll view will see.
- So with that, I'd like to hand it over to Russell to tell you all about how to put this altogether.
-  Thanks, Tyler.
- Now we've introduced many adaptive APIs to help your apps over the years adapt to different environments.
- And safe area is really just the newest of these.
- So I'm going to review some of these concepts and also talk about how they work with safe area.
- So let's go to the first screen of our application.
- And we've got a pretty standard setup here with a tab bar controller, continuing navigation controller, containing our content view controller.
- Now note that the views of all three of these view controllers are full screen.
- This is what enables the tab bar to extend underneath the home indicator, the navigation bar to extend underneath the status bar, and the content to extend and scroll underneath all of it.
- But we need to prevent these elements from overlapping.
- So let's see how safe area allows these components to do that.
- So the safe area insets start by flowing through the tab bar controller, which only receives insets on the home indicator and status bar because that's all that it sees.
- Since the navigation controller is inside of that, it also receives a safe area inside in the bottom that accounts for the tab bar.
- And the content view controller inside of both received safe area insets that account for both bars.
- Now what does the story look like in landscape? Similar.
- There are safe area insets in the top and bottom.
- But there are also insets on the left and right that account for the size of the screen.
- And those are propagated all the way down from the screen through the view controller hierarchy.
- Now I want to stop here and use this example to make a point about how you should think about using safe area when you implement your own views.
- So this custom view shouldn't know that it's running on an iPhone 10.
- It shouldn't even know that it's contained inside of container view controllers.
- This is the idea of encapsulation.
- If your views only read the safe area insets that are provided to them on all four sides, and are able to adapt to different, to arbitrary safe area insets, that will ensure that your views will be able to, will be modular, can be moved throughout your application and run in different, different environments and still not be occluded.
- Now let's jump to an article and talk about hiding the status bar.
- So hiding the status bar is a technique that would reclaim 20 points of vertical screen real estate on rectangular screen phones.
- And we're just doing this by overriding preferred status bar hidden in our content view controller and we're turning true.
- And this preference is then propagating up through our contained view controller hierarchy and respected by the root-- the root of the system.
- Now unfortunately on iPhone 10, preferring the status bar hidden does not also hide the sensor housing.
- So we can't slide content underneath it.
- [Laughs] So UIKit will protect you and will not allow you to create this UI.
- Instead, the behavior of navigation controller on iPhone 10 is that it will always display the status bar when the navigation bar is visible.
- So if you want to hide the status bar and reclaim vertical real estate, our recommendation is to hide the navigation bar and status bar together.
- And, in general, when you want to go-- when you want to create an immersive experience, go immersive and just hide all of your overlays and controls together.
- Not only does this look good and help your users focus on their content, it's also a design technique that will adapt well to all of our devices.
- Now, speaking of immersive experiences.
- Let's switch to the iPad and talk about rendering text in a very wide environment.
- So here you can see we have text, and it's not extending all the way to the edges of our view.
- The problem with doing that, if we had rendered the text all the way to the edge, is that it can become difficult to read, for your eye to track from one line of text to the next at a given font size.
- And so the solution is to always render text inside of a readable width, a recommended readable width provided by the system based on the user's currently selected dynamic type font size.
- Dynamic type being another adaptive element of our iOS.
- Now you can get the readable width with this API on UIView called the readable content guide.
- So this is another layout guide just like the layout guide for margins and safe area.
- And it works just the same.
- And I mentioned that this readable width depends on the user's currently selected dynamic type size, which means if the user changes their dynamic type size in Control Center or the setting app, the readable width will get smaller or larger to compensate.
- Now let's switch to portrait and bring in our sidebar with our article list to make the context for our article display much narrower.
- So here the maximum recommended readable-- readable width is much wider than the space we have to display the article.
- And the thing to note is that the readable content guide will still not report the maximum readable width necessarily.
- It'll be clamped to the layout margins, which means you can be confident in laying out your views against the readable content guide.
- And not worry that they're going to spill outside your margins.
- Now let's see how this works on a context for a safe area exists.
- The readable content guide functions just like-- just like layout margins where its insets add to those provided by the safe area insets.
- Now normally at the regular-- the default dynamic type font size of the system, the readable width is going to be wider than the width of a device of an iPhone in any orientation which means it won't come into play.
- However, even iPhones, if the user selects a smaller dynamic type font size than the default, it can come into play, so it's still nice for your application to adopt.
- Now let's jump back out to our article list table view and see how readable width can work here.
- Now the thing to know about table views is that they use their layout margins, I'm talking about the margins, to layout a lot of their UI elements.
- So that means the separators, the system accessories as well as the labels in the system cell styles.
- And any views you lay out inside of your own custom table view cells, if you laid them out against the margins, will play along as well.
- So that means if you adjust the margins of a table view, you can move all of these elements together.
- So if you have a table view with a lot of multiline text in it, it makes sense that you would want to adjust the margins of the table view to bring all these elements into alignment and still respect the readable width.
- So to do this, table view provides an API.
- Called cell layout margins follow readable width.
- Now when it's false, table view will use its normal system margins.
- And if it's true, all the content will inset.
- Now, something to note is that the default value of this property has changed in iOS 12.
- It is now false by default.
- It was previously true.
- This shouldn't affect the behavior of your appl-- of your applications too much, especially on phones.
- Our general recommendation is to leave the default alone and set it to true when you know that you have a table view that's going to contain a lot of multiline text where it would make sense.
- And this property's also adjustable from Interface Builder with the follow readable width checkbox.
- Now keeping with table views but moving on from readable width, there is something else to know how they work with safe area, which is that the content views of your table view cells will not extend beyond the safe area.
- However, by default, the background and selected background views do-- of UI table view cell do extend beyond the safe area.
- So if you have some content you want to place in custom table view cells that you want to overflow outside the safe area and bleed to the edges of the screen, you can either place it in the background or selected background views if the semantics of those views make sense.
- Or there's a property on UI table view called insets content views to safe area, which by default is true, but you can change to false to get your content views to also extend to the edges.
- And this property is also configurable from Interface Builder.
- Now let's rotate back to portrait.
- And in the main screen of our application, we mentioned this sheet that slides up from the bottom before containing a picker view.
- Now the safe area of the screen here means that we have to adjust the layout of the picker view to be inside this safe area.
- And most of the system controls, like UI picker view and other controls, and probably controls of your own many views don't make sense to have to know anything about the safe area.
- Because it's not clear how they would respond or like re-lay out themselves internally.
- So we have a recommended technique for handling the layout of these kinds of views, which is to place them inside of the container view.
- And the responsibility of this container view is simply to position its safe area unaware content inside the safe area by analyzing the safe area insets.
- And it can also provide the background, which extends beyond the safe area and makes your control feel connected to the edge of the screen in this case.
- The-- another technique we want to talk about related to safe area and positioning elements close to the edge of the screen is when you have a control or button that on one device you may want to place directly against the safe area and on another device where the safe area insets are zero you may want some padding.
- And the reason for doing this in design is that the safe area insets can sometimes incorporate some implicit padding.
- So let me bring-- I want to provide you a single solution that will work for both of these situations.
- So let's bring in a diagram, and I'm going to give you two auto layout constraints that will produce this result in these two different situations.
- So the first constraint we need represents the padding that we would other-- we would normally add.
- So this is just a constant constraint from the bottom of the super view to the bottom of our control.
- But in this case, we're going to make it not required so that we can break it when the safe, when the safe area insets are non-zero.
- The second constraint is an inequality constraint from the bottom of our control to the bottom of the safe area.
- This ensures that our control is always inside the safe area.
- So if I change the safe area insets to make them non-zero, you can see that the inequality constraint ensures our content is not clipped while still maintaining some minimum padding.
- Now we've talked about many different adaptive APIs in this talk and in previous talks.
- Layout margins help keep lots of your elements aligned.
- Safe area insets protect your views from being clipped or occluded.
- Readable width keeps columns of text comfortable to-- comfortable to read.
- Size classes inform when you should make large structur-- structural changes to your applications.
- And these APIs we use to implement higher-level components in our frameworks.
- So scroll views, tab view-- table views, container view controllers.
- The other kinds of things we talked about today reuse these things to ensure that our high-level components can adapt to all of our devices in the simplest way possible.
- So the takeaway is for you to design your applications in terms of these adaptive primitives as well.
- The advantage is that-- instead of coding for a specific device.
- Your code will be simple, flexible, and it'll guarantee that your applications are as future-proof as possible for all of our different environments.
- For more information, these slides and recording will be available online.
- Thank you all for coming, and I really hope you've enjoyed the conference.
- 
+WEBVTT
+
+00:00:07.516 --> 00:00:16.500 A:middle
+[ Music ]
+
+00:00:22.046 --> 00:00:23.106 A:middle
+&gt;&gt; My name is David Duncan.
+
+00:00:23.506 --> 00:00:25.126 A:middle
+I'll be joined on stage by my
+
+00:00:25.126 --> 00:00:26.886 A:middle
+colleague Tyler Fox and Russell
+
+00:00:26.886 --> 00:00:27.266 A:middle
+Ladd.
+
+00:00:27.826 --> 00:00:29.136 A:middle
+And we're here to talk to you
+
+00:00:29.666 --> 00:00:31.586 A:middle
+about building apps for every
+
+00:00:31.656 --> 00:00:32.586 A:middle
+size and shape.
+
+00:00:33.116 --> 00:00:36.826 A:middle
+So I don't know how many of you
+
+00:00:36.886 --> 00:00:38.186 A:middle
+were here back when we released
+
+00:00:38.186 --> 00:00:39.826 A:middle
+iOS2 on the original iPhone.
+
+00:00:40.306 --> 00:00:41.776 A:middle
+But you had one screen size to
+
+00:00:41.776 --> 00:00:42.446 A:middle
+work with then.
+
+00:00:43.396 --> 00:00:46.446 A:middle
+But today, we've got iPhones.
+
+00:00:46.536 --> 00:00:47.436 A:middle
+We've got iPads.
+
+00:00:47.986 --> 00:00:49.006 A:middle
+Multiple sizes.
+
+00:00:49.526 --> 00:00:51.066 A:middle
+We've got the iPhone 10, the
+
+00:00:51.066 --> 00:00:52.776 A:middle
+brilliant new screen, and a new
+
+00:00:52.776 --> 00:00:54.166 A:middle
+shape for you to build your apps
+
+00:00:54.216 --> 00:00:54.366 A:middle
+to.
+
+00:00:54.876 --> 00:00:57.256 A:middle
+For this talk we're going to be
+
+00:00:57.256 --> 00:00:59.076 A:middle
+using our Bagel Times app as an
+
+00:00:59.076 --> 00:01:01.196 A:middle
+example of a design that adapts
+
+00:00:59.076 --> 00:01:01.196 A:middle
+example of a design that adapts
+
+00:01:01.316 --> 00:01:03.886 A:middle
+beautifully to iPhone 10 and
+
+00:01:03.886 --> 00:01:04.495 A:middle
+iPhone 8.
+
+00:01:06.236 --> 00:01:08.266 A:middle
+And so these are the three
+
+00:01:08.266 --> 00:01:09.396 A:middle
+things we're going to be talking
+
+00:01:09.396 --> 00:01:10.216 A:middle
+to you about today.
+
+00:01:11.186 --> 00:01:12.726 A:middle
+I'll be speaking about safe area
+
+00:01:12.726 --> 00:01:13.716 A:middle
+and layout margins.
+
+00:01:13.876 --> 00:01:14.906 A:middle
+How you can use them in your
+
+00:01:14.906 --> 00:01:16.756 A:middle
+application to adapt to various
+
+00:01:16.756 --> 00:01:17.916 A:middle
+screen sizes and shapes.
+
+00:01:19.116 --> 00:01:21.546 A:middle
+Then Tyler will come up and talk
+
+00:01:21.546 --> 00:01:22.576 A:middle
+to you about scroll views.
+
+00:01:22.726 --> 00:01:24.406 A:middle
+How they interact with safe
+
+00:01:24.406 --> 00:01:25.686 A:middle
+area, layout margins, and other
+
+00:01:25.686 --> 00:01:26.926 A:middle
+UIKit technologies.
+
+00:01:27.346 --> 00:01:30.856 A:middle
+And finally, Russell will get up
+
+00:01:30.856 --> 00:01:32.236 A:middle
+and talk to you about using all
+
+00:01:32.236 --> 00:01:34.096 A:middle
+UIKit tools to build adaptive
+
+00:01:34.096 --> 00:01:34.936 A:middle
+applications.
+
+00:01:36.086 --> 00:01:38.156 A:middle
+And so with that, let's get to
+
+00:01:38.156 --> 00:01:39.686 A:middle
+talking about safe area and
+
+00:01:39.686 --> 00:01:40.456 A:middle
+layout margins.
+
+00:01:42.016 --> 00:01:44.646 A:middle
+So what is a safe area, and what
+
+00:01:44.646 --> 00:01:46.166 A:middle
+does it look like on the devices
+
+00:01:46.166 --> 00:01:47.026 A:middle
+that you've come to know and
+
+00:01:47.026 --> 00:01:47.576 A:middle
+love?
+
+00:01:48.406 --> 00:01:50.336 A:middle
+Well, on an iPhone 8 with a
+
+00:01:50.336 --> 00:01:52.536 A:middle
+rectangular screen, the entire
+
+00:01:52.536 --> 00:01:53.666 A:middle
+screen is a safe area.
+
+00:01:54.236 --> 00:01:56.356 A:middle
+All of it's there, no overlaps
+
+00:01:56.356 --> 00:01:58.986 A:middle
+on your content.
+
+00:01:58.986 --> 00:02:01.286 A:middle
+On iPhone 10, there's a little
+
+00:01:58.986 --> 00:02:01.286 A:middle
+On iPhone 10, there's a little
+
+00:02:01.286 --> 00:02:02.856 A:middle
+extra space that's taken up on
+
+00:02:02.856 --> 00:02:03.976 A:middle
+the top and bottom by the
+
+00:02:03.976 --> 00:02:07.226 A:middle
+hardware that will be taken away
+
+00:02:07.226 --> 00:02:08.936 A:middle
+from the safe area for your
+
+00:02:08.936 --> 00:02:09.545 A:middle
+application.
+
+00:02:10.606 --> 00:02:12.196 A:middle
+And in landscape, you've got
+
+00:02:12.196 --> 00:02:13.216 A:middle
+something kind of similar where
+
+00:02:13.726 --> 00:02:14.866 A:middle
+we've given you a symmetric
+
+00:02:14.866 --> 00:02:16.606 A:middle
+layout with space on the bottom
+
+00:02:16.606 --> 00:02:18.326 A:middle
+for the home indicator for you
+
+00:02:18.326 --> 00:02:19.986 A:middle
+to lay your content in safely.
+
+00:02:19.986 --> 00:02:22.766 A:middle
+But what other devices might
+
+00:02:22.766 --> 00:02:24.286 A:middle
+have a safe area that's not the
+
+00:02:24.286 --> 00:02:24.986 A:middle
+entire screen?
+
+00:02:26.696 --> 00:02:29.156 A:middle
+Well, Apple TV actually might
+
+00:02:29.156 --> 00:02:30.996 A:middle
+give you the situation because
+
+00:02:30.996 --> 00:02:33.866 A:middle
+certain TVs will have a screen
+
+00:02:33.966 --> 00:02:35.436 A:middle
+that actually extends past
+
+00:02:35.436 --> 00:02:36.656 A:middle
+what's visible to the user.
+
+00:02:37.346 --> 00:02:38.746 A:middle
+And those will represent their
+
+00:02:38.746 --> 00:02:40.096 A:middle
+information based on something
+
+00:02:40.096 --> 00:02:41.736 A:middle
+called overscan compensation.
+
+00:02:42.516 --> 00:02:43.506 A:middle
+And that overscan will be
+
+00:02:43.506 --> 00:02:45.156 A:middle
+represented as a safe area in
+
+00:02:45.196 --> 00:02:46.606 A:middle
+any apps that you build for
+
+00:02:46.606 --> 00:02:47.156 A:middle
+Apple TV.
+
+00:02:48.516 --> 00:02:50.246 A:middle
+So now that we've seen a few
+
+00:02:50.246 --> 00:02:51.836 A:middle
+examples of what the safe area
+
+00:02:51.836 --> 00:02:53.146 A:middle
+looks like at the screen of a
+
+00:02:53.146 --> 00:02:55.226 A:middle
+device, how does that get to
+
+00:02:55.226 --> 00:02:56.076 A:middle
+your views?
+
+00:02:56.636 --> 00:02:58.286 A:middle
+And how do you use that in your
+
+00:02:58.286 --> 00:02:59.816 A:middle
+own applications to build
+
+00:02:59.816 --> 00:03:00.866 A:middle
+adaptive applications?
+
+00:02:59.816 --> 00:03:00.866 A:middle
+adaptive applications?
+
+00:03:03.236 --> 00:03:05.296 A:middle
+So let's just pick up an
+
+00:03:05.296 --> 00:03:06.106 A:middle
+arbitrary view.
+
+00:03:06.676 --> 00:03:07.316 A:middle
+Whole thing.
+
+00:03:08.166 --> 00:03:09.876 A:middle
+There are four insets on the
+
+00:03:09.876 --> 00:03:11.926 A:middle
+top, bottom, and left and right
+
+00:03:12.596 --> 00:03:15.236 A:middle
+that represent areas that might
+
+00:03:15.236 --> 00:03:17.456 A:middle
+have some kind of overlay or
+
+00:03:17.456 --> 00:03:18.936 A:middle
+other thing that might occlude
+
+00:03:18.936 --> 00:03:20.456 A:middle
+your content if you placed it
+
+00:03:20.456 --> 00:03:20.626 A:middle
+there.
+
+00:03:21.826 --> 00:03:23.466 A:middle
+You can access this on your UI
+
+00:03:23.466 --> 00:03:25.966 A:middle
+views using the safe area insets
+
+00:03:25.966 --> 00:03:26.426 A:middle
+property.
+
+00:03:26.916 --> 00:03:28.966 A:middle
+A UI edge inset that has those
+
+00:03:28.966 --> 00:03:29.696 A:middle
+four values.
+
+00:03:31.116 --> 00:03:32.286 A:middle
+Now if you're doing layout with
+
+00:03:32.286 --> 00:03:33.726 A:middle
+Auto Layout, you actually might
+
+00:03:33.726 --> 00:03:35.906 A:middle
+want to just see the entire rec
+
+00:03:36.066 --> 00:03:36.686 A:middle
+that's safe.
+
+00:03:37.306 --> 00:03:39.336 A:middle
+And you can get that by looking
+
+00:03:39.336 --> 00:03:41.236 A:middle
+at the safe area layout guide.
+
+00:03:41.586 --> 00:03:43.966 A:middle
+Which is a UI layout guide that
+
+00:03:44.326 --> 00:03:45.916 A:middle
+represents that information.
+
+00:03:46.036 --> 00:03:47.286 A:middle
+It has layout anchors for you to
+
+00:03:47.286 --> 00:03:48.166 A:middle
+do Auto Layout with.
+
+00:03:48.306 --> 00:03:49.606 A:middle
+And a layout frame if you just
+
+00:03:49.606 --> 00:03:50.416 A:middle
+want to see the actual
+
+00:03:50.416 --> 00:03:50.876 A:middle
+rectangle.
+
+00:03:52.896 --> 00:03:54.966 A:middle
+So now that we've seen how
+
+00:03:54.966 --> 00:03:56.166 A:middle
+that's represented on our view,
+
+00:03:56.166 --> 00:03:58.676 A:middle
+let's take a look at how it gets
+
+00:03:58.676 --> 00:04:00.846 A:middle
+from one view to the next.
+
+00:03:58.676 --> 00:04:00.846 A:middle
+from one view to the next.
+
+00:04:01.456 --> 00:04:03.846 A:middle
+So we'll just take away the text
+
+00:04:04.226 --> 00:04:05.296 A:middle
+and add a subview.
+
+00:04:05.446 --> 00:04:07.136 A:middle
+And this is going to cover most
+
+00:04:07.136 --> 00:04:10.336 A:middle
+of the bottom edge of that view.
+
+00:04:10.556 --> 00:04:12.836 A:middle
+Now, how does the safe area get
+
+00:04:12.836 --> 00:04:13.946 A:middle
+calculated for this?
+
+00:04:14.406 --> 00:04:17.146 A:middle
+Well, as we saw, that subview
+
+00:04:17.146 --> 00:04:19.435 A:middle
+that we just added, it intrudes
+
+00:04:19.505 --> 00:04:21.116 A:middle
+on the unsafe parts of the view
+
+00:04:21.276 --> 00:04:24.816 A:middle
+on the left, right, and bottom
+
+00:04:24.816 --> 00:04:25.576 A:middle
+of its superview.
+
+00:04:25.836 --> 00:04:27.816 A:middle
+And so those are the values that
+
+00:04:27.816 --> 00:04:29.596 A:middle
+you will see in the UI edge
+
+00:04:29.596 --> 00:04:31.226 A:middle
+insets represented by the safe
+
+00:04:31.226 --> 00:04:32.626 A:middle
+area insets property on that
+
+00:04:32.676 --> 00:04:33.056 A:middle
+subview.
+
+00:04:33.856 --> 00:04:35.736 A:middle
+And similarly, you'll see a safe
+
+00:04:35.736 --> 00:04:37.526 A:middle
+area layout guide whose layout
+
+00:04:37.526 --> 00:04:40.356 A:middle
+frame looks kind of like this.
+
+00:04:40.556 --> 00:04:43.786 A:middle
+Now once you've seen this, and
+
+00:04:43.786 --> 00:04:45.656 A:middle
+you've got a view, you might
+
+00:04:45.656 --> 00:04:46.896 A:middle
+want to actually add additional
+
+00:04:46.896 --> 00:04:48.696 A:middle
+insets for your UI.
+
+00:04:48.786 --> 00:04:49.816 A:middle
+You might decide that you want
+
+00:04:49.816 --> 00:04:51.746 A:middle
+to add controls through your
+
+00:04:51.746 --> 00:04:53.456 A:middle
+view controllers that will then
+
+00:04:53.456 --> 00:04:55.096 A:middle
+add to the safe area or subtract
+
+00:04:55.096 --> 00:04:56.736 A:middle
+from the safe area for your
+
+00:04:56.736 --> 00:04:57.346 A:middle
+subviews.
+
+00:04:58.076 --> 00:04:58.856 A:middle
+So we'll go ahead and add
+
+00:04:58.856 --> 00:05:01.386 A:middle
+another subview here.
+
+00:04:58.856 --> 00:05:01.386 A:middle
+another subview here.
+
+00:05:01.906 --> 00:05:03.726 A:middle
+And along with that, it will
+
+00:05:03.726 --> 00:05:05.516 A:middle
+have a view controller because a
+
+00:05:05.516 --> 00:05:06.456 A:middle
+view controller is where we
+
+00:05:06.456 --> 00:05:07.526 A:middle
+actually have the property that
+
+00:05:07.526 --> 00:05:09.006 A:middle
+allows you to add additional
+
+00:05:09.006 --> 00:05:09.606 A:middle
+insets.
+
+00:05:10.106 --> 00:05:11.346 A:middle
+And that property is called
+
+00:05:12.826 --> 00:05:14.616 A:middle
+additional safe area insets.
+
+00:05:15.496 --> 00:05:16.336 A:middle
+We're going to go ahead and
+
+00:05:16.336 --> 00:05:17.906 A:middle
+inherit the insets we got from
+
+00:05:17.906 --> 00:05:18.316 A:middle
+our parent.
+
+00:05:19.446 --> 00:05:21.116 A:middle
+Add those additional safe area
+
+00:05:21.116 --> 00:05:22.366 A:middle
+insets to this view.
+
+00:05:23.026 --> 00:05:24.616 A:middle
+And finally construct the final
+
+00:05:24.616 --> 00:05:26.736 A:middle
+safe area that let-- , layout
+
+00:05:27.226 --> 00:05:27.326 A:middle
+guide.
+
+00:05:28.196 --> 00:05:29.506 A:middle
+What other things might you want
+
+00:05:29.506 --> 00:05:30.646 A:middle
+to know about how safe area
+
+00:05:30.646 --> 00:05:31.816 A:middle
+behaves in your application?
+
+00:05:32.636 --> 00:05:33.796 A:middle
+Well, let's take a look at
+
+00:05:33.796 --> 00:05:34.576 A:middle
+another example.
+
+00:05:35.136 --> 00:05:37.086 A:middle
+Here we've got one view safely
+
+00:05:37.086 --> 00:05:38.366 A:middle
+inside of the safe area of its
+
+00:05:38.476 --> 00:05:38.776 A:middle
+parent.
+
+00:05:39.356 --> 00:05:40.676 A:middle
+So that view safe area, of
+
+00:05:40.726 --> 00:05:42.276 A:middle
+course, encapsulates the entire
+
+00:05:42.276 --> 00:05:43.066 A:middle
+region of that view.
+
+00:05:43.856 --> 00:05:45.186 A:middle
+And we'll move it closer to one
+
+00:05:45.186 --> 00:05:46.766 A:middle
+edge and as you might expect,
+
+00:05:46.766 --> 00:05:47.756 A:middle
+we're not going to gain a safe
+
+00:05:47.756 --> 00:05:49.406 A:middle
+area because we haven't left the
+
+00:05:49.406 --> 00:05:50.706 A:middle
+safe area of our parent yet.
+
+00:05:51.096 --> 00:05:53.196 A:middle
+We'll move a little bit further
+
+00:05:53.196 --> 00:05:55.236 A:middle
+out, and you'll see that the
+
+00:05:55.236 --> 00:05:56.996 A:middle
+bottom inset on that safe area
+
+00:05:56.996 --> 00:05:57.966 A:middle
+now grows a little bit.
+
+00:05:58.236 --> 00:05:59.486 A:middle
+It takes up a part where it
+
+00:05:59.486 --> 00:06:01.716 A:middle
+overlaps, where it extends
+
+00:05:59.486 --> 00:06:01.716 A:middle
+overlaps, where it extends
+
+00:06:01.716 --> 00:06:03.146 A:middle
+outside of the safe area of its
+
+00:06:03.206 --> 00:06:03.566 A:middle
+parent.
+
+00:06:04.276 --> 00:06:05.366 A:middle
+And as we move closer to the
+
+00:06:05.366 --> 00:06:07.036 A:middle
+edge there, it continues to
+
+00:06:07.036 --> 00:06:07.446 A:middle
+extend.
+
+00:06:08.666 --> 00:06:09.556 A:middle
+Now what might you expect to
+
+00:06:09.556 --> 00:06:10.816 A:middle
+happen if we move this view
+
+00:06:10.816 --> 00:06:12.186 A:middle
+further off the bottom edge of
+
+00:06:12.186 --> 00:06:12.676 A:middle
+its parent?
+
+00:06:14.636 --> 00:06:16.506 A:middle
+Well, how about that?
+
+00:06:16.506 --> 00:06:18.246 A:middle
+The safe area did not grow any
+
+00:06:18.246 --> 00:06:19.796 A:middle
+further as the view moved
+
+00:06:19.796 --> 00:06:20.776 A:middle
+outside of its parent.
+
+00:06:21.676 --> 00:06:23.426 A:middle
+No matter how far outside of the
+
+00:06:23.426 --> 00:06:24.986 A:middle
+parent that view might go.
+
+00:06:24.986 --> 00:06:26.506 A:middle
+And you might be asking
+
+00:06:26.506 --> 00:06:28.066 A:middle
+yourself, "Why would that, why
+
+00:06:28.066 --> 00:06:28.746 A:middle
+would we do that?
+
+00:06:29.006 --> 00:06:29.946 A:middle
+What's the purpose here?"
+
+00:06:30.906 --> 00:06:32.526 A:middle
+And the answer is animation.
+
+00:06:33.266 --> 00:06:34.546 A:middle
+In this particular case, we're
+
+00:06:34.546 --> 00:06:35.836 A:middle
+moving this subview out of its
+
+00:06:35.886 --> 00:06:36.306 A:middle
+parent.
+
+00:06:36.886 --> 00:06:38.156 A:middle
+We wouldn't want the content to
+
+00:06:38.156 --> 00:06:39.516 A:middle
+stay inside of the safe area
+
+00:06:39.786 --> 00:06:40.746 A:middle
+because then it wouldn't move
+
+00:06:40.846 --> 00:06:41.706 A:middle
+with its own parent.
+
+00:06:42.466 --> 00:06:44.036 A:middle
+And as an example, we can see
+
+00:06:44.036 --> 00:06:44.496 A:middle
+this app.
+
+00:06:45.156 --> 00:06:47.286 A:middle
+Where we're going to pull up a
+
+00:06:47.286 --> 00:06:48.256 A:middle
+view on the bottom.
+
+00:06:49.596 --> 00:06:50.986 A:middle
+If that view had been laid out
+
+00:06:50.986 --> 00:06:51.956 A:middle
+against the safe area of the
+
+00:06:51.956 --> 00:06:54.046 A:middle
+parent, or its parent, and that
+
+00:06:54.046 --> 00:06:56.156 A:middle
+parent's safe area would extend
+
+00:06:56.386 --> 00:06:57.366 A:middle
+the farther it grew off the
+
+00:06:57.366 --> 00:06:59.576 A:middle
+bottom of the screen, then this
+
+00:06:59.576 --> 00:07:02.516 A:middle
+area would have stayed on screen
+
+00:06:59.576 --> 00:07:02.516 A:middle
+area would have stayed on screen
+
+00:07:02.736 --> 00:07:04.236 A:middle
+during the entire transition,
+
+00:07:05.066 --> 00:07:06.156 A:middle
+which would have meant that you
+
+00:07:06.156 --> 00:07:07.286 A:middle
+would have not seen the
+
+00:07:07.286 --> 00:07:08.406 A:middle
+background come up with it.
+
+00:07:09.156 --> 00:07:10.936 A:middle
+And so that's why the safe area
+
+00:07:10.936 --> 00:07:12.486 A:middle
+never grows larger on any
+
+00:07:12.486 --> 00:07:14.136 A:middle
+dimension than what its parent
+
+00:07:14.136 --> 00:07:14.506 A:middle
+provides.
+
+00:07:15.996 --> 00:07:18.466 A:middle
+So to summarize that safe area
+
+00:07:18.466 --> 00:07:19.936 A:middle
+part, let's took a look at how
+
+00:07:19.936 --> 00:07:21.606 A:middle
+you can interact with it.
+
+00:07:22.296 --> 00:07:23.646 A:middle
+Again, we've already mentioned
+
+00:07:23.646 --> 00:07:25.236 A:middle
+the safe area insets property
+
+00:07:25.586 --> 00:07:26.726 A:middle
+and the safe area layout guide
+
+00:07:26.726 --> 00:07:27.146 A:middle
+property.
+
+00:07:28.126 --> 00:07:29.986 A:middle
+But if your view needs to react
+
+00:07:30.066 --> 00:07:31.936 A:middle
+to when safe area insets change,
+
+00:07:32.286 --> 00:07:33.906 A:middle
+then you can override the safe
+
+00:07:33.906 --> 00:07:36.506 A:middle
+area insets did change method.
+
+00:07:37.316 --> 00:07:38.846 A:middle
+Typical thing you might do is
+
+00:07:38.846 --> 00:07:39.966 A:middle
+just call set needs layout.
+
+00:07:39.966 --> 00:07:40.866 A:middle
+But if there's any additional
+
+00:07:40.866 --> 00:07:41.926 A:middle
+logic you need to run, that's
+
+00:07:41.926 --> 00:07:42.486 A:middle
+okay too.
+
+00:07:43.796 --> 00:07:45.116 A:middle
+If your view controller needs to
+
+00:07:45.116 --> 00:07:46.716 A:middle
+respond to its view safe area
+
+00:07:46.766 --> 00:07:48.716 A:middle
+layout changing, then you can
+
+00:07:48.716 --> 00:07:50.766 A:middle
+override view safe area insets
+
+00:07:50.766 --> 00:07:52.086 A:middle
+did change on your view
+
+00:07:52.086 --> 00:07:52.616 A:middle
+controller.
+
+00:07:53.626 --> 00:07:55.126 A:middle
+And finally, if you're doing
+
+00:07:55.126 --> 00:07:56.756 A:middle
+your interface in IB, you can
+
+00:07:57.056 --> 00:07:59.106 A:middle
+use that safe area property
+
+00:07:59.546 --> 00:08:01.666 A:middle
+that's shown in the view list to
+
+00:07:59.546 --> 00:08:01.666 A:middle
+that's shown in the view list to
+
+00:08:02.376 --> 00:08:03.966 A:middle
+build your constraints against
+
+00:08:03.966 --> 00:08:04.596 A:middle
+the safe area.
+
+00:08:04.916 --> 00:08:07.956 A:middle
+And so a safe area is explained.
+
+00:08:08.346 --> 00:08:09.506 A:middle
+Let's talk a little bit about
+
+00:08:09.506 --> 00:08:10.000 A:middle
+layout margins.
+
+00:08:13.356 --> 00:08:17.356 A:middle
+So layout margins are padding.
+
+00:08:18.026 --> 00:08:19.036 A:middle
+They're a property that, in
+
+00:08:19.036 --> 00:08:20.556 A:middle
+general, you have full control
+
+00:08:20.556 --> 00:08:24.056 A:middle
+over and allows you to specify a
+
+00:08:24.056 --> 00:08:25.306 A:middle
+space from the edges of the
+
+00:08:25.306 --> 00:08:25.536 A:middle
+view.
+
+00:08:26.826 --> 00:08:28.116 A:middle
+Just like with safe areas,
+
+00:08:28.376 --> 00:08:30.196 A:middle
+they're represented by a UI edge
+
+00:08:30.196 --> 00:08:31.686 A:middle
+insets property, this time
+
+00:08:31.686 --> 00:08:32.866 A:middle
+called layout margins.
+
+00:08:33.996 --> 00:08:36.596 A:middle
+Now last year, we also added
+
+00:08:37.256 --> 00:08:38.486 A:middle
+directional layout margins.
+
+00:08:39.216 --> 00:08:40.866 A:middle
+These differ from layout margins
+
+00:08:41.126 --> 00:08:42.885 A:middle
+in that layout margins use a UI
+
+00:08:42.946 --> 00:08:45.496 A:middle
+Edge Insets value while
+
+00:08:45.496 --> 00:08:47.116 A:middle
+directional layout margins uses
+
+00:08:47.116 --> 00:08:48.626 A:middle
+an NS directional edge insets.
+
+00:08:48.626 --> 00:08:50.376 A:middle
+And the primary difference
+
+00:08:50.376 --> 00:08:52.016 A:middle
+between those two structures is
+
+00:08:52.016 --> 00:08:53.576 A:middle
+that directional insets use
+
+00:08:53.576 --> 00:08:54.986 A:middle
+leading and trailing instead of
+
+00:08:54.986 --> 00:08:56.846 A:middle
+left and right, which makes it
+
+00:08:56.846 --> 00:08:58.316 A:middle
+really easy for you to create
+
+00:08:58.476 --> 00:09:01.316 A:middle
+layout margins that adapt to RTL
+
+00:08:58.476 --> 00:09:01.316 A:middle
+layout margins that adapt to RTL
+
+00:09:01.316 --> 00:09:01.816 A:middle
+layouts.
+
+00:09:02.036 --> 00:09:02.866 A:middle
+So you don't have to do the
+
+00:09:02.866 --> 00:09:04.116 A:middle
+swapping between left and right
+
+00:09:04.116 --> 00:09:05.356 A:middle
+when you use directional layout
+
+00:09:05.356 --> 00:09:05.806 A:middle
+margins.
+
+00:09:07.186 --> 00:09:09.606 A:middle
+Now, just as with safe area, we
+
+00:09:09.606 --> 00:09:11.226 A:middle
+provide a margins guide as well
+
+00:09:11.226 --> 00:09:12.596 A:middle
+called a layout margins guide
+
+00:09:13.586 --> 00:09:14.446 A:middle
+that you can use with Auto
+
+00:09:14.446 --> 00:09:16.456 A:middle
+Layout to layout content against
+
+00:09:16.876 --> 00:09:17.556 A:middle
+that margin.
+
+00:09:18.406 --> 00:09:20.516 A:middle
+And then we go ahead and put our
+
+00:09:20.516 --> 00:09:22.276 A:middle
+content inside of that view.
+
+00:09:22.856 --> 00:09:25.696 A:middle
+Now the next question you might
+
+00:09:25.696 --> 00:09:27.226 A:middle
+be asking since we're talking
+
+00:09:27.226 --> 00:09:28.536 A:middle
+about layout margins and safe
+
+00:09:28.536 --> 00:09:32.296 A:middle
+areas together is how do the two
+
+00:09:32.296 --> 00:09:32.986 A:middle
+interact?
+
+00:09:34.286 --> 00:09:35.466 A:middle
+Well let's go ahead and bring
+
+00:09:35.466 --> 00:09:36.246 A:middle
+those markers back.
+
+00:09:37.216 --> 00:09:38.646 A:middle
+Oh yeah, I meant to talk about
+
+00:09:38.696 --> 00:09:40.206 A:middle
+how you can change those
+
+00:09:42.026 --> 00:09:42.646 A:middle
+[inaudible] layout.
+
+00:09:42.716 --> 00:09:46.266 A:middle
+So with safe area, by default,
+
+00:09:46.926 --> 00:09:49.076 A:middle
+we build the safe area, and then
+
+00:09:49.076 --> 00:09:50.866 A:middle
+we build the layout margins with
+
+00:09:50.866 --> 00:09:52.166 A:middle
+respect to the safe area.
+
+00:09:52.736 --> 00:09:54.796 A:middle
+And we do this for the perfectly
+
+00:09:54.796 --> 00:09:57.276 A:middle
+obvious answer that by default,
+
+00:09:57.276 --> 00:09:58.666 A:middle
+you probably actually want this.
+
+00:09:58.666 --> 00:09:59.816 A:middle
+You want your layout margins
+
+00:09:59.876 --> 00:10:01.596 A:middle
+inside of the safe area because
+
+00:09:59.876 --> 00:10:01.596 A:middle
+inside of the safe area because
+
+00:10:01.596 --> 00:10:02.556 A:middle
+they represent additional
+
+00:10:02.556 --> 00:10:04.076 A:middle
+padding against the layout that
+
+00:10:04.076 --> 00:10:04.616 A:middle
+you want to do.
+
+00:10:05.996 --> 00:10:08.566 A:middle
+But we thought to ourselves,
+
+00:10:09.006 --> 00:10:10.036 A:middle
+"Hey, some people may not
+
+00:10:10.036 --> 00:10:10.856 A:middle
+actually want this."
+
+00:10:11.436 --> 00:10:12.696 A:middle
+And so we made it very easy for
+
+00:10:12.696 --> 00:10:13.746 A:middle
+you to flip this default.
+
+00:10:14.276 --> 00:10:15.616 A:middle
+And so if you just change the
+
+00:10:15.616 --> 00:10:17.386 A:middle
+insets layout margins from safe
+
+00:10:17.386 --> 00:10:19.536 A:middle
+area property from true to
+
+00:10:19.536 --> 00:10:22.056 A:middle
+false, then we'll go ahead and
+
+00:10:22.056 --> 00:10:23.386 A:middle
+move layout margins back to the
+
+00:10:23.386 --> 00:10:24.136 A:middle
+bounds of the view.
+
+00:10:24.606 --> 00:10:26.216 A:middle
+As a [inaudible] instead of
+
+00:10:26.216 --> 00:10:27.656 A:middle
+being encapsulated inside.
+
+00:10:28.626 --> 00:10:29.366 A:middle
+So what else can you do with
+
+00:10:29.366 --> 00:10:29.926 A:middle
+layout margins?
+
+00:10:30.976 --> 00:10:33.006 A:middle
+Well, we already saw that by
+
+00:10:33.006 --> 00:10:34.936 A:middle
+default, safe area margins
+
+00:10:35.006 --> 00:10:36.276 A:middle
+propagate down the hierarchy.
+
+00:10:36.806 --> 00:10:39.346 A:middle
+But with layout margins, they go
+
+00:10:39.346 --> 00:10:39.926 A:middle
+by default.
+
+00:10:40.326 --> 00:10:41.626 A:middle
+Because by default, your layout
+
+00:10:41.626 --> 00:10:42.716 A:middle
+probably wants to be fairly
+
+00:10:42.716 --> 00:10:43.966 A:middle
+independent with margins as
+
+00:10:43.966 --> 00:10:45.136 A:middle
+opposed to safe area, which
+
+00:10:45.136 --> 00:10:47.286 A:middle
+represents a concept that really
+
+00:10:47.286 --> 00:10:48.086 A:middle
+is for the entire view
+
+00:10:48.086 --> 00:10:48.616 A:middle
+hierarchy.
+
+00:10:50.076 --> 00:10:51.416 A:middle
+But if you want to have
+
+00:10:51.416 --> 00:10:52.786 A:middle
+propagation, you can flip this
+
+00:10:52.786 --> 00:10:55.136 A:middle
+on view by view by changing
+
+00:10:55.136 --> 00:10:56.336 A:middle
+preserve super view layout
+
+00:10:56.336 --> 00:10:59.086 A:middle
+margins from false to true.
+
+00:10:59.326 --> 00:11:01.466 A:middle
+And we'll go ahead and line up
+
+00:10:59.326 --> 00:11:01.466 A:middle
+And we'll go ahead and line up
+
+00:11:01.516 --> 00:11:03.196 A:middle
+those margins that are smaller
+
+00:11:03.696 --> 00:11:05.356 A:middle
+than the parents in order to
+
+00:11:05.356 --> 00:11:06.556 A:middle
+make sure that everything lines
+
+00:11:06.556 --> 00:11:08.336 A:middle
+up naturally between a child and
+
+00:11:08.336 --> 00:11:08.986 A:middle
+its parent view.
+
+00:11:11.056 --> 00:11:12.996 A:middle
+Now in years past, you've
+
+00:11:12.996 --> 00:11:15.026 A:middle
+probably also tried to change
+
+00:11:15.026 --> 00:11:16.456 A:middle
+layout margins of your view
+
+00:11:16.456 --> 00:11:17.346 A:middle
+controller views.
+
+00:11:18.196 --> 00:11:19.926 A:middle
+And if you look at what we do by
+
+00:11:19.926 --> 00:11:20.506 A:middle
+default.
+
+00:11:21.326 --> 00:11:23.366 A:middle
+That this margin that you'll see
+
+00:11:23.416 --> 00:11:24.186 A:middle
+against that view.
+
+00:11:25.166 --> 00:11:27.376 A:middle
+Now we additionally added a
+
+00:11:27.376 --> 00:11:29.976 A:middle
+property last year called system
+
+00:11:29.976 --> 00:11:32.276 A:middle
+minimum layout margins and these
+
+00:11:32.276 --> 00:11:33.986 A:middle
+margins are the minimum margins
+
+00:11:34.026 --> 00:11:36.336 A:middle
+that we've combined against any
+
+00:11:36.336 --> 00:11:38.596 A:middle
+margins you provide now to
+
+00:11:38.596 --> 00:11:39.676 A:middle
+create the final margin.
+
+00:11:40.226 --> 00:11:41.296 A:middle
+So if you wanted to add to the
+
+00:11:41.296 --> 00:11:42.796 A:middle
+top and bottom of this, you can
+
+00:11:42.796 --> 00:11:44.516 A:middle
+do that without disturbing the
+
+00:11:44.516 --> 00:11:45.776 A:middle
+left and right margins that
+
+00:11:45.776 --> 00:11:46.546 A:middle
+UIKit provides.
+
+00:11:47.536 --> 00:11:48.836 A:middle
+But again, you might want a
+
+00:11:48.836 --> 00:11:49.776 A:middle
+little bit more control.
+
+00:11:49.826 --> 00:11:51.606 A:middle
+And so there's another property
+
+00:11:52.786 --> 00:11:54.766 A:middle
+called view respects system
+
+00:11:54.766 --> 00:11:55.876 A:middle
+minimum layout margins.
+
+00:11:56.786 --> 00:11:58.776 A:middle
+If you want your margins to be
+
+00:11:58.776 --> 00:11:59.786 A:middle
+completely underneath your
+
+00:11:59.786 --> 00:12:02.756 A:middle
+control, flip this to false, and
+
+00:11:59.786 --> 00:12:02.756 A:middle
+control, flip this to false, and
+
+00:12:02.756 --> 00:12:04.386 A:middle
+we'll use your margins as you
+
+00:12:04.386 --> 00:12:06.106 A:middle
+describe them, no questions
+
+00:12:06.806 --> 00:12:07.006 A:middle
+asked.
+
+00:12:07.776 --> 00:12:09.566 A:middle
+And so to wrap up with layout
+
+00:12:09.566 --> 00:12:12.616 A:middle
+margins, the properties you have
+
+00:12:12.616 --> 00:12:13.956 A:middle
+on UI View are the layout
+
+00:12:13.956 --> 00:12:15.906 A:middle
+margins property, edge insets,
+
+00:12:16.486 --> 00:12:17.566 A:middle
+left, right, top, bottom.
+
+00:12:18.416 --> 00:12:19.776 A:middle
+Directional layout margins.
+
+00:12:20.026 --> 00:12:21.646 A:middle
+Great for your RTL layouts.
+
+00:12:21.896 --> 00:12:23.006 A:middle
+Top, bottom, leading, and
+
+00:12:23.006 --> 00:12:23.456 A:middle
+trailing.
+
+00:12:24.006 --> 00:12:26.366 A:middle
+The Layout Margins Guide that
+
+00:12:26.366 --> 00:12:27.856 A:middle
+you can use with Auto Layout to
+
+00:12:27.856 --> 00:12:28.726 A:middle
+do all this there.
+
+00:12:28.726 --> 00:12:31.416 A:middle
+And finally, if you have logic
+
+00:12:31.416 --> 00:12:32.586 A:middle
+for when the layout margins
+
+00:12:32.586 --> 00:12:34.286 A:middle
+change in your view, you can
+
+00:12:34.286 --> 00:12:35.716 A:middle
+override layout margins did
+
+00:12:35.716 --> 00:12:37.596 A:middle
+change and do whatever logic you
+
+00:12:37.596 --> 00:12:38.176 A:middle
+need to do there.
+
+00:12:39.386 --> 00:12:41.076 A:middle
+In Interface Builder to create a
+
+00:12:41.076 --> 00:12:42.526 A:middle
+constraint that ties against the
+
+00:12:42.526 --> 00:12:44.166 A:middle
+margin, just check that
+
+00:12:44.166 --> 00:12:45.656 A:middle
+constraints to margins box.
+
+00:12:46.426 --> 00:12:48.086 A:middle
+And so with that, I'll bring up
+
+00:12:48.086 --> 00:12:49.666 A:middle
+Tyler Fox to talk to you about
+
+00:12:49.666 --> 00:12:49.976 A:middle
+scroll views.
+
+00:12:50.516 --> 00:12:57.336 A:middle
+[ Applause ]
+
+00:12:57.836 --> 00:12:59.426 A:middle
+&gt;&gt; Thanks, David.
+
+00:13:00.186 --> 00:13:00.826 A:middle
+Good afternoon.
+
+00:13:01.506 --> 00:13:03.606 A:middle
+And as David mentioned I'd like
+
+00:13:03.606 --> 00:13:04.526 A:middle
+to talk a little bit about
+
+00:13:04.526 --> 00:13:05.306 A:middle
+scroll views today.
+
+00:13:05.816 --> 00:13:07.606 A:middle
+So scroll views are a really key
+
+00:13:07.606 --> 00:13:09.156 A:middle
+part of the iOS experience.
+
+00:13:09.536 --> 00:13:10.856 A:middle
+And they show up all across the
+
+00:13:10.856 --> 00:13:11.296 A:middle
+system.
+
+00:13:11.296 --> 00:13:12.646 A:middle
+You have them in table views,
+
+00:13:12.686 --> 00:13:14.896 A:middle
+collection views, UI text view,
+
+00:13:14.896 --> 00:13:16.006 A:middle
+and of course in all of the
+
+00:13:16.006 --> 00:13:17.546 A:middle
+custom application in all of
+
+00:13:17.546 --> 00:13:18.156 A:middle
+your apps.
+
+00:13:19.026 --> 00:13:20.796 A:middle
+And so in our app, Bagel Times
+
+00:13:20.796 --> 00:13:21.876 A:middle
+that we've been working really
+
+00:13:21.876 --> 00:13:25.246 A:middle
+hard on as you can tell, this is
+
+00:13:25.246 --> 00:13:26.336 A:middle
+our news article screen.
+
+00:13:26.376 --> 00:13:28.076 A:middle
+And everything as you can see is
+
+00:13:28.076 --> 00:13:29.636 A:middle
+sort of centered around a scroll
+
+00:13:29.636 --> 00:13:30.486 A:middle
+view with the article.
+
+00:13:30.576 --> 00:13:31.486 A:middle
+And this is we want to you know
+
+00:13:31.556 --> 00:13:33.196 A:middle
+really showcase the high-quality
+
+00:13:33.196 --> 00:13:34.456 A:middle
+content our writers are putting
+
+00:13:34.456 --> 00:13:34.846 A:middle
+together.
+
+00:13:34.846 --> 00:13:36.606 A:middle
+Like, you know, exploring the
+
+00:13:36.606 --> 00:13:38.356 A:middle
+true inspiration for, you know,
+
+00:13:38.356 --> 00:13:38.946 A:middle
+Apple Park.
+
+00:13:39.836 --> 00:13:41.536 A:middle
+And we want to review some of
+
+00:13:41.536 --> 00:13:43.296 A:middle
+the basics about how you can use
+
+00:13:43.296 --> 00:13:45.126 A:middle
+scroll views in your apps to
+
+00:13:45.126 --> 00:13:46.996 A:middle
+understand how they can help you
+
+00:13:47.066 --> 00:13:49.206 A:middle
+adapt your content to devices of
+
+00:13:49.236 --> 00:13:50.506 A:middle
+different shapes and sizes.
+
+00:13:51.536 --> 00:13:53.486 A:middle
+So to do that, we're going to
+
+00:13:53.486 --> 00:13:54.806 A:middle
+walk through an example here,
+
+00:13:54.996 --> 00:13:56.116 A:middle
+and we'll start with a
+
+00:13:56.116 --> 00:13:57.156 A:middle
+full-screen scroll view.
+
+00:13:57.706 --> 00:13:58.636 A:middle
+And on the left I'm going to
+
+00:13:58.636 --> 00:13:59.846 A:middle
+show you what things look like
+
+00:13:59.846 --> 00:14:01.406 A:middle
+on more or less a real device.
+
+00:13:59.846 --> 00:14:01.406 A:middle
+on more or less a real device.
+
+00:14:01.796 --> 00:14:02.686 A:middle
+And on the right, we're going to
+
+00:14:02.686 --> 00:14:04.026 A:middle
+look at kind of things behind
+
+00:14:04.026 --> 00:14:04.486 A:middle
+the scenes.
+
+00:14:04.956 --> 00:14:06.396 A:middle
+Understanding what's happening
+
+00:14:06.396 --> 00:14:07.106 A:middle
+in a diagram.
+
+00:14:08.086 --> 00:14:09.466 A:middle
+So everything that we talk about
+
+00:14:09.466 --> 00:14:11.046 A:middle
+today is going to apply in--
+
+00:14:11.046 --> 00:14:12.456 A:middle
+we're going to talk about the y
+
+00:14:12.456 --> 00:14:13.856 A:middle
+axis of everything vertically.
+
+00:14:13.856 --> 00:14:15.136 A:middle
+But everything also applies
+
+00:14:15.136 --> 00:14:16.446 A:middle
+equally to the x axis.
+
+00:14:16.996 --> 00:14:18.726 A:middle
+And we're also going to use some
+
+00:14:18.726 --> 00:14:20.306 A:middle
+simple values for illustration.
+
+00:14:20.566 --> 00:14:21.826 A:middle
+So in this case we'll say that
+
+00:14:21.826 --> 00:14:23.146 A:middle
+our scroll view has a height of
+
+00:14:23.146 --> 00:14:25.596 A:middle
+400 points.
+
+00:14:25.756 --> 00:14:27.076 A:middle
+Now inside of your scroll view,
+
+00:14:28.126 --> 00:14:28.946 A:middle
+you'll have some content.
+
+00:14:29.926 --> 00:14:31.056 A:middle
+And you can think of the scroll
+
+00:14:31.056 --> 00:14:32.726 A:middle
+view a lot like a metaphorical
+
+00:14:32.726 --> 00:14:33.306 A:middle
+picture frame.
+
+00:14:33.896 --> 00:14:35.686 A:middle
+The scroll view size represents
+
+00:14:35.836 --> 00:14:37.196 A:middle
+kind of the fixed frame of the
+
+00:14:37.196 --> 00:14:37.806 A:middle
+picture frame.
+
+00:14:37.806 --> 00:14:39.586 A:middle
+And then inside of that, the
+
+00:14:39.586 --> 00:14:40.886 A:middle
+picture is your content.
+
+00:14:40.886 --> 00:14:41.876 A:middle
+And the content can kind of
+
+00:14:41.876 --> 00:14:43.836 A:middle
+slide around as if it's on ball
+
+00:14:43.836 --> 00:14:44.266 A:middle
+bearings.
+
+00:14:45.126 --> 00:14:46.996 A:middle
+Now in this case, our content is
+
+00:14:46.996 --> 00:14:47.936 A:middle
+vertically scrollable.
+
+00:14:48.326 --> 00:14:50.196 A:middle
+And that happens because our
+
+00:14:50.196 --> 00:14:52.276 A:middle
+content has a taller height via
+
+00:14:52.506 --> 00:14:54.486 A:middle
+the content size than the scroll
+
+00:14:54.486 --> 00:14:54.966 A:middle
+view's height.
+
+00:14:56.126 --> 00:14:56.906 A:middle
+And here I've turned off
+
+00:14:57.006 --> 00:14:58.366 A:middle
+clipping on this diagram on the
+
+00:14:58.366 --> 00:14:59.506 A:middle
+right so we can kind of peek
+
+00:14:59.506 --> 00:15:00.426 A:middle
+behind the scenes at what's
+
+00:14:59.506 --> 00:15:00.426 A:middle
+behind the scenes at what's
+
+00:15:00.426 --> 00:15:00.966 A:middle
+going on.
+
+00:15:02.296 --> 00:15:04.536 A:middle
+So scroll views use content
+
+00:15:04.536 --> 00:15:06.446 A:middle
+offset as a way to represent the
+
+00:15:06.446 --> 00:15:07.626 A:middle
+current scroll position of the
+
+00:15:07.626 --> 00:15:08.086 A:middle
+scroll view.
+
+00:15:09.356 --> 00:15:10.286 A:middle
+Right now, we're scrolled to the
+
+00:15:10.286 --> 00:15:10.776 A:middle
+very top.
+
+00:15:11.066 --> 00:15:12.626 A:middle
+So our content offset is at
+
+00:15:12.626 --> 00:15:14.496 A:middle
+zero, meaning our top edge of
+
+00:15:14.496 --> 00:15:16.326 A:middle
+the content is aligned with the
+
+00:15:16.326 --> 00:15:17.476 A:middle
+top edge of the scroll view.
+
+00:15:18.916 --> 00:15:20.366 A:middle
+Now, if we go ahead and scroll
+
+00:15:20.366 --> 00:15:21.676 A:middle
+the scroll view down, that will
+
+00:15:21.836 --> 00:15:23.146 A:middle
+slide our content up.
+
+00:15:23.296 --> 00:15:24.576 A:middle
+So let's scroll to the bottom
+
+00:15:24.576 --> 00:15:25.466 A:middle
+and watch that happens here.
+
+00:15:26.346 --> 00:15:27.616 A:middle
+And as you can see, the content
+
+00:15:27.616 --> 00:15:29.866 A:middle
+offset increases and goes all
+
+00:15:29.866 --> 00:15:31.766 A:middle
+the way to 100 in our example
+
+00:15:31.766 --> 00:15:32.676 A:middle
+when we reach the bottom.
+
+00:15:33.186 --> 00:15:34.376 A:middle
+That's because the top edge of
+
+00:15:34.376 --> 00:15:36.626 A:middle
+the sc-- the scroll view is now
+
+00:15:36.626 --> 00:15:38.446 A:middle
+100 points below the top edge of
+
+00:15:38.446 --> 00:15:39.296 A:middle
+that content area.
+
+00:15:40.546 --> 00:15:42.166 A:middle
+If we set a content offset of
+
+00:15:42.276 --> 00:15:43.936 A:middle
+zero on the scroll view, that
+
+00:15:43.936 --> 00:15:45.166 A:middle
+will put us all the way back up
+
+00:15:45.166 --> 00:15:45.636 A:middle
+to the top.
+
+00:15:45.636 --> 00:15:47.256 A:middle
+And we're back where we started.
+
+00:15:48.146 --> 00:15:49.616 A:middle
+So that's pretty much just the
+
+00:15:49.616 --> 00:15:50.966 A:middle
+basics of scrolling a simple
+
+00:15:50.966 --> 00:15:51.776 A:middle
+scroll view around.
+
+00:15:52.376 --> 00:15:53.436 A:middle
+Now let's talk about a very
+
+00:15:53.436 --> 00:15:54.946 A:middle
+important concept about
+
+00:15:55.186 --> 00:15:57.666 A:middle
+extending the scrollable area of
+
+00:15:57.666 --> 00:15:58.216 A:middle
+the scroll view.
+
+00:15:58.416 --> 00:15:59.716 A:middle
+And we do that through a
+
+00:15:59.716 --> 00:16:01.196 A:middle
+property called content inset.
+
+00:15:59.716 --> 00:16:01.196 A:middle
+property called content inset.
+
+00:16:01.746 --> 00:16:04.936 A:middle
+So content inset is a mechanism
+
+00:16:04.936 --> 00:16:06.316 A:middle
+for you to provide insets that
+
+00:16:06.316 --> 00:16:08.236 A:middle
+you can specify from the edges
+
+00:16:08.236 --> 00:16:09.456 A:middle
+of the scrollable area of the
+
+00:16:09.456 --> 00:16:11.066 A:middle
+scroll view to the content
+
+00:16:11.066 --> 00:16:11.486 A:middle
+inside.
+
+00:16:12.406 --> 00:16:13.866 A:middle
+So adding content inset
+
+00:16:13.946 --> 00:16:15.696 A:middle
+increases the scrollable area
+
+00:16:15.696 --> 00:16:17.466 A:middle
+and makes the scroll view able
+
+00:16:17.466 --> 00:16:18.976 A:middle
+to scroll to a larger area.
+
+00:16:19.546 --> 00:16:20.966 A:middle
+So let's set a content inset on
+
+00:16:20.966 --> 00:16:22.706 A:middle
+the top edge here and see what
+
+00:16:22.706 --> 00:16:23.016 A:middle
+happens.
+
+00:16:24.416 --> 00:16:25.546 A:middle
+So here we've set a content
+
+00:16:25.546 --> 00:16:26.326 A:middle
+inset of 20.
+
+00:16:27.126 --> 00:16:28.816 A:middle
+And as you can see, that extends
+
+00:16:28.816 --> 00:16:30.336 A:middle
+that top edge of the scroll view
+
+00:16:30.336 --> 00:16:31.476 A:middle
+so that the scrollable area is
+
+00:16:31.476 --> 00:16:32.076 A:middle
+now larger.
+
+00:16:33.176 --> 00:16:35.416 A:middle
+Now when our content offset is
+
+00:16:35.416 --> 00:16:37.536 A:middle
+sitting at zero, our content is
+
+00:16:37.536 --> 00:16:38.636 A:middle
+still aligned with the top of
+
+00:16:38.636 --> 00:16:39.266 A:middle
+the scroll view.
+
+00:16:39.846 --> 00:16:40.876 A:middle
+But the scroll view could
+
+00:16:40.876 --> 00:16:42.196 A:middle
+actually scroll even farther
+
+00:16:42.596 --> 00:16:43.406 A:middle
+towards the top now.
+
+00:16:44.096 --> 00:16:45.786 A:middle
+So let's scroll around like we
+
+00:16:45.786 --> 00:16:47.196 A:middle
+did before and watch how things
+
+00:16:47.196 --> 00:16:47.906 A:middle
+have changed.
+
+00:16:48.866 --> 00:16:50.756 A:middle
+We'll scroll to the bottom and
+
+00:16:50.786 --> 00:16:51.976 A:middle
+just like before, we're still
+
+00:16:51.976 --> 00:16:54.056 A:middle
+here at a content offset of 100.
+
+00:16:54.936 --> 00:16:55.986 A:middle
+That's because we didn't change
+
+00:16:55.986 --> 00:16:57.296 A:middle
+anything on the bottom edge.
+
+00:16:57.536 --> 00:16:58.506 A:middle
+And we still have a bottom
+
+00:16:58.506 --> 00:16:59.886 A:middle
+content inset of zero.
+
+00:17:00.986 --> 00:17:02.936 A:middle
+But if we now go ahead and
+
+00:17:02.936 --> 00:17:04.376 A:middle
+scroll back all the way to the
+
+00:17:04.376 --> 00:17:06.226 A:middle
+very top, we end up with a
+
+00:17:06.226 --> 00:17:07.616 A:middle
+content offset that actually
+
+00:17:07.616 --> 00:17:08.296 A:middle
+goes negative.
+
+00:17:09.736 --> 00:17:10.955 A:middle
+That's because we are now able
+
+00:17:10.955 --> 00:17:13.256 A:middle
+to scroll beyond the top edge of
+
+00:17:13.256 --> 00:17:13.876 A:middle
+our content.
+
+00:17:14.296 --> 00:17:15.976 A:middle
+And so we can scroll as far as
+
+00:17:15.976 --> 00:17:18.165 A:middle
+the negative content inset on
+
+00:17:18.165 --> 00:17:20.156 A:middle
+the top edge.
+
+00:17:20.406 --> 00:17:22.856 A:middle
+Now starting in iOS 7, this
+
+00:17:22.935 --> 00:17:24.415 A:middle
+content inset technique became
+
+00:17:24.415 --> 00:17:25.396 A:middle
+really important and that's
+
+00:17:25.396 --> 00:17:27.476 A:middle
+because with iOS 7, translucent
+
+00:17:27.476 --> 00:17:29.466 A:middle
+bars became really common across
+
+00:17:29.466 --> 00:17:29.986 A:middle
+the system.
+
+00:17:30.336 --> 00:17:31.576 A:middle
+And the idea was that you would
+
+00:17:31.576 --> 00:17:33.026 A:middle
+display your content edge to
+
+00:17:33.026 --> 00:17:33.466 A:middle
+edge.
+
+00:17:33.856 --> 00:17:35.756 A:middle
+And it would underlap the bars
+
+00:17:35.756 --> 00:17:36.726 A:middle
+so that you could get these nice
+
+00:17:36.726 --> 00:17:38.626 A:middle
+colorful blurs with your content
+
+00:17:38.626 --> 00:17:39.426 A:middle
+through the bars, right?
+
+00:17:39.806 --> 00:17:41.216 A:middle
+Tool bars, navigation bars, and
+
+00:17:41.406 --> 00:17:41.796 A:middle
+so forth.
+
+00:17:42.096 --> 00:17:43.876 A:middle
+So because this was so common,
+
+00:17:44.366 --> 00:17:45.396 A:middle
+we wanted a way to help
+
+00:17:45.506 --> 00:17:47.016 A:middle
+automatically set the content
+
+00:17:47.016 --> 00:17:48.506 A:middle
+inset on your scroll views to
+
+00:17:48.506 --> 00:17:49.976 A:middle
+make this easier in your apps.
+
+00:17:50.296 --> 00:17:51.946 A:middle
+And to do this, we had a
+
+00:17:51.946 --> 00:17:53.326 A:middle
+property on UI View Controller.
+
+00:17:53.696 --> 00:17:54.946 A:middle
+And this was called
+
+00:17:54.946 --> 00:17:56.706 A:middle
+automatically adjust scroll view
+
+00:17:56.706 --> 00:17:57.316 A:middle
+insets.
+
+00:17:57.796 --> 00:17:59.876 A:middle
+And the intent, intent again was
+
+00:17:59.876 --> 00:18:01.556 A:middle
+to automatically set the content
+
+00:17:59.876 --> 00:18:01.556 A:middle
+to automatically set the content
+
+00:18:01.556 --> 00:18:02.856 A:middle
+inset on your scroll view
+
+00:18:03.466 --> 00:18:05.426 A:middle
+whenever it had overlapping bars
+
+00:18:05.426 --> 00:18:07.276 A:middle
+coming from a navigation bar or
+
+00:18:07.276 --> 00:18:07.896 A:middle
+a tool bar.
+
+00:18:08.006 --> 00:18:09.476 A:middle
+And that was whenever your
+
+00:18:09.476 --> 00:18:10.726 A:middle
+scroll view was inside of a view
+
+00:18:10.726 --> 00:18:11.246 A:middle
+controller.
+
+00:18:11.606 --> 00:18:12.846 A:middle
+Which itself was contained
+
+00:18:12.906 --> 00:18:13.816 A:middle
+inside of a navigation
+
+00:18:13.816 --> 00:18:14.136 A:middle
+controller.
+
+00:18:14.726 --> 00:18:16.656 A:middle
+Now this worked pretty well for
+
+00:18:16.656 --> 00:18:17.646 A:middle
+some common cases.
+
+00:18:18.026 --> 00:18:19.566 A:middle
+But if your app had a more
+
+00:18:19.566 --> 00:18:21.876 A:middle
+custom or advanced usage of UI
+
+00:18:21.876 --> 00:18:24.196 A:middle
+scroll view, sometimes having
+
+00:18:24.236 --> 00:18:26.016 A:middle
+your code setting content inset
+
+00:18:26.016 --> 00:18:28.156 A:middle
+and also UIKit setting that same
+
+00:18:28.156 --> 00:18:29.846 A:middle
+content inset property could
+
+00:18:29.846 --> 00:18:30.626 A:middle
+create some challenges.
+
+00:18:31.676 --> 00:18:33.726 A:middle
+And so starting in iOS 11, we
+
+00:18:33.956 --> 00:18:35.526 A:middle
+have a much more explicit and
+
+00:18:35.526 --> 00:18:37.346 A:middle
+powerful way for you to get the
+
+00:18:37.346 --> 00:18:38.946 A:middle
+same automatic behavior.
+
+00:18:39.716 --> 00:18:41.336 A:middle
+And the mechanism for doing this
+
+00:18:41.556 --> 00:18:42.976 A:middle
+is a new property on UI scroll
+
+00:18:42.976 --> 00:18:44.786 A:middle
+view which we'll talk about now
+
+00:18:44.886 --> 00:18:46.586 A:middle
+called adjusted content inset.
+
+00:18:47.996 --> 00:18:50.356 A:middle
+So starting in iOS 11, we
+
+00:18:50.356 --> 00:18:51.546 A:middle
+introduced a new property on UI
+
+00:18:51.546 --> 00:18:52.036 A:middle
+scroll view.
+
+00:18:52.036 --> 00:18:52.766 A:middle
+It's read only.
+
+00:18:52.806 --> 00:18:54.066 A:middle
+It's adjust content inset.
+
+00:18:54.406 --> 00:18:56.506 A:middle
+And this basically describes how
+
+00:18:56.506 --> 00:18:57.776 A:middle
+the scroll view is actually
+
+00:18:57.776 --> 00:18:58.606 A:middle
+going to behave.
+
+00:18:59.716 --> 00:19:00.696 A:middle
+Well you're probably asking
+
+00:18:59.716 --> 00:19:00.696 A:middle
+Well you're probably asking
+
+00:19:00.696 --> 00:19:01.666 A:middle
+what's the difference between
+
+00:19:01.666 --> 00:19:03.726 A:middle
+this adjusted content inset and
+
+00:19:03.726 --> 00:19:04.796 A:middle
+the content inset that we just
+
+00:19:04.796 --> 00:19:05.356 A:middle
+talked about?
+
+00:19:05.886 --> 00:19:06.456 A:middle
+Great question.
+
+00:19:07.236 --> 00:19:08.066 A:middle
+Here's how it breaks down.
+
+00:19:09.286 --> 00:19:11.616 A:middle
+Adjusted content inset is equal
+
+00:19:11.616 --> 00:19:13.626 A:middle
+to the content inset that your
+
+00:19:13.626 --> 00:19:16.276 A:middle
+app provides plus any automatic
+
+00:19:16.276 --> 00:19:18.096 A:middle
+insets coming from the system or
+
+00:19:18.096 --> 00:19:18.506 A:middle
+UIKit.
+
+00:19:19.686 --> 00:19:21.156 A:middle
+And so because we now separate
+
+00:19:21.156 --> 00:19:23.276 A:middle
+these two, it's a lot easier to
+
+00:19:23.276 --> 00:19:24.326 A:middle
+reason about what's happening.
+
+00:19:25.446 --> 00:19:26.526 A:middle
+Of course you might be wondering
+
+00:19:26.556 --> 00:19:28.106 A:middle
+where and when would I get a
+
+00:19:28.206 --> 00:19:29.696 A:middle
+system inset on my scroll view.
+
+00:19:31.096 --> 00:19:32.726 A:middle
+Well, one most common case will
+
+00:19:32.726 --> 00:19:34.426 A:middle
+be safe area insets.
+
+00:19:35.126 --> 00:19:36.326 A:middle
+Let's look at how this works.
+
+00:19:36.736 --> 00:19:37.946 A:middle
+So we're back to our basic
+
+00:19:37.946 --> 00:19:38.696 A:middle
+diagram here.
+
+00:19:38.696 --> 00:19:39.726 A:middle
+But we're going to bring some
+
+00:19:39.726 --> 00:19:41.436 A:middle
+safe area insets into the mix.
+
+00:19:42.746 --> 00:19:44.466 A:middle
+So if we go ahead and start out
+
+00:19:44.466 --> 00:19:45.856 A:middle
+right now we have no safe area
+
+00:19:45.856 --> 00:19:46.986 A:middle
+insets on any edge.
+
+00:19:47.016 --> 00:19:48.526 A:middle
+But we'll go ahead and add some
+
+00:19:48.526 --> 00:19:50.346 A:middle
+safe area insets to the top edge
+
+00:19:50.346 --> 00:19:51.036 A:middle
+of our scroll view.
+
+00:19:51.976 --> 00:19:54.026 A:middle
+And what you'll see is that by
+
+00:19:54.026 --> 00:19:55.806 A:middle
+default, the scroll view is
+
+00:19:55.806 --> 00:19:57.886 A:middle
+automatically absorbing those
+
+00:19:57.886 --> 00:20:00.046 A:middle
+safe area insets on its top edge
+
+00:19:57.886 --> 00:20:00.046 A:middle
+safe area insets on its top edge
+
+00:20:00.526 --> 00:20:02.076 A:middle
+into its adjusted content
+
+00:20:02.076 --> 00:20:02.486 A:middle
+insets.
+
+00:20:02.926 --> 00:20:03.886 A:middle
+And that's because our scroll
+
+00:20:03.886 --> 00:20:05.146 A:middle
+view's vertically scrollable.
+
+00:20:05.766 --> 00:20:07.496 A:middle
+And so what this does is this
+
+00:20:07.546 --> 00:20:08.866 A:middle
+automatically increases the
+
+00:20:08.866 --> 00:20:10.746 A:middle
+scrollable area and makes it so
+
+00:20:10.746 --> 00:20:12.416 A:middle
+content can scroll out from
+
+00:20:12.466 --> 00:20:14.116 A:middle
+underneath anything covering up
+
+00:20:14.416 --> 00:20:16.266 A:middle
+the top edge like a bar or even
+
+00:20:16.266 --> 00:20:17.146 A:middle
+the edge of the display.
+
+00:20:19.176 --> 00:20:20.856 A:middle
+So take a look at an example
+
+00:20:20.856 --> 00:20:22.246 A:middle
+here where we have the same
+
+00:20:22.246 --> 00:20:23.596 A:middle
+scroll view on two different
+
+00:20:23.596 --> 00:20:23.976 A:middle
+devices.
+
+00:20:23.976 --> 00:20:26.186 A:middle
+iPhone 10 on the left, iPhone 8
+
+00:20:26.186 --> 00:20:26.676 A:middle
+on the right.
+
+00:20:27.116 --> 00:20:29.286 A:middle
+And you can see this is a real
+
+00:20:29.286 --> 00:20:31.066 A:middle
+example, the top safe area inset
+
+00:20:31.066 --> 00:20:32.436 A:middle
+is larger on the iPhone 10
+
+00:20:32.856 --> 00:20:34.736 A:middle
+because of the larger status bar
+
+00:20:34.736 --> 00:20:36.036 A:middle
+height and the sensor housing.
+
+00:20:36.636 --> 00:20:37.966 A:middle
+And as a result, the scroll view
+
+00:20:37.966 --> 00:20:39.476 A:middle
+has a larger top inset-- that's
+
+00:20:39.476 --> 00:20:40.846 A:middle
+the gray region that's shaded at
+
+00:20:40.846 --> 00:20:41.366 A:middle
+the top here.
+
+00:20:42.296 --> 00:20:43.816 A:middle
+So this is one way that scroll
+
+00:20:43.816 --> 00:20:45.586 A:middle
+view helps automatically adapt
+
+00:20:45.976 --> 00:20:47.206 A:middle
+to any device that it's running
+
+00:20:47.206 --> 00:20:47.436 A:middle
+on.
+
+00:20:47.996 --> 00:20:49.726 A:middle
+Now let's go back to our diagram
+
+00:20:49.726 --> 00:20:51.566 A:middle
+and talk about something else.
+
+00:20:52.876 --> 00:20:54.016 A:middle
+When we have a scroll view like
+
+00:20:54.016 --> 00:20:55.986 A:middle
+this where we have top safe area
+
+00:20:55.986 --> 00:20:58.206 A:middle
+insets, let's go ahead and add a
+
+00:20:58.206 --> 00:20:59.286 A:middle
+subview to our scroll view.
+
+00:20:59.286 --> 00:21:01.216 A:middle
+And we'll put this right in the
+
+00:20:59.286 --> 00:21:01.216 A:middle
+And we'll put this right in the
+
+00:21:01.216 --> 00:21:01.836 A:middle
+content area.
+
+00:21:01.836 --> 00:21:03.426 A:middle
+And so right now this-- this
+
+00:21:03.426 --> 00:21:05.296 A:middle
+subview is sitting fully inside
+
+00:21:05.296 --> 00:21:06.566 A:middle
+of the safe area in the scroll
+
+00:21:06.566 --> 00:21:06.756 A:middle
+view.
+
+00:21:07.726 --> 00:21:09.446 A:middle
+But what if we start to scroll
+
+00:21:09.446 --> 00:21:11.036 A:middle
+the scroll view down which will
+
+00:21:11.036 --> 00:21:12.026 A:middle
+move that content up?
+
+00:21:12.736 --> 00:21:14.936 A:middle
+Just like this so that part of
+
+00:21:14.936 --> 00:21:16.206 A:middle
+that subview is now sitting
+
+00:21:16.286 --> 00:21:18.206 A:middle
+outside of the scroll view safe
+
+00:21:18.206 --> 00:21:18.476 A:middle
+area?
+
+00:21:19.636 --> 00:21:21.106 A:middle
+Based on the safe area inset
+
+00:21:21.106 --> 00:21:22.546 A:middle
+propagation that David just
+
+00:21:22.546 --> 00:21:24.106 A:middle
+talked to you about, you might
+
+00:21:24.106 --> 00:21:25.456 A:middle
+be thinking, okay, that means
+
+00:21:25.456 --> 00:21:26.576 A:middle
+the subview is going to start
+
+00:21:26.616 --> 00:21:28.726 A:middle
+seeing its own top edge safe
+
+00:21:28.726 --> 00:21:29.356 A:middle
+area inset.
+
+00:21:30.496 --> 00:21:31.276 A:middle
+That's actually not what
+
+00:21:31.276 --> 00:21:31.676 A:middle
+happens.
+
+00:21:32.726 --> 00:21:34.386 A:middle
+The reason why is because when a
+
+00:21:34.386 --> 00:21:36.746 A:middle
+scroll view absorbs safe area
+
+00:21:36.746 --> 00:21:38.966 A:middle
+insets into its adjusted content
+
+00:21:38.966 --> 00:21:40.966 A:middle
+inset, it will no longer
+
+00:21:41.156 --> 00:21:43.316 A:middle
+propagate those same insets down
+
+00:21:43.316 --> 00:21:44.646 A:middle
+to its subviews on that same
+
+00:21:44.646 --> 00:21:45.016 A:middle
+edge.
+
+00:21:46.336 --> 00:21:47.236 A:middle
+This is really important.
+
+00:21:48.276 --> 00:21:50.316 A:middle
+Scroll views use scrolling to
+
+00:21:50.316 --> 00:21:52.306 A:middle
+move content around and move it
+
+00:21:52.306 --> 00:21:53.496 A:middle
+out into the safe area.
+
+00:21:54.516 --> 00:21:56.636 A:middle
+And if a scroll view were to
+
+00:21:56.986 --> 00:21:59.046 A:middle
+also propagate safe area insets
+
+00:21:59.046 --> 00:22:00.366 A:middle
+that it was using to extend its
+
+00:21:59.046 --> 00:22:00.366 A:middle
+that it was using to extend its
+
+00:22:00.366 --> 00:22:02.176 A:middle
+scrollable area, it would almost
+
+00:22:02.176 --> 00:22:03.626 A:middle
+be like double accounting for
+
+00:22:03.626 --> 00:22:05.316 A:middle
+those same insets in two
+
+00:22:05.316 --> 00:22:06.006 A:middle
+different places.
+
+00:22:06.646 --> 00:22:08.576 A:middle
+And so as a result, the subviews
+
+00:22:08.576 --> 00:22:10.036 A:middle
+on the scrollable axis are kind
+
+00:22:10.036 --> 00:22:12.256 A:middle
+of completely unaware that there
+
+00:22:12.256 --> 00:22:13.896 A:middle
+are safe area insets on the
+
+00:22:13.896 --> 00:22:15.066 A:middle
+edges that the scroll view is
+
+00:22:15.066 --> 00:22:16.276 A:middle
+absorbing them into its adjusted
+
+00:22:16.276 --> 00:22:16.906 A:middle
+content inset.
+
+00:22:18.026 --> 00:22:19.356 A:middle
+So now that we understand how
+
+00:22:19.356 --> 00:22:20.616 A:middle
+scroll views work together with
+
+00:22:20.616 --> 00:22:22.356 A:middle
+safe areas, let's cover the
+
+00:22:22.356 --> 00:22:23.686 A:middle
+options that we've exposed to
+
+00:22:23.686 --> 00:22:24.836 A:middle
+let you control this behavior.
+
+00:22:26.636 --> 00:22:27.846 A:middle
+The mechanism that you have to
+
+00:22:27.846 --> 00:22:29.216 A:middle
+do this is a property on UI
+
+00:22:29.216 --> 00:22:30.786 A:middle
+scroll view called content inset
+
+00:22:30.786 --> 00:22:31.596 A:middle
+adjusted behavior.
+
+00:22:32.096 --> 00:22:33.886 A:middle
+And it also is available on
+
+00:22:33.886 --> 00:22:35.426 A:middle
+interface builder as you can see
+
+00:22:35.426 --> 00:22:35.616 A:middle
+here.
+
+00:22:36.656 --> 00:22:38.106 A:middle
+Now the default value for this
+
+00:22:38.106 --> 00:22:38.826 A:middle
+is automatic.
+
+00:22:39.326 --> 00:22:41.356 A:middle
+And most of the time, if not all
+
+00:22:41.356 --> 00:22:42.676 A:middle
+the time, you're really going to
+
+00:22:42.676 --> 00:22:43.886 A:middle
+want to leave this at its
+
+00:22:43.886 --> 00:22:44.526 A:middle
+default value.
+
+00:22:45.246 --> 00:22:46.256 A:middle
+But we want to walk through the
+
+00:22:46.256 --> 00:22:47.786 A:middle
+options so that you understand
+
+00:22:48.236 --> 00:22:49.736 A:middle
+what they do and know that
+
+00:22:49.736 --> 00:22:50.306 A:middle
+they're available.
+
+00:22:50.636 --> 00:22:51.596 A:middle
+And so you can make the right
+
+00:22:51.596 --> 00:22:52.616 A:middle
+choice in your apps.
+
+00:22:53.456 --> 00:22:54.356 A:middle
+So we'll start with the first
+
+00:22:55.576 --> 00:22:55.666 A:middle
+one.
+
+00:22:56.046 --> 00:22:57.806 A:middle
+The first one is the always
+
+00:22:57.856 --> 00:22:58.276 A:middle
+behavior.
+
+00:22:58.516 --> 00:22:59.666 A:middle
+This is pretty straightforward
+
+00:22:59.666 --> 00:23:00.446 A:middle
+as you might expect.
+
+00:22:59.666 --> 00:23:00.446 A:middle
+as you might expect.
+
+00:23:00.866 --> 00:23:02.506 A:middle
+Scroll view is going to always
+
+00:23:02.506 --> 00:23:04.846 A:middle
+incorporate any system inset
+
+00:23:04.846 --> 00:23:06.546 A:middle
+like safe area insets into its
+
+00:23:06.546 --> 00:23:08.596 A:middle
+adjusted content inset on any
+
+00:23:08.596 --> 00:23:08.926 A:middle
+edge.
+
+00:23:09.236 --> 00:23:10.396 A:middle
+And this works fine in our
+
+00:23:10.396 --> 00:23:11.656 A:middle
+particular example here.
+
+00:23:11.656 --> 00:23:13.026 A:middle
+We only have a top and bottom
+
+00:23:13.026 --> 00:23:14.336 A:middle
+safe area inset on our scroll
+
+00:23:14.336 --> 00:23:14.606 A:middle
+view.
+
+00:23:14.906 --> 00:23:16.816 A:middle
+And so it will incorporate those
+
+00:23:16.816 --> 00:23:17.966 A:middle
+and the content gets to move out
+
+00:23:17.966 --> 00:23:18.996 A:middle
+from underneath the bars.
+
+00:23:19.216 --> 00:23:20.306 A:middle
+We don't have any horizontal
+
+00:23:20.306 --> 00:23:21.596 A:middle
+insets on the left or right.
+
+00:23:21.956 --> 00:23:22.726 A:middle
+So no problems.
+
+00:23:23.176 --> 00:23:24.686 A:middle
+But be careful with this one
+
+00:23:24.686 --> 00:23:25.836 A:middle
+because if you have something
+
+00:23:25.836 --> 00:23:27.676 A:middle
+like let's say a table view on
+
+00:23:27.676 --> 00:23:29.196 A:middle
+the iPhone 10 in landscape,
+
+00:23:29.646 --> 00:23:30.746 A:middle
+there are left and right safe
+
+00:23:30.746 --> 00:23:31.546 A:middle
+area insets.
+
+00:23:31.896 --> 00:23:33.626 A:middle
+Using this behavior the table
+
+00:23:33.626 --> 00:23:34.786 A:middle
+view is going to incorporate
+
+00:23:34.786 --> 00:23:36.186 A:middle
+those into its adjusted content
+
+00:23:36.186 --> 00:23:37.616 A:middle
+inset, which increases the
+
+00:23:37.616 --> 00:23:39.146 A:middle
+scrollable area, which is going
+
+00:23:39.146 --> 00:23:39.836 A:middle
+to make a table view
+
+00:23:39.836 --> 00:23:40.846 A:middle
+horizontally scrollable.
+
+00:23:40.846 --> 00:23:42.206 A:middle
+You're not going to want that
+
+00:23:42.206 --> 00:23:42.536 A:middle
+behavior.
+
+00:23:43.876 --> 00:23:45.106 A:middle
+That's why we have the next
+
+00:23:45.106 --> 00:23:46.466 A:middle
+behavior which is scrollable
+
+00:23:46.466 --> 00:23:46.736 A:middle
+axes.
+
+00:23:47.766 --> 00:23:49.536 A:middle
+For this one, the scroll view is
+
+00:23:49.536 --> 00:23:50.796 A:middle
+going to independently consider
+
+00:23:50.796 --> 00:23:52.426 A:middle
+things on the vertical axis and
+
+00:23:52.426 --> 00:23:53.506 A:middle
+the horizontal axis.
+
+00:23:53.926 --> 00:23:55.516 A:middle
+For each of those, if the
+
+00:23:55.516 --> 00:23:57.606 A:middle
+content size exceeds the width
+
+00:23:57.606 --> 00:23:59.716 A:middle
+or the height as appropriate, or
+
+00:24:00.026 --> 00:24:01.476 A:middle
+if you set the always bounce
+
+00:24:01.476 --> 00:24:02.876 A:middle
+horizontal or always bounce
+
+00:24:02.876 --> 00:24:04.176 A:middle
+vertical properties to true,
+
+00:24:04.856 --> 00:24:06.286 A:middle
+then the scroll view considers
+
+00:24:06.286 --> 00:24:07.396 A:middle
+that axis scrollable.
+
+00:24:07.696 --> 00:24:08.656 A:middle
+And it will go ahead and
+
+00:24:08.656 --> 00:24:10.146 A:middle
+incorporate in the system inset
+
+00:24:10.146 --> 00:24:11.556 A:middle
+into its adjusted content inset.
+
+00:24:12.006 --> 00:24:13.246 A:middle
+So in this example right behind
+
+00:24:13.246 --> 00:24:14.936 A:middle
+me we have a long article that's
+
+00:24:14.936 --> 00:24:15.506 A:middle
+scrollable.
+
+00:24:15.576 --> 00:24:16.516 A:middle
+And so we're getting those
+
+00:24:16.516 --> 00:24:17.956 A:middle
+automatic insets incorporated.
+
+00:24:18.476 --> 00:24:19.376 A:middle
+But what if we had a shorter
+
+00:24:19.376 --> 00:24:19.706 A:middle
+article?
+
+00:24:19.906 --> 00:24:20.386 A:middle
+Let's take a look.
+
+00:24:21.416 --> 00:24:21.716 A:middle
+Okay.
+
+00:24:21.816 --> 00:24:22.766 A:middle
+Here's a shorter article.
+
+00:24:23.456 --> 00:24:24.546 A:middle
+What's going on here?
+
+00:24:24.596 --> 00:24:25.586 A:middle
+Let's take a look under the nav
+
+00:24:25.586 --> 00:24:26.806 A:middle
+bar and see what's going on.
+
+00:24:26.936 --> 00:24:27.126 A:middle
+Ah.
+
+00:24:28.066 --> 00:24:29.286 A:middle
+Looks like we've lost our system
+
+00:24:29.286 --> 00:24:30.186 A:middle
+inset because it's not
+
+00:24:30.186 --> 00:24:31.086 A:middle
+scrollable anymore.
+
+00:24:31.186 --> 00:24:32.506 A:middle
+So our title's stuck all the way
+
+00:24:32.506 --> 00:24:33.676 A:middle
+up underneath the status bar.
+
+00:24:34.366 --> 00:24:35.476 A:middle
+So let's put back the nav bar
+
+00:24:36.306 --> 00:24:37.696 A:middle
+and talk about how we fix this.
+
+00:24:37.966 --> 00:24:39.296 A:middle
+Well, one way could be you could
+
+00:24:39.296 --> 00:24:40.826 A:middle
+set always bounce vertical on
+
+00:24:40.826 --> 00:24:41.666 A:middle
+this scroll view if that's the
+
+00:24:41.666 --> 00:24:42.456 A:middle
+behavior you want.
+
+00:24:42.696 --> 00:24:43.916 A:middle
+That will make the scroll view
+
+00:24:43.916 --> 00:24:45.036 A:middle
+always vertically scrollable.
+
+00:24:45.836 --> 00:24:47.376 A:middle
+Or we'll get to our next
+
+00:24:47.376 --> 00:24:48.716 A:middle
+behavior, which is automatic.
+
+00:24:49.626 --> 00:24:51.286 A:middle
+And so automatic works basically
+
+00:24:51.286 --> 00:24:53.026 A:middle
+the same as scrollable axes,
+
+00:24:53.026 --> 00:24:53.956 A:middle
+which we just talked about.
+
+00:24:54.456 --> 00:24:55.766 A:middle
+But it has one additional
+
+00:24:55.836 --> 00:24:58.046 A:middle
+behavior as part of it that is
+
+00:24:58.386 --> 00:24:59.716 A:middle
+when the scroll view is inside
+
+00:24:59.716 --> 00:25:01.706 A:middle
+of a navigation controller, the
+
+00:24:59.716 --> 00:25:01.706 A:middle
+of a navigation controller, the
+
+00:25:01.706 --> 00:25:02.816 A:middle
+scroll view will go ahead and
+
+00:25:02.816 --> 00:25:04.606 A:middle
+adjust its top and bottom
+
+00:25:04.746 --> 00:25:06.986 A:middle
+content inset even if it's not
+
+00:25:06.986 --> 00:25:08.746 A:middle
+vertically scrollable to account
+
+00:25:08.746 --> 00:25:09.946 A:middle
+for top and bottom bars.
+
+00:25:10.406 --> 00:25:11.516 A:middle
+So, even in this case where we
+
+00:25:11.516 --> 00:25:13.326 A:middle
+have a very short article, it
+
+00:25:13.326 --> 00:25:14.286 A:middle
+still means that we're getting
+
+00:25:14.286 --> 00:25:15.146 A:middle
+the right insets.
+
+00:25:15.416 --> 00:25:16.406 A:middle
+And this is generally the
+
+00:25:16.406 --> 00:25:17.396 A:middle
+behavior you're going to want.
+
+00:25:17.396 --> 00:25:18.496 A:middle
+And that's why we have it as the
+
+00:25:18.496 --> 00:25:18.936 A:middle
+default.
+
+00:25:19.466 --> 00:25:20.706 A:middle
+Just one quick heads up though.
+
+00:25:20.706 --> 00:25:21.656 A:middle
+If you are setting the
+
+00:25:21.656 --> 00:25:23.386 A:middle
+deprecated automatically adjust
+
+00:25:23.386 --> 00:25:24.666 A:middle
+scroll view inset property to
+
+00:25:24.666 --> 00:25:27.196 A:middle
+false, that will disable this
+
+00:25:27.196 --> 00:25:27.586 A:middle
+behavior.
+
+00:25:27.586 --> 00:25:28.626 A:middle
+And so it's going to behave
+
+00:25:28.626 --> 00:25:30.936 A:middle
+basically like scrollable axes.
+
+00:25:31.216 --> 00:25:32.526 A:middle
+Alright, that brings us to our
+
+00:25:32.526 --> 00:25:33.506 A:middle
+last behavior.
+
+00:25:33.896 --> 00:25:34.276 A:middle
+Never.
+
+00:25:35.536 --> 00:25:37.506 A:middle
+Now with this one, as you
+
+00:25:37.506 --> 00:25:38.576 A:middle
+expect, that means the scroll
+
+00:25:38.576 --> 00:25:39.956 A:middle
+view is never going to adjust
+
+00:25:39.956 --> 00:25:40.946 A:middle
+its content inset.
+
+00:25:42.116 --> 00:25:44.116 A:middle
+However, that has some side
+
+00:25:44.116 --> 00:25:44.606 A:middle
+effects.
+
+00:25:44.986 --> 00:25:47.016 A:middle
+For one, that means that the
+
+00:25:47.016 --> 00:25:47.936 A:middle
+scroll view will end up
+
+00:25:48.086 --> 00:25:50.206 A:middle
+propagating safe area insets on
+
+00:25:50.336 --> 00:25:51.936 A:middle
+all of its edges just like a
+
+00:25:51.936 --> 00:25:52.616 A:middle
+regular view.
+
+00:25:53.026 --> 00:25:54.376 A:middle
+And as we talked about before,
+
+00:25:54.686 --> 00:25:55.906 A:middle
+that might end up giving you
+
+00:25:55.906 --> 00:25:57.016 A:middle
+some behavior you don't really
+
+00:25:57.016 --> 00:25:57.396 A:middle
+want.
+
+00:25:57.916 --> 00:25:59.486 A:middle
+For example, if you recall your
+
+00:25:59.486 --> 00:26:00.826 A:middle
+layout margins are relative to
+
+00:25:59.486 --> 00:26:00.826 A:middle
+layout margins are relative to
+
+00:26:00.826 --> 00:26:02.196 A:middle
+the safe area, which means your
+
+00:26:02.196 --> 00:26:03.116 A:middle
+layout margins might end up
+
+00:26:03.116 --> 00:26:04.486 A:middle
+increasing or changing as a
+
+00:26:04.486 --> 00:26:05.286 A:middle
+result of this.
+
+00:26:06.006 --> 00:26:07.576 A:middle
+This is also going to disable
+
+00:26:07.576 --> 00:26:08.886 A:middle
+some very helpful automatic
+
+00:26:08.936 --> 00:26:09.976 A:middle
+behaviors that scroll view
+
+00:26:09.976 --> 00:26:11.876 A:middle
+provides like automatic scroll
+
+00:26:11.876 --> 00:26:12.966 A:middle
+indicator insets.
+
+00:26:13.726 --> 00:26:16.046 A:middle
+And so if you do a search online
+
+00:26:16.046 --> 00:26:17.406 A:middle
+and you see a favorite, you
+
+00:26:17.406 --> 00:26:18.556 A:middle
+know, question and answer
+
+00:26:18.556 --> 00:26:19.766 A:middle
+website suggesting that you set
+
+00:26:19.766 --> 00:26:21.256 A:middle
+your scroll view's content inset
+
+00:26:21.256 --> 00:26:22.306 A:middle
+adjustment behavior to never,
+
+00:26:23.016 --> 00:26:24.766 A:middle
+consider instead using
+
+00:26:24.766 --> 00:26:26.546 A:middle
+additional safe area insets to
+
+00:26:26.596 --> 00:26:28.126 A:middle
+increase the safe area insets.
+
+00:26:28.126 --> 00:26:29.206 A:middle
+If your goal is to try to
+
+00:26:29.576 --> 00:26:30.746 A:middle
+express to the system that
+
+00:26:30.746 --> 00:26:31.966 A:middle
+you've added let's say a toolbar
+
+00:26:31.966 --> 00:26:33.436 A:middle
+or some sort of other overlay.
+
+00:26:33.976 --> 00:26:36.186 A:middle
+Or you could consider just
+
+00:26:36.226 --> 00:26:37.716 A:middle
+modifying the content inset
+
+00:26:37.716 --> 00:26:38.776 A:middle
+directly, the property that we
+
+00:26:38.776 --> 00:26:39.516 A:middle
+talked about in the very
+
+00:26:39.516 --> 00:26:39.956 A:middle
+beginning.
+
+00:26:39.996 --> 00:26:41.166 A:middle
+That's for you to control.
+
+00:26:41.166 --> 00:26:42.446 A:middle
+And you can use that to add or
+
+00:26:42.446 --> 00:26:44.196 A:middle
+subtract from the effective
+
+00:26:44.296 --> 00:26:45.736 A:middle
+adjusted content inset that the
+
+00:26:45.736 --> 00:26:46.736 A:middle
+scroll view will see.
+
+00:26:47.116 --> 00:26:48.566 A:middle
+So with that, I'd like to hand
+
+00:26:48.566 --> 00:26:50.096 A:middle
+it over to Russell to tell you
+
+00:26:50.096 --> 00:26:51.646 A:middle
+all about how to put this
+
+00:26:51.646 --> 00:26:51.976 A:middle
+altogether.
+
+00:26:52.516 --> 00:26:57.516 A:middle
+[ Applause ]
+
+00:26:58.016 --> 00:26:58.916 A:middle
+&gt;&gt; Thanks, Tyler.
+
+00:27:00.516 --> 00:27:02.326 A:middle
+Now we've introduced many
+
+00:27:02.326 --> 00:27:03.536 A:middle
+adaptive APIs to help your apps
+
+00:27:03.616 --> 00:27:05.416 A:middle
+over the years adapt to
+
+00:27:05.416 --> 00:27:06.156 A:middle
+different environments.
+
+00:27:06.656 --> 00:27:08.216 A:middle
+And safe area is really just the
+
+00:27:08.216 --> 00:27:09.006 A:middle
+newest of these.
+
+00:27:09.006 --> 00:27:10.656 A:middle
+So I'm going to review some of
+
+00:27:10.656 --> 00:27:12.196 A:middle
+these concepts and also talk
+
+00:27:12.196 --> 00:27:13.576 A:middle
+about how they work with safe
+
+00:27:13.576 --> 00:27:13.836 A:middle
+area.
+
+00:27:15.456 --> 00:27:16.866 A:middle
+So let's go to the first screen
+
+00:27:16.866 --> 00:27:17.676 A:middle
+of our application.
+
+00:27:18.406 --> 00:27:20.276 A:middle
+And we've got a pretty standard
+
+00:27:20.276 --> 00:27:21.546 A:middle
+setup here with a tab bar
+
+00:27:21.546 --> 00:27:22.596 A:middle
+controller, continuing
+
+00:27:22.596 --> 00:27:23.596 A:middle
+navigation controller,
+
+00:27:23.906 --> 00:27:25.756 A:middle
+containing our content view
+
+00:27:25.786 --> 00:27:26.166 A:middle
+controller.
+
+00:27:27.516 --> 00:27:29.226 A:middle
+Now note that the views of all
+
+00:27:29.286 --> 00:27:30.406 A:middle
+three of these view controllers
+
+00:27:30.656 --> 00:27:31.466 A:middle
+are full screen.
+
+00:27:32.196 --> 00:27:33.836 A:middle
+This is what enables the tab bar
+
+00:27:33.836 --> 00:27:35.236 A:middle
+to extend underneath the home
+
+00:27:35.236 --> 00:27:37.146 A:middle
+indicator, the navigation bar to
+
+00:27:37.146 --> 00:27:38.126 A:middle
+extend underneath the status
+
+00:27:38.126 --> 00:27:40.246 A:middle
+bar, and the content to extend
+
+00:27:40.246 --> 00:27:42.426 A:middle
+and scroll underneath all of it.
+
+00:27:43.416 --> 00:27:44.516 A:middle
+But we need to prevent these
+
+00:27:44.516 --> 00:27:45.626 A:middle
+elements from overlapping.
+
+00:27:45.806 --> 00:27:47.146 A:middle
+So let's see how safe area
+
+00:27:47.206 --> 00:27:49.316 A:middle
+allows these components to do
+
+00:27:50.016 --> 00:27:50.196 A:middle
+that.
+
+00:27:50.356 --> 00:27:51.866 A:middle
+So the safe area insets start by
+
+00:27:51.866 --> 00:27:52.856 A:middle
+flowing through the tab bar
+
+00:27:52.856 --> 00:27:54.836 A:middle
+controller, which only receives
+
+00:27:54.836 --> 00:27:57.076 A:middle
+insets on the home indicator and
+
+00:27:57.076 --> 00:27:58.786 A:middle
+status bar because that's all
+
+00:27:58.786 --> 00:27:59.136 A:middle
+that it sees.
+
+00:28:00.776 --> 00:28:01.906 A:middle
+Since the navigation controller
+
+00:28:01.906 --> 00:28:03.996 A:middle
+is inside of that, it also
+
+00:28:04.036 --> 00:28:05.256 A:middle
+receives a safe area inside in
+
+00:28:05.256 --> 00:28:06.966 A:middle
+the bottom that accounts for the
+
+00:28:06.966 --> 00:28:07.406 A:middle
+tab bar.
+
+00:28:08.456 --> 00:28:09.596 A:middle
+And the content view controller
+
+00:28:09.596 --> 00:28:11.166 A:middle
+inside of both received safe
+
+00:28:11.166 --> 00:28:12.286 A:middle
+area insets that account for
+
+00:28:12.286 --> 00:28:12.926 A:middle
+both bars.
+
+00:28:12.926 --> 00:28:15.726 A:middle
+Now what does the story look
+
+00:28:15.726 --> 00:28:16.466 A:middle
+like in landscape?
+
+00:28:17.536 --> 00:28:18.086 A:middle
+Similar.
+
+00:28:18.086 --> 00:28:19.426 A:middle
+There are safe area insets in
+
+00:28:19.426 --> 00:28:20.206 A:middle
+the top and bottom.
+
+00:28:20.696 --> 00:28:22.106 A:middle
+But there are also insets on the
+
+00:28:22.106 --> 00:28:24.676 A:middle
+left and right that account for
+
+00:28:25.286 --> 00:28:26.486 A:middle
+the size of the screen.
+
+00:28:26.486 --> 00:28:27.886 A:middle
+And those are propagated all the
+
+00:28:27.886 --> 00:28:29.546 A:middle
+way down from the screen through
+
+00:28:29.546 --> 00:28:30.576 A:middle
+the view controller hierarchy.
+
+00:28:32.226 --> 00:28:33.696 A:middle
+Now I want to stop here and use
+
+00:28:33.696 --> 00:28:35.566 A:middle
+this example to make a point
+
+00:28:35.686 --> 00:28:37.516 A:middle
+about how you should think about
+
+00:28:37.516 --> 00:28:38.636 A:middle
+using safe area when you
+
+00:28:38.636 --> 00:28:39.856 A:middle
+implement your own views.
+
+00:28:40.806 --> 00:28:43.156 A:middle
+So this custom view shouldn't
+
+00:28:43.156 --> 00:28:44.516 A:middle
+know that it's running on an
+
+00:28:44.516 --> 00:28:45.156 A:middle
+iPhone 10.
+
+00:28:45.586 --> 00:28:46.886 A:middle
+It shouldn't even know that it's
+
+00:28:46.886 --> 00:28:48.626 A:middle
+contained inside of container
+
+00:28:48.626 --> 00:28:49.326 A:middle
+view controllers.
+
+00:28:50.286 --> 00:28:51.776 A:middle
+This is the idea of
+
+00:28:51.776 --> 00:28:52.726 A:middle
+encapsulation.
+
+00:28:53.236 --> 00:28:55.456 A:middle
+If your views only read the safe
+
+00:28:55.456 --> 00:28:57.036 A:middle
+area insets that are provided to
+
+00:28:57.036 --> 00:28:59.436 A:middle
+them on all four sides, and are
+
+00:28:59.436 --> 00:29:02.876 A:middle
+able to adapt to different, to
+
+00:28:59.436 --> 00:29:02.876 A:middle
+able to adapt to different, to
+
+00:29:02.876 --> 00:29:04.626 A:middle
+arbitrary safe area insets, that
+
+00:29:04.926 --> 00:29:06.976 A:middle
+will ensure that your views will
+
+00:29:06.976 --> 00:29:08.866 A:middle
+be able to, will be modular, can
+
+00:29:08.866 --> 00:29:09.576 A:middle
+be moved throughout your
+
+00:29:09.576 --> 00:29:10.796 A:middle
+application and run in
+
+00:29:10.796 --> 00:29:12.266 A:middle
+different, different
+
+00:29:12.266 --> 00:29:13.376 A:middle
+environments and still not be
+
+00:29:13.376 --> 00:29:13.776 A:middle
+occluded.
+
+00:29:16.266 --> 00:29:18.796 A:middle
+Now let's jump to an article and
+
+00:29:18.886 --> 00:29:21.086 A:middle
+talk about hiding the status
+
+00:29:21.896 --> 00:29:21.996 A:middle
+bar.
+
+00:29:22.226 --> 00:29:23.736 A:middle
+So hiding the status bar is a
+
+00:29:23.736 --> 00:29:25.596 A:middle
+technique that would reclaim 20
+
+00:29:25.596 --> 00:29:27.446 A:middle
+points of vertical screen real
+
+00:29:27.446 --> 00:29:28.966 A:middle
+estate on rectangular screen
+
+00:29:28.966 --> 00:29:29.396 A:middle
+phones.
+
+00:29:30.856 --> 00:29:32.686 A:middle
+And we're just doing this by
+
+00:29:32.686 --> 00:29:34.806 A:middle
+overriding preferred status bar
+
+00:29:34.806 --> 00:29:35.956 A:middle
+hidden in our content view
+
+00:29:35.956 --> 00:29:36.816 A:middle
+controller and we're turning
+
+00:29:36.816 --> 00:29:37.076 A:middle
+true.
+
+00:29:37.526 --> 00:29:38.486 A:middle
+And this preference is then
+
+00:29:38.486 --> 00:29:39.936 A:middle
+propagating up through our
+
+00:29:39.936 --> 00:29:40.906 A:middle
+contained view controller
+
+00:29:40.906 --> 00:29:43.576 A:middle
+hierarchy and respected by the
+
+00:29:43.576 --> 00:29:46.526 A:middle
+root-- the root of the system.
+
+00:29:46.666 --> 00:29:48.756 A:middle
+Now unfortunately on iPhone 10,
+
+00:29:49.296 --> 00:29:50.536 A:middle
+preferring the status bar hidden
+
+00:29:50.696 --> 00:29:52.196 A:middle
+does not also hide the sensor
+
+00:29:52.196 --> 00:29:52.476 A:middle
+housing.
+
+00:29:53.256 --> 00:29:55.186 A:middle
+So we can't slide content
+
+00:29:55.186 --> 00:29:56.676 A:middle
+underneath it.
+
+00:29:57.996 --> 00:29:59.106 A:middle
+[Laughs] So UIKit will protect
+
+00:29:59.106 --> 00:30:00.816 A:middle
+you and will not allow you to
+
+00:29:59.106 --> 00:30:00.816 A:middle
+you and will not allow you to
+
+00:30:00.816 --> 00:30:01.466 A:middle
+create this UI.
+
+00:30:01.976 --> 00:30:03.656 A:middle
+Instead, the behavior of
+
+00:30:03.656 --> 00:30:05.156 A:middle
+navigation controller on iPhone
+
+00:30:05.156 --> 00:30:06.716 A:middle
+10 is that it will always
+
+00:30:06.746 --> 00:30:08.846 A:middle
+display the status bar when the
+
+00:30:08.846 --> 00:30:10.286 A:middle
+navigation bar is visible.
+
+00:30:10.806 --> 00:30:13.426 A:middle
+So if you want to hide the
+
+00:30:13.426 --> 00:30:14.746 A:middle
+status bar and reclaim vertical
+
+00:30:14.746 --> 00:30:16.566 A:middle
+real estate, our recommendation
+
+00:30:16.666 --> 00:30:18.836 A:middle
+is to hide the navigation bar
+
+00:30:18.836 --> 00:30:20.026 A:middle
+and status bar together.
+
+00:30:20.726 --> 00:30:23.266 A:middle
+And, in general, when you want
+
+00:30:23.266 --> 00:30:24.536 A:middle
+to go-- when you want to create
+
+00:30:24.536 --> 00:30:26.556 A:middle
+an immersive experience, go
+
+00:30:26.556 --> 00:30:28.426 A:middle
+immersive and just hide all of
+
+00:30:28.426 --> 00:30:29.576 A:middle
+your overlays and controls
+
+00:30:29.576 --> 00:30:29.956 A:middle
+together.
+
+00:30:30.916 --> 00:30:32.596 A:middle
+Not only does this look good and
+
+00:30:32.656 --> 00:30:33.886 A:middle
+help your users focus on their
+
+00:30:33.886 --> 00:30:36.126 A:middle
+content, it's also a design
+
+00:30:36.126 --> 00:30:37.826 A:middle
+technique that will adapt well
+
+00:30:37.976 --> 00:30:40.736 A:middle
+to all of our devices.
+
+00:30:41.716 --> 00:30:43.306 A:middle
+Now, speaking of immersive
+
+00:30:43.306 --> 00:30:44.076 A:middle
+experiences.
+
+00:30:44.926 --> 00:30:46.726 A:middle
+Let's switch to the iPad and
+
+00:30:46.726 --> 00:30:48.276 A:middle
+talk about rendering text in a
+
+00:30:48.276 --> 00:30:49.416 A:middle
+very wide environment.
+
+00:30:51.426 --> 00:30:53.396 A:middle
+So here you can see we have
+
+00:30:53.516 --> 00:30:55.256 A:middle
+text, and it's not extending all
+
+00:30:55.256 --> 00:30:56.816 A:middle
+the way to the edges of our
+
+00:30:56.816 --> 00:30:57.056 A:middle
+view.
+
+00:30:58.546 --> 00:31:00.106 A:middle
+The problem with doing that, if
+
+00:30:58.546 --> 00:31:00.106 A:middle
+The problem with doing that, if
+
+00:31:00.106 --> 00:31:01.146 A:middle
+we had rendered the text all the
+
+00:31:01.146 --> 00:31:03.446 A:middle
+way to the edge, is that it can
+
+00:31:03.736 --> 00:31:05.606 A:middle
+become difficult to read, for
+
+00:31:05.606 --> 00:31:07.246 A:middle
+your eye to track from one line
+
+00:31:07.246 --> 00:31:10.156 A:middle
+of text to the next at a given
+
+00:31:10.156 --> 00:31:10.576 A:middle
+font size.
+
+00:31:11.716 --> 00:31:14.396 A:middle
+And so the solution is to always
+
+00:31:14.396 --> 00:31:16.806 A:middle
+render text inside of a readable
+
+00:31:16.806 --> 00:31:18.636 A:middle
+width, a recommended readable
+
+00:31:18.636 --> 00:31:20.036 A:middle
+width provided by the system
+
+00:31:20.476 --> 00:31:22.256 A:middle
+based on the user's currently
+
+00:31:22.346 --> 00:31:24.626 A:middle
+selected dynamic type font size.
+
+00:31:25.106 --> 00:31:26.676 A:middle
+Dynamic type being another
+
+00:31:26.876 --> 00:31:30.246 A:middle
+adaptive element of our iOS.
+
+00:31:30.986 --> 00:31:32.616 A:middle
+Now you can get the readable
+
+00:31:32.616 --> 00:31:35.676 A:middle
+width with this API on UIView
+
+00:31:35.976 --> 00:31:37.136 A:middle
+called the readable content
+
+00:31:37.136 --> 00:31:37.416 A:middle
+guide.
+
+00:31:37.866 --> 00:31:39.176 A:middle
+So this is another layout guide
+
+00:31:39.336 --> 00:31:40.656 A:middle
+just like the layout guide for
+
+00:31:40.656 --> 00:31:42.106 A:middle
+margins and safe area.
+
+00:31:42.976 --> 00:31:44.086 A:middle
+And it works just the same.
+
+00:31:44.646 --> 00:31:47.646 A:middle
+And I mentioned that this
+
+00:31:48.066 --> 00:31:49.536 A:middle
+readable width depends on the
+
+00:31:49.536 --> 00:31:50.756 A:middle
+user's currently selected
+
+00:31:50.756 --> 00:31:52.656 A:middle
+dynamic type size, which means
+
+00:31:52.656 --> 00:31:53.916 A:middle
+if the user changes their
+
+00:31:53.916 --> 00:31:55.486 A:middle
+dynamic type size in Control
+
+00:31:55.486 --> 00:31:57.666 A:middle
+Center or the setting app, the
+
+00:31:57.666 --> 00:31:58.976 A:middle
+readable width will get smaller
+
+00:31:58.976 --> 00:32:00.000 A:middle
+or larger to compensate.
+
+00:32:03.296 --> 00:32:05.246 A:middle
+Now let's switch to portrait and
+
+00:32:05.246 --> 00:32:07.096 A:middle
+bring in our sidebar with our
+
+00:32:07.096 --> 00:32:09.746 A:middle
+article list to make the context
+
+00:32:09.746 --> 00:32:11.156 A:middle
+for our article display much
+
+00:32:11.156 --> 00:32:11.636 A:middle
+narrower.
+
+00:32:12.116 --> 00:32:14.106 A:middle
+So here the maximum recommended
+
+00:32:14.106 --> 00:32:16.136 A:middle
+readable-- readable width is
+
+00:32:16.136 --> 00:32:18.056 A:middle
+much wider than the space we
+
+00:32:18.056 --> 00:32:19.226 A:middle
+have to display the article.
+
+00:32:20.236 --> 00:32:21.676 A:middle
+And the thing to note is that
+
+00:32:21.676 --> 00:32:23.496 A:middle
+the readable content guide will
+
+00:32:23.626 --> 00:32:26.246 A:middle
+still not report the maximum
+
+00:32:26.246 --> 00:32:27.366 A:middle
+readable width necessarily.
+
+00:32:27.366 --> 00:32:28.456 A:middle
+It'll be clamped to the layout
+
+00:32:28.456 --> 00:32:29.976 A:middle
+margins, which means you can be
+
+00:32:30.086 --> 00:32:31.616 A:middle
+confident in laying out your
+
+00:32:31.616 --> 00:32:33.366 A:middle
+views against the readable
+
+00:32:33.366 --> 00:32:34.046 A:middle
+content guide.
+
+00:32:34.046 --> 00:32:35.106 A:middle
+And not worry that they're going
+
+00:32:35.106 --> 00:32:36.616 A:middle
+to spill outside your margins.
+
+00:32:39.306 --> 00:32:41.206 A:middle
+Now let's see how this works on
+
+00:32:41.206 --> 00:32:42.776 A:middle
+a context for a safe area
+
+00:32:42.776 --> 00:32:43.116 A:middle
+exists.
+
+00:32:43.796 --> 00:32:44.886 A:middle
+The readable content guide
+
+00:32:44.886 --> 00:32:46.576 A:middle
+functions just like-- just like
+
+00:32:46.576 --> 00:32:48.616 A:middle
+layout margins where its insets
+
+00:32:48.716 --> 00:32:50.606 A:middle
+add to those provided by the
+
+00:32:50.606 --> 00:32:52.116 A:middle
+safe area insets.
+
+00:32:53.256 --> 00:32:56.376 A:middle
+Now normally at the regular--
+
+00:32:56.376 --> 00:32:58.176 A:middle
+the default dynamic type font
+
+00:32:58.176 --> 00:32:59.656 A:middle
+size of the system, the readable
+
+00:32:59.656 --> 00:33:01.846 A:middle
+width is going to be wider than
+
+00:32:59.656 --> 00:33:01.846 A:middle
+width is going to be wider than
+
+00:33:01.846 --> 00:33:03.366 A:middle
+the width of a device of an
+
+00:33:03.456 --> 00:33:05.546 A:middle
+iPhone in any orientation which
+
+00:33:05.546 --> 00:33:06.926 A:middle
+means it won't come into play.
+
+00:33:07.636 --> 00:33:09.326 A:middle
+However, even iPhones, if the
+
+00:33:09.326 --> 00:33:11.836 A:middle
+user selects a smaller dynamic
+
+00:33:11.836 --> 00:33:13.066 A:middle
+type font size than the default,
+
+00:33:13.386 --> 00:33:14.576 A:middle
+it can come into play, so it's
+
+00:33:14.576 --> 00:33:15.856 A:middle
+still nice for your application
+
+00:33:15.906 --> 00:33:16.886 A:middle
+to adopt.
+
+00:33:18.636 --> 00:33:20.976 A:middle
+Now let's jump back out to our
+
+00:33:21.326 --> 00:33:22.926 A:middle
+article list table view and see
+
+00:33:22.926 --> 00:33:23.966 A:middle
+how readable width can work
+
+00:33:24.056 --> 00:33:24.256 A:middle
+here.
+
+00:33:24.376 --> 00:33:26.286 A:middle
+Now the thing to know about
+
+00:33:26.286 --> 00:33:28.316 A:middle
+table views is that they use
+
+00:33:28.316 --> 00:33:30.566 A:middle
+their layout margins, I'm
+
+00:33:30.566 --> 00:33:32.386 A:middle
+talking about the margins, to
+
+00:33:32.386 --> 00:33:34.386 A:middle
+layout a lot of their UI
+
+00:33:34.386 --> 00:33:34.936 A:middle
+elements.
+
+00:33:35.266 --> 00:33:38.006 A:middle
+So that means the separators,
+
+00:33:38.326 --> 00:33:40.966 A:middle
+the system accessories as well
+
+00:33:40.966 --> 00:33:42.916 A:middle
+as the labels in the system cell
+
+00:33:42.916 --> 00:33:43.386 A:middle
+styles.
+
+00:33:43.976 --> 00:33:45.846 A:middle
+And any views you lay out inside
+
+00:33:45.846 --> 00:33:47.376 A:middle
+of your own custom table view
+
+00:33:47.376 --> 00:33:48.266 A:middle
+cells, if you laid them out
+
+00:33:48.266 --> 00:33:49.416 A:middle
+against the margins, will play
+
+00:33:49.416 --> 00:33:50.016 A:middle
+along as well.
+
+00:33:50.126 --> 00:33:52.756 A:middle
+So that means if you adjust the
+
+00:33:52.756 --> 00:33:55.496 A:middle
+margins of a table view, you can
+
+00:33:55.496 --> 00:33:57.346 A:middle
+move all of these elements
+
+00:33:57.416 --> 00:33:57.746 A:middle
+together.
+
+00:33:58.816 --> 00:34:00.106 A:middle
+So if you have a table view with
+
+00:33:58.816 --> 00:34:00.106 A:middle
+So if you have a table view with
+
+00:34:00.106 --> 00:34:01.606 A:middle
+a lot of multiline text in it,
+
+00:34:01.956 --> 00:34:03.306 A:middle
+it makes sense that you would
+
+00:34:03.306 --> 00:34:04.546 A:middle
+want to adjust the margins of
+
+00:34:04.546 --> 00:34:07.466 A:middle
+the table view to bring all
+
+00:34:07.466 --> 00:34:08.636 A:middle
+these elements into alignment
+
+00:34:08.636 --> 00:34:09.755 A:middle
+and still respect the readable
+
+00:34:09.755 --> 00:34:09.926 A:middle
+width.
+
+00:34:10.735 --> 00:34:12.226 A:middle
+So to do this, table view
+
+00:34:12.226 --> 00:34:12.916 A:middle
+provides an API.
+
+00:34:12.916 --> 00:34:15.246 A:middle
+Called cell layout margins
+
+00:34:15.436 --> 00:34:16.366 A:middle
+follow readable width.
+
+00:34:16.866 --> 00:34:18.255 A:middle
+Now when it's false, table view
+
+00:34:18.255 --> 00:34:19.795 A:middle
+will use its normal system
+
+00:34:19.795 --> 00:34:20.306 A:middle
+margins.
+
+00:34:20.806 --> 00:34:22.545 A:middle
+And if it's true, all the
+
+00:34:22.545 --> 00:34:23.815 A:middle
+content will inset.
+
+00:34:25.056 --> 00:34:27.505 A:middle
+Now, something to note is that
+
+00:34:27.505 --> 00:34:28.686 A:middle
+the default value of this
+
+00:34:28.746 --> 00:34:30.976 A:middle
+property has changed in iOS 12.
+
+00:34:31.886 --> 00:34:35.295 A:middle
+It is now false by default.
+
+00:34:35.576 --> 00:34:36.755 A:middle
+It was previously true.
+
+00:34:37.806 --> 00:34:38.746 A:middle
+This shouldn't affect the
+
+00:34:38.746 --> 00:34:39.926 A:middle
+behavior of your appl-- of your
+
+00:34:39.926 --> 00:34:41.036 A:middle
+applications too much,
+
+00:34:41.036 --> 00:34:42.065 A:middle
+especially on phones.
+
+00:34:42.596 --> 00:34:44.556 A:middle
+Our general recommendation is to
+
+00:34:44.556 --> 00:34:47.016 A:middle
+leave the default alone and set
+
+00:34:47.016 --> 00:34:48.976 A:middle
+it to true when you know that
+
+00:34:48.976 --> 00:34:50.136 A:middle
+you have a table view that's
+
+00:34:50.136 --> 00:34:51.156 A:middle
+going to contain a lot of
+
+00:34:51.156 --> 00:34:52.626 A:middle
+multiline text where it would
+
+00:34:53.306 --> 00:34:54.426 A:middle
+make sense.
+
+00:34:54.606 --> 00:34:55.886 A:middle
+And this property's also
+
+00:34:55.886 --> 00:34:56.856 A:middle
+adjustable from Interface
+
+00:34:56.856 --> 00:34:58.796 A:middle
+Builder with the follow readable
+
+00:34:58.796 --> 00:35:00.000 A:middle
+width checkbox.
+
+00:35:03.066 --> 00:35:05.336 A:middle
+Now keeping with table views but
+
+00:35:05.336 --> 00:35:07.066 A:middle
+moving on from readable width,
+
+00:35:08.266 --> 00:35:11.006 A:middle
+there is something else to know
+
+00:35:11.006 --> 00:35:11.966 A:middle
+how they work with safe area,
+
+00:35:12.496 --> 00:35:14.826 A:middle
+which is that the content views
+
+00:35:14.886 --> 00:35:17.186 A:middle
+of your table view cells will
+
+00:35:17.186 --> 00:35:20.156 A:middle
+not extend beyond the safe area.
+
+00:35:21.656 --> 00:35:23.476 A:middle
+However, by default, the
+
+00:35:23.636 --> 00:35:25.066 A:middle
+background and selected
+
+00:35:25.066 --> 00:35:27.176 A:middle
+background views do-- of UI
+
+00:35:27.176 --> 00:35:29.206 A:middle
+table view cell do extend beyond
+
+00:35:29.206 --> 00:35:29.736 A:middle
+the safe area.
+
+00:35:31.136 --> 00:35:32.556 A:middle
+So if you have some content you
+
+00:35:32.556 --> 00:35:33.946 A:middle
+want to place in custom table
+
+00:35:33.946 --> 00:35:35.836 A:middle
+view cells that you want to
+
+00:35:35.836 --> 00:35:37.526 A:middle
+overflow outside the safe area
+
+00:35:37.526 --> 00:35:38.646 A:middle
+and bleed to the edges of the
+
+00:35:38.646 --> 00:35:40.666 A:middle
+screen, you can either place it
+
+00:35:40.706 --> 00:35:42.126 A:middle
+in the background or selected
+
+00:35:42.126 --> 00:35:43.196 A:middle
+background views if the
+
+00:35:43.196 --> 00:35:44.426 A:middle
+semantics of those views make
+
+00:35:44.466 --> 00:35:44.836 A:middle
+sense.
+
+00:35:45.446 --> 00:35:47.416 A:middle
+Or there's a property on UI
+
+00:35:47.416 --> 00:35:50.156 A:middle
+table view called insets content
+
+00:35:50.156 --> 00:35:52.706 A:middle
+views to safe area, which by
+
+00:35:52.706 --> 00:35:55.026 A:middle
+default is true, but you can
+
+00:35:55.026 --> 00:35:56.486 A:middle
+change to false to get your
+
+00:35:56.486 --> 00:35:58.206 A:middle
+content views to also extend to
+
+00:35:58.206 --> 00:35:58.576 A:middle
+the edges.
+
+00:35:59.136 --> 00:36:01.986 A:middle
+And this property is also
+
+00:35:59.136 --> 00:36:01.986 A:middle
+And this property is also
+
+00:36:02.246 --> 00:36:03.426 A:middle
+configurable from Interface
+
+00:36:04.056 --> 00:36:04.216 A:middle
+Builder.
+
+00:36:06.486 --> 00:36:07.826 A:middle
+Now let's rotate back to
+
+00:36:07.826 --> 00:36:08.246 A:middle
+portrait.
+
+00:36:08.666 --> 00:36:09.836 A:middle
+And in the main screen of our
+
+00:36:09.836 --> 00:36:11.566 A:middle
+application, we mentioned this
+
+00:36:11.566 --> 00:36:12.676 A:middle
+sheet that slides up from the
+
+00:36:12.676 --> 00:36:13.986 A:middle
+bottom before containing a
+
+00:36:13.986 --> 00:36:14.476 A:middle
+picker view.
+
+00:36:15.606 --> 00:36:19.536 A:middle
+Now the safe area of the screen
+
+00:36:19.536 --> 00:36:23.026 A:middle
+here means that we have to
+
+00:36:23.256 --> 00:36:25.066 A:middle
+adjust the layout of the picker
+
+00:36:25.066 --> 00:36:28.706 A:middle
+view to be inside this safe
+
+00:36:28.706 --> 00:36:28.946 A:middle
+area.
+
+00:36:31.036 --> 00:36:33.426 A:middle
+And most of the system controls,
+
+00:36:33.486 --> 00:36:34.966 A:middle
+like UI picker view and other
+
+00:36:34.966 --> 00:36:36.016 A:middle
+controls, and probably controls
+
+00:36:36.016 --> 00:36:37.426 A:middle
+of your own many views don't
+
+00:36:37.426 --> 00:36:39.976 A:middle
+make sense to have to know
+
+00:36:39.976 --> 00:36:40.986 A:middle
+anything about the safe area.
+
+00:36:40.986 --> 00:36:42.586 A:middle
+Because it's not clear how they
+
+00:36:42.586 --> 00:36:44.446 A:middle
+would respond or like re-lay out
+
+00:36:44.446 --> 00:36:45.446 A:middle
+themselves internally.
+
+00:36:46.496 --> 00:36:47.556 A:middle
+So we have a recommended
+
+00:36:47.606 --> 00:36:49.126 A:middle
+technique for handling the
+
+00:36:49.126 --> 00:36:50.216 A:middle
+layout of these kinds of views,
+
+00:36:50.636 --> 00:36:53.146 A:middle
+which is to place them inside of
+
+00:36:53.146 --> 00:36:53.766 A:middle
+the container view.
+
+00:36:53.766 --> 00:36:56.016 A:middle
+And the responsibility of this
+
+00:36:56.046 --> 00:36:57.966 A:middle
+container view is simply to
+
+00:36:58.266 --> 00:37:00.466 A:middle
+position its safe area unaware
+
+00:36:58.266 --> 00:37:00.466 A:middle
+position its safe area unaware
+
+00:37:00.466 --> 00:37:03.796 A:middle
+content inside the safe area by
+
+00:37:04.416 --> 00:37:05.986 A:middle
+analyzing the safe area insets.
+
+00:37:06.406 --> 00:37:08.596 A:middle
+And it can also provide the
+
+00:37:08.596 --> 00:37:11.966 A:middle
+background, which extends beyond
+
+00:37:11.966 --> 00:37:13.036 A:middle
+the safe area and makes your
+
+00:37:13.036 --> 00:37:14.396 A:middle
+control feel connected to the
+
+00:37:14.726 --> 00:37:16.506 A:middle
+edge of the screen in this case.
+
+00:37:17.376 --> 00:37:19.736 A:middle
+The-- another technique we want
+
+00:37:19.736 --> 00:37:20.816 A:middle
+to talk about related to safe
+
+00:37:20.816 --> 00:37:22.096 A:middle
+area and positioning elements
+
+00:37:22.166 --> 00:37:23.296 A:middle
+close to the edge of the screen
+
+00:37:23.796 --> 00:37:25.656 A:middle
+is when you have a control or
+
+00:37:25.656 --> 00:37:29.876 A:middle
+button that on one device you
+
+00:37:29.876 --> 00:37:31.356 A:middle
+may want to place directly
+
+00:37:31.356 --> 00:37:33.106 A:middle
+against the safe area and on
+
+00:37:33.106 --> 00:37:34.746 A:middle
+another device where the safe
+
+00:37:34.746 --> 00:37:36.376 A:middle
+area insets are zero you may
+
+00:37:36.376 --> 00:37:37.056 A:middle
+want some padding.
+
+00:37:37.616 --> 00:37:38.806 A:middle
+And the reason for doing this in
+
+00:37:38.806 --> 00:37:40.426 A:middle
+design is that the safe area
+
+00:37:40.426 --> 00:37:42.326 A:middle
+insets can sometimes incorporate
+
+00:37:42.396 --> 00:37:43.456 A:middle
+some implicit padding.
+
+00:37:44.106 --> 00:37:45.556 A:middle
+So let me bring-- I want to
+
+00:37:45.596 --> 00:37:47.756 A:middle
+provide you a single solution
+
+00:37:47.986 --> 00:37:49.706 A:middle
+that will work for both of these
+
+00:37:49.706 --> 00:37:50.436 A:middle
+situations.
+
+00:37:51.246 --> 00:37:54.036 A:middle
+So let's bring in a diagram, and
+
+00:37:54.036 --> 00:37:55.286 A:middle
+I'm going to give you two auto
+
+00:37:55.286 --> 00:37:56.836 A:middle
+layout constraints that will
+
+00:37:56.836 --> 00:37:58.246 A:middle
+produce this result in these two
+
+00:37:58.246 --> 00:37:59.146 A:middle
+different situations.
+
+00:37:59.946 --> 00:38:02.626 A:middle
+So the first constraint we need
+
+00:37:59.946 --> 00:38:02.626 A:middle
+So the first constraint we need
+
+00:38:02.896 --> 00:38:04.586 A:middle
+represents the padding that we
+
+00:38:04.586 --> 00:38:05.996 A:middle
+would other-- we would normally
+
+00:38:06.226 --> 00:38:06.316 A:middle
+add.
+
+00:38:06.886 --> 00:38:07.956 A:middle
+So this is just a constant
+
+00:38:07.956 --> 00:38:09.066 A:middle
+constraint from the bottom of
+
+00:38:09.066 --> 00:38:11.236 A:middle
+the super view to the bottom of
+
+00:38:11.236 --> 00:38:11.756 A:middle
+our control.
+
+00:38:12.366 --> 00:38:13.386 A:middle
+But in this case, we're going to
+
+00:38:13.386 --> 00:38:15.126 A:middle
+make it not required so that we
+
+00:38:15.126 --> 00:38:16.906 A:middle
+can break it when the safe, when
+
+00:38:16.906 --> 00:38:17.776 A:middle
+the safe area insets are
+
+00:38:17.776 --> 00:38:18.336 A:middle
+non-zero.
+
+00:38:19.936 --> 00:38:21.806 A:middle
+The second constraint is an
+
+00:38:21.806 --> 00:38:23.666 A:middle
+inequality constraint from the
+
+00:38:23.666 --> 00:38:25.406 A:middle
+bottom of our control to the
+
+00:38:25.406 --> 00:38:26.346 A:middle
+bottom of the safe area.
+
+00:38:27.186 --> 00:38:29.886 A:middle
+This ensures that our control is
+
+00:38:29.886 --> 00:38:31.326 A:middle
+always inside the safe area.
+
+00:38:32.006 --> 00:38:34.546 A:middle
+So if I change the safe area
+
+00:38:34.546 --> 00:38:36.036 A:middle
+insets to make them non-zero,
+
+00:38:36.666 --> 00:38:38.496 A:middle
+you can see that the inequality
+
+00:38:38.496 --> 00:38:40.656 A:middle
+constraint ensures our content
+
+00:38:40.656 --> 00:38:42.946 A:middle
+is not clipped while still
+
+00:38:42.946 --> 00:38:43.786 A:middle
+maintaining some minimum
+
+00:38:43.786 --> 00:38:44.000 A:middle
+padding.
+
+00:38:48.096 --> 00:38:50.956 A:middle
+Now we've talked about many
+
+00:38:50.956 --> 00:38:53.186 A:middle
+different adaptive APIs in this
+
+00:38:53.266 --> 00:38:54.806 A:middle
+talk and in previous talks.
+
+00:38:55.226 --> 00:38:56.996 A:middle
+Layout margins help keep lots of
+
+00:38:56.996 --> 00:38:57.996 A:middle
+your elements aligned.
+
+00:38:58.886 --> 00:39:00.466 A:middle
+Safe area insets protect your
+
+00:38:58.886 --> 00:39:00.466 A:middle
+Safe area insets protect your
+
+00:39:00.466 --> 00:39:02.056 A:middle
+views from being clipped or
+
+00:39:02.096 --> 00:39:02.466 A:middle
+occluded.
+
+00:39:03.466 --> 00:39:04.966 A:middle
+Readable width keeps columns of
+
+00:39:04.966 --> 00:39:05.876 A:middle
+text comfortable to--
+
+00:39:06.096 --> 00:39:07.046 A:middle
+comfortable to read.
+
+00:39:07.756 --> 00:39:10.056 A:middle
+Size classes inform when you
+
+00:39:10.056 --> 00:39:11.416 A:middle
+should make large structur--
+
+00:39:11.696 --> 00:39:12.746 A:middle
+structural changes to your
+
+00:39:12.746 --> 00:39:13.426 A:middle
+applications.
+
+00:39:15.226 --> 00:39:18.846 A:middle
+And these APIs we use to
+
+00:39:18.846 --> 00:39:20.126 A:middle
+implement higher-level
+
+00:39:20.126 --> 00:39:21.696 A:middle
+components in our frameworks.
+
+00:39:22.286 --> 00:39:24.496 A:middle
+So scroll views, tab view--
+
+00:39:24.706 --> 00:39:26.236 A:middle
+table views, container view
+
+00:39:26.236 --> 00:39:26.856 A:middle
+controllers.
+
+00:39:27.196 --> 00:39:27.956 A:middle
+The other kinds of things we
+
+00:39:27.956 --> 00:39:29.286 A:middle
+talked about today reuse these
+
+00:39:29.286 --> 00:39:31.756 A:middle
+things to ensure that our
+
+00:39:31.756 --> 00:39:33.576 A:middle
+high-level components can adapt
+
+00:39:34.056 --> 00:39:35.816 A:middle
+to all of our devices in the
+
+00:39:35.816 --> 00:39:36.866 A:middle
+simplest way possible.
+
+00:39:37.776 --> 00:39:40.006 A:middle
+So the takeaway is for you to
+
+00:39:40.006 --> 00:39:42.266 A:middle
+design your applications in
+
+00:39:42.266 --> 00:39:43.696 A:middle
+terms of these adaptive
+
+00:39:43.806 --> 00:39:44.816 A:middle
+primitives as well.
+
+00:39:45.886 --> 00:39:47.576 A:middle
+The advantage is that-- instead
+
+00:39:47.576 --> 00:39:49.926 A:middle
+of coding for a specific device.
+
+00:39:50.826 --> 00:39:52.196 A:middle
+Your code will be simple,
+
+00:39:52.566 --> 00:39:54.286 A:middle
+flexible, and it'll guarantee
+
+00:39:54.286 --> 00:39:55.486 A:middle
+that your applications are as
+
+00:39:55.616 --> 00:39:57.776 A:middle
+future-proof as possible for all
+
+00:39:57.776 --> 00:39:59.436 A:middle
+of our different environments.
+
+00:40:00.196 --> 00:40:02.156 A:middle
+For more information, these
+
+00:40:02.336 --> 00:40:03.376 A:middle
+slides and recording will be
+
+00:40:03.376 --> 00:40:04.246 A:middle
+available online.
+
+00:40:05.386 --> 00:40:06.716 A:middle
+Thank you all for coming, and I
+
+00:40:06.716 --> 00:40:07.596 A:middle
+really hope you've enjoyed the
+
+00:40:07.596 --> 00:40:08.126 A:middle
+conference.
+
+00:40:09.516 --> 00:40:12.500 A:middle
+[ Applause ]
