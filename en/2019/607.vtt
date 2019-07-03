@@ -1,0 +1,3787 @@
+WEBVTT
+
+00:00:01.516 --> 00:00:04.500 A:middle
+[ Music ]
+
+00:00:11.276 --> 00:00:12.886 A:middle
+&gt;&gt; Hello everyone.
+
+00:00:13.016 --> 00:00:14.756 A:middle
+[ Applause ]
+
+00:00:14.756 --> 00:00:15.786 A:middle
+Thank you so much for coming.
+
+00:00:18.096 --> 00:00:19.676 A:middle
+This is a deep dive session for
+
+00:00:19.676 --> 00:00:20.376 A:middle
+ARKit.
+
+00:00:20.376 --> 00:00:21.446 A:middle
+We'll be showing you how we're
+
+00:00:21.446 --> 00:00:22.836 A:middle
+bringing people into AR.
+
+00:00:24.216 --> 00:00:25.226 A:middle
+My name is Adrian.
+
+00:00:25.226 --> 00:00:26.496 A:middle
+And, I'll be joined onstage by
+
+00:00:26.496 --> 00:00:26.966 A:middle
+Tanmay.
+
+00:00:31.666 --> 00:00:33.216 A:middle
+Earlier this week, Apple
+
+00:00:33.216 --> 00:00:34.526 A:middle
+announced the RealityKit
+
+00:00:34.526 --> 00:00:34.896 A:middle
+framework.
+
+00:00:35.536 --> 00:00:36.736 A:middle
+This is a new framework for
+
+00:00:36.736 --> 00:00:37.896 A:middle
+rendering photorealistic
+
+00:00:37.896 --> 00:00:38.366 A:middle
+content.
+
+00:00:39.166 --> 00:00:40.706 A:middle
+It has also been built from the
+
+00:00:40.706 --> 00:00:42.136 A:middle
+ground up to support AR.
+
+00:00:42.816 --> 00:00:46.036 A:middle
+We also held a What's New
+
+00:00:46.036 --> 00:00:47.806 A:middle
+session for ARKit 3, where we
+
+00:00:47.806 --> 00:00:49.166 A:middle
+showed you many of the cool
+
+00:00:49.166 --> 00:00:50.156 A:middle
+features that we're bringing
+
+00:00:50.156 --> 00:00:51.176 A:middle
+into ARKit this year.
+
+00:00:52.036 --> 00:00:53.446 A:middle
+And, for this deep dive, we're
+
+00:00:53.446 --> 00:00:54.806 A:middle
+going to focus on two of these.
+
+00:00:56.176 --> 00:00:57.536 A:middle
+First, I'll be showing you how
+
+00:00:57.536 --> 00:00:58.496 A:middle
+people occlusion works.
+
+00:00:58.786 --> 00:00:59.686 A:middle
+And then, I'm going to hand it
+
+00:00:59.686 --> 00:01:01.686 A:middle
+over to Tanmay to give you the
+
+00:00:59.686 --> 00:01:01.686 A:middle
+over to Tanmay to give you the
+
+00:01:01.686 --> 00:01:03.666 A:middle
+deep dive of how motion capture
+
+00:01:03.666 --> 00:01:03.956 A:middle
+works.
+
+00:01:05.436 --> 00:01:06.036 A:middle
+So, let's begin.
+
+00:01:07.456 --> 00:01:08.636 A:middle
+What is people occlusion?
+
+00:01:09.276 --> 00:01:12.346 A:middle
+In ARKit today, we're already
+
+00:01:12.346 --> 00:01:15.036 A:middle
+able to position rendered
+
+00:01:15.036 --> 00:01:16.246 A:middle
+content in the real world.
+
+00:01:16.686 --> 00:01:18.076 A:middle
+However, if we look at the video
+
+00:01:18.076 --> 00:01:19.146 A:middle
+behind me, we can see that
+
+00:01:19.146 --> 00:01:20.196 A:middle
+something is clearly wrong.
+
+00:01:21.226 --> 00:01:23.476 A:middle
+What we would expect, is for the
+
+00:01:23.476 --> 00:01:25.356 A:middle
+person closer to the camera to
+
+00:01:25.356 --> 00:01:27.416 A:middle
+occlude the rendered content as
+
+00:01:27.416 --> 00:01:28.846 A:middle
+it moves behind him.
+
+00:01:28.846 --> 00:01:31.616 A:middle
+And, with people occlusion,
+
+00:01:32.116 --> 00:01:33.906 A:middle
+we're bringing just that.
+
+00:01:33.906 --> 00:01:36.346 A:middle
+We're enabling rendered content
+
+00:01:36.346 --> 00:01:38.296 A:middle
+and people to correctly occlude
+
+00:01:38.296 --> 00:01:39.276 A:middle
+each other in the scene.
+
+00:01:39.666 --> 00:01:41.696 A:middle
+And, to understand what we need
+
+00:01:41.696 --> 00:01:42.936 A:middle
+to do in order to enable that,
+
+00:01:43.296 --> 00:01:46.456 A:middle
+I'm going to break down a frame.
+
+00:01:46.676 --> 00:01:47.986 A:middle
+So, here we have the camera
+
+00:01:47.986 --> 00:01:49.996 A:middle
+image, and we have two people
+
+00:01:49.996 --> 00:01:51.136 A:middle
+standing around a table.
+
+00:01:51.826 --> 00:01:53.556 A:middle
+And, we want to place a rendered
+
+00:01:53.586 --> 00:01:55.046 A:middle
+object on top of this table.
+
+00:01:56.576 --> 00:01:58.936 A:middle
+So far, for ARKit 2, the way we
+
+00:01:58.936 --> 00:02:01.786 A:middle
+position rendered content is by
+
+00:01:58.936 --> 00:02:01.786 A:middle
+position rendered content is by
+
+00:02:01.786 --> 00:02:03.196 A:middle
+simply overlaying it on the
+
+00:02:03.196 --> 00:02:03.676 A:middle
+image.
+
+00:02:04.076 --> 00:02:05.696 A:middle
+And, when we do it this way, we
+
+00:02:05.696 --> 00:02:07.376 A:middle
+see that we end up with an
+
+00:02:07.376 --> 00:02:08.596 A:middle
+incorrect occlusion.
+
+00:02:09.686 --> 00:02:10.705 A:middle
+This is not what we would
+
+00:02:10.705 --> 00:02:11.246 A:middle
+expect.
+
+00:02:11.386 --> 00:02:12.966 A:middle
+And, we want to turn that red
+
+00:02:12.966 --> 00:02:14.566 A:middle
+cross into a green checkmark.
+
+00:02:15.266 --> 00:02:16.676 A:middle
+So, the way we do that is, we
+
+00:02:16.676 --> 00:02:18.126 A:middle
+need to understand there's a
+
+00:02:18.126 --> 00:02:19.676 A:middle
+person closer to the camera than
+
+00:02:19.676 --> 00:02:20.496 A:middle
+the rendered object.
+
+00:02:20.496 --> 00:02:23.236 A:middle
+And, when we do so, we correctly
+
+00:02:23.346 --> 00:02:24.376 A:middle
+make sure that the rendered
+
+00:02:24.376 --> 00:02:25.456 A:middle
+object gets occluded.
+
+00:02:25.866 --> 00:02:29.316 A:middle
+And, this is essentially a depth
+
+00:02:29.376 --> 00:02:30.306 A:middle
+ordering problem.
+
+00:02:30.496 --> 00:02:32.526 A:middle
+And, in order to understand how
+
+00:02:32.526 --> 00:02:33.796 A:middle
+we're going to solve this, I'm
+
+00:02:33.796 --> 00:02:35.016 A:middle
+going to decompose the scene.
+
+00:02:35.646 --> 00:02:38.756 A:middle
+So, here's the same image in an
+
+00:02:38.756 --> 00:02:41.076 A:middle
+oblique angle, and let's explode
+
+00:02:41.336 --> 00:02:42.336 A:middle
+the scene and look at the
+
+00:02:42.336 --> 00:02:44.806 A:middle
+different depth planes that we
+
+00:02:44.806 --> 00:02:45.046 A:middle
+have.
+
+00:02:46.076 --> 00:02:46.966 A:middle
+We can see that we have
+
+00:02:46.966 --> 00:02:48.106 A:middle
+different things in different
+
+00:02:48.106 --> 00:02:50.006 A:middle
+depth planes, mixing real and
+
+00:02:50.216 --> 00:02:50.666 A:middle
+rendered.
+
+00:02:51.146 --> 00:02:53.006 A:middle
+And, here we have each person in
+
+00:02:53.006 --> 00:02:55.776 A:middle
+their own depth plane, with the
+
+00:02:55.776 --> 00:02:57.656 A:middle
+rendered object in between.
+
+00:02:59.996 --> 00:03:02.006 A:middle
+For rendered content, the
+
+00:02:59.996 --> 00:03:02.006 A:middle
+For rendered content, the
+
+00:03:02.006 --> 00:03:03.696 A:middle
+graphics pipeline already knows
+
+00:03:03.696 --> 00:03:05.696 A:middle
+exactly where it is, simply by
+
+00:03:05.696 --> 00:03:06.796 A:middle
+using a depth buffer.
+
+00:03:07.676 --> 00:03:09.366 A:middle
+And, in order for us to also do
+
+00:03:09.366 --> 00:03:10.756 A:middle
+the same thing for the real
+
+00:03:10.756 --> 00:03:12.326 A:middle
+content, we need to understand
+
+00:03:12.666 --> 00:03:13.706 A:middle
+where the people are in the
+
+00:03:13.706 --> 00:03:14.126 A:middle
+scene.
+
+00:03:14.296 --> 00:03:16.166 A:middle
+And, in order to enable this,
+
+00:03:16.526 --> 00:03:18.206 A:middle
+we're adding two new buffers.
+
+00:03:19.616 --> 00:03:21.486 A:middle
+We're adding the segmentation
+
+00:03:21.486 --> 00:03:23.136 A:middle
+buffer, which tells you, per
+
+00:03:23.136 --> 00:03:24.996 A:middle
+pixel, where a person is in this
+
+00:03:24.996 --> 00:03:25.296 A:middle
+scene.
+
+00:03:26.296 --> 00:03:27.996 A:middle
+And, we're also giving you a
+
+00:03:28.026 --> 00:03:30.516 A:middle
+corresponding depth buffer which
+
+00:03:30.516 --> 00:03:31.966 A:middle
+tells you where that person is
+
+00:03:32.156 --> 00:03:32.766 A:middle
+in depth.
+
+00:03:33.306 --> 00:03:36.316 A:middle
+Now, the amazing thing about
+
+00:03:36.316 --> 00:03:39.006 A:middle
+this feature is that the way
+
+00:03:39.006 --> 00:03:40.446 A:middle
+we're generating these buffers
+
+00:03:40.746 --> 00:03:42.316 A:middle
+is by leveraging the power of
+
+00:03:42.316 --> 00:03:44.616 A:middle
+the A12 chip and using machine
+
+00:03:44.616 --> 00:03:45.916 A:middle
+learning in order to generate
+
+00:03:45.916 --> 00:03:47.576 A:middle
+these buffers, using only the
+
+00:03:47.576 --> 00:03:48.366 A:middle
+camera image.
+
+00:03:48.886 --> 00:03:51.576 A:middle
+And so, these two new buffers
+
+00:03:52.686 --> 00:03:54.766 A:middle
+will be exposed on the ARFrame
+
+00:03:54.826 --> 00:03:56.586 A:middle
+as two new properties, the
+
+00:03:56.586 --> 00:03:58.156 A:middle
+segmentationBuffer, and the
+
+00:03:58.156 --> 00:03:59.976 A:middle
+estimatedDepthData.
+
+00:04:03.186 --> 00:04:04.306 A:middle
+Since we want to use these
+
+00:04:04.306 --> 00:04:06.346 A:middle
+buffers for people occlusion, we
+
+00:04:06.346 --> 00:04:08.146 A:middle
+also have to have them generated
+
+00:04:08.206 --> 00:04:09.796 A:middle
+at the same cadence as the
+
+00:04:09.796 --> 00:04:10.506 A:middle
+camera frame.
+
+00:04:11.146 --> 00:04:12.716 A:middle
+So, when your camera frame is
+
+00:04:12.716 --> 00:04:14.266 A:middle
+running at 60 frames a second,
+
+00:04:15.076 --> 00:04:16.696 A:middle
+we are also able to generate
+
+00:04:16.696 --> 00:04:18.426 A:middle
+these buffers for you at 60
+
+00:04:18.426 --> 00:04:22.076 A:middle
+frames a second.
+
+00:04:22.076 --> 00:04:23.806 A:middle
+We would also like these buffers
+
+00:04:23.846 --> 00:04:25.606 A:middle
+to be at the same resolution as
+
+00:04:25.636 --> 00:04:26.466 A:middle
+the camera image.
+
+00:04:27.596 --> 00:04:29.526 A:middle
+However, in order to enable this
+
+00:04:29.526 --> 00:04:31.966 A:middle
+in real time, the neural network
+
+00:04:31.966 --> 00:04:33.776 A:middle
+only sees a smaller image.
+
+00:04:33.986 --> 00:04:36.096 A:middle
+And so, if you take the output
+
+00:04:36.096 --> 00:04:38.106 A:middle
+of the neural network, and we
+
+00:04:38.106 --> 00:04:39.766 A:middle
+magnify it, we will see that
+
+00:04:39.766 --> 00:04:41.146 A:middle
+there's a lot of detail that the
+
+00:04:41.146 --> 00:04:42.426 A:middle
+neural network just simply did
+
+00:04:42.426 --> 00:04:43.026 A:middle
+not see.
+
+00:04:44.456 --> 00:04:46.166 A:middle
+So, in order to compensate for
+
+00:04:46.166 --> 00:04:48.076 A:middle
+this, we're doing some
+
+00:04:48.076 --> 00:04:49.236 A:middle
+additional processing.
+
+00:04:50.436 --> 00:04:51.756 A:middle
+We're applying matting.
+
+00:04:52.136 --> 00:04:55.376 A:middle
+And, what matting does is, it's
+
+00:04:55.376 --> 00:04:56.616 A:middle
+basically using the
+
+00:04:56.616 --> 00:04:58.456 A:middle
+segmentationBuffer as a guide,
+
+00:04:58.456 --> 00:05:00.316 A:middle
+and then looking at the camera
+
+00:04:58.456 --> 00:05:00.316 A:middle
+and then looking at the camera
+
+00:05:00.316 --> 00:05:01.616 A:middle
+image in order to figure out
+
+00:05:01.616 --> 00:05:02.746 A:middle
+what the missing detail was.
+
+00:05:03.846 --> 00:05:05.986 A:middle
+And now, with a matted image,
+
+00:05:05.986 --> 00:05:07.846 A:middle
+we're able to correctly extract
+
+00:05:07.846 --> 00:05:09.686 A:middle
+the people from the scene, and
+
+00:05:09.686 --> 00:05:10.376 A:middle
+together with the
+
+00:05:10.376 --> 00:05:12.636 A:middle
+estimatedDepthData, we can then
+
+00:05:12.636 --> 00:05:13.996 A:middle
+position them in the correct
+
+00:05:13.996 --> 00:05:14.626 A:middle
+depth plane.
+
+00:05:15.376 --> 00:05:16.876 A:middle
+Finally letting us solve the
+
+00:05:16.876 --> 00:05:18.526 A:middle
+depth ordering problem, and we
+
+00:05:18.526 --> 00:05:20.316 A:middle
+can then recompose the scene.
+
+00:05:20.966 --> 00:05:23.076 A:middle
+Now, this is a lot of
+
+00:05:23.076 --> 00:05:25.226 A:middle
+technology, and we want to make
+
+00:05:25.226 --> 00:05:27.216 A:middle
+it as easy as possible for you
+
+00:05:27.216 --> 00:05:28.526 A:middle
+developers to adopt this.
+
+00:05:28.996 --> 00:05:30.446 A:middle
+So, we're enabling this feature
+
+00:05:30.586 --> 00:05:32.406 A:middle
+in three different ways.
+
+00:05:33.076 --> 00:05:35.726 A:middle
+First, we have RealityKit, the
+
+00:05:35.726 --> 00:05:37.276 A:middle
+new framework that we announced
+
+00:05:37.506 --> 00:05:38.626 A:middle
+this Dub-dub.
+
+00:05:39.056 --> 00:05:40.216 A:middle
+However, if you've already been
+
+00:05:40.216 --> 00:05:42.646 A:middle
+using SceneKit, and we also
+
+00:05:42.646 --> 00:05:43.946 A:middle
+added support for people
+
+00:05:43.946 --> 00:05:45.916 A:middle
+occlusion using the ARCSNView.
+
+00:05:46.656 --> 00:05:47.836 A:middle
+And, in case you have your own
+
+00:05:47.836 --> 00:05:49.846 A:middle
+renderer, or you're working with
+
+00:05:49.846 --> 00:05:51.626 A:middle
+a third-party rendering, we're
+
+00:05:51.626 --> 00:05:53.166 A:middle
+giving you the building blocks
+
+00:05:53.636 --> 00:05:55.436 A:middle
+to enable incorporating people
+
+00:05:55.436 --> 00:05:57.206 A:middle
+occlusion into your own app
+
+00:05:57.256 --> 00:05:58.356 A:middle
+using the power of Metal.
+
+00:05:59.746 --> 00:06:00.986 A:middle
+So, let's look at how we'd do it
+
+00:05:59.746 --> 00:06:00.986 A:middle
+So, let's look at how we'd do it
+
+00:06:00.986 --> 00:06:01.706 A:middle
+in RealityKit.
+
+00:06:03.846 --> 00:06:06.586 A:middle
+RealityKit is the recommended
+
+00:06:06.586 --> 00:06:07.976 A:middle
+way if you're going to build a
+
+00:06:07.976 --> 00:06:09.756 A:middle
+new AR app.
+
+00:06:10.046 --> 00:06:11.756 A:middle
+It has a new UI element called
+
+00:06:11.756 --> 00:06:14.626 A:middle
+the ARView, which enables you--
+
+00:06:14.876 --> 00:06:16.366 A:middle
+gives you an easy-to-use API
+
+00:06:16.366 --> 00:06:19.166 A:middle
+that brings photorealism to AR,
+
+00:06:19.706 --> 00:06:21.496 A:middle
+further blending the border
+
+00:06:21.496 --> 00:06:24.036 A:middle
+between the real and the
+
+00:06:24.036 --> 00:06:24.866 A:middle
+rendered content.
+
+00:06:25.516 --> 00:06:28.856 A:middle
+It also has built-in support for
+
+00:06:28.856 --> 00:06:29.626 A:middle
+people occlusion.
+
+00:06:30.276 --> 00:06:31.476 A:middle
+And, if you attended the What's
+
+00:06:31.476 --> 00:06:32.966 A:middle
+New session, you have already
+
+00:06:32.966 --> 00:06:35.076 A:middle
+seen a live demo of how you can
+
+00:06:35.076 --> 00:06:36.506 A:middle
+enable people occlusion in
+
+00:06:36.506 --> 00:06:36.876 A:middle
+ARView.
+
+00:06:37.496 --> 00:06:38.786 A:middle
+And so, for this deep dive,
+
+00:06:38.876 --> 00:06:39.966 A:middle
+we'll do a quick recap.
+
+00:06:40.606 --> 00:06:42.226 A:middle
+Let's look at some code.
+
+00:06:43.296 --> 00:06:45.466 A:middle
+So, here I have my viewDidLoad
+
+00:06:45.466 --> 00:06:47.136 A:middle
+function in my view controller.
+
+00:06:47.616 --> 00:06:48.716 A:middle
+And, the first thing I need to
+
+00:06:48.716 --> 00:06:50.256 A:middle
+do is to make sure that it's
+
+00:06:50.296 --> 00:06:51.186 A:middle
+future supported.
+
+00:06:52.396 --> 00:06:53.936 A:middle
+I do that by checking my
+
+00:06:53.936 --> 00:06:55.996 A:middle
+configuration, shown as my
+
+00:06:55.996 --> 00:06:57.216 A:middle
+WorldTrackingConfiguration.
+
+00:06:58.076 --> 00:06:59.506 A:middle
+And, I need to look for a new
+
+00:06:59.506 --> 00:07:01.286 A:middle
+property called FrameSemantics.
+
+00:06:59.506 --> 00:07:01.286 A:middle
+property called FrameSemantics.
+
+00:07:01.536 --> 00:07:02.696 A:middle
+And, the FrameSemantics we're
+
+00:07:02.696 --> 00:07:03.916 A:middle
+going to use to enable people
+
+00:07:03.916 --> 00:07:04.686 A:middle
+occlusion is
+
+00:07:04.726 --> 00:07:06.396 A:middle
+personSegmentationWithDepth.
+
+00:07:07.756 --> 00:07:08.896 A:middle
+Once I know that this is
+
+00:07:08.976 --> 00:07:11.836 A:middle
+supported on my configuration,
+
+00:07:12.706 --> 00:07:14.246 A:middle
+the only thing I have to do is
+
+00:07:14.246 --> 00:07:15.966 A:middle
+set the FrameSemantics on my
+
+00:07:15.966 --> 00:07:18.236 A:middle
+configuration, and then, when
+
+00:07:18.236 --> 00:07:19.886 A:middle
+the session starts running, the
+
+00:07:19.886 --> 00:07:21.716 A:middle
+ARView will automatically pick
+
+00:07:21.716 --> 00:07:23.886 A:middle
+this up, and enable people
+
+00:07:23.886 --> 00:07:25.516 A:middle
+occlusion for my AR application.
+
+00:07:26.976 --> 00:07:29.056 A:middle
+So, all we had to do was really
+
+00:07:29.056 --> 00:07:30.446 A:middle
+to change our configuration,
+
+00:07:30.446 --> 00:07:31.696 A:middle
+using the new property that
+
+00:07:31.696 --> 00:07:33.046 A:middle
+we're introducing for this year,
+
+00:07:33.846 --> 00:07:34.696 A:middle
+FrameSemantics.
+
+00:07:35.106 --> 00:07:36.546 A:middle
+And, as you saw in the previous
+
+00:07:36.546 --> 00:07:37.676 A:middle
+example, I was using
+
+00:07:37.676 --> 00:07:39.356 A:middle
+personSegmentationWithDepth.
+
+00:07:39.916 --> 00:07:41.136 A:middle
+But, we can also do only
+
+00:07:41.166 --> 00:07:42.536 A:middle
+PersonSegmentation in case you
+
+00:07:42.536 --> 00:07:43.886 A:middle
+want to enable a weatherman-like
+
+00:07:43.886 --> 00:07:44.506 A:middle
+experience.
+
+00:07:45.896 --> 00:07:48.256 A:middle
+Now, ARView is the recommended
+
+00:07:48.256 --> 00:07:50.806 A:middle
+way for using people occlusion.
+
+00:07:51.196 --> 00:07:53.156 A:middle
+And, the reason is, it has a
+
+00:07:53.226 --> 00:07:54.706 A:middle
+deep renderer integration.
+
+00:07:54.956 --> 00:07:56.596 A:middle
+And, what that means is the
+
+00:07:56.596 --> 00:07:58.306 A:middle
+entire graphics pipeline is
+
+00:07:58.306 --> 00:07:59.996 A:middle
+aware that there are people in
+
+00:07:59.996 --> 00:08:00.516 A:middle
+the scene.
+
+00:07:59.996 --> 00:08:00.516 A:middle
+the scene.
+
+00:08:00.996 --> 00:08:02.836 A:middle
+And, it's therefore able to also
+
+00:08:02.836 --> 00:08:04.666 A:middle
+handle transparent objects when
+
+00:08:04.666 --> 00:08:05.626 A:middle
+you're using this feature.
+
+00:08:06.676 --> 00:08:08.486 A:middle
+It's doing this while also being
+
+00:08:08.486 --> 00:08:10.186 A:middle
+built for optimal performance.
+
+00:08:10.566 --> 00:08:12.646 A:middle
+And, if you're wondering what
+
+00:08:12.646 --> 00:08:14.216 A:middle
+kind of experiences you can
+
+00:08:14.216 --> 00:08:16.126 A:middle
+enable using people occlusion
+
+00:08:16.296 --> 00:08:17.946 A:middle
+and RealityKit, I would like to
+
+00:08:18.026 --> 00:08:19.906 A:middle
+play a short video for you.
+
+00:08:21.516 --> 00:08:35.500 A:middle
+[ Music ]
+
+00:08:38.046 --> 00:08:39.135 A:middle
+This is Swiftstrike.
+
+00:08:39.746 --> 00:08:41.405 A:middle
+It's a really cool demo that
+
+00:08:41.405 --> 00:08:42.395 A:middle
+we're showing right here in
+
+00:08:42.395 --> 00:08:44.716 A:middle
+Dub-dub, and I urge everyone to
+
+00:08:44.716 --> 00:08:46.126 A:middle
+check it out if you haven't done
+
+00:08:46.126 --> 00:08:46.726 A:middle
+so already.
+
+00:08:48.076 --> 00:08:49.186 A:middle
+So, what if you've been using
+
+00:08:49.256 --> 00:08:49.696 A:middle
+SceneKit?
+
+00:08:50.306 --> 00:08:52.606 A:middle
+Well, let's look at how I would
+
+00:08:52.606 --> 00:08:53.746 A:middle
+enable people occlusion for
+
+00:08:53.746 --> 00:08:54.176 A:middle
+SceneKit.
+
+00:08:56.436 --> 00:08:57.816 A:middle
+If you've already been using
+
+00:08:57.936 --> 00:08:59.776 A:middle
+ARSCNView, we're enabling people
+
+00:08:59.776 --> 00:09:01.686 A:middle
+occlusion in very much the same
+
+00:08:59.776 --> 00:09:01.686 A:middle
+occlusion in very much the same
+
+00:09:01.686 --> 00:09:02.636 A:middle
+way we're enabling for
+
+00:09:02.636 --> 00:09:03.306 A:middle
+RealityKit.
+
+00:09:04.056 --> 00:09:05.376 A:middle
+All we have to do is set the
+
+00:09:05.376 --> 00:09:07.056 A:middle
+FrameSemantics on our
+
+00:09:07.056 --> 00:09:09.176 A:middle
+configuration, and the ARSCNView
+
+00:09:09.176 --> 00:09:10.606 A:middle
+will automatically pick this up.
+
+00:09:11.736 --> 00:09:13.146 A:middle
+However, there's a difference
+
+00:09:13.146 --> 00:09:14.366 A:middle
+between the SceneKit
+
+00:09:14.366 --> 00:09:15.896 A:middle
+implementation and RealityKit,
+
+00:09:16.236 --> 00:09:18.216 A:middle
+where SceneKit does a
+
+00:09:18.356 --> 00:09:19.896 A:middle
+post-processing composition.
+
+00:09:20.296 --> 00:09:21.206 A:middle
+And, what that means for you
+
+00:09:21.206 --> 00:09:23.416 A:middle
+concretely is it may not work as
+
+00:09:23.416 --> 00:09:24.826 A:middle
+well with transparent objects,
+
+00:09:24.826 --> 00:09:26.016 A:middle
+depending on how you write
+
+00:09:26.846 --> 00:09:26.966 A:middle
+depth.
+
+00:09:28.196 --> 00:09:30.206 A:middle
+Finally, what if I have my own
+
+00:09:30.206 --> 00:09:31.056 A:middle
+rendering engine?
+
+00:09:32.276 --> 00:09:33.946 A:middle
+Well, we want to enable you to
+
+00:09:33.946 --> 00:09:35.646 A:middle
+incorporate people occlusion
+
+00:09:35.646 --> 00:09:37.006 A:middle
+into your own rendering engine,
+
+00:09:37.616 --> 00:09:38.756 A:middle
+or a third-party rendering
+
+00:09:38.756 --> 00:09:39.156 A:middle
+engine.
+
+00:09:39.756 --> 00:09:42.096 A:middle
+And, what this gives you is
+
+00:09:42.096 --> 00:09:43.286 A:middle
+complete control over the
+
+00:09:43.286 --> 00:09:43.896 A:middle
+composition.
+
+00:09:43.896 --> 00:09:47.126 A:middle
+We want to give you as much
+
+00:09:47.126 --> 00:09:49.086 A:middle
+flexibility as possible, while
+
+00:09:49.086 --> 00:09:50.866 A:middle
+still giving you easy-to-use API
+
+00:09:51.616 --> 00:09:52.876 A:middle
+in order to incorporate this
+
+00:09:52.876 --> 00:09:53.426 A:middle
+great feature.
+
+00:09:54.216 --> 00:09:55.566 A:middle
+So, before I show you how we do
+
+00:09:55.566 --> 00:09:57.256 A:middle
+this, let's do a quick review.
+
+00:09:58.496 --> 00:10:01.116 A:middle
+We had the segmentationBuffer
+
+00:09:58.496 --> 00:10:01.116 A:middle
+We had the segmentationBuffer
+
+00:10:01.116 --> 00:10:02.136 A:middle
+that came out of the neural
+
+00:10:02.136 --> 00:10:04.386 A:middle
+network, that was working on a
+
+00:10:04.386 --> 00:10:04.976 A:middle
+smaller image.
+
+00:10:05.346 --> 00:10:06.816 A:middle
+And then, we applied matting in
+
+00:10:06.816 --> 00:10:08.196 A:middle
+order to recapture some of that
+
+00:10:08.196 --> 00:10:08.906 A:middle
+missing detail.
+
+00:10:10.306 --> 00:10:11.646 A:middle
+Well, when we do our custom
+
+00:10:11.646 --> 00:10:13.936 A:middle
+composition, we're providing a
+
+00:10:13.936 --> 00:10:16.086 A:middle
+new class that will generate
+
+00:10:16.086 --> 00:10:17.346 A:middle
+this matte for you, using the
+
+00:10:17.386 --> 00:10:19.076 A:middle
+power of Metal, giving you the
+
+00:10:19.076 --> 00:10:20.596 A:middle
+matte as a texture for you to
+
+00:10:20.596 --> 00:10:21.596 A:middle
+incorporate into your own
+
+00:10:21.596 --> 00:10:22.016 A:middle
+pipeline.
+
+00:10:22.686 --> 00:10:24.296 A:middle
+Let's look at an example of how
+
+00:10:24.296 --> 00:10:25.786 A:middle
+we can do just that.
+
+00:10:26.796 --> 00:10:28.416 A:middle
+So, here I have my custom
+
+00:10:28.416 --> 00:10:29.406 A:middle
+composition function.
+
+00:10:29.826 --> 00:10:31.626 A:middle
+And, the first thing I do is to
+
+00:10:31.626 --> 00:10:32.866 A:middle
+make sure whether this feature
+
+00:10:32.866 --> 00:10:34.276 A:middle
+is supported.
+
+00:10:34.276 --> 00:10:37.006 A:middle
+And, once I've done that, all I
+
+00:10:37.006 --> 00:10:38.246 A:middle
+have to do is call
+
+00:10:38.246 --> 00:10:39.906 A:middle
+generateMatte, and I give it the
+
+00:10:39.906 --> 00:10:41.646 A:middle
+frame and the commandBuffer, and
+
+00:10:41.646 --> 00:10:42.836 A:middle
+it gives me back the Metal
+
+00:10:42.836 --> 00:10:45.146 A:middle
+texture that I can then use when
+
+00:10:45.146 --> 00:10:46.916 A:middle
+I do my own custom composition,
+
+00:10:47.566 --> 00:10:49.106 A:middle
+and finally schedule everything
+
+00:10:49.106 --> 00:10:49.786 A:middle
+to the GPU.
+
+00:10:50.336 --> 00:10:52.406 A:middle
+So, the class that we're
+
+00:10:52.406 --> 00:10:54.196 A:middle
+bringing to ARKit is called
+
+00:10:54.196 --> 00:10:55.906 A:middle
+ARMatteGenerator, and as you saw
+
+00:10:55.906 --> 00:10:57.586 A:middle
+in the example, it takes the
+
+00:10:57.586 --> 00:10:58.986 A:middle
+ARFrame and the commandBuffer,
+
+00:10:58.986 --> 00:11:00.806 A:middle
+and it gives you back a texture
+
+00:10:58.986 --> 00:11:00.806 A:middle
+and it gives you back a texture
+
+00:11:00.806 --> 00:11:01.616 A:middle
+that you can use.
+
+00:11:02.366 --> 00:11:04.286 A:middle
+However, we're not done yet.
+
+00:11:05.056 --> 00:11:06.976 A:middle
+Just like the segmentationBuffer
+
+00:11:06.976 --> 00:11:09.276 A:middle
+was of a lower resolution, the
+
+00:11:09.276 --> 00:11:11.076 A:middle
+estimatedDepthData is also
+
+00:11:11.076 --> 00:11:13.236 A:middle
+lower, and if we simply magnify
+
+00:11:13.236 --> 00:11:15.046 A:middle
+it, and overlay it on our matted
+
+00:11:15.046 --> 00:11:17.686 A:middle
+image, we will see that there
+
+00:11:17.686 --> 00:11:18.776 A:middle
+might be a mismatch.
+
+00:11:19.366 --> 00:11:20.836 A:middle
+We can have depth values where
+
+00:11:20.836 --> 00:11:22.086 A:middle
+there's no alpha value in the
+
+00:11:22.086 --> 00:11:23.706 A:middle
+matte, and more importantly, we
+
+00:11:23.706 --> 00:11:25.346 A:middle
+can have alpha values in the
+
+00:11:25.346 --> 00:11:26.186 A:middle
+matte where there's no
+
+00:11:26.186 --> 00:11:27.456 A:middle
+corresponding depth value.
+
+00:11:31.176 --> 00:11:32.626 A:middle
+Now, since the matte has already
+
+00:11:32.626 --> 00:11:33.976 A:middle
+recaptured some of the missing
+
+00:11:33.976 --> 00:11:35.526 A:middle
+detail, we can't really modify
+
+00:11:35.526 --> 00:11:36.486 A:middle
+the alpha itself.
+
+00:11:36.686 --> 00:11:38.476 A:middle
+Instead, we need to modify the
+
+00:11:38.476 --> 00:11:39.186 A:middle
+depth buffer.
+
+00:11:39.746 --> 00:11:42.896 A:middle
+So, let's go back to my previous
+
+00:11:42.896 --> 00:11:44.426 A:middle
+example, and see how we do just
+
+00:11:44.426 --> 00:11:45.346 A:middle
+that.
+
+00:11:45.866 --> 00:11:47.766 A:middle
+So, here we have the line where
+
+00:11:47.766 --> 00:11:49.306 A:middle
+I added-- we generated the matte
+
+00:11:49.446 --> 00:11:50.496 A:middle
+in order for me to use for my
+
+00:11:50.496 --> 00:11:51.526 A:middle
+custom composition.
+
+00:11:51.906 --> 00:11:53.956 A:middle
+And so I add an addition
+
+00:11:54.096 --> 00:11:55.356 A:middle
+function call to
+
+00:11:55.356 --> 00:11:56.736 A:middle
+generateDilatedDepth.
+
+00:11:57.076 --> 00:11:58.446 A:middle
+And, much in the same way, it
+
+00:11:58.446 --> 00:11:59.816 A:middle
+takes the frame in the command
+
+00:11:59.816 --> 00:12:01.516 A:middle
+buffer, and gives me back a
+
+00:11:59.816 --> 00:12:01.516 A:middle
+buffer, and gives me back a
+
+00:12:01.566 --> 00:12:01.916 A:middle
+texture.
+
+00:12:02.536 --> 00:12:05.516 A:middle
+And, if you look at the API, it
+
+00:12:05.516 --> 00:12:07.106 A:middle
+looks very similar to how we
+
+00:12:07.106 --> 00:12:09.696 A:middle
+generated the matte, giving us
+
+00:12:09.756 --> 00:12:11.966 A:middle
+the texture, taking the frame
+
+00:12:11.966 --> 00:12:12.816 A:middle
+and the command buffer.
+
+00:12:14.026 --> 00:12:15.926 A:middle
+And, what this does is ensures
+
+00:12:15.926 --> 00:12:17.876 A:middle
+that for every alpha value we
+
+00:12:17.876 --> 00:12:19.486 A:middle
+find in the matte, we will have
+
+00:12:19.486 --> 00:12:21.076 A:middle
+a corresponding depth value that
+
+00:12:21.076 --> 00:12:22.546 A:middle
+we can then use when we do our
+
+00:12:22.546 --> 00:12:23.536 A:middle
+final composition.
+
+00:12:24.956 --> 00:12:27.096 A:middle
+So, with the dilated depth, and
+
+00:12:27.096 --> 00:12:28.976 A:middle
+the matte, we're now finally
+
+00:12:28.976 --> 00:12:30.806 A:middle
+able to move on to composition.
+
+00:12:32.556 --> 00:12:34.536 A:middle
+Composition is usually done on
+
+00:12:34.536 --> 00:12:36.046 A:middle
+the GPU in the fragment shader.
+
+00:12:36.516 --> 00:12:37.796 A:middle
+So, let's look at an example
+
+00:12:37.796 --> 00:12:39.436 A:middle
+shader of how I bring everything
+
+00:12:39.436 --> 00:12:39.846 A:middle
+together.
+
+00:12:40.436 --> 00:12:43.726 A:middle
+I begin by doing what we would
+
+00:12:43.726 --> 00:12:45.716 A:middle
+usually do for an AR experience.
+
+00:12:46.056 --> 00:12:48.376 A:middle
+I sample the camera image, as
+
+00:12:48.376 --> 00:12:49.626 A:middle
+well as the rendered texture,
+
+00:12:50.386 --> 00:12:51.486 A:middle
+but since we're going to do
+
+00:12:51.486 --> 00:12:53.096 A:middle
+occlusion, I'm also sampling the
+
+00:12:53.096 --> 00:12:54.446 A:middle
+rendered depth.
+
+00:12:55.056 --> 00:12:57.186 A:middle
+And then, I do what I would
+
+00:12:57.216 --> 00:12:58.976 A:middle
+usually do in AR, I simply
+
+00:12:58.976 --> 00:13:00.636 A:middle
+overlay the rendered content on
+
+00:12:58.976 --> 00:13:00.636 A:middle
+overlay the rendered content on
+
+00:13:00.636 --> 00:13:02.856 A:middle
+the real image, given the
+
+00:13:03.046 --> 00:13:03.766 A:middle
+rendered alpha.
+
+00:13:05.236 --> 00:13:07.816 A:middle
+The new part, in order to enable
+
+00:13:07.816 --> 00:13:09.506 A:middle
+people occlusion, is I also
+
+00:13:09.506 --> 00:13:11.516 A:middle
+sample my matte, and my
+
+00:13:11.516 --> 00:13:12.336 A:middle
+dilatedDepth.
+
+00:13:13.556 --> 00:13:16.336 A:middle
+And then, I make sure to compare
+
+00:13:16.336 --> 00:13:17.936 A:middle
+the dilatedDepth with the
+
+00:13:17.936 --> 00:13:18.686 A:middle
+renderedDepth.
+
+00:13:18.686 --> 00:13:20.726 A:middle
+And, if I find that there's
+
+00:13:20.726 --> 00:13:21.966 A:middle
+something in the dilatedDepth
+
+00:13:21.966 --> 00:13:23.206 A:middle
+that's closer to the camera,
+
+00:13:23.206 --> 00:13:24.546 A:middle
+meaning that there might be a
+
+00:13:24.546 --> 00:13:26.976 A:middle
+person there, I then mix the
+
+00:13:26.976 --> 00:13:29.276 A:middle
+camera back, given the value of
+
+00:13:29.276 --> 00:13:29.616 A:middle
+the matte.
+
+00:13:30.256 --> 00:13:32.166 A:middle
+However, if the render content
+
+00:13:32.166 --> 00:13:34.536 A:middle
+is closer to the camera, I
+
+00:13:34.536 --> 00:13:36.106 A:middle
+simply do what we always do, and
+
+00:13:36.106 --> 00:13:37.856 A:middle
+have the render content overlaid
+
+00:13:37.856 --> 00:13:38.526 A:middle
+on top of it.
+
+00:13:38.526 --> 00:13:41.106 A:middle
+And, with all of this, we're
+
+00:13:41.196 --> 00:13:43.846 A:middle
+finally able to do people
+
+00:13:43.846 --> 00:13:45.676 A:middle
+occlusion in our own custom
+
+00:13:45.676 --> 00:13:45.976 A:middle
+renderer.
+
+00:13:49.516 --> 00:13:54.636 A:middle
+[ Applause ]
+
+00:13:55.136 --> 00:13:56.696 A:middle
+Since this feature is using the
+
+00:13:56.696 --> 00:13:59.196 A:middle
+neural engine, and machine
+
+00:13:59.196 --> 00:14:01.296 A:middle
+learning, it's supported on A12
+
+00:13:59.196 --> 00:14:01.296 A:middle
+learning, it's supported on A12
+
+00:14:01.296 --> 00:14:02.286 A:middle
+devices and later.
+
+00:14:03.826 --> 00:14:05.796 A:middle
+It also works best in indoor
+
+00:14:05.796 --> 00:14:06.416 A:middle
+environments.
+
+00:14:07.226 --> 00:14:08.956 A:middle
+And, in all the videos you saw,
+
+00:14:08.956 --> 00:14:10.316 A:middle
+you saw people standing in the
+
+00:14:10.316 --> 00:14:12.066 A:middle
+scene, but this feature also
+
+00:14:12.066 --> 00:14:13.426 A:middle
+works for your own hands and
+
+00:14:13.426 --> 00:14:13.696 A:middle
+feet.
+
+00:14:15.006 --> 00:14:16.366 A:middle
+It also works for multiple
+
+00:14:16.366 --> 00:14:17.176 A:middle
+people in the scene.
+
+00:14:18.386 --> 00:14:20.066 A:middle
+Before I hand it over to Tanmay
+
+00:14:20.136 --> 00:14:21.286 A:middle
+to show you all about motion
+
+00:14:21.286 --> 00:14:24.596 A:middle
+capture, let's do a quick recap.
+
+00:14:24.596 --> 00:14:26.626 A:middle
+So, with people occlusion, we're
+
+00:14:26.626 --> 00:14:28.596 A:middle
+enabling correct occlusion
+
+00:14:28.696 --> 00:14:30.176 A:middle
+between rendered and real
+
+00:14:30.176 --> 00:14:31.306 A:middle
+content for people.
+
+00:14:33.136 --> 00:14:34.936 A:middle
+The recommended way, if you're
+
+00:14:34.936 --> 00:14:36.506 A:middle
+building a new app, is to use
+
+00:14:36.506 --> 00:14:39.006 A:middle
+RealityKit and ARView, since
+
+00:14:39.006 --> 00:14:40.716 A:middle
+this does the deep integration.
+
+00:14:41.706 --> 00:14:43.556 A:middle
+If you already have an app using
+
+00:14:43.556 --> 00:14:45.156 A:middle
+SceneKit, we've also added
+
+00:14:45.156 --> 00:14:46.796 A:middle
+support for people occlusion in
+
+00:14:46.796 --> 00:14:47.806 A:middle
+the ARSCNView.
+
+00:14:49.246 --> 00:14:50.166 A:middle
+And, if you have your own
+
+00:14:50.166 --> 00:14:51.736 A:middle
+renderer, we're providing you
+
+00:14:51.736 --> 00:14:53.266 A:middle
+with a new API called the
+
+00:14:53.266 --> 00:14:55.436 A:middle
+ARMatteGenerator, so you can do
+
+00:14:55.436 --> 00:14:56.756 A:middle
+your own compositing and
+
+00:14:56.756 --> 00:14:58.136 A:middle
+incorporating into your own
+
+00:14:58.136 --> 00:14:58.526 A:middle
+renderer.
+
+00:14:59.346 --> 00:15:00.766 A:middle
+And, with that, I'd like to hand
+
+00:14:59.346 --> 00:15:00.766 A:middle
+And, with that, I'd like to hand
+
+00:15:00.766 --> 00:15:02.496 A:middle
+it over to Tanmay to give you a
+
+00:15:02.496 --> 00:15:03.916 A:middle
+deep dive into motion capture.
+
+00:15:04.516 --> 00:15:10.546 A:middle
+[ Applause ]
+
+00:15:11.046 --> 00:15:12.156 A:middle
+&gt;&gt; Thank you, Adrian.
+
+00:15:12.566 --> 00:15:13.436 A:middle
+Hello everyone.
+
+00:15:13.596 --> 00:15:15.666 A:middle
+I'm Tanmay, and today I'm going
+
+00:15:15.666 --> 00:15:17.326 A:middle
+to introduce you to this new
+
+00:15:17.326 --> 00:15:18.766 A:middle
+piece of technology that we are
+
+00:15:18.766 --> 00:15:20.636 A:middle
+bringing this year, motion
+
+00:15:20.826 --> 00:15:21.866 A:middle
+capture.
+
+00:15:22.516 --> 00:15:25.316 A:middle
+[ Applause ]
+
+00:15:25.816 --> 00:15:28.046 A:middle
+So, what is motion capture?
+
+00:15:28.746 --> 00:15:30.716 A:middle
+It's just a process of capturing
+
+00:15:30.716 --> 00:15:31.766 A:middle
+movement of people.
+
+00:15:33.196 --> 00:15:35.566 A:middle
+You see a person, you capture
+
+00:15:35.566 --> 00:15:37.516 A:middle
+all the movements, and you use
+
+00:15:37.566 --> 00:15:39.466 A:middle
+that motion to animate a virtual
+
+00:15:39.466 --> 00:15:41.926 A:middle
+character so that the character
+
+00:15:41.926 --> 00:15:43.876 A:middle
+performs the same set of actions
+
+00:15:43.936 --> 00:15:45.856 A:middle
+as the person you're looking at.
+
+00:15:45.856 --> 00:15:47.446 A:middle
+And, we're trying to enable this
+
+00:15:47.446 --> 00:15:49.116 A:middle
+technology in your applications.
+
+00:15:50.516 --> 00:15:51.636 A:middle
+Now, let's dive in.
+
+00:15:52.476 --> 00:15:54.326 A:middle
+We would like the character to
+
+00:15:54.326 --> 00:15:55.646 A:middle
+mimic the person that you're
+
+00:15:55.646 --> 00:15:56.156 A:middle
+looking at.
+
+00:15:56.346 --> 00:15:58.146 A:middle
+But, before we do that, we need
+
+00:15:58.146 --> 00:16:00.456 A:middle
+to understand what exactly are
+
+00:15:58.146 --> 00:16:00.456 A:middle
+to understand what exactly are
+
+00:16:00.456 --> 00:16:01.406 A:middle
+we trying to animate?
+
+00:16:01.816 --> 00:16:03.346 A:middle
+What does a character entail?
+
+00:16:04.646 --> 00:16:06.066 A:middle
+So, this is an example of a
+
+00:16:06.066 --> 00:16:06.966 A:middle
+virtual character.
+
+00:16:06.966 --> 00:16:09.096 A:middle
+Let's take an x-ray of it and
+
+00:16:09.096 --> 00:16:10.096 A:middle
+see what's inside it.
+
+00:16:10.756 --> 00:16:13.806 A:middle
+You can see that it has two main
+
+00:16:13.806 --> 00:16:14.466 A:middle
+components.
+
+00:16:14.716 --> 00:16:16.186 A:middle
+The outer coating, which is
+
+00:16:16.326 --> 00:16:17.256 A:middle
+called a mesh.
+
+00:16:17.576 --> 00:16:19.296 A:middle
+And, the bony structure inside,
+
+00:16:19.366 --> 00:16:20.776 A:middle
+which is called a skeleton.
+
+00:16:21.026 --> 00:16:23.686 A:middle
+And, these two combined together
+
+00:16:23.686 --> 00:16:25.426 A:middle
+give you the complete character.
+
+00:16:26.766 --> 00:16:28.196 A:middle
+The skeleton is the driving
+
+00:16:28.196 --> 00:16:30.186 A:middle
+force behind the entire
+
+00:16:30.186 --> 00:16:30.686 A:middle
+character.
+
+00:16:31.206 --> 00:16:32.906 A:middle
+It contains all the limbs that
+
+00:16:32.906 --> 00:16:34.276 A:middle
+we use for motion, just like
+
+00:16:34.316 --> 00:16:34.706 A:middle
+people.
+
+00:16:35.606 --> 00:16:37.346 A:middle
+And so, in order to animate a
+
+00:16:37.346 --> 00:16:39.196 A:middle
+character, we need to animate
+
+00:16:39.256 --> 00:16:40.496 A:middle
+the skeleton with the same
+
+00:16:40.496 --> 00:16:40.906 A:middle
+motion.
+
+00:16:42.066 --> 00:16:43.706 A:middle
+So, what's the first step here?
+
+00:16:43.986 --> 00:16:44.886 A:middle
+We have a person.
+
+00:16:45.076 --> 00:16:46.846 A:middle
+And, the first step here is to
+
+00:16:46.846 --> 00:16:48.296 A:middle
+have the skeleton mimic this
+
+00:16:48.296 --> 00:16:48.726 A:middle
+person.
+
+00:16:48.916 --> 00:16:52.186 A:middle
+And, this is what it looks like.
+
+00:16:52.186 --> 00:16:54.146 A:middle
+And, once the skeleton moves,
+
+00:16:55.026 --> 00:16:56.566 A:middle
+the character follows suit.
+
+00:16:57.696 --> 00:17:00.426 A:middle
+And, you have the entire virtual
+
+00:16:57.696 --> 00:17:00.426 A:middle
+And, you have the entire virtual
+
+00:17:00.426 --> 00:17:02.116 A:middle
+character mimicking you
+
+00:17:02.116 --> 00:17:02.876 A:middle
+automatically.
+
+00:17:03.466 --> 00:17:06.296 A:middle
+So, how do we do it?
+
+00:17:07.806 --> 00:17:09.306 A:middle
+How do we animate this skeleton?
+
+00:17:09.665 --> 00:17:12.086 A:middle
+Given this image, we use machine
+
+00:17:12.086 --> 00:17:14.685 A:middle
+learning technology to first
+
+00:17:14.685 --> 00:17:16.236 A:middle
+estimate the pose of the person
+
+00:17:16.236 --> 00:17:16.886 A:middle
+in the image.
+
+00:17:17.316 --> 00:17:20.185 A:middle
+And, we use that pose to build a
+
+00:17:20.185 --> 00:17:21.846 A:middle
+full-fledged, high-fidelity
+
+00:17:21.846 --> 00:17:22.445 A:middle
+skeleton.
+
+00:17:23.076 --> 00:17:25.756 A:middle
+And, finally, we use this
+
+00:17:25.796 --> 00:17:27.165 A:middle
+skeleton, and combine it with a
+
+00:17:27.165 --> 00:17:28.626 A:middle
+mesh to give you the final
+
+00:17:28.626 --> 00:17:29.156 A:middle
+character.
+
+00:17:29.456 --> 00:17:32.066 A:middle
+And, we interface all of this,
+
+00:17:32.146 --> 00:17:33.266 A:middle
+everything that you're looking
+
+00:17:33.266 --> 00:17:34.626 A:middle
+here, through ARKit.
+
+00:17:35.336 --> 00:17:39.366 A:middle
+To get a complete overview, we
+
+00:17:39.366 --> 00:17:40.706 A:middle
+are introducing the technology
+
+00:17:40.706 --> 00:17:42.616 A:middle
+of motion capture in this year's
+
+00:17:42.616 --> 00:17:42.976 A:middle
+ARKit.
+
+00:17:43.716 --> 00:17:45.166 A:middle
+And, with that, you can track
+
+00:17:45.166 --> 00:17:47.526 A:middle
+movement of people in real time,
+
+00:17:47.696 --> 00:17:48.676 A:middle
+on your devices.
+
+00:17:49.666 --> 00:17:51.246 A:middle
+It works seamlessly with
+
+00:17:51.246 --> 00:17:53.696 A:middle
+RealityKit, which gives you the
+
+00:17:53.696 --> 00:17:55.576 A:middle
+ability to drive animated
+
+00:17:55.576 --> 00:17:57.336 A:middle
+characters, and render them on
+
+00:17:57.336 --> 00:17:58.036 A:middle
+your screens.
+
+00:17:58.946 --> 00:18:00.386 A:middle
+It's powered by machine learning
+
+00:17:58.946 --> 00:18:00.386 A:middle
+It's powered by machine learning
+
+00:18:00.386 --> 00:18:02.076 A:middle
+and runs smoothly on Apple
+
+00:18:02.076 --> 00:18:02.856 A:middle
+Neural Engine.
+
+00:18:03.806 --> 00:18:05.616 A:middle
+And, we have made it available
+
+00:18:05.616 --> 00:18:07.776 A:middle
+on A12 devices and beyond.
+
+00:18:09.216 --> 00:18:10.356 A:middle
+So, now you have this
+
+00:18:10.386 --> 00:18:12.316 A:middle
+technology, what can you use it
+
+00:18:12.376 --> 00:18:12.626 A:middle
+for?
+
+00:18:12.706 --> 00:18:14.846 A:middle
+What can you enable with it?
+
+00:18:15.516 --> 00:18:17.036 A:middle
+Well, for starters, you can
+
+00:18:17.036 --> 00:18:18.726 A:middle
+always have a virtual character
+
+00:18:18.936 --> 00:18:20.226 A:middle
+follow and track a person.
+
+00:18:20.546 --> 00:18:21.916 A:middle
+You can have your own puppet in
+
+00:18:22.056 --> 00:18:22.256 A:middle
+AR.
+
+00:18:22.256 --> 00:18:24.506 A:middle
+And, this is something that we
+
+00:18:24.506 --> 00:18:25.856 A:middle
+enable out of the box.
+
+00:18:26.306 --> 00:18:27.886 A:middle
+But, beyond that, there are a
+
+00:18:27.886 --> 00:18:29.956 A:middle
+lot of other use cases as well,
+
+00:18:30.046 --> 00:18:31.106 A:middle
+that you can enable with it.
+
+00:18:32.006 --> 00:18:34.286 A:middle
+For example, you can enhance it
+
+00:18:34.286 --> 00:18:35.476 A:middle
+further by creating your own
+
+00:18:35.476 --> 00:18:37.366 A:middle
+models for detecting what
+
+00:18:37.366 --> 00:18:38.766 A:middle
+actions people are doing.
+
+00:18:39.316 --> 00:18:41.996 A:middle
+You can use it to build tools
+
+00:18:41.996 --> 00:18:44.036 A:middle
+for analyzing motions like how
+
+00:18:44.036 --> 00:18:46.526 A:middle
+good a golf swing is, or is your
+
+00:18:46.526 --> 00:18:47.966 A:middle
+posture correct, or are you
+
+00:18:47.966 --> 00:18:49.466 A:middle
+performing an exercise in a
+
+00:18:49.466 --> 00:18:51.026 A:middle
+correct way or not?
+
+00:18:52.536 --> 00:18:54.476 A:middle
+Also, now since a person has a
+
+00:18:54.476 --> 00:18:56.766 A:middle
+virtual presence in the scene,
+
+00:18:56.946 --> 00:18:58.506 A:middle
+you can enable interaction with
+
+00:18:58.506 --> 00:19:00.446 A:middle
+any virtual object that you
+
+00:18:58.506 --> 00:19:00.446 A:middle
+any virtual object that you
+
+00:19:00.446 --> 00:19:00.656 A:middle
+like.
+
+00:19:00.656 --> 00:19:04.096 A:middle
+And, it's supported for all the
+
+00:19:04.096 --> 00:19:06.806 A:middle
+virtual objects present in the
+
+00:19:07.376 --> 00:19:07.496 A:middle
+scene.
+
+00:19:07.496 --> 00:19:09.486 A:middle
+And, finally, you can also use
+
+00:19:09.486 --> 00:19:11.406 A:middle
+it for image and video
+
+00:19:11.406 --> 00:19:12.086 A:middle
+analytics.
+
+00:19:12.406 --> 00:19:14.356 A:middle
+Because we also provide 2D
+
+00:19:14.356 --> 00:19:15.716 A:middle
+version of the skeleton as well
+
+00:19:15.906 --> 00:19:17.206 A:middle
+in image space, and you can
+
+00:19:17.206 --> 00:19:19.136 A:middle
+build it to use editing tools,
+
+00:19:19.196 --> 00:19:20.816 A:middle
+or for semantic image
+
+00:19:20.816 --> 00:19:21.536 A:middle
+understanding.
+
+00:19:21.976 --> 00:19:27.966 A:middle
+And, this doesn't even cover the
+
+00:19:27.966 --> 00:19:30.126 A:middle
+entire set of possibilities that
+
+00:19:30.126 --> 00:19:31.926 A:middle
+you can enable with it remotely.
+
+00:19:32.416 --> 00:19:33.766 A:middle
+There are so many other things
+
+00:19:33.766 --> 00:19:35.186 A:middle
+that you can do with it.
+
+00:19:35.866 --> 00:19:37.766 A:middle
+Now, let me show you how you can
+
+00:19:37.766 --> 00:19:39.236 A:middle
+leverage motion capture for your
+
+00:19:39.236 --> 00:19:39.966 A:middle
+applications.
+
+00:19:40.816 --> 00:19:42.926 A:middle
+Depending on the use cases, we
+
+00:19:42.926 --> 00:19:44.096 A:middle
+have three different ways of
+
+00:19:44.096 --> 00:19:44.566 A:middle
+using it.
+
+00:19:45.706 --> 00:19:48.286 A:middle
+The first one is motion capture
+
+00:19:48.286 --> 00:19:49.156 A:middle
+in RealityKit.
+
+00:19:50.366 --> 00:19:51.576 A:middle
+If you just want to quickly
+
+00:19:51.576 --> 00:19:54.086 A:middle
+animate a character, this
+
+00:19:54.086 --> 00:19:55.696 A:middle
+high-level API will help you get
+
+00:19:55.696 --> 00:19:55.986 A:middle
+there.
+
+00:19:56.676 --> 00:19:58.676 A:middle
+If you want to enable advanced
+
+00:19:58.676 --> 00:20:00.766 A:middle
+use cases, like activity
+
+00:19:58.676 --> 00:20:00.766 A:middle
+use cases, like activity
+
+00:20:00.766 --> 00:20:02.426 A:middle
+recognition, analysis, or
+
+00:20:02.426 --> 00:20:04.136 A:middle
+interaction with 3D objects in a
+
+00:20:04.136 --> 00:20:06.646 A:middle
+scene, we've also provided
+
+00:20:06.646 --> 00:20:09.026 A:middle
+low-level APIs to extract each
+
+00:20:09.026 --> 00:20:10.276 A:middle
+and every element of the
+
+00:20:10.276 --> 00:20:10.956 A:middle
+skeleton.
+
+00:20:12.156 --> 00:20:15.196 A:middle
+And, it's for you to use it.
+
+00:20:15.196 --> 00:20:17.246 A:middle
+And, finally, if your use case
+
+00:20:17.246 --> 00:20:18.606 A:middle
+requires 2D versions of the
+
+00:20:18.606 --> 00:20:20.966 A:middle
+skeleton in image space, maybe
+
+00:20:20.966 --> 00:20:22.366 A:middle
+for doing semantic image
+
+00:20:22.366 --> 00:20:24.266 A:middle
+analysis, or for editing tools,
+
+00:20:24.306 --> 00:20:25.866 A:middle
+or for something else, we've
+
+00:20:25.866 --> 00:20:29.556 A:middle
+provided access to that as well.
+
+00:20:29.746 --> 00:20:31.156 A:middle
+So, let's get started with
+
+00:20:31.156 --> 00:20:32.806 A:middle
+motion capture in RealityKit.
+
+00:20:34.226 --> 00:20:35.926 A:middle
+As you all know, we introduced
+
+00:20:35.926 --> 00:20:39.146 A:middle
+RealityKit this year, and given
+
+00:20:39.146 --> 00:20:41.286 A:middle
+our API in RealityKit, in just
+
+00:20:41.396 --> 00:20:43.106 A:middle
+few lines of code, you can track
+
+00:20:43.106 --> 00:20:45.616 A:middle
+a person and add a character to
+
+00:20:45.616 --> 00:20:45.996 A:middle
+mimic.
+
+00:20:47.526 --> 00:20:49.476 A:middle
+We've provided a very simple and
+
+00:20:49.476 --> 00:20:51.066 A:middle
+easy-to-use API for this
+
+00:20:51.116 --> 00:20:51.506 A:middle
+purpose.
+
+00:20:52.496 --> 00:20:54.106 A:middle
+You can add your own custom
+
+00:20:54.146 --> 00:20:55.966 A:middle
+characters as well, based on the
+
+00:20:55.966 --> 00:20:57.406 A:middle
+structure of our provided
+
+00:20:57.406 --> 00:20:58.006 A:middle
+example.
+
+00:20:58.516 --> 00:21:01.246 A:middle
+So, you can use any mesh, any
+
+00:20:58.516 --> 00:21:01.246 A:middle
+So, you can use any mesh, any
+
+00:21:01.246 --> 00:21:02.406 A:middle
+character that you want,
+
+00:21:02.556 --> 00:21:06.076 A:middle
+provided that it is based on the
+
+00:21:06.076 --> 00:21:07.546 A:middle
+structure of our provided
+
+00:21:07.546 --> 00:21:08.976 A:middle
+example in the sample bundle.
+
+00:21:10.956 --> 00:21:13.146 A:middle
+Finally, the tracked person is
+
+00:21:13.146 --> 00:21:15.416 A:middle
+very easy to access here, via an
+
+00:21:15.416 --> 00:21:17.396 A:middle
+element called AnchorEntities,
+
+00:21:17.676 --> 00:21:18.766 A:middle
+which are basically just
+
+00:21:18.766 --> 00:21:20.126 A:middle
+building blocks of the scene.
+
+00:21:20.666 --> 00:21:22.176 A:middle
+And, it automatically gathers
+
+00:21:22.356 --> 00:21:24.256 A:middle
+all the required transforms that
+
+00:21:24.256 --> 00:21:25.526 A:middle
+we need for motion capture.
+
+00:21:26.146 --> 00:21:32.636 A:middle
+So, to start with, every element
+
+00:21:32.636 --> 00:21:34.886 A:middle
+of motion capture that you get
+
+00:21:34.886 --> 00:21:37.406 A:middle
+in ARView, which as you all
+
+00:21:37.406 --> 00:21:39.326 A:middle
+know, is the main UI element
+
+00:21:39.396 --> 00:21:41.446 A:middle
+combining AR and RealityKit
+
+00:21:41.446 --> 00:21:43.686 A:middle
+together, is powered by a new
+
+00:21:43.686 --> 00:21:45.976 A:middle
+configuration called
+
+00:21:45.976 --> 00:21:47.666 A:middle
+ARBodyTrackingConfiguration.
+
+00:21:48.346 --> 00:21:50.376 A:middle
+And, once you enable this, you
+
+00:21:50.376 --> 00:21:53.196 A:middle
+start adding anchors containing
+
+00:21:53.196 --> 00:21:55.716 A:middle
+bodies, and this entire thing is
+
+00:21:55.716 --> 00:21:57.526 A:middle
+encapsulated in a special type
+
+00:21:57.526 --> 00:21:58.976 A:middle
+of anchor entity called
+
+00:21:58.976 --> 00:22:00.156 A:middle
+bodyTrackedEntity.
+
+00:21:58.976 --> 00:22:00.156 A:middle
+bodyTrackedEntity.
+
+00:22:00.826 --> 00:22:01.786 A:middle
+So, let me give you a brief
+
+00:22:01.786 --> 00:22:02.986 A:middle
+description of what this
+
+00:22:02.986 --> 00:22:05.036 A:middle
+bodyTrackedEntity actually is.
+
+00:22:06.656 --> 00:22:08.616 A:middle
+A body tracked entity represents
+
+00:22:08.686 --> 00:22:09.886 A:middle
+one single person.
+
+00:22:10.226 --> 00:22:11.996 A:middle
+It contains the underlying
+
+00:22:11.996 --> 00:22:14.186 A:middle
+skeleton and its position.
+
+00:22:14.776 --> 00:22:17.646 A:middle
+It's tracked in real time and
+
+00:22:17.646 --> 00:22:19.516 A:middle
+gets updated every frame.
+
+00:22:20.136 --> 00:22:22.136 A:middle
+And, finally it combines the
+
+00:22:22.136 --> 00:22:23.556 A:middle
+skeleton to a given [inaudible]
+
+00:22:23.606 --> 00:22:26.076 A:middle
+mesh automatically and give you
+
+00:22:26.076 --> 00:22:27.296 A:middle
+the complete character.
+
+00:22:27.296 --> 00:22:30.826 A:middle
+Now, let's go to the code to
+
+00:22:30.916 --> 00:22:32.386 A:middle
+animate a character quickly, and
+
+00:22:32.386 --> 00:22:33.616 A:middle
+you'll see how easy it is.
+
+00:22:33.856 --> 00:22:35.036 A:middle
+You just have to follow three
+
+00:22:35.036 --> 00:22:35.616 A:middle
+steps.
+
+00:22:36.586 --> 00:22:38.136 A:middle
+The first step is to load a
+
+00:22:38.176 --> 00:22:38.676 A:middle
+character.
+
+00:22:39.876 --> 00:22:42.396 A:middle
+To automatically load a tracked
+
+00:22:42.396 --> 00:22:45.006 A:middle
+human, asynchronously, you just
+
+00:22:45.006 --> 00:22:45.616 A:middle
+need to call
+
+00:22:45.616 --> 00:22:48.336 A:middle
+entity.loadBodyTrackedAsync
+
+00:22:48.366 --> 00:22:48.786 A:middle
+function.
+
+00:22:49.956 --> 00:22:52.576 A:middle
+And, you can use .sync to either
+
+00:22:52.576 --> 00:22:54.466 A:middle
+catch errors in the received
+
+00:22:54.466 --> 00:22:55.866 A:middle
+completion block, or if
+
+00:22:55.866 --> 00:22:57.306 A:middle
+everything works fine, you can
+
+00:22:57.306 --> 00:22:58.406 A:middle
+get your character in the
+
+00:22:58.406 --> 00:22:59.466 A:middle
+received value block.
+
+00:22:59.786 --> 00:23:01.396 A:middle
+And, this character is of the
+
+00:22:59.786 --> 00:23:01.396 A:middle
+And, this character is of the
+
+00:23:01.396 --> 00:23:02.976 A:middle
+type bodyTrackedEntity.
+
+00:23:07.086 --> 00:23:10.166 A:middle
+We have a file called robot.usdz
+
+00:23:10.166 --> 00:23:11.876 A:middle
+in our sample code bundle, and
+
+00:23:11.906 --> 00:23:13.346 A:middle
+if you provided the file bot to
+
+00:23:13.346 --> 00:23:15.646 A:middle
+this file, it will automatically
+
+00:23:15.646 --> 00:23:17.226 A:middle
+add the skeleton to the robot
+
+00:23:17.226 --> 00:23:18.496 A:middle
+mesh, and provide you with a
+
+00:23:18.536 --> 00:23:18.996 A:middle
+character.
+
+00:23:20.516 --> 00:23:22.216 A:middle
+So, moving on, the second step
+
+00:23:22.216 --> 00:23:24.066 A:middle
+is to get the location where you
+
+00:23:24.066 --> 00:23:25.436 A:middle
+would like to put your character
+
+00:23:25.436 --> 00:23:25.656 A:middle
+on.
+
+00:23:26.846 --> 00:23:28.916 A:middle
+For example, let's say, if you
+
+00:23:28.916 --> 00:23:30.316 A:middle
+would like to put the character
+
+00:23:30.316 --> 00:23:31.626 A:middle
+right on top of the person that
+
+00:23:31.626 --> 00:23:33.446 A:middle
+you are tracking, you can get
+
+00:23:33.446 --> 00:23:34.586 A:middle
+the location by using
+
+00:23:34.586 --> 00:23:36.296 A:middle
+AnchorEntity with the argument
+
+00:23:36.536 --> 00:23:37.186 A:middle
+.body.
+
+00:23:37.776 --> 00:23:39.516 A:middle
+And, please note that this is
+
+00:23:39.516 --> 00:23:41.096 A:middle
+just an example, and it can be
+
+00:23:41.246 --> 00:23:43.626 A:middle
+any other location as well, be
+
+00:23:43.626 --> 00:23:45.416 A:middle
+it on the floor, on a tabletop,
+
+00:23:45.416 --> 00:23:46.486 A:middle
+or anywhere else.
+
+00:23:46.726 --> 00:23:47.966 A:middle
+You just have to provide an
+
+00:23:48.056 --> 00:23:49.856 A:middle
+anchor containing that location.
+
+00:23:50.226 --> 00:23:52.546 A:middle
+And, the character will still
+
+00:23:52.546 --> 00:23:53.406 A:middle
+mimic the person.
+
+00:23:53.856 --> 00:23:57.566 A:middle
+And, finally, just add your
+
+00:23:57.566 --> 00:23:59.026 A:middle
+character to the location, and
+
+00:23:59.496 --> 00:23:59.866 A:middle
+voila.
+
+00:24:00.416 --> 00:24:02.546 A:middle
+You can drive your character.
+
+00:24:02.546 --> 00:24:02.976 A:middle
+It's that simple.
+
+00:24:08.426 --> 00:24:10.286 A:middle
+So, you might be wondering that,
+
+00:24:10.906 --> 00:24:12.586 A:middle
+how can you replace this robot
+
+00:24:12.766 --> 00:24:14.216 A:middle
+with any other custom character
+
+00:24:14.216 --> 00:24:14.696 A:middle
+that you like?
+
+00:24:15.276 --> 00:24:18.836 A:middle
+Like I said before, we have a
+
+00:24:18.836 --> 00:24:20.876 A:middle
+file called robot.usdz.
+
+00:24:21.166 --> 00:24:23.656 A:middle
+And, this usdz file has an
+
+00:24:23.656 --> 00:24:24.546 A:middle
+entire structure.
+
+00:24:24.546 --> 00:24:26.286 A:middle
+And, if your custom model
+
+00:24:26.556 --> 00:24:28.396 A:middle
+follows the same structure, then
+
+00:24:28.396 --> 00:24:29.096 A:middle
+you can use it.
+
+00:24:29.756 --> 00:24:32.096 A:middle
+And, just to let you know that
+
+00:24:32.096 --> 00:24:33.426 A:middle
+the underlying skeleton that we
+
+00:24:33.426 --> 00:24:35.566 A:middle
+provide is a very high-fidelity
+
+00:24:35.566 --> 00:24:37.716 A:middle
+skeleton consisting of 91
+
+00:24:37.716 --> 00:24:38.106 A:middle
+joints.
+
+00:24:38.586 --> 00:24:41.466 A:middle
+And, for your information, here
+
+00:24:41.466 --> 00:24:45.316 A:middle
+are all of them.
+
+00:24:45.526 --> 00:24:46.296 A:middle
+It's a lot, right?
+
+00:24:46.296 --> 00:24:48.096 A:middle
+And, these are just regular
+
+00:24:48.096 --> 00:24:50.596 A:middle
+joints, contained in arms, legs,
+
+00:24:50.596 --> 00:24:51.296 A:middle
+and so on.
+
+00:24:51.896 --> 00:24:53.936 A:middle
+And, if your character follows
+
+00:24:53.936 --> 00:24:55.536 A:middle
+this naming scheme, you can use
+
+00:24:55.536 --> 00:24:56.696 A:middle
+it directly in RealityKit.
+
+00:25:00.456 --> 00:25:02.746 A:middle
+That was a quick and easy way to
+
+00:25:02.746 --> 00:25:04.196 A:middle
+load a tracked person and drive
+
+00:25:04.226 --> 00:25:04.856 A:middle
+the character.
+
+00:25:05.496 --> 00:25:07.206 A:middle
+Now, let's move on to low-level
+
+00:25:07.206 --> 00:25:09.016 A:middle
+APIs for advanced access.
+
+00:25:10.406 --> 00:25:11.826 A:middle
+Here we will provide you with
+
+00:25:12.176 --> 00:25:13.776 A:middle
+access to each and every element
+
+00:25:13.776 --> 00:25:14.616 A:middle
+of the skeleton.
+
+00:25:15.176 --> 00:25:17.386 A:middle
+And, we interface it through a
+
+00:25:17.386 --> 00:25:20.806 A:middle
+very easy-to-use API.
+
+00:25:21.046 --> 00:25:22.286 A:middle
+You can enable all those
+
+00:25:22.286 --> 00:25:23.646 A:middle
+advanced use cases that we
+
+00:25:23.646 --> 00:25:24.986 A:middle
+discussed earlier, which
+
+00:25:24.986 --> 00:25:26.736 A:middle
+requires either using the
+
+00:25:26.736 --> 00:25:29.316 A:middle
+skeleton data for analysis, or
+
+00:25:29.316 --> 00:25:30.946 A:middle
+as an input to your models.
+
+00:25:33.656 --> 00:25:35.426 A:middle
+And, finally the skeleton that
+
+00:25:35.426 --> 00:25:37.856 A:middle
+we provide is contained in a new
+
+00:25:37.856 --> 00:25:38.996 A:middle
+type of anchor that we're
+
+00:25:38.996 --> 00:25:40.416 A:middle
+introducing, called
+
+00:25:40.416 --> 00:25:41.366 A:middle
+ARBodyAnchor.
+
+00:25:42.566 --> 00:25:44.106 A:middle
+And, ARBodyAnchor is the
+
+00:25:44.106 --> 00:25:45.716 A:middle
+starting point of the entire
+
+00:25:45.716 --> 00:25:47.466 A:middle
+data structure that we provide.
+
+00:25:48.896 --> 00:25:50.106 A:middle
+And, this is what the data
+
+00:25:50.106 --> 00:25:50.876 A:middle
+structure looks like.
+
+00:25:51.406 --> 00:25:54.536 A:middle
+We have ARBodyAnchor on the top,
+
+00:25:54.536 --> 00:25:56.966 A:middle
+and it contains all the skeletal
+
+00:25:57.796 --> 00:25:58.066 A:middle
+elements.
+
+00:25:59.976 --> 00:26:01.716 A:middle
+So, let's just walk through this
+
+00:25:59.976 --> 00:26:01.716 A:middle
+So, let's just walk through this
+
+00:26:01.716 --> 00:26:05.996 A:middle
+structure, and start at the top.
+
+00:26:05.996 --> 00:26:07.576 A:middle
+ARBodyAnchor is just a regular
+
+00:26:07.806 --> 00:26:08.076 A:middle
+anchor.
+
+00:26:08.236 --> 00:26:09.786 A:middle
+It contains a geometry.
+
+00:26:10.146 --> 00:26:11.836 A:middle
+And, in this case, the geometry
+
+00:26:11.836 --> 00:26:13.316 A:middle
+itself is the skeleton.
+
+00:26:13.316 --> 00:26:14.986 A:middle
+And, this is what the skeleton
+
+00:26:14.986 --> 00:26:15.446 A:middle
+looks like.
+
+00:26:15.986 --> 00:26:18.146 A:middle
+It consists of nodes and edges,
+
+00:26:18.196 --> 00:26:19.676 A:middle
+just like any other geometry.
+
+00:26:21.076 --> 00:26:22.946 A:middle
+It also contains a transform.
+
+00:26:23.446 --> 00:26:25.436 A:middle
+And, this transform is just the
+
+00:26:25.436 --> 00:26:26.616 A:middle
+location of the anchor in
+
+00:26:26.966 --> 00:26:29.146 A:middle
+rotation and translation matrix
+
+00:26:29.146 --> 00:26:29.416 A:middle
+form.
+
+00:26:30.256 --> 00:26:31.656 A:middle
+Accessing the skeleton is what
+
+00:26:31.656 --> 00:26:32.546 A:middle
+we're interested in here,
+
+00:26:32.546 --> 00:26:33.036 A:middle
+mainly.
+
+00:26:33.236 --> 00:26:34.426 A:middle
+So, let's just get right into
+
+00:26:35.016 --> 00:26:35.086 A:middle
+it.
+
+00:26:35.776 --> 00:26:37.436 A:middle
+What is this skeleton that we
+
+00:26:37.436 --> 00:26:38.026 A:middle
+are showing you?
+
+00:26:38.446 --> 00:26:40.966 A:middle
+It's a geometry, composed of
+
+00:26:40.966 --> 00:26:42.556 A:middle
+nodes, which represent the
+
+00:26:42.556 --> 00:26:44.836 A:middle
+joints, the green points and the
+
+00:26:44.836 --> 00:26:46.156 A:middle
+yellow points that you see here.
+
+00:26:46.156 --> 00:26:48.236 A:middle
+And, it contains edges, which
+
+00:26:48.236 --> 00:26:49.766 A:middle
+represent the bones, the white
+
+00:26:49.766 --> 00:26:50.756 A:middle
+lines that you see here.
+
+00:26:51.206 --> 00:26:52.776 A:middle
+They show you how the joints are
+
+00:26:52.826 --> 00:26:53.266 A:middle
+connected.
+
+00:26:53.266 --> 00:26:56.616 A:middle
+And, once all the joints are
+
+00:26:56.616 --> 00:26:58.536 A:middle
+connected, you form this entire
+
+00:26:58.536 --> 00:26:59.086 A:middle
+geometry.
+
+00:27:00.276 --> 00:27:02.016 A:middle
+We call this skeleton as
+
+00:27:02.016 --> 00:27:04.056 A:middle
+ARSkeleton, and you can simply
+
+00:27:04.056 --> 00:27:05.926 A:middle
+access it by using skeleton
+
+00:27:05.966 --> 00:27:07.596 A:middle
+property of ARBodyAnchor.
+
+00:27:11.476 --> 00:27:13.266 A:middle
+The root node of this skeleton,
+
+00:27:13.556 --> 00:27:15.096 A:middle
+the topmost point in this
+
+00:27:15.176 --> 00:27:16.836 A:middle
+geometry in the geometry
+
+00:27:16.836 --> 00:27:18.706 A:middle
+hierarchy, is the hip joint,
+
+00:27:18.926 --> 00:27:19.816 A:middle
+which you can see here.
+
+00:27:21.086 --> 00:27:22.506 A:middle
+So, let's move on and have a
+
+00:27:22.506 --> 00:27:23.496 A:middle
+look at its structural
+
+00:27:23.496 --> 00:27:24.076 A:middle
+definition.
+
+00:27:25.116 --> 00:27:26.606 A:middle
+Definition, what we call here,
+
+00:27:26.606 --> 00:27:27.606 A:middle
+is just a property of the
+
+00:27:27.606 --> 00:27:29.326 A:middle
+skeleton, containing two
+
+00:27:29.326 --> 00:27:29.926 A:middle
+components.
+
+00:27:30.586 --> 00:27:32.286 A:middle
+The names of all the joints
+
+00:27:32.326 --> 00:27:33.406 A:middle
+present in the skeleton, and the
+
+00:27:33.706 --> 00:27:35.286 A:middle
+connections between them, which
+
+00:27:35.286 --> 00:27:36.526 A:middle
+show you how to connect those
+
+00:27:36.526 --> 00:27:37.226 A:middle
+joints together.
+
+00:27:37.986 --> 00:27:38.986 A:middle
+So, let's just have a look at
+
+00:27:39.066 --> 00:27:40.186 A:middle
+both of these properties.
+
+00:27:42.016 --> 00:27:43.676 A:middle
+Here, we are labeling some of
+
+00:27:43.676 --> 00:27:45.496 A:middle
+the joints in the skeleton, and
+
+00:27:45.546 --> 00:27:46.786 A:middle
+as you can see, that these
+
+00:27:46.786 --> 00:27:48.046 A:middle
+joints have semantically
+
+00:27:48.046 --> 00:27:49.966 A:middle
+meaningful names, like left
+
+00:27:50.126 --> 00:27:51.496 A:middle
+shoulder, right shoulder, left
+
+00:27:51.496 --> 00:27:53.306 A:middle
+hand, right hand, and so on.
+
+00:27:53.536 --> 00:27:54.546 A:middle
+Similar to people.
+
+00:27:55.566 --> 00:27:57.136 A:middle
+Here I would like to point out
+
+00:27:57.136 --> 00:27:58.486 A:middle
+that the green points are the
+
+00:27:58.486 --> 00:28:00.446 A:middle
+ones that we control and are
+
+00:27:58.486 --> 00:28:00.446 A:middle
+ones that we control and are
+
+00:28:00.536 --> 00:28:02.116 A:middle
+estimated from the person that
+
+00:28:02.116 --> 00:28:03.296 A:middle
+you're looking at, and the
+
+00:28:03.296 --> 00:28:05.056 A:middle
+yellow ones are not tracked.
+
+00:28:05.426 --> 00:28:06.826 A:middle
+They just follow the motion of
+
+00:28:06.826 --> 00:28:08.986 A:middle
+the closest green parent.
+
+00:28:10.816 --> 00:28:12.876 A:middle
+Zooming in, focus on the right
+
+00:28:12.876 --> 00:28:14.896 A:middle
+arm, and consider these three
+
+00:28:14.896 --> 00:28:15.356 A:middle
+joints.
+
+00:28:15.496 --> 00:28:17.106 A:middle
+Right hand, right elbow and
+
+00:28:17.106 --> 00:28:17.736 A:middle
+right shoulder.
+
+00:28:18.336 --> 00:28:19.966 A:middle
+They follow a parent-child
+
+00:28:19.996 --> 00:28:20.606 A:middle
+relationship.
+
+00:28:21.116 --> 00:28:23.136 A:middle
+So, your hand is a child of
+
+00:28:23.136 --> 00:28:23.706 A:middle
+elbow.
+
+00:28:23.706 --> 00:28:24.906 A:middle
+And elbow is a child of
+
+00:28:24.936 --> 00:28:25.446 A:middle
+shoulder.
+
+00:28:25.946 --> 00:28:27.666 A:middle
+And, this continues for rest of
+
+00:28:27.666 --> 00:28:29.416 A:middle
+the skeleton as well, thus
+
+00:28:29.476 --> 00:28:30.436 A:middle
+giving you the complete
+
+00:28:30.496 --> 00:28:30.816 A:middle
+hierarchy.
+
+00:28:36.336 --> 00:28:38.256 A:middle
+We know now what all the joints
+
+00:28:38.256 --> 00:28:39.626 A:middle
+are called, and how to connect
+
+00:28:39.626 --> 00:28:39.896 A:middle
+them.
+
+00:28:40.306 --> 00:28:41.776 A:middle
+But, how do we get their
+
+00:28:41.776 --> 00:28:42.296 A:middle
+locations?
+
+00:28:43.036 --> 00:28:44.306 A:middle
+We've provided two ways to
+
+00:28:44.306 --> 00:28:45.666 A:middle
+access the locations of all the
+
+00:28:45.666 --> 00:28:45.956 A:middle
+joints.
+
+00:28:47.256 --> 00:28:49.226 A:middle
+The first one is relative to its
+
+00:28:49.326 --> 00:28:49.746 A:middle
+parent.
+
+00:28:50.436 --> 00:28:51.856 A:middle
+If you want the location of your
+
+00:28:51.856 --> 00:28:53.036 A:middle
+right hand relative to the
+
+00:28:53.036 --> 00:28:54.696 A:middle
+elbow, you can have that
+
+00:28:54.696 --> 00:28:55.866 A:middle
+transform by calling
+
+00:28:55.866 --> 00:28:57.556 A:middle
+localTransform function, and
+
+00:28:57.596 --> 00:28:59.336 A:middle
+provide it with the argument
+
+00:28:59.336 --> 00:28:59.776 A:middle
+.rightHand.
+
+00:29:00.426 --> 00:29:02.986 A:middle
+And, if you want to transform
+
+00:29:02.986 --> 00:29:04.546 A:middle
+relative to the root, which in
+
+00:29:04.546 --> 00:29:06.586 A:middle
+our case is the hip joint, you
+
+00:29:06.586 --> 00:29:07.806 A:middle
+can call modelTransform
+
+00:29:07.806 --> 00:29:09.986 A:middle
+function, and provide, again,
+
+00:29:09.986 --> 00:29:12.326 A:middle
+same argument, .rightHand.
+
+00:29:13.236 --> 00:29:15.496 A:middle
+Now, if you don't want to access
+
+00:29:15.576 --> 00:29:17.066 A:middle
+the transforms of all the joints
+
+00:29:17.146 --> 00:29:18.876 A:middle
+individually, but instead you
+
+00:29:18.876 --> 00:29:20.056 A:middle
+want a list containing
+
+00:29:20.056 --> 00:29:21.916 A:middle
+transforms of all the joints,
+
+00:29:22.376 --> 00:29:24.576 A:middle
+you can also do that by simply
+
+00:29:24.576 --> 00:29:26.466 A:middle
+using localTransforms property
+
+00:29:26.466 --> 00:29:28.356 A:middle
+and modelTransforms property.
+
+00:29:28.686 --> 00:29:31.466 A:middle
+This will give you a list of
+
+00:29:31.466 --> 00:29:33.886 A:middle
+transforms of all the joints.
+
+00:29:34.456 --> 00:29:36.306 A:middle
+And, if you want that relative
+
+00:29:36.306 --> 00:29:37.916 A:middle
+to the parent, you can use
+
+00:29:37.976 --> 00:29:39.846 A:middle
+localTransforms, and if you want
+
+00:29:39.846 --> 00:29:41.096 A:middle
+relative to the root, you can
+
+00:29:41.096 --> 00:29:42.126 A:middle
+use modelTransforms.
+
+00:29:42.266 --> 00:29:45.526 A:middle
+So, now that we had a good look
+
+00:29:45.526 --> 00:29:47.876 A:middle
+over the skeleton, let's go to
+
+00:29:47.876 --> 00:29:49.486 A:middle
+the code and learn how to use
+
+00:29:49.486 --> 00:29:50.696 A:middle
+each and every element.
+
+00:29:51.176 --> 00:29:54.456 A:middle
+You start by iterating over all
+
+00:29:54.456 --> 00:29:55.456 A:middle
+the anchors in the scene.
+
+00:29:56.146 --> 00:29:57.226 A:middle
+And, just look for the
+
+00:29:57.226 --> 00:29:57.896 A:middle
+bodyAnchor.
+
+00:29:59.086 --> 00:30:00.446 A:middle
+Once you have the bodyAnchor,
+
+00:29:59.086 --> 00:30:00.446 A:middle
+Once you have the bodyAnchor,
+
+00:30:00.726 --> 00:30:02.016 A:middle
+you might want to know where
+
+00:30:02.016 --> 00:30:03.486 A:middle
+that bodyAnchor is located in
+
+00:30:03.486 --> 00:30:03.936 A:middle
+the world.
+
+00:30:05.266 --> 00:30:06.736 A:middle
+And, you can use the transform
+
+00:30:06.736 --> 00:30:08.046 A:middle
+property of the bodyAnchor to
+
+00:30:08.046 --> 00:30:10.026 A:middle
+get that.
+
+00:30:10.026 --> 00:30:12.106 A:middle
+And, since in our geometry, hip
+
+00:30:12.106 --> 00:30:14.586 A:middle
+is the root, so the
+
+00:30:14.586 --> 00:30:16.156 A:middle
+bodyAnchor.transform will give
+
+00:30:16.156 --> 00:30:17.516 A:middle
+you the world position of the
+
+00:30:17.516 --> 00:30:18.106 A:middle
+hip joint.
+
+00:30:19.446 --> 00:30:20.476 A:middle
+Once you have the transform of
+
+00:30:20.476 --> 00:30:21.796 A:middle
+the anchor, you might need to
+
+00:30:21.796 --> 00:30:22.886 A:middle
+access the geometry of the
+
+00:30:22.946 --> 00:30:24.486 A:middle
+anchor, and you can do that by
+
+00:30:24.486 --> 00:30:26.556 A:middle
+using skeleton property of the
+
+00:30:26.926 --> 00:30:27.236 A:middle
+anchor.
+
+00:30:27.956 --> 00:30:30.306 A:middle
+Once you have this geometry, you
+
+00:30:30.306 --> 00:30:31.276 A:middle
+need all the joints.
+
+00:30:31.386 --> 00:30:32.316 A:middle
+You need all the nodes.
+
+00:30:32.676 --> 00:30:34.626 A:middle
+And, to get a list of transforms
+
+00:30:34.626 --> 00:30:36.596 A:middle
+of all the joints, that is the
+
+00:30:36.596 --> 00:30:37.906 A:middle
+list of locations of all the
+
+00:30:37.906 --> 00:30:39.506 A:middle
+joints, you can simply use
+
+00:30:39.586 --> 00:30:41.596 A:middle
+jointModelTransforms property of
+
+00:30:41.636 --> 00:30:42.166 A:middle
+the skeleton.
+
+00:30:43.346 --> 00:30:45.076 A:middle
+Once you have this list, you can
+
+00:30:45.076 --> 00:30:46.706 A:middle
+iterate over this list and
+
+00:30:46.746 --> 00:30:48.846 A:middle
+access transform of every
+
+00:30:48.846 --> 00:30:49.346 A:middle
+element.
+
+00:30:49.476 --> 00:30:51.166 A:middle
+Or, every joint, in this case.
+
+00:30:52.186 --> 00:30:53.376 A:middle
+So, iterating over all the
+
+00:30:53.376 --> 00:30:55.916 A:middle
+joints, you can access the
+
+00:30:55.916 --> 00:30:58.666 A:middle
+parentIndex of each joint by
+
+00:30:58.666 --> 00:31:00.526 A:middle
+using the parentIndices property
+
+00:30:58.666 --> 00:31:00.526 A:middle
+using the parentIndices property
+
+00:31:00.796 --> 00:31:01.706 A:middle
+in the definition.
+
+00:31:02.316 --> 00:31:03.986 A:middle
+And, just check if the parent is
+
+00:31:03.986 --> 00:31:04.496 A:middle
+not the root.
+
+00:31:04.496 --> 00:31:06.076 A:middle
+Because the root is the topmost
+
+00:31:06.076 --> 00:31:07.086 A:middle
+point of the hierarchy, so it
+
+00:31:07.086 --> 00:31:07.956 A:middle
+doesn't have a parent.
+
+00:31:08.726 --> 00:31:09.926 A:middle
+So, if the parent is not the
+
+00:31:09.926 --> 00:31:13.246 A:middle
+root, you can access the
+
+00:31:13.246 --> 00:31:15.446 A:middle
+transform of the parent by using
+
+00:31:15.446 --> 00:31:17.176 A:middle
+the same jointTransforms list,
+
+00:31:17.676 --> 00:31:19.386 A:middle
+but just index it with the
+
+00:31:19.626 --> 00:31:20.436 A:middle
+parentIndex.
+
+00:31:21.076 --> 00:31:21.726 A:middle
+And, that's it.
+
+00:31:22.316 --> 00:31:24.726 A:middle
+This gives you every child pair
+
+00:31:25.256 --> 00:31:27.446 A:middle
+in the entire hierarchy, and
+
+00:31:27.576 --> 00:31:29.876 A:middle
+once you have every child-parent
+
+00:31:29.876 --> 00:31:31.196 A:middle
+pair in the hierarchy, you have
+
+00:31:31.196 --> 00:31:32.176 A:middle
+the entire hierarchy of the
+
+00:31:32.176 --> 00:31:32.796 A:middle
+skeleton.
+
+00:31:33.576 --> 00:31:35.826 A:middle
+And, you can now use it however
+
+00:31:35.826 --> 00:31:36.256 A:middle
+you want.
+
+00:31:36.906 --> 00:31:38.326 A:middle
+So, let's just run this code.
+
+00:31:38.416 --> 00:31:40.486 A:middle
+Let's just take this, and simply
+
+00:31:40.486 --> 00:31:42.486 A:middle
+draw the skeleton, and see what
+
+00:31:42.486 --> 00:31:43.766 A:middle
+it looks like.
+
+00:31:44.636 --> 00:31:46.206 A:middle
+This is what it looks like.
+
+00:31:46.676 --> 00:31:48.366 A:middle
+All we did was, we took the
+
+00:31:48.366 --> 00:31:49.306 A:middle
+entire hierarchy.
+
+00:31:49.336 --> 00:31:51.336 A:middle
+We took all parent-child points,
+
+00:31:51.336 --> 00:31:52.776 A:middle
+and we just drew the skeleton,
+
+00:31:52.876 --> 00:31:53.316 A:middle
+that's it.
+
+00:31:53.956 --> 00:31:55.046 A:middle
+And, it starts to mimic the
+
+00:31:55.046 --> 00:31:56.106 A:middle
+person automatically.
+
+00:31:56.806 --> 00:31:58.096 A:middle
+And, this is the most basic
+
+00:31:58.096 --> 00:31:59.446 A:middle
+thing that you can do, because
+
+00:31:59.946 --> 00:32:00.996 A:middle
+once you have this entire
+
+00:31:59.946 --> 00:32:00.996 A:middle
+once you have this entire
+
+00:32:00.996 --> 00:32:02.846 A:middle
+skeleton hierarchy, you can use
+
+00:32:02.846 --> 00:32:04.626 A:middle
+it for many other use cases that
+
+00:32:04.626 --> 00:32:05.536 A:middle
+we discussed earlier.
+
+00:32:06.366 --> 00:32:07.856 A:middle
+This technology is at your
+
+00:32:07.856 --> 00:32:09.286 A:middle
+disposal, wherever your
+
+00:32:09.286 --> 00:32:10.366 A:middle
+imagination takes you.
+
+00:32:14.356 --> 00:32:16.426 A:middle
+So far, we've only talked about
+
+00:32:16.796 --> 00:32:19.016 A:middle
+3D objects in world space.
+
+00:32:19.826 --> 00:32:21.876 A:middle
+But, in case you want 2D
+
+00:32:21.876 --> 00:32:23.466 A:middle
+versions of the skeleton in
+
+00:32:23.466 --> 00:32:25.716 A:middle
+image space, we have provided an
+
+00:32:25.716 --> 00:32:27.176 A:middle
+API for that as well.
+
+00:32:28.136 --> 00:32:29.386 A:middle
+Here, we provide you with
+
+00:32:29.606 --> 00:32:31.516 A:middle
+detailed access to each and
+
+00:32:31.516 --> 00:32:35.156 A:middle
+every element in 2D space.
+
+00:32:35.366 --> 00:32:37.276 A:middle
+We also provide all the skeleton
+
+00:32:37.276 --> 00:32:39.176 A:middle
+joints as normalized image
+
+00:32:39.176 --> 00:32:39.946 A:middle
+coordinates.
+
+00:32:40.986 --> 00:32:43.106 A:middle
+We have a very easy to use API
+
+00:32:43.326 --> 00:32:44.096 A:middle
+for this as well.
+
+00:32:44.096 --> 00:32:47.456 A:middle
+And, you can use it for semantic
+
+00:32:47.456 --> 00:32:49.136 A:middle
+image analysis, or for building
+
+00:32:49.136 --> 00:32:50.876 A:middle
+editing tools both for images
+
+00:32:50.876 --> 00:32:51.596 A:middle
+and videos.
+
+00:32:52.276 --> 00:32:55.356 A:middle
+And, finally this entire
+
+00:32:55.356 --> 00:32:56.976 A:middle
+structure is interfaced through
+
+00:32:56.976 --> 00:32:59.476 A:middle
+an object called ARBody2D.
+
+00:33:00.046 --> 00:33:02.896 A:middle
+And, this is what ARBody2D
+
+00:33:02.896 --> 00:33:04.216 A:middle
+object looks like when
+
+00:33:04.216 --> 00:33:04.906 A:middle
+visualized.
+
+00:33:05.686 --> 00:33:08.096 A:middle
+ARBody2D object contains the
+
+00:33:08.096 --> 00:33:09.706 A:middle
+entire skeletal structure.
+
+00:33:13.556 --> 00:33:15.086 A:middle
+And, this is what the structure
+
+00:33:15.086 --> 00:33:15.486 A:middle
+looks like.
+
+00:33:16.126 --> 00:33:17.976 A:middle
+So, you have the object itself
+
+00:33:17.976 --> 00:33:18.486 A:middle
+on the top.
+
+00:33:18.486 --> 00:33:20.216 A:middle
+And then, again, similar to its
+
+00:33:20.216 --> 00:33:22.026 A:middle
+3D counterpart, all the skeletal
+
+00:33:22.026 --> 00:33:23.346 A:middle
+elements under that object.
+
+00:33:24.226 --> 00:33:25.426 A:middle
+So, let's walk through this
+
+00:33:25.426 --> 00:33:26.726 A:middle
+structure, and just learn about
+
+00:33:26.726 --> 00:33:27.766 A:middle
+these elements quickly.
+
+00:33:28.246 --> 00:33:30.906 A:middle
+Starting with the ARBody2D
+
+00:33:30.906 --> 00:33:34.016 A:middle
+object on top, there are two
+
+00:33:34.016 --> 00:33:35.546 A:middle
+ways that you can access this
+
+00:33:35.546 --> 00:33:36.006 A:middle
+object.
+
+00:33:36.876 --> 00:33:38.516 A:middle
+If you're already working in 2D
+
+00:33:38.516 --> 00:33:40.016 A:middle
+space, the default way is to
+
+00:33:40.016 --> 00:33:41.626 A:middle
+access it via ARFrame.
+
+00:33:41.826 --> 00:33:43.586 A:middle
+And, you can simply do that by
+
+00:33:43.586 --> 00:33:46.296 A:middle
+using detectedBody property of
+
+00:33:46.336 --> 00:33:47.086 A:middle
+the ARFrame.
+
+00:33:48.486 --> 00:33:50.066 A:middle
+And, here the person is an
+
+00:33:50.066 --> 00:33:51.996 A:middle
+instance of ARBody2D object.
+
+00:33:53.476 --> 00:33:55.366 A:middle
+For your convenience, if you're
+
+00:33:55.366 --> 00:33:57.626 A:middle
+already working in 3D space, if
+
+00:33:57.626 --> 00:33:59.046 A:middle
+you're already working with a 3D
+
+00:33:59.046 --> 00:34:01.136 A:middle
+skeleton, and for some reason,
+
+00:33:59.046 --> 00:34:01.136 A:middle
+skeleton, and for some reason,
+
+00:34:01.136 --> 00:34:02.856 A:middle
+you want the corresponding 2D
+
+00:34:02.856 --> 00:34:04.846 A:middle
+skeleton in image space as well,
+
+00:34:05.766 --> 00:34:07.676 A:middle
+we have provided a direct way to
+
+00:34:07.676 --> 00:34:09.505 A:middle
+access it by simply using
+
+00:34:09.716 --> 00:34:11.536 A:middle
+referenceBody property of
+
+00:34:11.755 --> 00:34:12.576 A:middle
+ARBodyAnchor.
+
+00:34:13.746 --> 00:34:15.596 A:middle
+And, this gives you the ARBody2D
+
+00:34:15.596 --> 00:34:16.476 A:middle
+object as well.
+
+00:34:16.886 --> 00:34:20.446 A:middle
+After accessing the ARBody2D
+
+00:34:20.446 --> 00:34:22.516 A:middle
+object, we can extract skeleton
+
+00:34:22.516 --> 00:34:24.315 A:middle
+from it by simply using skeleton
+
+00:34:24.315 --> 00:34:27.206 A:middle
+property, and this is the
+
+00:34:27.206 --> 00:34:28.755 A:middle
+visualization of that skeleton.
+
+00:34:30.076 --> 00:34:31.716 A:middle
+So, like I said, this skeleton
+
+00:34:31.716 --> 00:34:33.525 A:middle
+is present in normalized image
+
+00:34:33.525 --> 00:34:34.056 A:middle
+space.
+
+00:34:34.606 --> 00:34:36.876 A:middle
+So, if this is your image grid,
+
+00:34:36.876 --> 00:34:39.005 A:middle
+and the top left is 0,0 and
+
+00:34:39.005 --> 00:34:40.956 A:middle
+bottom right is 1,1, all the
+
+00:34:40.956 --> 00:34:43.436 A:middle
+points on this diagram are in
+
+00:34:43.436 --> 00:34:44.906 A:middle
+the range of 0 and 1.
+
+00:34:44.985 --> 00:34:46.976 A:middle
+Both in x and y direction.
+
+00:34:49.656 --> 00:34:51.255 A:middle
+The green points that you see
+
+00:34:51.255 --> 00:34:52.735 A:middle
+here are called landmarks.
+
+00:34:53.306 --> 00:34:54.476 A:middle
+Note that here we don't call
+
+00:34:54.476 --> 00:34:55.985 A:middle
+them joints, although they do
+
+00:34:55.985 --> 00:34:56.826 A:middle
+represent joints.
+
+00:34:56.826 --> 00:34:58.046 A:middle
+We just call them landmarks,
+
+00:34:58.046 --> 00:35:00.196 A:middle
+because they are pixel locations
+
+00:34:58.046 --> 00:35:00.196 A:middle
+because they are pixel locations
+
+00:35:00.716 --> 00:35:02.866 A:middle
+on image.
+
+00:35:03.106 --> 00:35:05.116 A:middle
+Similar to the 3D version, it
+
+00:35:05.116 --> 00:35:06.636 A:middle
+contains an object called
+
+00:35:06.636 --> 00:35:08.456 A:middle
+definition, describing what the
+
+00:35:08.456 --> 00:35:09.906 A:middle
+landmarks are called in the
+
+00:35:09.906 --> 00:35:11.606 A:middle
+skeleton, and how to connect
+
+00:35:11.646 --> 00:35:12.336 A:middle
+those landmarks.
+
+00:35:12.936 --> 00:35:16.096 A:middle
+In this skeleton there are 16
+
+00:35:16.096 --> 00:35:18.366 A:middle
+joints, and similar to 3D, they
+
+00:35:18.366 --> 00:35:20.316 A:middle
+have semantically meaningful
+
+00:35:20.316 --> 00:35:22.436 A:middle
+names like left shoulder, right
+
+00:35:22.436 --> 00:35:24.036 A:middle
+shoulder, left hand, right hand,
+
+00:35:24.036 --> 00:35:24.986 A:middle
+and so on.
+
+00:35:25.206 --> 00:35:27.166 A:middle
+The root node is still the hip
+
+00:35:27.166 --> 00:35:27.706 A:middle
+joint here.
+
+00:35:27.876 --> 00:35:31.796 A:middle
+Again, similar to the 3D.
+
+00:35:31.956 --> 00:35:34.536 A:middle
+So, focusing on the right arm,
+
+00:35:34.716 --> 00:35:36.516 A:middle
+we can see that the hand is a
+
+00:35:36.516 --> 00:35:38.116 A:middle
+child of right elbow, and elbow
+
+00:35:38.116 --> 00:35:39.416 A:middle
+is a child of right shoulder.
+
+00:35:39.416 --> 00:35:41.866 A:middle
+And, this is, again, similar
+
+00:35:41.866 --> 00:35:43.266 A:middle
+parent-child relationship that
+
+00:35:43.266 --> 00:35:45.246 A:middle
+you saw in the 3D version as
+
+00:35:45.246 --> 00:35:45.426 A:middle
+well.
+
+00:35:46.096 --> 00:35:47.976 A:middle
+And, the similar hierarchy is
+
+00:35:48.036 --> 00:35:48.556 A:middle
+formed here.
+
+00:35:49.146 --> 00:35:52.606 A:middle
+So, having all that information
+
+00:35:52.606 --> 00:35:54.186 A:middle
+with us, let's quickly walk
+
+00:35:54.186 --> 00:35:55.736 A:middle
+through this structure via code
+
+00:35:55.736 --> 00:35:56.056 A:middle
+now.
+
+00:35:57.106 --> 00:35:59.266 A:middle
+We start with accessing ARBody2D
+
+00:35:59.266 --> 00:35:59.706 A:middle
+object.
+
+00:36:01.646 --> 00:36:03.726 A:middle
+So, once you have your ARFRame,
+
+00:36:03.986 --> 00:36:05.626 A:middle
+you can simply use detectedBody
+
+00:36:05.626 --> 00:36:07.656 A:middle
+property to get ARBody2D object.
+
+00:36:07.986 --> 00:36:10.296 A:middle
+And now, once you have ARBody2D
+
+00:36:10.296 --> 00:36:11.686 A:middle
+object, you can access the
+
+00:36:11.686 --> 00:36:13.496 A:middle
+entire skeletal structure from
+
+00:36:13.496 --> 00:36:14.936 A:middle
+underneath it.
+
+00:36:15.096 --> 00:36:16.546 A:middle
+You can extract the geometry by
+
+00:36:16.546 --> 00:36:18.016 A:middle
+using person.skeleton.
+
+00:36:18.016 --> 00:36:20.766 A:middle
+In this case, person refers to
+
+00:36:20.766 --> 00:36:22.056 A:middle
+the ARBody2D object.
+
+00:36:22.276 --> 00:36:23.976 A:middle
+And, the definition of the
+
+00:36:23.976 --> 00:36:26.146 A:middle
+skeleton, which again, comprises
+
+00:36:26.146 --> 00:36:28.026 A:middle
+of the names of all the joints,
+
+00:36:28.026 --> 00:36:29.876 A:middle
+and the information of how to
+
+00:36:29.876 --> 00:36:31.786 A:middle
+connect those joints, is present
+
+00:36:32.216 --> 00:36:33.696 A:middle
+in the definition, which you can
+
+00:36:33.696 --> 00:36:35.426 A:middle
+access it by using definition
+
+00:36:35.426 --> 00:36:36.786 A:middle
+property of the skeleton.
+
+00:36:37.276 --> 00:36:39.896 A:middle
+Once you have this information,
+
+00:36:40.236 --> 00:36:42.146 A:middle
+you might need to know where
+
+00:36:42.146 --> 00:36:43.536 A:middle
+those landmarks are located.
+
+00:36:43.776 --> 00:36:45.456 A:middle
+And, similar to the 3D version,
+
+00:36:45.726 --> 00:36:46.666 A:middle
+we have a property called
+
+00:36:46.666 --> 00:36:48.706 A:middle
+jointLandmarks, which gives you
+
+00:36:48.706 --> 00:36:51.256 A:middle
+a list of locations of all those
+
+00:36:51.256 --> 00:36:52.576 A:middle
+green points that you see here.
+
+00:36:53.566 --> 00:36:54.716 A:middle
+But, please note that, in this
+
+00:36:54.716 --> 00:36:55.976 A:middle
+case, the green points are in
+
+00:36:55.976 --> 00:36:57.716 A:middle
+2D, so they're in image space.
+
+00:36:57.716 --> 00:36:59.836 A:middle
+They're normalized pixel
+
+00:36:59.836 --> 00:37:00.616 A:middle
+coordinates.
+
+00:36:59.836 --> 00:37:00.616 A:middle
+coordinates.
+
+00:37:01.056 --> 00:37:02.876 A:middle
+And, once you have that list,
+
+00:37:03.006 --> 00:37:04.546 A:middle
+you can iterate over all these
+
+00:37:04.546 --> 00:37:05.046 A:middle
+landmarks.
+
+00:37:05.726 --> 00:37:07.116 A:middle
+And, for each landmark, you can
+
+00:37:07.116 --> 00:37:09.356 A:middle
+access its parent by calling
+
+00:37:09.516 --> 00:37:11.366 A:middle
+parentIndices property in the
+
+00:37:11.366 --> 00:37:11.946 A:middle
+definition.
+
+00:37:12.426 --> 00:37:13.616 A:middle
+And, again, just check if the
+
+00:37:13.966 --> 00:37:15.716 A:middle
+parent is not the root, because
+
+00:37:15.886 --> 00:37:17.146 A:middle
+the root is the topmost point of
+
+00:37:17.146 --> 00:37:17.696 A:middle
+the hierarchy.
+
+00:37:18.236 --> 00:37:19.486 A:middle
+And, if the parent is not the
+
+00:37:19.486 --> 00:37:21.286 A:middle
+root, you can access its
+
+00:37:21.286 --> 00:37:23.106 A:middle
+transform by using
+
+00:37:23.106 --> 00:37:24.506 A:middle
+jointLandmarks list, and
+
+00:37:24.506 --> 00:37:25.496 A:middle
+indexing it with the
+
+00:37:25.496 --> 00:37:26.266 A:middle
+parentIndex.
+
+00:37:27.346 --> 00:37:29.916 A:middle
+And, again, in this way, you
+
+00:37:29.916 --> 00:37:32.476 A:middle
+have the transforms of every
+
+00:37:32.476 --> 00:37:35.016 A:middle
+child-parent pair in the
+
+00:37:35.016 --> 00:37:36.016 A:middle
+skeletal hierarchy.
+
+00:37:36.256 --> 00:37:37.596 A:middle
+And, you can, again, use it
+
+00:37:37.646 --> 00:37:39.206 A:middle
+however you want, and you can
+
+00:37:39.206 --> 00:37:40.886 A:middle
+continue from here and build
+
+00:37:40.886 --> 00:37:43.876 A:middle
+your own ideas, which brings us
+
+00:37:43.906 --> 00:37:44.686 A:middle
+to the conclusion.
+
+00:37:45.246 --> 00:37:49.636 A:middle
+We've introduced motion capture
+
+00:37:49.886 --> 00:37:51.296 A:middle
+in AR this year.
+
+00:37:51.826 --> 00:37:54.766 A:middle
+We've provided access to tracked
+
+00:37:55.036 --> 00:37:56.586 A:middle
+person in real time.
+
+00:37:57.316 --> 00:38:01.896 A:middle
+We have provided both 3D and 2D
+
+00:37:57.316 --> 00:38:01.896 A:middle
+We have provided both 3D and 2D
+
+00:38:01.896 --> 00:38:04.536 A:middle
+skeletons for you guys to use
+
+00:38:04.536 --> 00:38:07.526 A:middle
+it, and that is how we interface
+
+00:38:07.526 --> 00:38:10.446 A:middle
+the pose of the person.
+
+00:38:10.606 --> 00:38:11.956 A:middle
+We've enabled character
+
+00:38:12.016 --> 00:38:13.846 A:middle
+animation out of the box.
+
+00:38:13.846 --> 00:38:16.216 A:middle
+And, it runs seamlessly in
+
+00:38:16.216 --> 00:38:16.836 A:middle
+RealityKit.
+
+00:38:17.356 --> 00:38:20.926 A:middle
+We have a RealityKit API that we
+
+00:38:20.926 --> 00:38:22.766 A:middle
+discussed earlier for quickly
+
+00:38:22.826 --> 00:38:25.086 A:middle
+animating a character, and like
+
+00:38:25.086 --> 00:38:26.376 A:middle
+I mentioned earlier as well, you
+
+00:38:26.376 --> 00:38:27.466 A:middle
+can use your own custom
+
+00:38:27.466 --> 00:38:29.516 A:middle
+characters as well, as long as
+
+00:38:29.556 --> 00:38:31.246 A:middle
+it's based on the structure of
+
+00:38:31.246 --> 00:38:32.296 A:middle
+our provided example.
+
+00:38:32.616 --> 00:38:36.146 A:middle
+And, we've provided an ARKit API
+
+00:38:36.476 --> 00:38:38.276 A:middle
+for all the advanced use cases
+
+00:38:38.276 --> 00:38:39.886 A:middle
+that you might think of, like
+
+00:38:39.916 --> 00:38:42.096 A:middle
+recognition tasks, or analysis
+
+00:38:42.136 --> 00:38:42.686 A:middle
+tasks.
+
+00:38:46.046 --> 00:38:47.436 A:middle
+And, that brings us to the end
+
+00:38:47.436 --> 00:38:48.066 A:middle
+of the session.
+
+00:38:48.626 --> 00:38:50.456 A:middle
+We presented two new features in
+
+00:38:50.456 --> 00:38:52.386 A:middle
+this session, person occlusion,
+
+00:38:52.386 --> 00:38:53.446 A:middle
+and motion capture.
+
+00:38:53.486 --> 00:38:55.436 A:middle
+And, we've provided APIs for
+
+00:38:55.706 --> 00:38:57.616 A:middle
+both of these features.
+
+00:38:59.076 --> 00:39:00.726 A:middle
+For more information from
+
+00:38:59.076 --> 00:39:00.726 A:middle
+For more information from
+
+00:39:00.726 --> 00:39:02.426 A:middle
+today's session, please visit
+
+00:39:02.426 --> 00:39:04.296 A:middle
+our website, and please feel
+
+00:39:04.296 --> 00:39:05.756 A:middle
+free to download the sample code
+
+00:39:05.886 --> 00:39:06.436 A:middle
+and use it.
+
+00:39:07.306 --> 00:39:08.946 A:middle
+We will be in the lab tomorrow,
+
+00:39:08.946 --> 00:39:10.466 A:middle
+so come visit us to get all your
+
+00:39:10.466 --> 00:39:11.366 A:middle
+questions answered.
+
+00:39:14.016 --> 00:39:15.126 A:middle
+[ Applause ]
+
+00:39:15.126 --> 00:39:15.976 A:middle
+Thank you.
+
+00:39:16.508 --> 00:39:18.508 A:middle
+[ Applause ]

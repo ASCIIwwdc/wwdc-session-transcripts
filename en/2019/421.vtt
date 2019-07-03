@@ -1,0 +1,4708 @@
+WEBVTT
+
+00:00:00.506 --> 00:00:05.500 A:middle
+[ Music ]
+
+00:00:10.441 --> 00:00:12.441 A:middle
+[ Applause ]
+
+00:00:12.866 --> 00:00:13.956 A:middle
+&gt;&gt; Thank you.
+
+00:00:16.196 --> 00:00:17.126 A:middle
+Alright, good afternoon.
+
+00:00:17.356 --> 00:00:18.316 A:middle
+My name is Chad Woolf.
+
+00:00:18.316 --> 00:00:19.636 A:middle
+I'm a performance tools engineer
+
+00:00:19.636 --> 00:00:20.706 A:middle
+for Apple and this is session
+
+00:00:20.706 --> 00:00:22.506 A:middle
+421, we'll talk about modeling
+
+00:00:23.076 --> 00:00:24.286 A:middle
+in Custom Instruments.
+
+00:00:24.946 --> 00:00:25.876 A:middle
+Now, within the Custom
+
+00:00:25.876 --> 00:00:26.876 A:middle
+Instruments Architecture,
+
+00:00:27.296 --> 00:00:28.526 A:middle
+modeling is done by this piece
+
+00:00:28.526 --> 00:00:29.396 A:middle
+in the middle here called a
+
+00:00:29.396 --> 00:00:30.956 A:middle
+modeler, and the modeler's job
+
+00:00:30.956 --> 00:00:32.906 A:middle
+is really to reason about the
+
+00:00:32.906 --> 00:00:33.706 A:middle
+raw events that are being
+
+00:00:33.706 --> 00:00:34.536 A:middle
+recorded by the operating
+
+00:00:34.536 --> 00:00:35.536 A:middle
+system, perform some
+
+00:00:35.536 --> 00:00:36.746 A:middle
+transformations, and create the
+
+00:00:36.746 --> 00:00:38.516 A:middle
+displayable events or the input
+
+00:00:38.516 --> 00:00:40.206 A:middle
+to another modeler for
+
+00:00:40.336 --> 00:00:41.746 A:middle
+instruments in the Air
+
+00:00:41.746 --> 00:00:42.326 A:middle
+Instruments UI.
+
+00:00:42.966 --> 00:00:44.296 A:middle
+Now, this architecture was
+
+00:00:44.386 --> 00:00:46.366 A:middle
+covered in its entirety in our
+
+00:00:46.366 --> 00:00:48.126 A:middle
+2018 session, Creating Custom
+
+00:00:48.126 --> 00:00:48.586 A:middle
+Instruments.
+
+00:00:49.136 --> 00:00:49.936 A:middle
+So in this session, what we're
+
+00:00:49.936 --> 00:00:51.316 A:middle
+going to do really is just take
+
+00:00:51.316 --> 00:00:52.926 A:middle
+sort of a spotlight focus on
+
+00:00:52.926 --> 00:00:53.906 A:middle
+this piece in the middle, called
+
+00:00:53.906 --> 00:00:54.346 A:middle
+a modeler.
+
+00:00:55.306 --> 00:00:56.526 A:middle
+Now modelers are important to
+
+00:00:56.526 --> 00:00:57.916 A:middle
+all of our instruments including
+
+00:00:58.206 --> 00:00:59.936 A:middle
+the Time Profiler up here.
+
+00:01:00.646 --> 00:01:02.016 A:middle
+Now in the Time Profiler, the
+
+00:01:02.016 --> 00:01:03.236 A:middle
+data that you're seeing
+
+00:01:03.296 --> 00:01:04.436 A:middle
+presented in the UI is not
+
+00:01:04.436 --> 00:01:05.495 A:middle
+exactly the same as being
+
+00:01:05.495 --> 00:01:06.956 A:middle
+recorded by the kernel.
+
+00:01:07.576 --> 00:01:08.956 A:middle
+We use a modeler to do some
+
+00:01:08.956 --> 00:01:09.626 A:middle
+transforms.
+
+00:01:10.206 --> 00:01:11.446 A:middle
+So now when the kernel takes a
+
+00:01:11.446 --> 00:01:12.666 A:middle
+sample of what your thread is
+
+00:01:12.666 --> 00:01:15.096 A:middle
+doing, it creates or captures
+
+00:01:15.096 --> 00:01:15.906 A:middle
+what's called a primitive
+
+00:01:15.906 --> 00:01:17.946 A:middle
+backtrace, and it puts that into
+
+00:01:17.946 --> 00:01:19.996 A:middle
+the time sample table, which is
+
+00:01:19.996 --> 00:01:21.056 A:middle
+then picked up by the Time
+
+00:01:21.056 --> 00:01:23.126 A:middle
+Profiler modeler, which is then
+
+00:01:23.126 --> 00:01:24.086 A:middle
+transformed into a more
+
+00:01:24.086 --> 00:01:25.076 A:middle
+displayable form of the
+
+00:01:25.076 --> 00:01:26.756 A:middle
+backtrace, which goes into the
+
+00:01:26.756 --> 00:01:28.906 A:middle
+Time Profiler table, which is
+
+00:01:28.906 --> 00:01:30.006 A:middle
+ultimately viewed by the Time
+
+00:01:30.006 --> 00:01:30.786 A:middle
+Profiler instrument.
+
+00:01:31.236 --> 00:01:32.476 A:middle
+Now, the reason we do this is
+
+00:01:32.476 --> 00:01:33.526 A:middle
+because it's a lot simpler and
+
+00:01:33.526 --> 00:01:34.906 A:middle
+thus more efficient to capture
+
+00:01:34.906 --> 00:01:36.886 A:middle
+these primitive backtraces, and
+
+00:01:36.946 --> 00:01:38.106 A:middle
+then we can fix them up in user
+
+00:01:38.106 --> 00:01:39.386 A:middle
+space later inside of our
+
+00:01:39.386 --> 00:01:41.016 A:middle
+modeler and therefore we keep
+
+00:01:41.016 --> 00:01:42.086 A:middle
+that recording side in the
+
+00:01:42.086 --> 00:01:42.936 A:middle
+kernel very efficient.
+
+00:01:43.686 --> 00:01:44.856 A:middle
+Now, another kind of
+
+00:01:45.336 --> 00:01:46.406 A:middle
+optimization that's made by the
+
+00:01:46.406 --> 00:01:48.886 A:middle
+kernel is if the kernel samples
+
+00:01:48.886 --> 00:01:50.336 A:middle
+a thread that it knows hasn't
+
+00:01:50.336 --> 00:01:51.756 A:middle
+moved since the last time it
+
+00:01:51.756 --> 00:01:53.366 A:middle
+samples it, instead of taking a
+
+00:01:53.366 --> 00:01:55.296 A:middle
+full back trace, it just puts a
+
+00:01:55.296 --> 00:01:57.006 A:middle
+placeholder backtrace into the
+
+00:01:57.006 --> 00:01:59.006 A:middle
+time sample table and then our
+
+00:01:59.006 --> 00:02:00.606 A:middle
+time profiler modeler picks that
+
+00:01:59.006 --> 00:02:00.606 A:middle
+time profiler modeler picks that
+
+00:02:00.606 --> 00:02:02.426 A:middle
+up, takes the last known
+
+00:02:02.426 --> 00:02:04.336 A:middle
+backtrace for that, and
+
+00:02:04.336 --> 00:02:05.596 A:middle
+replicates that into the Time
+
+00:02:05.596 --> 00:02:07.246 A:middle
+Profile table that's viewed by
+
+00:02:07.246 --> 00:02:07.766 A:middle
+the Instrument.
+
+00:02:08.346 --> 00:02:09.756 A:middle
+Now, this does two things.
+
+00:02:09.756 --> 00:02:11.476 A:middle
+It saves a ton of space in the
+
+00:02:11.476 --> 00:02:12.506 A:middle
+kernel's recording buffer,
+
+00:02:12.506 --> 00:02:13.586 A:middle
+especially if your threads are
+
+00:02:13.586 --> 00:02:14.176 A:middle
+mostly idle.
+
+00:02:14.176 --> 00:02:16.506 A:middle
+And it also keeps the UI
+
+00:02:16.506 --> 00:02:17.746 A:middle
+efficient, because the UI
+
+00:02:17.746 --> 00:02:18.786 A:middle
+doesn't need to know about this
+
+00:02:18.846 --> 00:02:20.556 A:middle
+placeholder convention because
+
+00:02:20.556 --> 00:02:22.416 A:middle
+that's all been normalized by
+
+00:02:22.596 --> 00:02:23.126 A:middle
+our modeler.
+
+00:02:23.886 --> 00:02:24.636 A:middle
+So, you're going to see these
+
+00:02:24.636 --> 00:02:25.556 A:middle
+themes repeat in today's
+
+00:02:25.556 --> 00:02:25.856 A:middle
+session.
+
+00:02:26.426 --> 00:02:28.076 A:middle
+And that is basically to take
+
+00:02:28.076 --> 00:02:29.296 A:middle
+the complexity of your custom
+
+00:02:29.296 --> 00:02:31.016 A:middle
+instrument and absorb that in
+
+00:02:31.016 --> 00:02:31.846 A:middle
+the modeling layer.
+
+00:02:31.846 --> 00:02:33.526 A:middle
+And that will promote simplicity
+
+00:02:33.526 --> 00:02:34.796 A:middle
+in other areas, specifically
+
+00:02:35.206 --> 00:02:36.516 A:middle
+when it comes to the tracing
+
+00:02:36.516 --> 00:02:37.806 A:middle
+code that you embed inside your
+
+00:02:37.806 --> 00:02:39.126 A:middle
+logic and also the UI that you
+
+00:02:39.126 --> 00:02:39.956 A:middle
+use in Instruments.
+
+00:02:40.446 --> 00:02:42.016 A:middle
+So, today's session looks like
+
+00:02:42.016 --> 00:02:42.166 A:middle
+this.
+
+00:02:42.166 --> 00:02:42.956 A:middle
+We're going to review some
+
+00:02:42.956 --> 00:02:44.816 A:middle
+modeling basics and then we're
+
+00:02:44.816 --> 00:02:45.556 A:middle
+going to walk you through the
+
+00:02:45.556 --> 00:02:46.736 A:middle
+process of building a custom
+
+00:02:46.736 --> 00:02:47.156 A:middle
+modeler.
+
+00:02:47.776 --> 00:02:49.476 A:middle
+When you get to build a custom
+
+00:02:49.476 --> 00:02:51.726 A:middle
+modeler, sometimes it's tough
+
+00:02:51.726 --> 00:02:52.536 A:middle
+when you do it from scratch.
+
+00:02:53.086 --> 00:02:54.266 A:middle
+So, this year we have sample
+
+00:02:54.266 --> 00:02:56.426 A:middle
+code attached to this year's
+
+00:02:56.596 --> 00:02:58.176 A:middle
+session, so you can follow along
+
+00:02:58.176 --> 00:02:59.416 A:middle
+with that, or use that as the
+
+00:02:59.416 --> 00:03:00.646 A:middle
+basis for your own modelers.
+
+00:02:59.416 --> 00:03:00.646 A:middle
+basis for your own modelers.
+
+00:03:01.126 --> 00:03:02.036 A:middle
+Now, in the process, we're also
+
+00:03:02.036 --> 00:03:03.796 A:middle
+going to talk about execution
+
+00:03:03.886 --> 00:03:05.446 A:middle
+and the rules engine, Cliff's
+
+00:03:05.446 --> 00:03:05.996 A:middle
+rules engine.
+
+00:03:06.306 --> 00:03:07.576 A:middle
+And also an important topic
+
+00:03:07.656 --> 00:03:08.516 A:middle
+called speculation.
+
+00:03:09.046 --> 00:03:11.056 A:middle
+So, let's start with reviewing
+
+00:03:11.056 --> 00:03:12.236 A:middle
+some modeling basics.
+
+00:03:12.776 --> 00:03:15.776 A:middle
+Now, when you create a modeler,
+
+00:03:16.076 --> 00:03:17.486 A:middle
+you also have to define the
+
+00:03:17.486 --> 00:03:18.496 A:middle
+other pieces of that
+
+00:03:18.496 --> 00:03:19.496 A:middle
+architecture as well.
+
+00:03:19.496 --> 00:03:21.076 A:middle
+So, you also have to define the
+
+00:03:21.076 --> 00:03:22.626 A:middle
+schemas that will glue all this
+
+00:03:22.626 --> 00:03:24.026 A:middle
+together in the Instrument,
+
+00:03:24.446 --> 00:03:26.396 A:middle
+which will ultimately view the
+
+00:03:26.396 --> 00:03:28.176 A:middle
+output of your Instrument.
+
+00:03:28.176 --> 00:03:29.986 A:middle
+And that all gets built into an
+
+00:03:29.986 --> 00:03:31.036 A:middle
+Instrument's distribution
+
+00:03:31.036 --> 00:03:32.346 A:middle
+package, which can then be
+
+00:03:32.346 --> 00:03:34.096 A:middle
+installed inside of Instruments
+
+00:03:34.096 --> 00:03:34.846 A:middle
+and tested.
+
+00:03:35.556 --> 00:03:36.426 A:middle
+Now, at this point we're going
+
+00:03:36.426 --> 00:03:38.006 A:middle
+to assume that you already have
+
+00:03:38.006 --> 00:03:39.476 A:middle
+one of these projects set up in
+
+00:03:39.506 --> 00:03:39.876 A:middle
+Xcode.
+
+00:03:39.876 --> 00:03:40.676 A:middle
+And really, what you're looking
+
+00:03:40.676 --> 00:03:43.106 A:middle
+to do is add a custom modeler or
+
+00:03:43.106 --> 00:03:43.966 A:middle
+you're going to be working from
+
+00:03:43.966 --> 00:03:45.676 A:middle
+our sample code that's attached
+
+00:03:45.676 --> 00:03:47.396 A:middle
+to the session this year, and
+
+00:03:47.396 --> 00:03:48.086 A:middle
+you're going to have that
+
+00:03:48.086 --> 00:03:49.716 A:middle
+project already set up.
+
+00:03:50.226 --> 00:03:51.996 A:middle
+Now, when do you need to create
+
+00:03:51.996 --> 00:03:52.716 A:middle
+a custom modeler?
+
+00:03:53.446 --> 00:03:54.936 A:middle
+It's true that Xcode will
+
+00:03:54.936 --> 00:03:56.306 A:middle
+generate modelers for you, in
+
+00:03:56.306 --> 00:03:58.086 A:middle
+some cases specifically when
+
+00:03:58.086 --> 00:03:59.716 A:middle
+you're using OS Signpost as your
+
+00:03:59.716 --> 00:04:00.046 A:middle
+input.
+
+00:03:59.716 --> 00:04:00.046 A:middle
+input.
+
+00:04:00.186 --> 00:04:01.716 A:middle
+But these modelers are really
+
+00:04:01.716 --> 00:04:03.026 A:middle
+meant to get you an Instrument
+
+00:04:03.026 --> 00:04:04.006 A:middle
+up and running quickly.
+
+00:04:04.006 --> 00:04:05.186 A:middle
+They're not really there to
+
+00:04:05.186 --> 00:04:07.186 A:middle
+expose the entire feature set to
+
+00:04:07.186 --> 00:04:08.246 A:middle
+you that you can do with custom
+
+00:04:08.246 --> 00:04:08.686 A:middle
+modelers.
+
+00:04:09.486 --> 00:04:11.176 A:middle
+Such as being able to fuse data
+
+00:04:11.176 --> 00:04:12.386 A:middle
+from multiple input tables.
+
+00:04:12.436 --> 00:04:13.466 A:middle
+That's something that you can do
+
+00:04:13.516 --> 00:04:14.356 A:middle
+with a custom modeler.
+
+00:04:14.436 --> 00:04:15.396 A:middle
+You can't do it in the generated
+
+00:04:15.396 --> 00:04:15.796 A:middle
+case.
+
+00:04:16.856 --> 00:04:18.016 A:middle
+And more importantly, maintain a
+
+00:04:18.016 --> 00:04:18.716 A:middle
+working memory.
+
+00:04:18.886 --> 00:04:20.995 A:middle
+This allows your modeler to keep
+
+00:04:20.995 --> 00:04:22.016 A:middle
+some running totals.
+
+00:04:22.046 --> 00:04:23.406 A:middle
+To track open intervals.
+
+00:04:23.776 --> 00:04:25.076 A:middle
+And perform some more extensive
+
+00:04:25.076 --> 00:04:27.316 A:middle
+calculations using the modeler's
+
+00:04:27.316 --> 00:04:27.906 A:middle
+working memory.
+
+00:04:27.906 --> 00:04:30.366 A:middle
+Now, another thing that you can
+
+00:04:30.366 --> 00:04:31.606 A:middle
+do is create custom graphs.
+
+00:04:31.606 --> 00:04:32.366 A:middle
+If there's a graph that you'd
+
+00:04:32.366 --> 00:04:33.426 A:middle
+like to create but Instruments
+
+00:04:33.426 --> 00:04:35.186 A:middle
+doesn't do it natively, you can
+
+00:04:35.186 --> 00:04:36.766 A:middle
+synthesize the data inside your
+
+00:04:36.766 --> 00:04:37.206 A:middle
+modeler.
+
+00:04:37.206 --> 00:04:38.306 A:middle
+For example, maybe you can
+
+00:04:38.306 --> 00:04:41.026 A:middle
+compute a running average or
+
+00:04:41.026 --> 00:04:42.056 A:middle
+something as sophisticated as a
+
+00:04:42.056 --> 00:04:42.666 A:middle
+Calvin filter.
+
+00:04:42.666 --> 00:04:44.106 A:middle
+It's really, it's up to you and
+
+00:04:44.106 --> 00:04:45.576 A:middle
+you can do all of that in a
+
+00:04:45.576 --> 00:04:46.306 A:middle
+custom modeler.
+
+00:04:46.556 --> 00:04:48.076 A:middle
+Now, ultimately the goal here is
+
+00:04:48.076 --> 00:04:49.056 A:middle
+really to build smarter and
+
+00:04:49.056 --> 00:04:51.676 A:middle
+smarter instruments so that the
+
+00:04:51.676 --> 00:04:52.956 A:middle
+instruments know what's going on
+
+00:04:52.956 --> 00:04:53.556 A:middle
+in your code.
+
+00:04:53.556 --> 00:04:55.246 A:middle
+And it's to even reach a point
+
+00:04:55.586 --> 00:04:57.026 A:middle
+where the people who are working
+
+00:04:57.026 --> 00:04:58.146 A:middle
+with your code will turn to your
+
+00:04:58.146 --> 00:04:59.596 A:middle
+Instruments first before they
+
+00:04:59.596 --> 00:05:00.536 A:middle
+turn to you for trouble
+
+00:04:59.596 --> 00:05:00.536 A:middle
+turn to you for trouble
+
+00:05:00.536 --> 00:05:01.856 A:middle
+shooting, and that'll kind of
+
+00:05:02.086 --> 00:05:03.516 A:middle
+free you up to work on the next
+
+00:05:03.516 --> 00:05:03.916 A:middle
+great thing.
+
+00:05:07.046 --> 00:05:07.656 A:middle
+Now, a modeler is basically a
+
+00:05:07.656 --> 00:05:09.176 A:middle
+rules engine that is bound to a
+
+00:05:09.176 --> 00:05:10.936 A:middle
+set of input tables and a set of
+
+00:05:10.936 --> 00:05:11.776 A:middle
+output tables.
+
+00:05:12.586 --> 00:05:13.676 A:middle
+The Instrument's analysis core
+
+00:05:13.676 --> 00:05:15.356 A:middle
+takes on the task of time
+
+00:05:15.356 --> 00:05:16.976 A:middle
+ordering the input tables and
+
+00:05:16.976 --> 00:05:17.886 A:middle
+injecting them into the
+
+00:05:17.886 --> 00:05:19.106 A:middle
+modeler's working memory.
+
+00:05:19.636 --> 00:05:20.476 A:middle
+Now, objects in the working
+
+00:05:20.476 --> 00:05:21.776 A:middle
+memory are called facts.
+
+00:05:21.906 --> 00:05:22.826 A:middle
+And the way that you reason
+
+00:05:22.826 --> 00:05:24.146 A:middle
+about the changes to the working
+
+00:05:24.146 --> 00:05:25.876 A:middle
+memory and these facts is by
+
+00:05:25.876 --> 00:05:27.706 A:middle
+defining a rules system in the
+
+00:05:27.706 --> 00:05:28.436 A:middle
+CLIPS language.
+
+00:05:28.656 --> 00:05:29.696 A:middle
+Now, CLIPS is an open source
+
+00:05:29.696 --> 00:05:30.046 A:middle
+language.
+
+00:05:30.046 --> 00:05:31.086 A:middle
+It's been around since the '80s,
+
+00:05:31.086 --> 00:05:31.836 A:middle
+so there's lots of great
+
+00:05:31.836 --> 00:05:33.596 A:middle
+examples and documentation to
+
+00:05:33.596 --> 00:05:34.896 A:middle
+help you get started and there's
+
+00:05:34.896 --> 00:05:35.916 A:middle
+a lot of great examples in our
+
+00:05:35.916 --> 00:05:37.126 A:middle
+sample code and also in our
+
+00:05:37.126 --> 00:05:37.796 A:middle
+slides today.
+
+00:05:38.776 --> 00:05:39.936 A:middle
+Now, ultimately when your
+
+00:05:39.936 --> 00:05:41.216 A:middle
+modeler discovers something that
+
+00:05:41.216 --> 00:05:42.766 A:middle
+it wants to output, there are
+
+00:05:42.766 --> 00:05:44.106 A:middle
+functions in the modeler as well
+
+00:05:44.106 --> 00:05:45.396 A:middle
+to write to the bound output
+
+00:05:45.396 --> 00:05:45.906 A:middle
+tables.
+
+00:05:46.286 --> 00:05:47.936 A:middle
+Now, to get started writing a
+
+00:05:47.936 --> 00:05:49.096 A:middle
+modeler from scratch, we have a
+
+00:05:49.096 --> 00:05:50.486 A:middle
+three-step process that starts
+
+00:05:50.486 --> 00:05:52.236 A:middle
+with basically deciding what you
+
+00:05:52.236 --> 00:05:52.776 A:middle
+want to model.
+
+00:05:53.186 --> 00:05:54.546 A:middle
+Now, this means understanding
+
+00:05:54.546 --> 00:05:55.576 A:middle
+the technology you're creating a
+
+00:05:55.576 --> 00:05:56.536 A:middle
+Custom Instrument for.
+
+00:05:56.536 --> 00:05:59.116 A:middle
+And it also means knowing how
+
+00:05:59.116 --> 00:05:59.876 A:middle
+the Custom Instrument's
+
+00:05:59.876 --> 00:06:00.986 A:middle
+infrastructure works and how to
+
+00:05:59.876 --> 00:06:00.986 A:middle
+infrastructure works and how to
+
+00:06:00.986 --> 00:06:02.146 A:middle
+really get the most out of it.
+
+00:06:02.146 --> 00:06:04.756 A:middle
+In our 2019 session, Developing
+
+00:06:04.756 --> 00:06:05.956 A:middle
+a Great Profile Experience, our
+
+00:06:05.956 --> 00:06:06.976 A:middle
+team will walk you through the
+
+00:06:07.006 --> 00:06:09.046 A:middle
+process of trying to tell a
+
+00:06:09.046 --> 00:06:10.286 A:middle
+story of what's going on with
+
+00:06:10.286 --> 00:06:11.406 A:middle
+your code using Custom
+
+00:06:11.406 --> 00:06:12.306 A:middle
+Instruments, so that's a great
+
+00:06:12.346 --> 00:06:13.546 A:middle
+place to start with
+
+00:06:13.836 --> 00:06:14.806 A:middle
+understanding what your'e trying
+
+00:06:14.806 --> 00:06:15.146 A:middle
+to model.
+
+00:06:15.146 --> 00:06:17.526 A:middle
+All right, so now that you have
+
+00:06:18.296 --> 00:06:19.876 A:middle
+the output defined for your
+
+00:06:19.876 --> 00:06:21.296 A:middle
+modeler, it's going to need some
+
+00:06:21.296 --> 00:06:21.636 A:middle
+input.
+
+00:06:21.636 --> 00:06:23.336 A:middle
+And the best way to get input
+
+00:06:23.336 --> 00:06:24.556 A:middle
+into instruments from your code
+
+00:06:24.776 --> 00:06:26.276 A:middle
+is through the OS Signpost API.
+
+00:06:26.616 --> 00:06:28.006 A:middle
+This is an API that you can
+
+00:06:28.006 --> 00:06:29.226 A:middle
+sprinkle throughout your code to
+
+00:06:29.226 --> 00:06:30.356 A:middle
+basically trace what's happening
+
+00:06:30.356 --> 00:06:32.176 A:middle
+in your code and pass argument
+
+00:06:32.176 --> 00:06:33.836 A:middle
+data, gives your modeler
+
+00:06:33.836 --> 00:06:35.196 A:middle
+something to reason about in
+
+00:06:35.196 --> 00:06:35.786 A:middle
+your input stream.
+
+00:06:36.156 --> 00:06:37.646 A:middle
+Now, once you have your inputs
+
+00:06:37.686 --> 00:06:39.246 A:middle
+and your outputs, then it's time
+
+00:06:39.306 --> 00:06:40.366 A:middle
+to start defining your rule
+
+00:06:40.366 --> 00:06:41.336 A:middle
+system and start writing your
+
+00:06:41.336 --> 00:06:41.746 A:middle
+rules.
+
+00:06:42.236 --> 00:06:43.386 A:middle
+Now, we know that steps two and
+
+00:06:43.386 --> 00:06:44.356 A:middle
+three are going to be iterative.
+
+00:06:44.496 --> 00:06:46.636 A:middle
+So, as you write your rules, you
+
+00:06:46.636 --> 00:06:47.776 A:middle
+may discover that you need to go
+
+00:06:47.776 --> 00:06:49.596 A:middle
+back and add more Signposts or
+
+00:06:49.596 --> 00:06:50.446 A:middle
+that you need to change your
+
+00:06:50.446 --> 00:06:51.526 A:middle
+Signposts, which is totally
+
+00:06:51.656 --> 00:06:51.746 A:middle
+fine.
+
+00:06:51.746 --> 00:06:52.486 A:middle
+You can do that.
+
+00:06:52.786 --> 00:06:53.616 A:middle
+But keep in mind that your
+
+00:06:53.616 --> 00:06:55.246 A:middle
+Signposts re going to really
+
+00:06:55.246 --> 00:06:56.696 A:middle
+form the boundary between what's
+
+00:06:56.696 --> 00:06:58.066 A:middle
+going on in your code and your
+
+00:06:58.066 --> 00:06:58.486 A:middle
+Instrument.
+
+00:06:58.486 --> 00:06:59.406 A:middle
+So, at some point you're going
+
+00:06:59.406 --> 00:07:00.356 A:middle
+to want to, like, make sure that
+
+00:06:59.406 --> 00:07:00.356 A:middle
+to want to, like, make sure that
+
+00:07:00.356 --> 00:07:02.166 A:middle
+you comment those Signpost
+
+00:07:02.166 --> 00:07:04.106 A:middle
+invocation calls and let people
+
+00:07:04.106 --> 00:07:05.176 A:middle
+know that that's really a
+
+00:07:05.176 --> 00:07:06.506 A:middle
+contract and it'll break your
+
+00:07:06.506 --> 00:07:08.456 A:middle
+instrument if you modify it.
+
+00:07:08.456 --> 00:07:10.286 A:middle
+All right, now we think that
+
+00:07:10.286 --> 00:07:11.756 A:middle
+this process is probably best
+
+00:07:11.756 --> 00:07:12.826 A:middle
+understood with a practical
+
+00:07:12.826 --> 00:07:13.336 A:middle
+example.
+
+00:07:13.336 --> 00:07:15.006 A:middle
+So, I would like to now turn it
+
+00:07:15.006 --> 00:07:16.696 A:middle
+over to our modeling expert,
+
+00:07:16.986 --> 00:07:18.856 A:middle
+Alejandro Lucena, to walk us
+
+00:07:19.486 --> 00:07:19.596 A:middle
+through.
+
+00:07:20.516 --> 00:07:23.336 A:middle
+[Applause]
+
+00:07:23.836 --> 00:07:24.596 A:middle
+&gt;&gt; All right.
+
+00:07:24.596 --> 00:07:25.796 A:middle
+Good afternoon, everybody, and
+
+00:07:25.796 --> 00:07:26.786 A:middle
+thank you, Chad.
+
+00:07:27.066 --> 00:07:28.826 A:middle
+So, what I'd like to do is I'd
+
+00:07:28.826 --> 00:07:29.786 A:middle
+like to go through this thought
+
+00:07:29.786 --> 00:07:30.766 A:middle
+process that Chad just
+
+00:07:30.766 --> 00:07:32.166 A:middle
+highlighted and apply it to an
+
+00:07:32.166 --> 00:07:33.556 A:middle
+example so we can see how all
+
+00:07:33.556 --> 00:07:34.526 A:middle
+these pieces fit together.
+
+00:07:35.436 --> 00:07:37.256 A:middle
+And to do that, I want to start
+
+00:07:37.256 --> 00:07:38.186 A:middle
+off with this demo app.
+
+00:07:38.516 --> 00:07:39.906 A:middle
+And full disclosure, this is
+
+00:07:39.906 --> 00:07:41.176 A:middle
+probably the coolest thing I
+
+00:07:41.176 --> 00:07:43.066 A:middle
+have ever worked on and it's a
+
+00:07:43.066 --> 00:07:44.236 A:middle
+list of goats, right?
+
+00:07:44.916 --> 00:07:46.986 A:middle
+Now, these different goats don't
+
+00:07:46.986 --> 00:07:48.306 A:middle
+just have themselves displayed
+
+00:07:48.306 --> 00:07:48.956 A:middle
+on this app.
+
+00:07:48.996 --> 00:07:50.296 A:middle
+The app also lets me sort the
+
+00:07:50.296 --> 00:07:50.636 A:middle
+list.
+
+00:07:51.186 --> 00:07:52.426 A:middle
+Now, the sorting is implemented
+
+00:07:52.426 --> 00:07:53.536 A:middle
+using something we call the
+
+00:07:53.536 --> 00:07:54.376 A:middle
+mobile agent pattern.
+
+00:07:55.016 --> 00:07:56.406 A:middle
+And this pattern has a lot of
+
+00:07:56.406 --> 00:07:57.566 A:middle
+parallels to different patterns
+
+00:07:57.566 --> 00:07:59.046 A:middle
+that you may be using such as
+
+00:07:59.046 --> 00:08:00.126 A:middle
+futures and promises or
+
+00:07:59.046 --> 00:08:00.126 A:middle
+futures and promises or
+
+00:08:00.126 --> 00:08:00.936 A:middle
+operation queues.
+
+00:08:01.486 --> 00:08:02.806 A:middle
+So, whenever you hear the term
+
+00:08:02.806 --> 00:08:04.156 A:middle
+mobile agent, when we're talking
+
+00:08:04.156 --> 00:08:05.426 A:middle
+about it, you can mentally
+
+00:08:05.426 --> 00:08:07.486 A:middle
+substitute that in for whichever
+
+00:08:07.486 --> 00:08:08.276 A:middle
+pattern you're using.
+
+00:08:08.716 --> 00:08:09.646 A:middle
+But we'll stick with the mobile
+
+00:08:09.646 --> 00:08:10.636 A:middle
+agent pattern for the purposes
+
+00:08:10.636 --> 00:08:11.476 A:middle
+of this session.
+
+00:08:12.626 --> 00:08:14.056 A:middle
+So, as the name implies, the
+
+00:08:14.056 --> 00:08:15.706 A:middle
+mobile agent pattern has a very
+
+00:08:15.706 --> 00:08:16.886 A:middle
+important concept which is that
+
+00:08:16.886 --> 00:08:17.646 A:middle
+of a mobile agent.
+
+00:08:18.246 --> 00:08:19.526 A:middle
+And we'll visualize the mobile
+
+00:08:19.526 --> 00:08:20.666 A:middle
+agent as this circle in the
+
+00:08:20.666 --> 00:08:21.436 A:middle
+upper lefthand corner.
+
+00:08:22.266 --> 00:08:23.456 A:middle
+Now, the goal of an agent is to
+
+00:08:23.456 --> 00:08:24.946 A:middle
+take a task such as sorting a
+
+00:08:24.946 --> 00:08:26.446 A:middle
+list and really breaking it down
+
+00:08:26.446 --> 00:08:28.496 A:middle
+into a few subtasks such as
+
+00:08:28.496 --> 00:08:29.886 A:middle
+obtaining the initial list and
+
+00:08:29.886 --> 00:08:30.746 A:middle
+then sorting it, and then
+
+00:08:30.746 --> 00:08:32.466 A:middle
+committing the results, with
+
+00:08:32.546 --> 00:08:33.785 A:middle
+each of those subtasks being
+
+00:08:33.785 --> 00:08:35.616 A:middle
+executed at what we call stops.
+
+00:08:36.246 --> 00:08:37.836 A:middle
+And stops can provide the agent
+
+00:08:37.836 --> 00:08:39.356 A:middle
+with some sort of dependencies
+
+00:08:39.356 --> 00:08:40.866 A:middle
+or execution context for it to
+
+00:08:40.866 --> 00:08:41.626 A:middle
+achieve its subgoal.
+
+00:08:42.336 --> 00:08:44.046 A:middle
+So I want to take a look at how
+
+00:08:44.046 --> 00:08:45.296 A:middle
+we can implement something like
+
+00:08:45.296 --> 00:08:46.976 A:middle
+sorting using this mobile agent
+
+00:08:46.976 --> 00:08:47.226 A:middle
+pattern.
+
+00:08:47.956 --> 00:08:49.036 A:middle
+Now, what we'll do is when we
+
+00:08:49.036 --> 00:08:50.176 A:middle
+click the sort in the upper
+
+00:08:50.176 --> 00:08:52.456 A:middle
+lefthand corner, the agent is
+
+00:08:52.456 --> 00:08:53.886 A:middle
+going to move over to its very
+
+00:08:53.886 --> 00:08:54.436 A:middle
+first stop.
+
+00:08:54.626 --> 00:08:55.856 A:middle
+In this case, the stop is hosted
+
+00:08:55.856 --> 00:08:58.326 A:middle
+by a UI and it will execute its
+
+00:08:58.326 --> 00:08:59.726 A:middle
+first subtask of obtaining the
+
+00:08:59.726 --> 00:09:00.036 A:middle
+list.
+
+00:08:59.726 --> 00:09:00.036 A:middle
+list.
+
+00:09:00.976 --> 00:09:02.196 A:middle
+Now, once the list is obtained,
+
+00:09:02.576 --> 00:09:03.796 A:middle
+it can move over to a different
+
+00:09:03.796 --> 00:09:05.776 A:middle
+stop, such as one hosted by a
+
+00:09:05.776 --> 00:09:06.566 A:middle
+dispatch queues.
+
+00:09:06.726 --> 00:09:08.856 A:middle
+And at that dispatch queues stop,
+
+00:09:08.856 --> 00:09:10.026 A:middle
+it can then perform the actual
+
+00:09:10.026 --> 00:09:10.396 A:middle
+sorting.
+
+00:09:11.306 --> 00:09:12.536 A:middle
+And once the sorting is
+
+00:09:12.536 --> 00:09:14.276 A:middle
+complete, it can move back to
+
+00:09:14.276 --> 00:09:16.476 A:middle
+the UI to end up populating the
+
+00:09:16.476 --> 00:09:18.066 A:middle
+list with those sorted results.
+
+00:09:19.136 --> 00:09:20.426 A:middle
+And finally, it can park itself
+
+00:09:20.456 --> 00:09:21.376 A:middle
+back at the sort button for
+
+00:09:21.376 --> 00:09:21.886 A:middle
+future use.
+
+00:09:23.296 --> 00:09:24.736 A:middle
+So, what we just saw is that the
+
+00:09:24.736 --> 00:09:26.166 A:middle
+mobile agent pattern, or really
+
+00:09:26.166 --> 00:09:27.436 A:middle
+the agents can be in one of two
+
+00:09:27.436 --> 00:09:28.236 A:middle
+primary phases.
+
+00:09:28.566 --> 00:09:29.796 A:middle
+They can either be executing at
+
+00:09:29.796 --> 00:09:31.346 A:middle
+a stop, or they can be moving
+
+00:09:31.346 --> 00:09:32.096 A:middle
+over to a stop.
+
+00:09:32.536 --> 00:09:33.166 A:middle
+And this is what we're
+
+00:09:33.166 --> 00:09:34.086 A:middle
+interested in modeling.
+
+00:09:34.086 --> 00:09:35.006 A:middle
+And more specifically, we're
+
+00:09:35.006 --> 00:09:35.686 A:middle
+interested in seeing the
+
+00:09:35.686 --> 00:09:36.806 A:middle
+duration of these things, how
+
+00:09:36.806 --> 00:09:37.616 A:middle
+long they take and the
+
+00:09:37.616 --> 00:09:38.636 A:middle
+interactions between them.
+
+00:09:39.506 --> 00:09:40.636 A:middle
+And to better visualize this, I
+
+00:09:40.636 --> 00:09:41.526 A:middle
+want to go through the sorting
+
+00:09:41.526 --> 00:09:43.126 A:middle
+example again but put these
+
+00:09:43.126 --> 00:09:44.256 A:middle
+intervals into perspective.
+
+00:09:44.376 --> 00:09:45.196 A:middle
+So, what I'm going to do is I'm
+
+00:09:45.196 --> 00:09:46.536 A:middle
+going to move this device over
+
+00:09:46.536 --> 00:09:48.156 A:middle
+to the lefthand side because
+
+00:09:48.156 --> 00:09:49.126 A:middle
+we'll need some space.
+
+00:09:50.126 --> 00:09:51.286 A:middle
+So again, when we click the sort
+
+00:09:51.286 --> 00:09:52.886 A:middle
+button, the agent is moving over
+
+00:09:52.886 --> 00:09:53.776 A:middle
+to that UI stop.
+
+00:09:54.556 --> 00:09:55.576 A:middle
+And as soon as that movement
+
+00:09:55.576 --> 00:09:56.506 A:middle
+happens, we want to see an
+
+00:09:56.506 --> 00:09:57.736 A:middle
+interval with maybe some
+
+00:09:57.736 --> 00:09:58.896 A:middle
+descriptive string or something
+
+00:09:58.896 --> 00:09:59.896 A:middle
+telling us what happened.
+
+00:10:01.046 --> 00:10:02.196 A:middle
+Next, we know that at the stop,
+
+00:10:02.196 --> 00:10:03.266 A:middle
+the agent is going to perform
+
+00:10:03.266 --> 00:10:05.006 A:middle
+its first subtask, which is
+
+00:10:05.366 --> 00:10:05.896 A:middle
+getting the list.
+
+00:10:06.146 --> 00:10:08.126 A:middle
+And we see that in a different
+
+00:10:08.126 --> 00:10:08.806 A:middle
+interval here.
+
+00:10:09.306 --> 00:10:12.046 A:middle
+Next, the agent is going to move
+
+00:10:12.046 --> 00:10:13.866 A:middle
+over to a dispatch queues, and
+
+00:10:13.866 --> 00:10:14.946 A:middle
+that'll be represented by its
+
+00:10:14.946 --> 00:10:15.466 A:middle
+own interval.
+
+00:10:17.356 --> 00:10:19.066 A:middle
+At the dispatch queues, the agent
+
+00:10:19.066 --> 00:10:21.316 A:middle
+will perform some sorting, and
+
+00:10:21.316 --> 00:10:22.576 A:middle
+we see it; it's executing in the
+
+00:10:22.576 --> 00:10:23.216 A:middle
+sorting mode.
+
+00:10:24.716 --> 00:10:26.006 A:middle
+Before it finally moves back
+
+00:10:26.006 --> 00:10:27.306 A:middle
+over to the UI stop and we have
+
+00:10:27.306 --> 00:10:28.646 A:middle
+a final movement interval,
+
+00:10:28.646 --> 00:10:29.696 A:middle
+moving back to the UI.
+
+00:10:29.696 --> 00:10:32.296 A:middle
+And at that stop, it will
+
+00:10:32.296 --> 00:10:34.046 A:middle
+execute the next, or the last,
+
+00:10:34.176 --> 00:10:35.596 A:middle
+subtask of filling in the list
+
+00:10:35.596 --> 00:10:36.386 A:middle
+with the sorted results.
+
+00:10:37.746 --> 00:10:38.716 A:middle
+So, with these intervals, we can
+
+00:10:38.716 --> 00:10:39.696 A:middle
+really think of the beginning of
+
+00:10:39.696 --> 00:10:40.896 A:middle
+the interval as being the time
+
+00:10:40.896 --> 00:10:42.126 A:middle
+at which the activity started,
+
+00:10:42.126 --> 00:10:43.306 A:middle
+either execution or movement.
+
+00:10:43.806 --> 00:10:44.726 A:middle
+And the end of the interval
+
+00:10:44.726 --> 00:10:45.706 A:middle
+being the time at which that
+
+00:10:45.706 --> 00:10:46.326 A:middle
+activity ended.
+
+00:10:47.096 --> 00:10:47.916 A:middle
+And with these intervals in
+
+00:10:47.916 --> 00:10:49.286 A:middle
+mind, we can have or we can
+
+00:10:49.286 --> 00:10:50.946 A:middle
+design some instrument that we'd
+
+00:10:50.946 --> 00:10:52.196 A:middle
+like to see, and that's
+
+00:10:52.196 --> 00:10:53.316 A:middle
+precisely what I have behind me
+
+00:10:53.316 --> 00:10:53.516 A:middle
+now.
+
+00:10:54.436 --> 00:10:55.566 A:middle
+Here in the topmost track, I
+
+00:10:55.566 --> 00:10:57.146 A:middle
+have al these intervals together
+
+00:10:57.146 --> 00:10:58.036 A:middle
+and we can see the different
+
+00:10:58.036 --> 00:10:59.206 A:middle
+movements and executions.
+
+00:10:59.856 --> 00:11:01.366 A:middle
+And beneath that very topmost
+
+00:10:59.856 --> 00:11:01.366 A:middle
+And beneath that very topmost
+
+00:11:01.366 --> 00:11:02.256 A:middle
+track, we have the different
+
+00:11:02.256 --> 00:11:03.346 A:middle
+stops that were active during
+
+00:11:03.346 --> 00:11:03.756 A:middle
+the trace.
+
+00:11:05.056 --> 00:11:06.506 A:middle
+Now, on top of the visual aspect
+
+00:11:06.506 --> 00:11:07.936 A:middle
+of the instrument, we also want
+
+00:11:08.006 --> 00:11:08.816 A:middle
+to see a detail view.
+
+00:11:08.816 --> 00:11:10.186 A:middle
+And the detail view will give us
+
+00:11:10.186 --> 00:11:11.246 A:middle
+some more information about what
+
+00:11:11.246 --> 00:11:12.936 A:middle
+happened at each stop, such as
+
+00:11:13.016 --> 00:11:14.586 A:middle
+the time that it started, how
+
+00:11:14.586 --> 00:11:16.426 A:middle
+long it took, which agent was
+
+00:11:16.426 --> 00:11:17.176 A:middle
+there, and so forth.
+
+00:11:18.436 --> 00:11:20.376 A:middle
+Now, at this point, we should
+
+00:11:20.376 --> 00:11:21.846 A:middle
+notice these columns at the top.
+
+00:11:22.256 --> 00:11:23.666 A:middle
+Because these columns are how we
+
+00:11:23.666 --> 00:11:24.966 A:middle
+define what we're interested in
+
+00:11:24.966 --> 00:11:25.406 A:middle
+modeling.
+
+00:11:25.996 --> 00:11:27.056 A:middle
+Here, the columns tell us that
+
+00:11:27.056 --> 00:11:28.016 A:middle
+this is a start time and a
+
+00:11:28.016 --> 00:11:29.746 A:middle
+duration and an agent kind, but
+
+00:11:29.746 --> 00:11:31.316 A:middle
+more generally we specify these
+
+00:11:31.316 --> 00:11:32.446 A:middle
+columns in our Instrument's
+
+00:11:32.446 --> 00:11:33.976 A:middle
+package files written in XML.
+
+00:11:34.596 --> 00:11:35.946 A:middle
+And these columns collectively
+
+00:11:36.006 --> 00:11:37.036 A:middle
+form our output tables.
+
+00:11:37.646 --> 00:11:38.516 A:middle
+Which brings us to our very
+
+00:11:38.516 --> 00:11:39.016 A:middle
+first checkpoint.
+
+00:11:39.536 --> 00:11:40.416 A:middle
+And that is that with these
+
+00:11:40.416 --> 00:11:42.146 A:middle
+columns, we define what it is
+
+00:11:42.146 --> 00:11:43.346 A:middle
+that we're trying to store.
+
+00:11:43.346 --> 00:11:45.266 A:middle
+And that fulfills the first goal
+
+00:11:45.266 --> 00:11:46.476 A:middle
+of deciding what it is that we
+
+00:11:46.476 --> 00:11:46.946 A:middle
+want to model.
+
+00:11:46.946 --> 00:11:49.696 A:middle
+And now that we have that, the
+
+00:11:49.696 --> 00:11:50.876 A:middle
+next thing we need to do is get
+
+00:11:50.876 --> 00:11:52.366 A:middle
+data from our application into
+
+00:11:52.416 --> 00:11:53.726 A:middle
+Instruments, and we'll
+
+00:11:53.726 --> 00:11:54.716 A:middle
+accomplish this by using OS
+
+00:11:54.716 --> 00:11:55.256 A:middle
+Signpost.
+
+00:11:56.706 --> 00:11:57.496 A:middle
+So, let's take a look at our
+
+00:11:57.496 --> 00:11:58.066 A:middle
+intervals again.
+
+00:11:58.736 --> 00:11:59.126 A:middle
+We have these.
+
+00:11:59.786 --> 00:12:01.696 A:middle
+And we do have an API that
+
+00:11:59.786 --> 00:12:01.696 A:middle
+And we do have an API that
+
+00:12:01.696 --> 00:12:03.456 A:middle
+utilizes OS Signpost, that is
+
+00:12:03.456 --> 00:12:04.916 A:middle
+natively built for intervals.
+
+00:12:05.766 --> 00:12:07.146 A:middle
+But we want to take it one step
+
+00:12:07.146 --> 00:12:09.626 A:middle
+further and specifically I want
+
+00:12:09.626 --> 00:12:10.806 A:middle
+to use event Signposts.
+
+00:12:11.366 --> 00:12:12.226 A:middle
+And each of these event
+
+00:12:12.226 --> 00:12:13.696 A:middle
+Signposts will be emitted at the
+
+00:12:13.696 --> 00:12:14.966 A:middle
+borders between the activity
+
+00:12:14.966 --> 00:12:15.436 A:middle
+intervals.
+
+00:12:15.846 --> 00:12:17.086 A:middle
+And the reason for doing this is
+
+00:12:17.086 --> 00:12:18.816 A:middle
+not only because we get to save
+
+00:12:18.816 --> 00:12:20.096 A:middle
+roughly 50% of the amount of
+
+00:12:20.096 --> 00:12:21.306 A:middle
+Signposts we would otherwise
+
+00:12:21.306 --> 00:12:21.566 A:middle
+emit.
+
+00:12:22.016 --> 00:12:22.936 A:middle
+But this is actually a more
+
+00:12:22.936 --> 00:12:24.266 A:middle
+accurate representation of the
+
+00:12:24.266 --> 00:12:25.096 A:middle
+mobile agent pattern.
+
+00:12:25.866 --> 00:12:27.136 A:middle
+Specifically, when an agent is
+
+00:12:27.136 --> 00:12:28.396 A:middle
+done with the current activity,
+
+00:12:28.396 --> 00:12:29.336 A:middle
+it will immediately begin
+
+00:12:29.336 --> 00:12:30.406 A:middle
+another one, and so we can just
+
+00:12:30.406 --> 00:12:31.676 A:middle
+emit a single Signpost that
+
+00:12:31.676 --> 00:12:33.076 A:middle
+tells us that it's moving on to
+
+00:12:33.076 --> 00:12:35.276 A:middle
+the next thing.
+
+00:12:35.276 --> 00:12:36.616 A:middle
+And in order to accomplish this,
+
+00:12:36.886 --> 00:12:38.076 A:middle
+here we have an execute stop
+
+00:12:38.286 --> 00:12:39.356 A:middle
+function that is part of the
+
+00:12:39.356 --> 00:12:40.206 A:middle
+mobile agent class.
+
+00:12:40.736 --> 00:12:42.436 A:middle
+And before we perform the actual
+
+00:12:42.436 --> 00:12:43.696 A:middle
+internal logic of executing
+
+00:12:43.696 --> 00:12:44.696 A:middle
+whatever it is that we're doing
+
+00:12:44.696 --> 00:12:46.496 A:middle
+at that stop, we have a Signpost
+
+00:12:46.586 --> 00:12:48.586 A:middle
+that has a name, a specific
+
+00:12:48.586 --> 00:12:50.016 A:middle
+Signpost ID and a message that
+
+00:12:50.016 --> 00:12:50.756 A:middle
+we'd like to embed.
+
+00:12:52.056 --> 00:12:54.086 A:middle
+In addition to that, we have the
+
+00:12:54.086 --> 00:12:55.856 A:middle
+same sort of OS Signpost setup
+
+00:12:55.856 --> 00:12:57.276 A:middle
+within this visit next stop
+
+00:12:57.276 --> 00:12:58.336 A:middle
+function, which implements the
+
+00:12:58.336 --> 00:12:59.746 A:middle
+logic of moving an agent from
+
+00:12:59.746 --> 00:13:00.776 A:middle
+one stop over to the next.
+
+00:12:59.746 --> 00:13:00.776 A:middle
+one stop over to the next.
+
+00:13:01.316 --> 00:13:02.606 A:middle
+And again, before we perform the
+
+00:13:02.606 --> 00:13:03.936 A:middle
+movement, we title it
+
+00:13:03.936 --> 00:13:05.126 A:middle
+appropriately such as mobile
+
+00:13:05.126 --> 00:13:06.096 A:middle
+agent moves, then we give it
+
+00:13:06.096 --> 00:13:07.736 A:middle
+another Signpost ID and a
+
+00:13:07.736 --> 00:13:08.076 A:middle
+message.
+
+00:13:11.556 --> 00:13:12.636 A:middle
+But now we've really got to
+
+00:13:12.636 --> 00:13:13.686 A:middle
+focus on this middle piece which
+
+00:13:13.686 --> 00:13:14.896 A:middle
+is the modeler, and the modeler
+
+00:13:14.896 --> 00:13:15.806 A:middle
+is what's going to transform
+
+00:13:15.806 --> 00:13:17.116 A:middle
+those Signposts that we just put
+
+00:13:17.116 --> 00:13:18.826 A:middle
+into our app into the usable
+
+00:13:18.826 --> 00:13:20.026 A:middle
+intervals that we want to see in
+
+00:13:20.186 --> 00:13:21.956 A:middle
+the output table.
+
+00:13:22.086 --> 00:13:22.786 A:middle
+So, I'd like to give you an
+
+00:13:22.786 --> 00:13:23.216 A:middle
+example.
+
+00:13:23.216 --> 00:13:24.626 A:middle
+Here we have a modeler, and this
+
+00:13:24.626 --> 00:13:25.906 A:middle
+modeler starts off with a blank
+
+00:13:25.906 --> 00:13:26.936 A:middle
+view of working memory, because
+
+00:13:26.936 --> 00:13:27.866 A:middle
+it doesn't really know anything
+
+00:13:27.866 --> 00:13:28.516 A:middle
+about the state of the
+
+00:13:28.516 --> 00:13:29.236 A:middle
+application yet.
+
+00:13:30.246 --> 00:13:31.826 A:middle
+But what we do know, however, is
+
+00:13:31.826 --> 00:13:33.646 A:middle
+that the modeler interacts very
+
+00:13:33.646 --> 00:13:34.996 A:middle
+closely with the OS Signpost
+
+00:13:34.996 --> 00:13:35.256 A:middle
+table.
+
+00:13:35.686 --> 00:13:36.716 A:middle
+And the OS Signpost table is
+
+00:13:36.716 --> 00:13:37.916 A:middle
+populated from our application.
+
+00:13:38.826 --> 00:13:40.036 A:middle
+So, let's consider the case of
+
+00:13:40.036 --> 00:13:41.776 A:middle
+the modeler trying to detect a
+
+00:13:41.776 --> 00:13:43.476 A:middle
+mobile agent from the Signpost.
+
+00:13:44.626 --> 00:13:46.166 A:middle
+While when we click the Sort on
+
+00:13:46.166 --> 00:13:47.666 A:middle
+our demo app, the modeler is
+
+00:13:47.666 --> 00:13:49.246 A:middle
+going to receive an OS Signpost.
+
+00:13:49.506 --> 00:13:50.716 A:middle
+And the modeler will represent
+
+00:13:50.716 --> 00:13:51.766 A:middle
+that Signpost by a fact.
+
+00:13:52.296 --> 00:13:53.496 A:middle
+And that fact has its slots
+
+00:13:53.496 --> 00:13:54.676 A:middle
+filled out according to however
+
+00:13:54.676 --> 00:13:56.076 A:middle
+we made the OS Signpost call.
+
+00:13:56.076 --> 00:13:58.866 A:middle
+Now, at this point the modeler
+
+00:13:58.866 --> 00:14:00.356 A:middle
+sees that the OS Signpost fact
+
+00:13:58.866 --> 00:14:00.356 A:middle
+sees that the OS Signpost fact
+
+00:14:00.356 --> 00:14:01.556 A:middle
+is actually advertising a lot of
+
+00:14:01.556 --> 00:14:02.476 A:middle
+information about a mobile
+
+00:14:02.476 --> 00:14:02.766 A:middle
+agent.
+
+00:14:03.276 --> 00:14:04.856 A:middle
+And so the modeler can use that
+
+00:14:04.856 --> 00:14:06.646 A:middle
+OS Signpost fact to deduce the
+
+00:14:06.646 --> 00:14:08.256 A:middle
+agent and introduce it into
+
+00:14:08.256 --> 00:14:09.566 A:middle
+working memory by asserting a
+
+00:14:09.566 --> 00:14:09.796 A:middle
+fact.
+
+00:14:10.306 --> 00:14:11.386 A:middle
+In this case, it's asserting
+
+00:14:11.386 --> 00:14:12.326 A:middle
+that it knows that there's a
+
+00:14:12.326 --> 00:14:13.616 A:middle
+sorting agent that's moved to
+
+00:14:13.616 --> 00:14:13.976 A:middle
+the background.
+
+00:14:14.456 --> 00:14:17.366 A:middle
+Next, the modeler should
+
+00:14:17.366 --> 00:14:18.506 A:middle
+determine the activity that the
+
+00:14:18.506 --> 00:14:20.076 A:middle
+agent was doing, such as what it
+
+00:14:20.076 --> 00:14:21.366 A:middle
+was actually, you know, trying
+
+00:14:21.456 --> 00:14:22.666 A:middle
+to do as well as the time.
+
+00:14:23.396 --> 00:14:24.536 A:middle
+So, the modeler can look at the
+
+00:14:24.596 --> 00:14:26.086 A:middle
+facts already and say, or it
+
+00:14:26.086 --> 00:14:27.326 A:middle
+knows that it has a mobile agent
+
+00:14:27.446 --> 00:14:28.096 A:middle
+that was moving.
+
+00:14:28.506 --> 00:14:29.796 A:middle
+And it sees the Signpost fact
+
+00:14:29.876 --> 00:14:31.526 A:middle
+and that it started at time 42.
+
+00:14:31.526 --> 00:14:33.176 A:middle
+And the modeler can again make
+
+00:14:33.176 --> 00:14:34.456 A:middle
+note of that by introducing
+
+00:14:34.456 --> 00:14:35.956 A:middle
+another fact into working memory
+
+00:14:36.466 --> 00:14:37.696 A:middle
+that tells us that it started at
+
+00:14:37.696 --> 00:14:38.366 A:middle
+time 42.
+
+00:14:38.366 --> 00:14:41.306 A:middle
+Now, at this point the Signpost
+
+00:14:41.306 --> 00:14:43.846 A:middle
+facts go away but that's okay,
+
+00:14:43.846 --> 00:14:45.156 A:middle
+because we kept all the relevant
+
+00:14:45.156 --> 00:14:46.406 A:middle
+information in the facts that we
+
+00:14:46.406 --> 00:14:47.496 A:middle
+asserted into working memory
+
+00:14:47.496 --> 00:14:48.016 A:middle
+ourselves.
+
+00:14:49.186 --> 00:14:50.106 A:middle
+So, I'll move these facts up a
+
+00:14:50.106 --> 00:14:51.276 A:middle
+little bit, because we need some
+
+00:14:51.276 --> 00:14:51.646 A:middle
+space.
+
+00:14:51.646 --> 00:14:53.506 A:middle
+And the last thing that the
+
+00:14:53.506 --> 00:14:54.956 A:middle
+modeler has to do here is
+
+00:14:54.956 --> 00:14:56.716 A:middle
+determine the full interval of
+
+00:14:56.716 --> 00:14:57.246 A:middle
+the activity.
+
+00:14:57.626 --> 00:14:58.676 A:middle
+Right now we only have the start
+
+00:14:58.676 --> 00:14:58.896 A:middle
+time.
+
+00:14:58.896 --> 00:15:00.176 A:middle
+We don't really know the entire
+
+00:14:58.896 --> 00:15:00.176 A:middle
+We don't really know the entire
+
+00:15:00.176 --> 00:15:00.446 A:middle
+interval.
+
+00:15:00.446 --> 00:15:02.336 A:middle
+But we know that at some point
+
+00:15:02.916 --> 00:15:04.216 A:middle
+our demo app is going to emit
+
+00:15:04.216 --> 00:15:05.006 A:middle
+another Signpost.
+
+00:15:05.186 --> 00:15:06.116 A:middle
+And again, when the modeler
+
+00:15:06.116 --> 00:15:07.456 A:middle
+receives it, it will represent
+
+00:15:07.456 --> 00:15:08.416 A:middle
+it as a fact accordingly.
+
+00:15:09.026 --> 00:15:10.336 A:middle
+And because we structured our
+
+00:15:10.336 --> 00:15:11.506 A:middle
+Signposts such that they were
+
+00:15:11.506 --> 00:15:12.716 A:middle
+emitted at the borders between
+
+00:15:12.716 --> 00:15:14.546 A:middle
+these intervals, the modeler now
+
+00:15:14.546 --> 00:15:15.976 A:middle
+knows that when it receives
+
+00:15:15.976 --> 00:15:17.446 A:middle
+another Signpost, it can look at
+
+00:15:17.446 --> 00:15:19.156 A:middle
+any open interval facts that it
+
+00:15:19.156 --> 00:15:21.006 A:middle
+previously had open and close
+
+00:15:21.006 --> 00:15:21.176 A:middle
+them.
+
+00:15:22.186 --> 00:15:23.236 A:middle
+In this case, the modeler is
+
+00:15:23.236 --> 00:15:24.286 A:middle
+going to look at these values
+
+00:15:24.286 --> 00:15:25.586 A:middle
+from the facts that it has, and
+
+00:15:25.616 --> 00:15:27.516 A:middle
+it has enough to determine the
+
+00:15:27.676 --> 00:15:28.726 A:middle
+full interval.
+
+00:15:28.726 --> 00:15:30.366 A:middle
+And to do that, it'll summon the
+
+00:15:30.366 --> 00:15:33.176 A:middle
+output table and then remove
+
+00:15:33.176 --> 00:15:34.336 A:middle
+that open interval fact that it
+
+00:15:34.336 --> 00:15:36.546 A:middle
+had to replace it with a full
+
+00:15:36.546 --> 00:15:36.866 A:middle
+interval.
+
+00:15:36.866 --> 00:15:37.606 A:middle
+In this case, moving it to the
+
+00:15:37.606 --> 00:15:38.016 A:middle
+background.
+
+00:15:38.636 --> 00:15:39.846 A:middle
+And use that interval to
+
+00:15:39.846 --> 00:15:43.226 A:middle
+populate the output table.
+
+00:15:43.226 --> 00:15:43.546 A:middle
+All right.
+
+00:15:44.686 --> 00:15:45.756 A:middle
+Now, before delving into some
+
+00:15:45.756 --> 00:15:47.156 A:middle
+CLIPS code that actually goes
+
+00:15:47.156 --> 00:15:48.016 A:middle
+through all this, I think it's
+
+00:15:48.016 --> 00:15:49.936 A:middle
+important to understand how an
+
+00:15:49.936 --> 00:15:51.556 A:middle
+API call from our application
+
+00:15:51.556 --> 00:15:53.276 A:middle
+code translates to a fact within
+
+00:15:53.276 --> 00:15:53.616 A:middle
+CLIPS.
+
+00:15:54.766 --> 00:15:57.056 A:middle
+Specifically, when we call OS
+
+00:15:57.056 --> 00:15:58.166 A:middle
+Signposts with a particular
+
+00:15:58.166 --> 00:16:00.416 A:middle
+name, that name becomes the same
+
+00:15:58.166 --> 00:16:00.416 A:middle
+name, that name becomes the same
+
+00:16:00.416 --> 00:16:02.506 A:middle
+name slot in the OS Signpost
+
+00:16:02.696 --> 00:16:03.286 A:middle
+fact.
+
+00:16:04.416 --> 00:16:05.886 A:middle
+Furthermore, the type of
+
+00:16:05.886 --> 00:16:07.036 A:middle
+Signposts that we have, in this
+
+00:16:07.036 --> 00:16:08.636 A:middle
+case event, becomes the
+
+00:16:08.666 --> 00:16:10.096 A:middle
+event-type slot within the OS
+
+00:16:10.096 --> 00:16:11.456 A:middle
+Signpost fact.
+
+00:16:11.856 --> 00:16:14.176 A:middle
+And lastly, the Signpost ID
+
+00:16:14.596 --> 00:16:16.336 A:middle
+becomes the identifier value
+
+00:16:16.436 --> 00:16:18.576 A:middle
+within the OS Signpost fact as
+
+00:16:18.576 --> 00:16:19.186 A:middle
+well as a message.
+
+00:16:19.186 --> 00:16:20.576 A:middle
+The message that we embed also
+
+00:16:20.706 --> 00:16:22.266 A:middle
+takes on the message value
+
+00:16:22.266 --> 00:16:24.246 A:middle
+within the OS Signpost fact.
+
+00:16:26.496 --> 00:16:27.856 A:middle
+So, now that we know that, we
+
+00:16:27.856 --> 00:16:29.146 A:middle
+can try to look at some rules to
+
+00:16:29.146 --> 00:16:30.156 A:middle
+detect a mobile agent.
+
+00:16:30.156 --> 00:16:31.136 A:middle
+Here we have a rule written in
+
+00:16:31.136 --> 00:16:32.376 A:middle
+CLIPS, and the first thing that
+
+00:16:32.376 --> 00:16:33.606 A:middle
+it's trying to do is to detect
+
+00:16:33.606 --> 00:16:34.946 A:middle
+the presence of an OS Signpost
+
+00:16:35.536 --> 00:16:37.476 A:middle
+that has a particular name such
+
+00:16:37.476 --> 00:16:38.406 A:middle
+as mobile agent moved.
+
+00:16:39.296 --> 00:16:40.916 A:middle
+And what we'll do is we're going
+
+00:16:40.946 --> 00:16:42.546 A:middle
+to capture the value that's held
+
+00:16:42.546 --> 00:16:44.156 A:middle
+within the identifier slot in
+
+00:16:44.156 --> 00:16:45.116 A:middle
+this instance variable.
+
+00:16:46.736 --> 00:16:48.236 A:middle
+Additionally, we can perform
+
+00:16:48.236 --> 00:16:49.586 A:middle
+some parsing on the message to
+
+00:16:49.586 --> 00:16:50.766 A:middle
+extract any useful information
+
+00:16:50.766 --> 00:16:51.356 A:middle
+that we see from there.
+
+00:16:53.756 --> 00:16:55.116 A:middle
+And now in the second part, we
+
+00:16:55.116 --> 00:16:56.026 A:middle
+have one more condition that
+
+00:16:56.026 --> 00:16:57.396 A:middle
+we'd like to express, which is
+
+00:16:57.396 --> 00:16:59.116 A:middle
+that we're trying to match
+
+00:16:59.116 --> 00:17:00.746 A:middle
+against the absence of a mobile
+
+00:16:59.116 --> 00:17:00.746 A:middle
+against the absence of a mobile
+
+00:17:00.746 --> 00:17:01.636 A:middle
+agent that has already been
+
+00:17:01.636 --> 00:17:02.896 A:middle
+identified by the Signpost.
+
+00:17:03.266 --> 00:17:04.276 A:middle
+Signpost is what we're going to
+
+00:17:04.276 --> 00:17:05.896 A:middle
+use to identify mobile agents,
+
+00:17:05.896 --> 00:17:06.906 A:middle
+but we don't want to introduce
+
+00:17:06.906 --> 00:17:07.626 A:middle
+any duplicates.
+
+00:17:08.076 --> 00:17:09.215 A:middle
+So, here with the knot keyword,
+
+00:17:09.215 --> 00:17:10.766 A:middle
+we're telling the modeler only
+
+00:17:10.766 --> 00:17:11.915 A:middle
+do this if you don't already
+
+00:17:11.915 --> 00:17:13.016 A:middle
+have a mobile agent that has
+
+00:17:13.016 --> 00:17:14.116 A:middle
+been identified with this
+
+00:17:14.116 --> 00:17:14.756 A:middle
+instance variable.
+
+00:17:14.756 --> 00:17:17.215 A:middle
+And if that's the case, the
+
+00:17:17.215 --> 00:17:18.496 A:middle
+modeler can go ahead and assert
+
+00:17:18.496 --> 00:17:19.526 A:middle
+that mobile agent into working
+
+00:17:19.526 --> 00:17:19.816 A:middle
+memory.
+
+00:17:22.516 --> 00:17:23.796 A:middle
+Likewise, when we're trying to
+
+00:17:23.796 --> 00:17:25.336 A:middle
+detect what the mobile agent was
+
+00:17:25.336 --> 00:17:27.175 A:middle
+doing, we match against the OS
+
+00:17:27.175 --> 00:17:28.356 A:middle
+Signpost fact again, because
+
+00:17:28.356 --> 00:17:29.336 A:middle
+we'll need that to determine
+
+00:17:29.336 --> 00:17:30.036 A:middle
+some properties.
+
+00:17:31.036 --> 00:17:32.856 A:middle
+But in this case, we omit the
+
+00:17:32.856 --> 00:17:34.336 A:middle
+use of the knot keyword, because
+
+00:17:34.336 --> 00:17:35.686 A:middle
+we really do want the presence
+
+00:17:35.686 --> 00:17:37.136 A:middle
+of this agent fact to live in
+
+00:17:37.136 --> 00:17:37.856 A:middle
+our working memory.
+
+00:17:37.856 --> 00:17:39.196 A:middle
+So, we know that we have already
+
+00:17:39.196 --> 00:17:40.576 A:middle
+parsed the agent and we can do
+
+00:17:40.576 --> 00:17:41.256 A:middle
+something more with it.
+
+00:17:42.516 --> 00:17:44.346 A:middle
+Specifically, once we do have
+
+00:17:44.346 --> 00:17:46.316 A:middle
+these two facts present, we can
+
+00:17:46.316 --> 00:17:47.616 A:middle
+assert or introduce that
+
+00:17:47.616 --> 00:17:48.816 A:middle
+movement fact so that the
+
+00:17:48.816 --> 00:17:50.266 A:middle
+modeler can keep track of what
+
+00:17:50.266 --> 00:17:53.526 A:middle
+the agent was actually doing.
+
+00:17:53.666 --> 00:17:54.796 A:middle
+All right, so we've seen some
+
+00:17:54.796 --> 00:17:55.836 A:middle
+examples of how we can write
+
+00:17:55.836 --> 00:17:58.646 A:middle
+CLIPS code to detect agents and
+
+00:17:58.646 --> 00:17:59.696 A:middle
+activities that they were doing,
+
+00:17:59.696 --> 00:18:00.766 A:middle
+but we need to learn a little
+
+00:17:59.696 --> 00:18:00.766 A:middle
+but we need to learn a little
+
+00:18:00.766 --> 00:18:01.976 A:middle
+bit more about the underlying
+
+00:18:01.976 --> 00:18:04.386 A:middle
+execution to help us structure
+
+00:18:04.386 --> 00:18:05.456 A:middle
+our modeler a little bit better.
+
+00:18:05.946 --> 00:18:07.206 A:middle
+And in order to do that, I want
+
+00:18:07.206 --> 00:18:08.166 A:middle
+to invite Chad back onto the
+
+00:18:08.166 --> 00:18:09.366 A:middle
+stage to talk to us about rule
+
+00:18:09.366 --> 00:18:09.806 A:middle
+execution.
+
+00:18:12.016 --> 00:18:13.306 A:middle
+[ Applause ]
+
+00:18:13.306 --> 00:18:14.816 A:middle
+&gt;&gt; All right, so let's talk
+
+00:18:14.816 --> 00:18:16.846 A:middle
+about rules execution in the
+
+00:18:16.846 --> 00:18:18.956 A:middle
+CLIPS language in Rules Engine.
+
+00:18:20.136 --> 00:18:21.686 A:middle
+All right, when we define Rules
+
+00:18:21.686 --> 00:18:22.946 A:middle
+in CLIPS, they're defined with a
+
+00:18:22.946 --> 00:18:24.486 A:middle
+lefthand side and a righthand
+
+00:18:24.486 --> 00:18:26.546 A:middle
+side separated by a production
+
+00:18:26.546 --> 00:18:26.976 A:middle
+operator.
+
+00:18:27.406 --> 00:18:29.306 A:middle
+Now, lefthand side is really the
+
+00:18:29.306 --> 00:18:30.216 A:middle
+declarative part of the
+
+00:18:30.216 --> 00:18:30.596 A:middle
+language.
+
+00:18:30.596 --> 00:18:31.726 A:middle
+So, this is where you define a
+
+00:18:31.726 --> 00:18:32.976 A:middle
+pattern that you want the rules
+
+00:18:32.976 --> 00:18:34.706 A:middle
+engine to find in the working
+
+00:18:34.706 --> 00:18:35.616 A:middle
+memory of facts.
+
+00:18:36.266 --> 00:18:37.266 A:middle
+And when the Rules Engine
+
+00:18:37.266 --> 00:18:39.266 A:middle
+identifies a set of facts that
+
+00:18:39.266 --> 00:18:40.656 A:middle
+satisfies that pattern on the
+
+00:18:40.656 --> 00:18:42.356 A:middle
+lefthand side, it creates what's
+
+00:18:42.356 --> 00:18:43.196 A:middle
+called an activation.
+
+00:18:43.586 --> 00:18:45.206 A:middle
+Now, for each activation, it
+
+00:18:45.206 --> 00:18:46.646 A:middle
+will fire the righthand side of
+
+00:18:46.646 --> 00:18:46.976 A:middle
+the rule.
+
+00:18:47.176 --> 00:18:48.486 A:middle
+Now, the righthand side of the
+
+00:18:48.486 --> 00:18:49.696 A:middle
+rule is really the imperative
+
+00:18:49.746 --> 00:18:50.356 A:middle
+part of the language.
+
+00:18:50.356 --> 00:18:51.436 A:middle
+This is where you have access to
+
+00:18:51.436 --> 00:18:53.136 A:middle
+functions like retract, which
+
+00:18:53.136 --> 00:18:54.426 A:middle
+allows you to remove a fact from
+
+00:18:54.426 --> 00:18:54.996 A:middle
+working memory.
+
+00:18:55.666 --> 00:18:57.306 A:middle
+Or assert, which allows you to
+
+00:18:57.306 --> 00:18:58.786 A:middle
+add a fact into the working
+
+00:18:58.786 --> 00:18:59.096 A:middle
+memory.
+
+00:18:59.746 --> 00:19:00.906 A:middle
+And also some specialized
+
+00:18:59.746 --> 00:19:00.906 A:middle
+And also some specialized
+
+00:19:00.906 --> 00:19:02.426 A:middle
+functions that allow you to
+
+00:19:02.426 --> 00:19:03.876 A:middle
+write to the output tables of
+
+00:19:03.876 --> 00:19:05.636 A:middle
+your modeler so you can write
+
+00:19:05.636 --> 00:19:05.946 A:middle
+the output.
+
+00:19:07.686 --> 00:19:08.776 A:middle
+Now, let's talk about facts for
+
+00:19:08.776 --> 00:19:08.986 A:middle
+a minute.
+
+00:19:09.326 --> 00:19:10.786 A:middle
+When we assert a fact into the
+
+00:19:10.786 --> 00:19:12.286 A:middle
+working memory, we use our
+
+00:19:12.286 --> 00:19:13.016 A:middle
+assert function.
+
+00:19:13.016 --> 00:19:15.426 A:middle
+And each new fact is assigned
+
+00:19:15.426 --> 00:19:16.946 A:middle
+what's called a fact address,
+
+00:19:16.946 --> 00:19:17.706 A:middle
+and they're identified with a
+
+00:19:17.706 --> 00:19:19.426 A:middle
+lowercase f, dash, and then some
+
+00:19:19.426 --> 00:19:20.026 A:middle
+unique number.
+
+00:19:20.946 --> 00:19:23.116 A:middle
+Now when we want to modify a
+
+00:19:23.116 --> 00:19:24.856 A:middle
+fact in the working memory, we
+
+00:19:24.856 --> 00:19:26.716 A:middle
+also have a modify function
+
+00:19:27.466 --> 00:19:28.636 A:middle
+which takes the fact address and
+
+00:19:28.636 --> 00:19:29.536 A:middle
+the slots that we'd like to
+
+00:19:29.536 --> 00:19:30.666 A:middle
+change on that piece of the
+
+00:19:30.666 --> 00:19:31.186 A:middle
+working memory.
+
+00:19:31.956 --> 00:19:33.376 A:middle
+Now, this is actually
+
+00:19:33.376 --> 00:19:34.786 A:middle
+implemented as a combination of
+
+00:19:34.786 --> 00:19:36.306 A:middle
+a retraction and an assertion.
+
+00:19:36.306 --> 00:19:37.656 A:middle
+So what happens here is we first
+
+00:19:37.656 --> 00:19:38.826 A:middle
+retract the fact from the
+
+00:19:38.826 --> 00:19:40.586 A:middle
+working memory, make the change,
+
+00:19:40.586 --> 00:19:42.176 A:middle
+and then reassert it back into
+
+00:19:42.176 --> 00:19:43.186 A:middle
+the working memory with the
+
+00:19:43.186 --> 00:19:44.846 A:middle
+updated fields or updated slots.
+
+00:19:45.586 --> 00:19:47.476 A:middle
+Now, this is important because
+
+00:19:47.566 --> 00:19:48.686 A:middle
+when you reassert something into
+
+00:19:48.686 --> 00:19:49.856 A:middle
+the working memory, it will
+
+00:19:49.856 --> 00:19:50.876 A:middle
+refire and potentially
+
+00:19:50.876 --> 00:19:52.266 A:middle
+reactivate some of those rules,
+
+00:19:52.586 --> 00:19:53.676 A:middle
+which exactly what you want in
+
+00:19:53.676 --> 00:19:55.476 A:middle
+most cases because that's how
+
+00:19:55.476 --> 00:19:56.486 A:middle
+your rules system is going to
+
+00:19:56.486 --> 00:19:58.106 A:middle
+react to the changes you're
+
+00:19:58.106 --> 00:19:59.636 A:middle
+making to the working memory.
+
+00:20:00.446 --> 00:20:02.026 A:middle
+However, this can lead in some
+
+00:20:02.026 --> 00:20:03.486 A:middle
+cases to a complication I like
+
+00:20:03.486 --> 00:20:05.336 A:middle
+to refer to as a logical loop.
+
+00:20:05.876 --> 00:20:07.016 A:middle
+So, let's see how we might have
+
+00:20:07.016 --> 00:20:08.496 A:middle
+accidently created a logical
+
+00:20:08.496 --> 00:20:09.466 A:middle
+loop in our code.
+
+00:20:09.466 --> 00:20:11.276 A:middle
+So, we have this pretty small
+
+00:20:11.276 --> 00:20:11.756 A:middle
+rule here.
+
+00:20:11.916 --> 00:20:13.726 A:middle
+And what it's designed to do is
+
+00:20:13.726 --> 00:20:14.826 A:middle
+to count the number of mobile
+
+00:20:14.826 --> 00:20:16.756 A:middle
+agents-- mobile agent instances
+
+00:20:16.756 --> 00:20:17.456 A:middle
+that have appeared in the
+
+00:20:17.456 --> 00:20:18.036 A:middle
+working memory.
+
+00:20:18.746 --> 00:20:19.876 A:middle
+So, it starts off with a counter
+
+00:20:19.876 --> 00:20:21.026 A:middle
+fact, with a slot that's
+
+00:20:21.026 --> 00:20:21.886 A:middle
+initially zero.
+
+00:20:22.546 --> 00:20:24.036 A:middle
+And for each mobile agent that
+
+00:20:24.036 --> 00:20:25.146 A:middle
+gets placed into the working
+
+00:20:25.146 --> 00:20:26.326 A:middle
+memory, it will fire the
+
+00:20:26.326 --> 00:20:28.136 A:middle
+righthand side of the rule which
+
+00:20:28.136 --> 00:20:30.206 A:middle
+simply modifies the counter by
+
+00:20:30.206 --> 00:20:32.326 A:middle
+bumping the count slot up by
+
+00:20:32.326 --> 00:20:32.596 A:middle
+one.
+
+00:20:32.916 --> 00:20:33.636 A:middle
+Now, this sounds pretty
+
+00:20:33.636 --> 00:20:34.196 A:middle
+straightforward.
+
+00:20:34.796 --> 00:20:36.366 A:middle
+However, let's look at it when
+
+00:20:36.366 --> 00:20:37.486 A:middle
+it actually executes.
+
+00:20:38.206 --> 00:20:39.536 A:middle
+So first thing, we start off
+
+00:20:39.536 --> 00:20:40.396 A:middle
+with our counter in working
+
+00:20:40.396 --> 00:20:41.846 A:middle
+memory with an initial count of
+
+00:20:41.846 --> 00:20:42.246 A:middle
+zero.
+
+00:20:43.836 --> 00:20:45.136 A:middle
+And let's say at some point in
+
+00:20:45.136 --> 00:20:46.646 A:middle
+the future a mobile agent is
+
+00:20:46.646 --> 00:20:47.486 A:middle
+asserted into the working
+
+00:20:47.486 --> 00:20:47.836 A:middle
+memory.
+
+00:20:47.976 --> 00:20:49.046 A:middle
+Now we have enough on the
+
+00:20:49.046 --> 00:20:50.366 A:middle
+lefthand side to fire the
+
+00:20:50.366 --> 00:20:50.996 A:middle
+righthand side.
+
+00:20:51.326 --> 00:20:53.526 A:middle
+So, that will call our modify
+
+00:20:53.526 --> 00:20:55.796 A:middle
+function which will first do a
+
+00:20:55.796 --> 00:20:57.186 A:middle
+retraction of that fact.
+
+00:20:57.926 --> 00:20:59.936 A:middle
+It'll modify by increasing the
+
+00:20:59.936 --> 00:21:01.616 A:middle
+count value, and then it will
+
+00:20:59.936 --> 00:21:01.616 A:middle
+count value, and then it will
+
+00:21:01.616 --> 00:21:02.826 A:middle
+reassert it back into the
+
+00:21:02.826 --> 00:21:03.476 A:middle
+working memory.
+
+00:21:03.756 --> 00:21:05.436 A:middle
+Now when we do this, notice that
+
+00:21:05.436 --> 00:21:06.896 A:middle
+it refired that same rule.
+
+00:21:07.506 --> 00:21:08.906 A:middle
+So now for that same mobile
+
+00:21:08.906 --> 00:21:09.796 A:middle
+agent instance, it's going to
+
+00:21:09.796 --> 00:21:11.476 A:middle
+count two, three, four, five,
+
+00:21:11.476 --> 00:21:12.236 A:middle
+six, seven, right.
+
+00:21:12.236 --> 00:21:13.156 A:middle
+It's going to keep going on and
+
+00:21:13.156 --> 00:21:14.956 A:middle
+on and on until eventually the
+
+00:21:14.956 --> 00:21:16.636 A:middle
+trace stops and instruments
+
+00:21:16.636 --> 00:21:17.896 A:middle
+tells you this was a fatal error
+
+00:21:17.896 --> 00:21:19.156 A:middle
+and that the rules engine
+
+00:21:19.156 --> 00:21:19.986 A:middle
+appears to be stuck.
+
+00:21:20.786 --> 00:21:21.706 A:middle
+Now, in the Instruments
+
+00:21:21.706 --> 00:21:23.766 A:middle
+Inspector in the console of your
+
+00:21:24.076 --> 00:21:25.796 A:middle
+modeler, you'll see trace, which
+
+00:21:25.796 --> 00:21:27.226 A:middle
+indicates all the events and
+
+00:21:27.226 --> 00:21:28.426 A:middle
+activations that were happening
+
+00:21:28.826 --> 00:21:29.726 A:middle
+during that loop.
+
+00:21:29.726 --> 00:21:30.726 A:middle
+So, that'll give you a head
+
+00:21:30.726 --> 00:21:32.286 A:middle
+start on how to debug that and
+
+00:21:32.286 --> 00:21:33.626 A:middle
+get out of it.
+
+00:21:33.626 --> 00:21:35.016 A:middle
+Now, the easiest way, in my
+
+00:21:35.016 --> 00:21:35.836 A:middle
+experience, to get out of a
+
+00:21:35.836 --> 00:21:36.796 A:middle
+logical loop is to do what I
+
+00:21:36.796 --> 00:21:37.326 A:middle
+call a little bit of
+
+00:21:37.326 --> 00:21:38.436 A:middle
+goal-oriented programming.
+
+00:21:39.016 --> 00:21:40.016 A:middle
+So instead of modifying the
+
+00:21:40.016 --> 00:21:41.206 A:middle
+counter fact directly, what we
+
+00:21:41.206 --> 00:21:43.376 A:middle
+do is we create a goal fact to
+
+00:21:43.626 --> 00:21:45.556 A:middle
+bump the counter for us.
+
+00:21:45.916 --> 00:21:47.426 A:middle
+And now this time when we detect
+
+00:21:47.426 --> 00:21:48.956 A:middle
+a mobile agent instance, we
+
+00:21:48.956 --> 00:21:50.726 A:middle
+assert a goal fact to count that
+
+00:21:50.726 --> 00:21:51.296 A:middle
+instance.
+
+00:21:51.836 --> 00:21:53.236 A:middle
+And then in our counting rule,
+
+00:21:53.636 --> 00:21:55.976 A:middle
+we capture the counter and the
+
+00:21:55.976 --> 00:21:58.066 A:middle
+goal and we retract the goal
+
+00:21:58.356 --> 00:21:59.556 A:middle
+because now it's being satisfied
+
+00:21:59.966 --> 00:22:00.976 A:middle
+when we bump the counter.
+
+00:21:59.966 --> 00:22:00.976 A:middle
+when we bump the counter.
+
+00:22:00.976 --> 00:22:01.746 A:middle
+And that's going to keep that
+
+00:22:01.746 --> 00:22:03.016 A:middle
+rule from coming back through
+
+00:22:03.016 --> 00:22:04.226 A:middle
+and that's how we've broken out
+
+00:22:04.226 --> 00:22:05.626 A:middle
+of that logical loop.
+
+00:22:06.376 --> 00:22:08.216 A:middle
+All right, now let's talk about
+
+00:22:08.216 --> 00:22:09.706 A:middle
+the firing order of our rules
+
+00:22:09.706 --> 00:22:10.856 A:middle
+and how that might change the
+
+00:22:10.856 --> 00:22:12.136 A:middle
+outcome of our modeler.
+
+00:22:13.086 --> 00:22:14.236 A:middle
+So, let's return back to our
+
+00:22:14.236 --> 00:22:15.136 A:middle
+execute stop function.
+
+00:22:15.136 --> 00:22:15.966 A:middle
+This is what's called right
+
+00:22:15.966 --> 00:22:17.806 A:middle
+before a mobile agent goes into
+
+00:22:17.806 --> 00:22:18.886 A:middle
+its executing stage.
+
+00:22:19.196 --> 00:22:20.876 A:middle
+And now you'll notice here in
+
+00:22:20.876 --> 00:22:22.476 A:middle
+our OS Signpost, that first
+
+00:22:22.476 --> 00:22:23.956 A:middle
+argument in our first version of
+
+00:22:23.956 --> 00:22:25.556 A:middle
+the code, we're actually using
+
+00:22:25.856 --> 00:22:27.236 A:middle
+the agent's type string.
+
+00:22:27.816 --> 00:22:28.586 A:middle
+Which in this case would be
+
+00:22:28.586 --> 00:22:30.146 A:middle
+sorting agent or it's about 14
+
+00:22:30.146 --> 00:22:31.426 A:middle
+bytes of data that has to be
+
+00:22:31.426 --> 00:22:32.816 A:middle
+logged into the trace buffers.
+
+00:22:33.246 --> 00:22:34.366 A:middle
+Now, we think we can improve on
+
+00:22:34.366 --> 00:22:36.266 A:middle
+that by changing it from a
+
+00:22:36.266 --> 00:22:38.616 A:middle
+string over to a type code.
+
+00:22:39.096 --> 00:22:40.006 A:middle
+Now, this is only going to be a
+
+00:22:40.006 --> 00:22:41.686 A:middle
+four byte integer which is going
+
+00:22:41.686 --> 00:22:43.046 A:middle
+to save us about 10 bytes per
+
+00:22:43.046 --> 00:22:43.396 A:middle
+event.
+
+00:22:43.776 --> 00:22:44.746 A:middle
+And if these things are coming
+
+00:22:44.746 --> 00:22:45.836 A:middle
+in by the thousands, which they
+
+00:22:45.836 --> 00:22:47.906 A:middle
+are, it's going to save 10s of
+
+00:22:47.906 --> 00:22:48.886 A:middle
+thousands of bytes in the
+
+00:22:48.886 --> 00:22:49.456 A:middle
+tracing buffer.
+
+00:22:50.486 --> 00:22:51.436 A:middle
+Now in order to do that, we're
+
+00:22:51.436 --> 00:22:52.346 A:middle
+going to have to create some
+
+00:22:52.456 --> 00:22:53.566 A:middle
+mapping inside of our modeler
+
+00:22:53.736 --> 00:22:55.516 A:middle
+that coverts that code over to
+
+00:22:55.516 --> 00:22:56.496 A:middle
+that string, and so we're going
+
+00:22:56.496 --> 00:22:57.686 A:middle
+to use facts to do that.
+
+00:22:58.546 --> 00:23:01.056 A:middle
+And this time, in our detection
+
+00:22:58.546 --> 00:23:01.056 A:middle
+And this time, in our detection
+
+00:23:01.056 --> 00:23:02.486 A:middle
+rule, we're going to capture the
+
+00:23:02.486 --> 00:23:05.536 A:middle
+agent's type code and when we
+
+00:23:05.536 --> 00:23:06.946 A:middle
+assert our mobile agent, we're
+
+00:23:06.946 --> 00:23:08.086 A:middle
+going to assert it with a kind
+
+00:23:08.086 --> 00:23:09.896 A:middle
+slot that's the symbol sentinel.
+
+00:23:09.896 --> 00:23:10.476 A:middle
+It's going to indicate we
+
+00:23:10.476 --> 00:23:11.816 A:middle
+haven't set the full string yet.
+
+00:23:12.716 --> 00:23:14.276 A:middle
+Because on a second rule, what
+
+00:23:14.276 --> 00:23:15.466 A:middle
+we're going to do is look for
+
+00:23:15.516 --> 00:23:17.236 A:middle
+any mobile agent that has a kind
+
+00:23:17.236 --> 00:23:19.796 A:middle
+of sentinel and we're going to
+
+00:23:19.796 --> 00:23:22.126 A:middle
+find for that corresponding type
+
+00:23:22.196 --> 00:23:23.846 A:middle
+code, the type string map that
+
+00:23:23.846 --> 00:23:25.396 A:middle
+you saw on the previous slide.
+
+00:23:25.396 --> 00:23:27.216 A:middle
+And once we have those two
+
+00:23:27.216 --> 00:23:29.266 A:middle
+pieces, we'll modify the kind
+
+00:23:29.266 --> 00:23:30.556 A:middle
+slot, changing it from the
+
+00:23:30.556 --> 00:23:32.486 A:middle
+symbol sentinel to a real
+
+00:23:32.486 --> 00:23:32.776 A:middle
+string.
+
+00:23:33.666 --> 00:23:35.106 A:middle
+Now, this whole design really
+
+00:23:35.106 --> 00:23:37.706 A:middle
+relies on this second lookup
+
+00:23:37.706 --> 00:23:39.296 A:middle
+rule, firing immediately after
+
+00:23:39.296 --> 00:23:40.306 A:middle
+we perform the assertion.
+
+00:23:41.166 --> 00:23:42.366 A:middle
+But what happens if another rule
+
+00:23:42.366 --> 00:23:43.466 A:middle
+in our system, for example our
+
+00:23:43.466 --> 00:23:45.226 A:middle
+agent parked rule, which also
+
+00:23:45.226 --> 00:23:46.806 A:middle
+references the mobile agent and
+
+00:23:47.246 --> 00:23:49.266 A:middle
+captures and uses the kind slot.
+
+00:23:49.266 --> 00:23:50.886 A:middle
+What if it happens to slip in
+
+00:23:50.886 --> 00:23:52.376 A:middle
+there between the assertion and
+
+00:23:52.376 --> 00:23:52.826 A:middle
+the lookup rule?
+
+00:23:52.826 --> 00:23:53.946 A:middle
+Well, it's going to see a kind
+
+00:23:53.946 --> 00:23:54.416 A:middle
+of sentinel.
+
+00:23:54.416 --> 00:23:55.796 A:middle
+And since this is a change we're
+
+00:23:55.796 --> 00:23:56.896 A:middle
+making to our rule system, it
+
+00:23:56.896 --> 00:23:57.746 A:middle
+might not be ready for that.
+
+00:23:57.746 --> 00:23:58.796 A:middle
+We have a whole new set of bugs
+
+00:23:58.796 --> 00:23:58.996 A:middle
+now.
+
+00:23:59.716 --> 00:24:01.066 A:middle
+So, one way to work around this
+
+00:23:59.716 --> 00:24:01.066 A:middle
+So, one way to work around this
+
+00:24:01.116 --> 00:24:03.776 A:middle
+is to add a restriction to that
+
+00:24:03.856 --> 00:24:05.946 A:middle
+rule that says as long as the
+
+00:24:05.946 --> 00:24:07.556 A:middle
+kind is not equal to sentinel
+
+00:24:07.616 --> 00:24:08.906 A:middle
+and that effectively delays the
+
+00:24:08.906 --> 00:24:10.476 A:middle
+rule firing until that lookup
+
+00:24:10.476 --> 00:24:12.576 A:middle
+rule does change the agent's
+
+00:24:12.646 --> 00:24:14.276 A:middle
+kind from something, from
+
+00:24:14.276 --> 00:24:15.216 A:middle
+sentinel to something real.
+
+00:24:15.216 --> 00:24:17.056 A:middle
+Now, you can certainly do this
+
+00:24:17.056 --> 00:24:18.016 A:middle
+but you're going to have to do
+
+00:24:18.016 --> 00:24:19.286 A:middle
+this to all of the rules.
+
+00:24:19.286 --> 00:24:20.126 A:middle
+And so that could be a little
+
+00:24:20.126 --> 00:24:22.186 A:middle
+bit of a maintenance problem if
+
+00:24:22.186 --> 00:24:23.096 A:middle
+you already have an existing
+
+00:24:23.096 --> 00:24:24.796 A:middle
+rule set that assumes that will
+
+00:24:24.796 --> 00:24:25.586 A:middle
+never be sentinel.
+
+00:24:26.536 --> 00:24:27.706 A:middle
+So, let's look at another
+
+00:24:27.776 --> 00:24:28.856 A:middle
+alternative way to do that.
+
+00:24:29.096 --> 00:24:29.986 A:middle
+Now, really what we're trying to
+
+00:24:29.986 --> 00:24:31.716 A:middle
+do is get that lookup rule to
+
+00:24:31.716 --> 00:24:32.886 A:middle
+fire immediately after we
+
+00:24:32.886 --> 00:24:33.756 A:middle
+perform that assertion.
+
+00:24:34.066 --> 00:24:34.966 A:middle
+And one of the ways that we can
+
+00:24:34.966 --> 00:24:37.916 A:middle
+do that is by telling CLIPS that
+
+00:24:38.096 --> 00:24:39.426 A:middle
+that specific rule is more
+
+00:24:39.426 --> 00:24:41.436 A:middle
+important than or more salient
+
+00:24:41.796 --> 00:24:43.476 A:middle
+than the default salience of
+
+00:24:43.476 --> 00:24:43.846 A:middle
+zero.
+
+00:24:44.546 --> 00:24:45.936 A:middle
+Now, as long as that rule is the
+
+00:24:46.386 --> 00:24:48.526 A:middle
+most salient rule in the system,
+
+00:24:48.856 --> 00:24:50.276 A:middle
+as soon as our first rule
+
+00:24:50.276 --> 00:24:51.466 A:middle
+finishes, that second rule is
+
+00:24:51.466 --> 00:24:52.446 A:middle
+going to be the one that fires.
+
+00:24:52.896 --> 00:24:53.946 A:middle
+Now, if you're using salience in
+
+00:24:53.946 --> 00:24:54.836 A:middle
+other locations, you're going to
+
+00:24:54.836 --> 00:24:55.676 A:middle
+have to go through your code and
+
+00:24:55.676 --> 00:24:57.966 A:middle
+make sure that 100 is still the
+
+00:24:57.966 --> 00:24:59.166 A:middle
+highest salience value, but
+
+00:24:59.166 --> 00:25:00.456 A:middle
+that's another way to ensure
+
+00:24:59.166 --> 00:25:00.456 A:middle
+that's another way to ensure
+
+00:25:00.456 --> 00:25:00.686 A:middle
+that.
+
+00:25:01.086 --> 00:25:03.236 A:middle
+Now, there is a little bit more
+
+00:25:03.236 --> 00:25:04.706 A:middle
+direct way to control the rule
+
+00:25:04.706 --> 00:25:05.766 A:middle
+ordering and the rule firing,
+
+00:25:05.766 --> 00:25:07.476 A:middle
+but that requires that we learn
+
+00:25:07.476 --> 00:25:08.576 A:middle
+a little bit more about
+
+00:25:08.576 --> 00:25:09.476 A:middle
+activations.
+
+00:25:10.116 --> 00:25:12.466 A:middle
+So, a reminder, an activation is
+
+00:25:12.466 --> 00:25:14.356 A:middle
+basically a combination of facts
+
+00:25:14.356 --> 00:25:15.206 A:middle
+in the working memory that
+
+00:25:15.206 --> 00:25:16.506 A:middle
+satisfies the lefthand side of
+
+00:25:16.506 --> 00:25:16.996 A:middle
+our pattern.
+
+00:25:17.226 --> 00:25:18.566 A:middle
+And for each activation, we fire
+
+00:25:18.566 --> 00:25:19.756 A:middle
+the righthand side of the rule.
+
+00:25:20.416 --> 00:25:22.036 A:middle
+Now, we don't fire the righthand
+
+00:25:22.036 --> 00:25:23.246 A:middle
+side of the rule immediately.
+
+00:25:23.606 --> 00:25:25.536 A:middle
+Instead, what we do is the
+
+00:25:25.536 --> 00:25:27.096 A:middle
+activation is logged to a data
+
+00:25:27.096 --> 00:25:29.876 A:middle
+structure called the agenda, or
+
+00:25:29.876 --> 00:25:30.476 A:middle
+an agenda.
+
+00:25:31.106 --> 00:25:34.266 A:middle
+Now, an agenda is basically a
+
+00:25:34.266 --> 00:25:36.036 A:middle
+list of activations that have
+
+00:25:36.036 --> 00:25:37.116 A:middle
+resulted from a working memory
+
+00:25:37.116 --> 00:25:38.336 A:middle
+update, and so all the rules
+
+00:25:38.336 --> 00:25:39.596 A:middle
+engine needs to do is start from
+
+00:25:39.596 --> 00:25:40.516 A:middle
+the top of that list and work
+
+00:25:40.516 --> 00:25:41.916 A:middle
+its way down, firing the rules
+
+00:25:42.246 --> 00:25:43.686 A:middle
+in that particular pattern.
+
+00:25:44.236 --> 00:25:45.516 A:middle
+So, here we've fired the first
+
+00:25:45.516 --> 00:25:46.466 A:middle
+rule, now we come down to the
+
+00:25:46.466 --> 00:25:46.806 A:middle
+second rule.
+
+00:25:47.086 --> 00:25:47.986 A:middle
+Now, this data structure is
+
+00:25:48.026 --> 00:25:50.096 A:middle
+dynamic, so if rule 99 here were
+
+00:25:50.096 --> 00:25:53.476 A:middle
+to retract fact 17, and fact 17
+
+00:25:53.476 --> 00:25:54.556 A:middle
+is being referenced by these
+
+00:25:54.556 --> 00:25:56.126 A:middle
+other two activations, CLIPS
+
+00:25:56.126 --> 00:25:57.826 A:middle
+will first retract those
+
+00:25:57.826 --> 00:25:59.756 A:middle
+activations before moving
+
+00:25:59.756 --> 00:26:01.056 A:middle
+forward, and then thus the
+
+00:25:59.756 --> 00:26:01.056 A:middle
+forward, and then thus the
+
+00:26:01.056 --> 00:26:02.986 A:middle
+agenda will look like this when
+
+00:26:03.116 --> 00:26:04.386 A:middle
+execution resumes.
+
+00:26:04.946 --> 00:26:08.086 A:middle
+Now the agendas are ordered by
+
+00:26:08.176 --> 00:26:08.976 A:middle
+salience, so that's where
+
+00:26:08.976 --> 00:26:09.886 A:middle
+salience comes into play.
+
+00:26:09.886 --> 00:26:10.906 A:middle
+The higher salience, the higher
+
+00:26:10.906 --> 00:26:11.746 A:middle
+it appears on the agenda.
+
+00:26:12.536 --> 00:26:13.776 A:middle
+But the more important part here
+
+00:26:13.996 --> 00:26:15.506 A:middle
+is that there isn't a single
+
+00:26:15.506 --> 00:26:17.086 A:middle
+agenda on your modeler.
+
+00:26:17.086 --> 00:26:18.686 A:middle
+There's actually one per module
+
+00:26:18.766 --> 00:26:19.406 A:middle
+that's defined.
+
+00:26:19.696 --> 00:26:20.946 A:middle
+And we take advantage of that in
+
+00:26:20.946 --> 00:26:22.356 A:middle
+the analysis core by defining a
+
+00:26:22.426 --> 00:26:23.786 A:middle
+couple of standard modules for
+
+00:26:23.786 --> 00:26:24.006 A:middle
+you.
+
+00:26:24.696 --> 00:26:26.066 A:middle
+The first one being the modeler
+
+00:26:26.156 --> 00:26:27.176 A:middle
+module, and this is where you're
+
+00:26:27.176 --> 00:26:29.026 A:middle
+going to want to put your pure
+
+00:26:29.026 --> 00:26:30.136 A:middle
+reasoning logic and your
+
+00:26:30.236 --> 00:26:32.156 A:middle
+reasoning rules in this module,
+
+00:26:32.156 --> 00:26:33.706 A:middle
+by prefacing the rule name with
+
+00:26:33.706 --> 00:26:34.916 A:middle
+modeler colon colon.
+
+00:26:35.406 --> 00:26:37.386 A:middle
+And we defined a second module
+
+00:26:37.556 --> 00:26:39.526 A:middle
+called a recorder module that,
+
+00:26:39.526 --> 00:26:40.096 A:middle
+this is where you're going to
+
+00:26:40.096 --> 00:26:41.186 A:middle
+want to put your output writing
+
+00:26:41.186 --> 00:26:42.726 A:middle
+rules, by prefacing those with
+
+00:26:42.726 --> 00:26:43.826 A:middle
+recorder colon colon.
+
+00:26:43.826 --> 00:26:45.316 A:middle
+And the reason you're going to
+
+00:26:45.316 --> 00:26:46.916 A:middle
+want to do that is because when
+
+00:26:46.916 --> 00:26:48.966 A:middle
+we execute these rules, we
+
+00:26:48.966 --> 00:26:50.316 A:middle
+execute everything that's on the
+
+00:26:50.316 --> 00:26:52.536 A:middle
+modeler's agenda first until
+
+00:26:52.536 --> 00:26:53.816 A:middle
+it's completely empty before
+
+00:26:53.816 --> 00:26:55.096 A:middle
+moving over to the recorder's
+
+00:26:55.096 --> 00:26:55.526 A:middle
+module.
+
+00:26:56.056 --> 00:26:56.946 A:middle
+And so what that allows you to
+
+00:26:56.976 --> 00:26:58.916 A:middle
+do is have confidence that when
+
+00:26:58.916 --> 00:26:59.896 A:middle
+you're having an output writing
+
+00:26:59.896 --> 00:27:01.696 A:middle
+rule, you're not looking at
+
+00:26:59.896 --> 00:27:01.696 A:middle
+rule, you're not looking at
+
+00:27:01.696 --> 00:27:02.506 A:middle
+working memory that's in the
+
+00:27:02.506 --> 00:27:03.936 A:middle
+process of being reasoned in the
+
+00:27:03.936 --> 00:27:04.626 A:middle
+modeler module.
+
+00:27:05.796 --> 00:27:06.746 A:middle
+Now, you can take advantage of
+
+00:27:06.746 --> 00:27:07.826 A:middle
+this yourself by defining your
+
+00:27:07.826 --> 00:27:09.856 A:middle
+own custom modules in CLIPS.
+
+00:27:09.856 --> 00:27:10.966 A:middle
+And so let's take a look at how
+
+00:27:10.966 --> 00:27:13.396 A:middle
+we could do that to better
+
+00:27:13.466 --> 00:27:15.586 A:middle
+adjust our lookup rule
+
+00:27:15.586 --> 00:27:16.106 A:middle
+execution.
+
+00:27:16.506 --> 00:27:17.856 A:middle
+So the first thing we want not
+
+00:27:17.856 --> 00:27:19.296 A:middle
+do is define the module for our
+
+00:27:19.296 --> 00:27:20.156 A:middle
+lookup module.
+
+00:27:21.026 --> 00:27:22.586 A:middle
+Now we want to place our lookup
+
+00:27:22.806 --> 00:27:24.346 A:middle
+rule inside that module by
+
+00:27:24.346 --> 00:27:25.696 A:middle
+prefacing it with lookup colon
+
+00:27:25.696 --> 00:27:26.056 A:middle
+colon.
+
+00:27:27.296 --> 00:27:29.456 A:middle
+Now, when we assert a mobile
+
+00:27:29.456 --> 00:27:31.756 A:middle
+agent fact, immediately the next
+
+00:27:31.756 --> 00:27:33.606 A:middle
+thing that we do is tell CLIPS
+
+00:27:33.606 --> 00:27:35.136 A:middle
+to focus on the lookup agenda.
+
+00:27:35.376 --> 00:27:36.436 A:middle
+Basically run all of the
+
+00:27:36.436 --> 00:27:37.336 A:middle
+activations that are in the
+
+00:27:37.336 --> 00:27:39.866 A:middle
+lookup agenda before returning
+
+00:27:39.866 --> 00:27:41.796 A:middle
+back to the modeler's agenda and
+
+00:27:41.796 --> 00:27:42.936 A:middle
+thusly executing the next set of
+
+00:27:42.936 --> 00:27:43.416 A:middle
+modeling rules.
+
+00:27:43.416 --> 00:27:44.666 A:middle
+So, that's a great way to slip
+
+00:27:44.806 --> 00:27:47.336 A:middle
+rules in between execution in
+
+00:27:47.336 --> 00:27:48.066 A:middle
+the execution order.
+
+00:27:48.706 --> 00:27:49.816 A:middle
+All right, so that gives us
+
+00:27:49.816 --> 00:27:51.716 A:middle
+enough information now and we
+
+00:27:51.716 --> 00:27:53.126 A:middle
+can start taking a look at how
+
+00:27:53.126 --> 00:27:54.556 A:middle
+to start debugging and
+
+00:27:54.556 --> 00:27:55.126 A:middle
+profiling.
+
+00:27:55.216 --> 00:27:56.006 A:middle
+And in order to do that, I'd
+
+00:27:56.006 --> 00:27:57.246 A:middle
+like to ask Alejandro to come
+
+00:27:57.246 --> 00:27:58.786 A:middle
+back up to the stage and walk us
+
+00:27:58.836 --> 00:28:00.216 A:middle
+through that.
+
+00:27:58.836 --> 00:28:00.216 A:middle
+through that.
+
+00:28:01.516 --> 00:28:04.596 A:middle
+[ Applause ]
+
+00:28:05.096 --> 00:28:05.956 A:middle
+&gt;&gt; All right, thank you Chad.
+
+00:28:06.686 --> 00:28:07.596 A:middle
+What I'd like to do is talk
+
+00:28:07.596 --> 00:28:08.686 A:middle
+about some of the debugging and
+
+00:28:08.686 --> 00:28:09.886 A:middle
+profiling primitives we have
+
+00:28:09.886 --> 00:28:10.836 A:middle
+available to us when we're
+
+00:28:10.836 --> 00:28:11.806 A:middle
+building these models.
+
+00:28:12.536 --> 00:28:13.586 A:middle
+Starting off with logging.
+
+00:28:14.326 --> 00:28:15.586 A:middle
+Now, the logging primitives that
+
+00:28:15.586 --> 00:28:17.186 A:middle
+we have available to us are very
+
+00:28:17.186 --> 00:28:18.586 A:middle
+similar to print f, in that we
+
+00:28:18.586 --> 00:28:20.096 A:middle
+can specify a format string,
+
+00:28:20.436 --> 00:28:22.116 A:middle
+format flags as well, and the
+
+00:28:22.266 --> 00:28:23.716 A:middle
+variables that we'd like to
+
+00:28:23.746 --> 00:28:24.646 A:middle
+represent those types.
+
+00:28:25.546 --> 00:28:27.216 A:middle
+Now, unlike print f or just
+
+00:28:27.216 --> 00:28:28.806 A:middle
+normal use of print f, through
+
+00:28:28.806 --> 00:28:29.936 A:middle
+the Instruments Inspector, we
+
+00:28:29.936 --> 00:28:31.056 A:middle
+actually have the ability to
+
+00:28:31.056 --> 00:28:32.506 A:middle
+dynamically enable or disable
+
+00:28:32.506 --> 00:28:33.486 A:middle
+these log statements, and we'll
+
+00:28:33.486 --> 00:28:34.356 A:middle
+see an example of this very
+
+00:28:34.356 --> 00:28:34.676 A:middle
+shortly.
+
+00:28:35.776 --> 00:28:36.816 A:middle
+Now, how do I actually get these
+
+00:28:36.816 --> 00:28:37.986 A:middle
+logging statements into my
+
+00:28:38.096 --> 00:28:38.406 A:middle
+rules?
+
+00:28:38.906 --> 00:28:40.056 A:middle
+Well, there's a function in
+
+00:28:40.056 --> 00:28:41.506 A:middle
+CLIPS which is log narrative.
+
+00:28:41.976 --> 00:28:43.376 A:middle
+And log narrative works, as I
+
+00:28:43.376 --> 00:28:44.436 A:middle
+mentioned, very similarly to
+
+00:28:44.436 --> 00:28:45.876 A:middle
+print f in that we can specify a
+
+00:28:45.876 --> 00:28:47.456 A:middle
+string, such as resolve agent
+
+00:28:47.456 --> 00:28:49.186 A:middle
+kind code, and then we specify
+
+00:28:49.186 --> 00:28:50.826 A:middle
+the format type using percent
+
+00:28:51.046 --> 00:28:52.196 A:middle
+and then the actual engineering
+
+00:28:52.196 --> 00:28:54.176 A:middle
+type, in this case UN 64 and
+
+00:28:54.296 --> 00:28:56.396 A:middle
+then a percent sign to string,
+
+00:28:56.806 --> 00:28:57.746 A:middle
+followed by the variables that
+
+00:28:57.746 --> 00:28:58.876 A:middle
+we'd like to take on those data
+
+00:28:58.876 --> 00:28:59.216 A:middle
+types.
+
+00:29:01.946 --> 00:29:03.056 A:middle
+Now, likewise, we can also
+
+00:29:03.056 --> 00:29:04.326 A:middle
+enable different type of
+
+00:29:04.426 --> 00:29:05.246 A:middle
+primitive here which is
+
+00:29:05.246 --> 00:29:06.046 A:middle
+profiling through the
+
+00:29:06.046 --> 00:29:07.756 A:middle
+Instruments Inspector, and the
+
+00:29:07.756 --> 00:29:09.046 A:middle
+profiling primitive gives us
+
+00:29:09.046 --> 00:29:10.306 A:middle
+things such as rule activation
+
+00:29:10.306 --> 00:29:11.496 A:middle
+counts so we can see how many
+
+00:29:11.496 --> 00:29:13.656 A:middle
+times certain rules fired as
+
+00:29:13.656 --> 00:29:15.266 A:middle
+well as a time distribution so
+
+00:29:15.266 --> 00:29:16.916 A:middle
+we can see how much time in
+
+00:29:16.916 --> 00:29:18.466 A:middle
+seconds and percentage wise we
+
+00:29:18.466 --> 00:29:20.136 A:middle
+spent activating certain rules.
+
+00:29:20.846 --> 00:29:22.126 A:middle
+Now, to put all this in context,
+
+00:29:22.506 --> 00:29:23.396 A:middle
+I'd like to switch over to a
+
+00:29:23.396 --> 00:29:24.696 A:middle
+demo and I'll show you how all
+
+00:29:24.696 --> 00:29:25.416 A:middle
+these things work together.
+
+00:29:29.356 --> 00:29:30.566 A:middle
+So here with me I have the
+
+00:29:30.566 --> 00:29:31.566 A:middle
+sample code that is again
+
+00:29:31.566 --> 00:29:32.476 A:middle
+available to download.
+
+00:29:32.616 --> 00:29:33.786 A:middle
+And within the sample code we
+
+00:29:33.786 --> 00:29:34.826 A:middle
+have many different targets that
+
+00:29:34.826 --> 00:29:35.356 A:middle
+you can use.
+
+00:29:35.976 --> 00:29:36.986 A:middle
+But the one that I like to start
+
+00:29:36.986 --> 00:29:37.956 A:middle
+with first is this plot
+
+00:29:37.956 --> 00:29:39.106 A:middle
+templates modeling target that
+
+00:29:39.106 --> 00:29:40.286 A:middle
+we can see over here.
+
+00:29:41.436 --> 00:29:42.746 A:middle
+So, this will actually open up
+
+00:29:42.816 --> 00:29:44.296 A:middle
+instruments when I build and run
+
+00:29:44.296 --> 00:29:44.376 A:middle
+it.
+
+00:29:46.696 --> 00:29:48.156 A:middle
+Looks like the build succeeded.
+
+00:29:50.636 --> 00:29:52.276 A:middle
+And we can open up instruments
+
+00:29:52.276 --> 00:29:52.696 A:middle
+accordingly.
+
+00:29:54.096 --> 00:29:55.406 A:middle
+Now what I'll do here is I
+
+00:29:55.406 --> 00:29:57.036 A:middle
+actually have the goats app
+
+00:29:57.436 --> 00:29:58.806 A:middle
+already pulled up, so I won't
+
+00:29:58.806 --> 00:29:59.806 A:middle
+maximize the screen, because
+
+00:29:59.806 --> 00:30:01.076 A:middle
+we're going to need to keep this
+
+00:29:59.806 --> 00:30:01.076 A:middle
+we're going to need to keep this
+
+00:30:01.076 --> 00:30:02.086 A:middle
+in mind here.
+
+00:30:02.906 --> 00:30:03.826 A:middle
+Initially what I'll do is I'll
+
+00:30:03.826 --> 00:30:06.196 A:middle
+go to the blank template and in
+
+00:30:06.196 --> 00:30:07.116 A:middle
+the upper righthand corner, I
+
+00:30:07.116 --> 00:30:08.166 A:middle
+can select an instrument that
+
+00:30:08.166 --> 00:30:08.606 A:middle
+I'd like to add.
+
+00:30:08.606 --> 00:30:10.456 A:middle
+And so to do that, I'll go ahead
+
+00:30:10.576 --> 00:30:12.616 A:middle
+and go here and start searching
+
+00:30:12.616 --> 00:30:14.996 A:middle
+for the mobile agents target
+
+00:30:15.056 --> 00:30:17.066 A:middle
+that we just built.
+
+00:30:17.246 --> 00:30:18.396 A:middle
+Now within here, again I
+
+00:30:18.396 --> 00:30:19.476 A:middle
+mentioned the log narratives can
+
+00:30:19.476 --> 00:30:20.716 A:middle
+be enabled or disabled
+
+00:30:20.716 --> 00:30:22.186 A:middle
+dynamically via the Instruments
+
+00:30:22.186 --> 00:30:22.636 A:middle
+Inspector.
+
+00:30:22.636 --> 00:30:24.666 A:middle
+So using command i, I can open
+
+00:30:24.666 --> 00:30:26.276 A:middle
+up the Instruments Inspector and
+
+00:30:26.276 --> 00:30:27.476 A:middle
+here in the login tab, by
+
+00:30:27.476 --> 00:30:28.636 A:middle
+default it's set to none.
+
+00:30:28.826 --> 00:30:30.046 A:middle
+Butt I can switch that over to
+
+00:30:30.046 --> 00:30:31.186 A:middle
+narrative, and that will enable
+
+00:30:31.186 --> 00:30:32.266 A:middle
+these log narrative statements.
+
+00:30:33.176 --> 00:30:33.996 A:middle
+So, I'll go ahead and close
+
+00:30:33.996 --> 00:30:34.276 A:middle
+this.
+
+00:30:34.486 --> 00:30:36.096 A:middle
+And instead of all processes,
+
+00:30:36.126 --> 00:30:37.086 A:middle
+I'm going to switch it over to
+
+00:30:37.086 --> 00:30:38.366 A:middle
+this goat list app.
+
+00:30:39.356 --> 00:30:40.576 A:middle
+So, I'll start recording.
+
+00:30:41.006 --> 00:30:41.996 A:middle
+And here in the goat list I can
+
+00:30:41.996 --> 00:30:43.356 A:middle
+perform some actions such as
+
+00:30:43.356 --> 00:30:44.436 A:middle
+sorting the different list of
+
+00:30:44.436 --> 00:30:44.816 A:middle
+goats.
+
+00:30:45.316 --> 00:30:46.576 A:middle
+And I see some activity popping
+
+00:30:46.576 --> 00:30:47.426 A:middle
+up here in instruments.
+
+00:30:48.526 --> 00:30:49.566 A:middle
+I can click it again and we'll
+
+00:30:49.566 --> 00:30:50.696 A:middle
+see some more activity popping
+
+00:30:50.696 --> 00:30:52.206 A:middle
+up, but I think that's enough to
+
+00:30:52.206 --> 00:30:53.196 A:middle
+demonstrate the purpose here.
+
+00:30:54.656 --> 00:30:56.976 A:middle
+First I'd like to zoom in and
+
+00:30:56.976 --> 00:30:57.976 A:middle
+show the different intervals
+
+00:30:57.976 --> 00:30:58.946 A:middle
+that we were talking about
+
+00:30:58.946 --> 00:31:00.546 A:middle
+previously such as activating
+
+00:30:58.946 --> 00:31:00.546 A:middle
+previously such as activating
+
+00:31:00.546 --> 00:31:01.856 A:middle
+and the movements and
+
+00:31:01.856 --> 00:31:02.316 A:middle
+everything.
+
+00:31:03.126 --> 00:31:04.156 A:middle
+But to see the actual log
+
+00:31:04.156 --> 00:31:04.956 A:middle
+narrative statements, again,
+
+00:31:04.956 --> 00:31:05.906 A:middle
+I'll open up the Instruments
+
+00:31:05.906 --> 00:31:07.156 A:middle
+Inspector using command i.
+
+00:31:08.076 --> 00:31:09.026 A:middle
+And we got something new.
+
+00:31:09.026 --> 00:31:10.726 A:middle
+We got this modeler log table.
+
+00:31:11.046 --> 00:31:12.466 A:middle
+And in this modeler log table,
+
+00:31:12.466 --> 00:31:13.296 A:middle
+that's where all of our log
+
+00:31:13.296 --> 00:31:14.346 A:middle
+narrative statements will live,
+
+00:31:14.746 --> 00:31:16.296 A:middle
+such as this resolving agent
+
+00:31:16.296 --> 00:31:17.706 A:middle
+kind code that we saw in this
+
+00:31:17.706 --> 00:31:18.856 A:middle
+example of how we use log
+
+00:31:18.856 --> 00:31:19.246 A:middle
+narrative.
+
+00:31:19.706 --> 00:31:20.726 A:middle
+In addition to many other ones
+
+00:31:20.726 --> 00:31:21.686 A:middle
+that we have in our rules.
+
+00:31:22.206 --> 00:31:24.756 A:middle
+Now, how do we switch over from
+
+00:31:24.756 --> 00:31:25.846 A:middle
+using log narrative over to
+
+00:31:25.846 --> 00:31:26.356 A:middle
+profile.
+
+00:31:26.696 --> 00:31:29.066 A:middle
+Well again, in this login tab, I
+
+00:31:29.066 --> 00:31:29.996 A:middle
+can switch over to something
+
+00:31:29.996 --> 00:31:32.146 A:middle
+like profile 1, and I'll close
+
+00:31:32.146 --> 00:31:33.256 A:middle
+out of the Instruments Inspector
+
+00:31:33.726 --> 00:31:34.826 A:middle
+and try running Instruments
+
+00:31:34.826 --> 00:31:35.096 A:middle
+again.
+
+00:31:35.306 --> 00:31:36.356 A:middle
+I'll re-record the trace.
+
+00:31:37.096 --> 00:31:38.076 A:middle
+Now I realize that this is
+
+00:31:38.076 --> 00:31:40.076 A:middle
+already sorted but we can still
+
+00:31:40.076 --> 00:31:41.286 A:middle
+get some activity happening from
+
+00:31:41.286 --> 00:31:41.966 A:middle
+the mobile agents.
+
+00:31:42.406 --> 00:31:43.806 A:middle
+And that should be enough again
+
+00:31:43.806 --> 00:31:44.916 A:middle
+to demonstrate the purposes.
+
+00:31:45.856 --> 00:31:47.656 A:middle
+So, I'll stop and I'll open up
+
+00:31:47.656 --> 00:31:49.006 A:middle
+the Instruments Inspector again.
+
+00:31:49.996 --> 00:31:51.106 A:middle
+There is no more modeler log
+
+00:31:51.106 --> 00:31:52.326 A:middle
+table because we don't have any
+
+00:31:52.496 --> 00:31:53.396 A:middle
+log narratives to show.
+
+00:31:54.046 --> 00:31:55.106 A:middle
+But if, however, I go to this
+
+00:31:55.106 --> 00:31:57.296 A:middle
+modeler's tab up here, I can
+
+00:31:57.296 --> 00:31:58.486 A:middle
+actually see a very nice
+
+00:31:58.486 --> 00:31:59.746 A:middle
+descriptive view of these
+
+00:31:59.746 --> 00:32:01.886 A:middle
+different profiling values, such
+
+00:31:59.746 --> 00:32:01.886 A:middle
+different profiling values, such
+
+00:32:01.886 --> 00:32:03.376 A:middle
+as this rule, this lookup
+
+00:32:03.376 --> 00:32:06.246 A:middle
+unknown stop for execution got 7
+
+00:32:06.246 --> 00:32:07.436 A:middle
+entries in the amount of time
+
+00:32:07.436 --> 00:32:08.646 A:middle
+that it took and percentage wise
+
+00:32:08.646 --> 00:32:10.486 A:middle
+as well, in addition to many of
+
+00:32:10.486 --> 00:32:11.216 A:middle
+the other rules that I've
+
+00:32:11.216 --> 00:32:12.296 A:middle
+specified in my modeling.
+
+00:32:12.826 --> 00:32:15.156 A:middle
+Now, before closing this out, I
+
+00:32:15.346 --> 00:32:16.306 A:middle
+did notice something
+
+00:32:16.306 --> 00:32:17.326 A:middle
+particularly interesting.
+
+00:32:17.326 --> 00:32:18.276 A:middle
+I'm going to rerun the trace
+
+00:32:18.276 --> 00:32:19.706 A:middle
+once more because I want to
+
+00:32:19.706 --> 00:32:21.036 A:middle
+capture it one more time.
+
+00:32:22.026 --> 00:32:23.306 A:middle
+I'll start the sort and I see
+
+00:32:23.306 --> 00:32:24.176 A:middle
+these different activities
+
+00:32:24.176 --> 00:32:24.606 A:middle
+coming up.
+
+00:32:25.286 --> 00:32:26.836 A:middle
+But then if I sort again, I
+
+00:32:26.836 --> 00:32:27.946 A:middle
+notice that I get these long
+
+00:32:27.946 --> 00:32:29.396 A:middle
+orange intervals coming in after
+
+00:32:29.396 --> 00:32:29.756 A:middle
+the fact.
+
+00:32:29.816 --> 00:32:30.656 A:middle
+They don't really follow the
+
+00:32:30.656 --> 00:32:33.766 A:middle
+same live description or the
+
+00:32:33.766 --> 00:32:35.436 A:middle
+live rendering that I expect
+
+00:32:35.436 --> 00:32:36.076 A:middle
+with this Instrument.
+
+00:32:36.866 --> 00:32:38.026 A:middle
+Now, there is a reason why this
+
+00:32:38.026 --> 00:32:39.666 A:middle
+happens and in order to talk us
+
+00:32:39.726 --> 00:32:40.776 A:middle
+through it and how we can find a
+
+00:32:40.776 --> 00:32:42.096 A:middle
+solution for this, I want to
+
+00:32:42.096 --> 00:32:43.366 A:middle
+bring Chad back on to talk about
+
+00:32:43.366 --> 00:32:43.906 A:middle
+speculation.
+
+00:32:48.516 --> 00:32:50.796 A:middle
+[ Applause ]
+
+00:32:51.296 --> 00:32:53.196 A:middle
+&gt;&gt; Hi. Thank you, Alejandro.
+
+00:32:53.496 --> 00:32:55.376 A:middle
+All right, so to describe the
+
+00:32:55.446 --> 00:32:57.396 A:middle
+phenomenon that Alejandro was
+
+00:32:57.396 --> 00:32:58.426 A:middle
+seeing, or work around it, we
+
+00:32:58.686 --> 00:32:59.806 A:middle
+have to introduce a concept
+
+00:32:59.856 --> 00:33:00.736 A:middle
+called speculation.
+
+00:32:59.856 --> 00:33:00.736 A:middle
+called speculation.
+
+00:33:00.976 --> 00:33:02.856 A:middle
+And now what happened with those
+
+00:33:02.856 --> 00:33:03.376 A:middle
+intervals?
+
+00:33:03.716 --> 00:33:05.216 A:middle
+What makes them unique is first
+
+00:33:05.216 --> 00:33:06.056 A:middle
+they're long intervals.
+
+00:33:06.056 --> 00:33:07.836 A:middle
+They appear over or they extend
+
+00:33:07.836 --> 00:33:08.596 A:middle
+over a period of several
+
+00:33:08.596 --> 00:33:10.006 A:middle
+seconds, so it's more obvious,
+
+00:33:10.006 --> 00:33:10.526 A:middle
+more visible.
+
+00:33:11.196 --> 00:33:13.266 A:middle
+But secondly, the real problem
+
+00:33:13.266 --> 00:33:14.856 A:middle
+is that the only record of these
+
+00:33:14.856 --> 00:33:16.256 A:middle
+intervals that exists is sitting
+
+00:33:16.256 --> 00:33:17.336 A:middle
+in the working memory of your
+
+00:33:17.336 --> 00:33:17.796 A:middle
+modeler.
+
+00:33:18.056 --> 00:33:19.756 A:middle
+Now, your UI is actually looking
+
+00:33:19.756 --> 00:33:20.726 A:middle
+at the output tables in your
+
+00:33:20.726 --> 00:33:22.066 A:middle
+modeler, so it's not able to see
+
+00:33:22.066 --> 00:33:22.426 A:middle
+those.
+
+00:33:22.976 --> 00:33:24.206 A:middle
+And we can't really write those
+
+00:33:24.206 --> 00:33:25.526 A:middle
+intervals into the output table
+
+00:33:25.736 --> 00:33:27.326 A:middle
+until we know, you know, when
+
+00:33:27.326 --> 00:33:28.056 A:middle
+they're going to close.
+
+00:33:28.176 --> 00:33:29.876 A:middle
+And that's what you're seeing in
+
+00:33:29.876 --> 00:33:30.726 A:middle
+that particular case.
+
+00:33:31.666 --> 00:33:33.106 A:middle
+Now, what we really want to do
+
+00:33:33.106 --> 00:33:34.096 A:middle
+is be able to write like
+
+00:33:34.236 --> 00:33:35.816 A:middle
+temporary or placeholder rows
+
+00:33:35.816 --> 00:33:37.256 A:middle
+into the output tables of our
+
+00:33:37.256 --> 00:33:37.666 A:middle
+modeler.
+
+00:33:38.026 --> 00:33:39.176 A:middle
+And to do that, we've introduced
+
+00:33:39.176 --> 00:33:40.476 A:middle
+a concept called Speculation
+
+00:33:40.516 --> 00:33:40.716 A:middle
+mode.
+
+00:33:41.956 --> 00:33:43.206 A:middle
+Now, Speculation mode in your
+
+00:33:43.206 --> 00:33:44.816 A:middle
+modeler really says if this were
+
+00:33:44.816 --> 00:33:46.936 A:middle
+your last chance to write to the
+
+00:33:46.936 --> 00:33:48.606 A:middle
+output tables, what would you
+
+00:33:48.606 --> 00:33:49.326 A:middle
+write right now?
+
+00:33:49.886 --> 00:33:51.006 A:middle
+So, let's look at an example
+
+00:33:51.006 --> 00:33:51.176 A:middle
+here.
+
+00:33:51.756 --> 00:33:52.596 A:middle
+Let's say our modeler has
+
+00:33:52.626 --> 00:33:54.176 A:middle
+processed all the data up until
+
+00:33:54.176 --> 00:33:55.306 A:middle
+this white line here, which we
+
+00:33:55.306 --> 00:33:57.056 A:middle
+call the event horizon.
+
+00:33:57.236 --> 00:33:58.866 A:middle
+The event horizon is a point in
+
+00:33:58.926 --> 00:34:00.626 A:middle
+time after which the modeler has
+
+00:33:58.926 --> 00:34:00.626 A:middle
+time after which the modeler has
+
+00:34:00.626 --> 00:34:01.306 A:middle
+no visibility.
+
+00:34:01.536 --> 00:34:02.766 A:middle
+Now, that could be due to the
+
+00:34:02.766 --> 00:34:04.126 A:middle
+fact that the trace just ended,
+
+00:34:04.546 --> 00:34:05.986 A:middle
+or it could be that the analysis
+
+00:34:05.986 --> 00:34:07.616 A:middle
+core hasn't filled in that
+
+00:34:07.816 --> 00:34:09.056 A:middle
+portion of the trace yet.
+
+00:34:09.356 --> 00:34:10.676 A:middle
+And so it's unaware of what's on
+
+00:34:10.676 --> 00:34:11.556 A:middle
+the other side of that line.
+
+00:34:12.045 --> 00:34:13.146 A:middle
+Now, do you see that we've
+
+00:34:13.246 --> 00:34:14.366 A:middle
+created an interval that says
+
+00:34:14.366 --> 00:34:15.446 A:middle
+moving to the background.
+
+00:34:15.716 --> 00:34:16.606 A:middle
+And we can do that because it is
+
+00:34:16.606 --> 00:34:17.746 A:middle
+nicely bookended between a
+
+00:34:17.746 --> 00:34:19.496 A:middle
+moving and executing Signpost
+
+00:34:19.496 --> 00:34:19.706 A:middle
+pair.
+
+00:34:20.306 --> 00:34:21.795 A:middle
+But we don't know where that
+
+00:34:21.795 --> 00:34:23.166 A:middle
+followup executing interval's
+
+00:34:23.166 --> 00:34:24.156 A:middle
+really going to end because it's
+
+00:34:24.156 --> 00:34:25.106 A:middle
+ending event is on the other
+
+00:34:25.106 --> 00:34:26.126 A:middle
+side of the event horizon.
+
+00:34:26.416 --> 00:34:28.156 A:middle
+So what we want to do is when we
+
+00:34:28.156 --> 00:34:29.866 A:middle
+get into speculation mode, just
+
+00:34:29.936 --> 00:34:31.466 A:middle
+write a temporary placeholder
+
+00:34:31.466 --> 00:34:33.106 A:middle
+event into the tables so that
+
+00:34:33.106 --> 00:34:35.516 A:middle
+the UI can see something and
+
+00:34:35.516 --> 00:34:37.226 A:middle
+we're going to run that interval
+
+00:34:37.226 --> 00:34:38.886 A:middle
+basically from the executing
+
+00:34:38.886 --> 00:34:40.966 A:middle
+Signpost up to the current value
+
+00:34:41.166 --> 00:34:42.076 A:middle
+of the event horizon.
+
+00:34:43.346 --> 00:34:44.146 A:middle
+Now, you know that your
+
+00:34:44.146 --> 00:34:45.525 A:middle
+modeler's in Speculation mode
+
+00:34:45.636 --> 00:34:47.505 A:middle
+because you get a Speculate fact
+
+00:34:47.565 --> 00:34:49.356 A:middle
+that's going to be injected into
+
+00:34:49.596 --> 00:34:50.376 A:middle
+working memory.
+
+00:34:51.196 --> 00:34:52.726 A:middle
+And in your recorder rules, you
+
+00:34:52.726 --> 00:34:54.206 A:middle
+can combine that Speculate fact
+
+00:34:54.206 --> 00:34:56.275 A:middle
+with any interval facts to write
+
+00:34:56.565 --> 00:34:58.996 A:middle
+those open intervals into the
+
+00:34:58.996 --> 00:35:00.426 A:middle
+table with the captured event
+
+00:34:58.996 --> 00:35:00.426 A:middle
+table with the captured event
+
+00:35:00.426 --> 00:35:01.396 A:middle
+horizon timestamp.
+
+00:35:01.566 --> 00:35:03.836 A:middle
+And that's your opportunity to
+
+00:35:03.836 --> 00:35:04.916 A:middle
+write the open intervals.
+
+00:35:05.836 --> 00:35:07.396 A:middle
+So, let's take a look at example
+
+00:35:07.396 --> 00:35:08.376 A:middle
+rule that we might define here.
+
+00:35:08.986 --> 00:35:10.016 A:middle
+So first off, we're going to put
+
+00:35:10.016 --> 00:35:12.246 A:middle
+our speculative output writing
+
+00:35:12.246 --> 00:35:13.586 A:middle
+rule in the recorder module.
+
+00:35:13.586 --> 00:35:14.716 A:middle
+So, prefix it with a recorder
+
+00:35:14.716 --> 00:35:15.506 A:middle
+colon colon.
+
+00:35:16.796 --> 00:35:18.246 A:middle
+Now, we're going to match on the
+
+00:35:18.246 --> 00:35:19.616 A:middle
+Speculate event, capture the
+
+00:35:19.616 --> 00:35:21.156 A:middle
+value of the event horizon.
+
+00:35:21.156 --> 00:35:22.976 A:middle
+So, we have the end time for our
+
+00:35:22.976 --> 00:35:24.346 A:middle
+interval, our theoretical end
+
+00:35:24.346 --> 00:35:24.626 A:middle
+time.
+
+00:35:25.526 --> 00:35:27.506 A:middle
+Now, for each open interval fact
+
+00:35:27.506 --> 00:35:28.686 A:middle
+sitting in the working memory,
+
+00:35:28.936 --> 00:35:29.816 A:middle
+we're going to fire the
+
+00:35:29.816 --> 00:35:30.816 A:middle
+righthand side of the rule.
+
+00:35:31.486 --> 00:35:32.646 A:middle
+And what we're going to do here
+
+00:35:32.646 --> 00:35:34.736 A:middle
+is compute the duration based on
+
+00:35:34.736 --> 00:35:35.856 A:middle
+the end time which is the event
+
+00:35:35.856 --> 00:35:37.226 A:middle
+horizon and start time which is
+
+00:35:37.226 --> 00:35:38.516 A:middle
+whenever the interval started.
+
+00:35:39.346 --> 00:35:41.436 A:middle
+And then you create a new row
+
+00:35:41.436 --> 00:35:42.616 A:middle
+and fill out the columns just
+
+00:35:42.616 --> 00:35:43.666 A:middle
+like you would in normal output
+
+00:35:43.666 --> 00:35:44.126 A:middle
+writing rule.
+
+00:35:44.336 --> 00:35:45.386 A:middle
+Now the only difference really
+
+00:35:45.526 --> 00:35:46.826 A:middle
+between a normal output writing
+
+00:35:46.826 --> 00:35:47.926 A:middle
+rule and a speculative output
+
+00:35:47.926 --> 00:35:50.146 A:middle
+writing rule is that you're
+
+00:35:50.146 --> 00:35:51.756 A:middle
+testing or predicating this rule
+
+00:35:51.756 --> 00:35:53.936 A:middle
+on the Speculate fact, and
+
+00:35:54.016 --> 00:35:55.066 A:middle
+you're looking at the open
+
+00:35:55.066 --> 00:35:56.346 A:middle
+intervals instead of the closed
+
+00:35:56.346 --> 00:35:57.446 A:middle
+intervals, which you'd normally
+
+00:35:57.446 --> 00:35:59.056 A:middle
+be writing into your output
+
+00:35:59.056 --> 00:35:59.326 A:middle
+table.
+
+00:36:00.706 --> 00:36:02.606 A:middle
+Now, when you're in immediate
+
+00:36:02.606 --> 00:36:04.516 A:middle
+mode, what happens is that as
+
+00:36:04.516 --> 00:36:05.746 A:middle
+that recording head moves
+
+00:36:05.796 --> 00:36:08.496 A:middle
+forward, the older speculative
+
+00:36:08.496 --> 00:36:10.386 A:middle
+data is purged and your modeler
+
+00:36:10.386 --> 00:36:11.616 A:middle
+enters into speculation mode
+
+00:36:11.616 --> 00:36:13.076 A:middle
+again with a new value of the
+
+00:36:13.076 --> 00:36:14.706 A:middle
+event horizon and you're able to
+
+00:36:14.706 --> 00:36:15.946 A:middle
+put those speculation events
+
+00:36:15.946 --> 00:36:16.106 A:middle
+back.
+
+00:36:16.676 --> 00:36:18.476 A:middle
+And the UI just continues to
+
+00:36:18.476 --> 00:36:19.336 A:middle
+update like normal.
+
+00:36:20.056 --> 00:36:21.986 A:middle
+Now when the trace stops, your
+
+00:36:21.986 --> 00:36:23.756 A:middle
+modeler will enter Speculation
+
+00:36:23.756 --> 00:36:24.746 A:middle
+mode one more time.
+
+00:36:24.746 --> 00:36:26.686 A:middle
+But whatever you write now will
+
+00:36:26.686 --> 00:36:28.466 A:middle
+actually be recorded and saved
+
+00:36:28.466 --> 00:36:30.106 A:middle
+in the real trace data and
+
+00:36:30.106 --> 00:36:31.376 A:middle
+become available to downstream
+
+00:36:31.376 --> 00:36:32.666 A:middle
+modelers, not just the UI.
+
+00:36:32.666 --> 00:36:35.536 A:middle
+Now, if we make that change to
+
+00:36:35.536 --> 00:36:38.316 A:middle
+our existing instrument, it'll
+
+00:36:38.316 --> 00:36:39.466 A:middle
+start working like this now
+
+00:36:39.776 --> 00:36:40.686 A:middle
+where you have our mobile agent
+
+00:36:40.686 --> 00:36:42.716 A:middle
+trace and now you see this
+
+00:36:42.716 --> 00:36:44.896 A:middle
+parking interval continuing to
+
+00:36:44.896 --> 00:36:45.796 A:middle
+grow here at the end.
+
+00:36:45.946 --> 00:36:47.526 A:middle
+And it updates in real time.
+
+00:36:47.526 --> 00:36:48.736 A:middle
+If you look in the detail table
+
+00:36:48.736 --> 00:36:49.586 A:middle
+on the bottom, you'll see the
+
+00:36:49.586 --> 00:36:51.506 A:middle
+duration continuing to grow.
+
+00:36:52.356 --> 00:36:54.496 A:middle
+Now, when we press stop and end
+
+00:36:54.496 --> 00:36:55.786 A:middle
+the recording, you'll notice
+
+00:36:55.786 --> 00:36:56.896 A:middle
+that the interval sticks around.
+
+00:36:56.896 --> 00:36:58.076 A:middle
+It's actually been recorded and
+
+00:36:58.316 --> 00:36:59.346 A:middle
+will be saved as part of the
+
+00:36:59.346 --> 00:36:59.836 A:middle
+trace.
+
+00:37:01.356 --> 00:37:02.536 A:middle
+Now in summary, we know that
+
+00:37:02.536 --> 00:37:03.536 A:middle
+writing custom modelers
+
+00:37:03.536 --> 00:37:05.086 A:middle
+represents a significant
+
+00:37:05.086 --> 00:37:06.186 A:middle
+investment, both in your time
+
+00:37:06.186 --> 00:37:07.336 A:middle
+and learning a new technology.
+
+00:37:07.816 --> 00:37:09.316 A:middle
+But it's really the best way to
+
+00:37:09.316 --> 00:37:10.466 A:middle
+get the most out of custom
+
+00:37:10.466 --> 00:37:11.536 A:middle
+instruments and to add
+
+00:37:11.536 --> 00:37:12.906 A:middle
+intelligence to your custom
+
+00:37:12.906 --> 00:37:13.426 A:middle
+instruments.
+
+00:37:13.696 --> 00:37:15.116 A:middle
+And as we've seen, an
+
+00:37:15.116 --> 00:37:16.426 A:middle
+intelligent instrument can lead
+
+00:37:16.426 --> 00:37:17.936 A:middle
+to a more efficient recording
+
+00:37:17.936 --> 00:37:19.526 A:middle
+mechanism and a much better user
+
+00:37:19.526 --> 00:37:20.196 A:middle
+experience.
+
+00:37:22.036 --> 00:37:23.096 A:middle
+So for more information, we have
+
+00:37:23.096 --> 00:37:24.646 A:middle
+our attached sample code, also
+
+00:37:24.646 --> 00:37:26.416 A:middle
+some related sessions on our
+
+00:37:26.416 --> 00:37:27.916 A:middle
+sessions webpage.
+
+00:37:28.366 --> 00:37:29.816 A:middle
+And that about does it for
+
+00:37:29.816 --> 00:37:30.126 A:middle
+today.
+
+00:37:30.216 --> 00:37:30.866 A:middle
+Thank you very much.
+
+00:37:31.006 --> 00:37:31.666 A:middle
+Enjoy the rest of the show.
+
+00:37:32.516 --> 00:37:35.500 A:middle
+[ Applause ]
