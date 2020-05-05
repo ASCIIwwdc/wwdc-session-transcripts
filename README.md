@@ -1,6 +1,6 @@
 # WWDC Session Transcripts
 
-As used by [ASCIIwwdc](http://asciiwwdc.com).
+As used by [ASCIIwwdc](https://asciiwwdc.com).
 
 ## Methodology
 
