@@ -1,0 +1,2181 @@
+WEBVTT
+
+00:00:06.516 --> 00:00:17.516 A:middle
+[ Music ]
+
+00:00:18.516 --> 00:00:25.366 A:middle
+[ Applause ]
+
+00:00:25.866 --> 00:00:28.216 A:middle
+&gt;&gt; Welcome to Optimizing
+On-Demand Resources.
+
+00:00:28.306 --> 00:00:32.566 A:middle
+I'm Bill Bumgarner with
+the tvOS Engineering Team.
+
+00:00:32.776 --> 00:00:36.756 A:middle
+So in this session, well,
+in the, in last year's WWDC
+
+00:00:36.756 --> 00:00:39.496 A:middle
+and in the developer
+kitchens throughout the year,
+
+00:00:39.496 --> 00:00:42.706 A:middle
+we've covered really how
+to use on-demand resources.
+
+00:00:43.076 --> 00:00:44.676 A:middle
+In this session, we
+really want to focus
+
+00:00:44.676 --> 00:00:47.356 A:middle
+on how you optimize the use
+of them, and in particular,
+
+00:00:47.816 --> 00:00:50.456 A:middle
+how you polish the user
+experience to really make
+
+00:00:50.456 --> 00:00:52.406 A:middle
+for a fabulous user experience.
+
+00:00:53.136 --> 00:00:55.076 A:middle
+So we're going to look
+at a basic overview
+
+00:00:55.076 --> 00:00:56.206 A:middle
+of some of the motivations.
+
+00:00:56.276 --> 00:01:00.216 A:middle
+How you assign tags, the use of
+the API's, and then we're going
+
+00:00:56.276 --> 00:01:00.216 A:middle
+How you assign tags, the use of
+the API's, and then we're going
+
+00:01:00.216 --> 00:01:02.486 A:middle
+to get into how you
+optimize that first launch
+
+00:01:02.486 --> 00:01:06.356 A:middle
+and how you optimize the
+ongoing user experience as well
+
+00:01:06.356 --> 00:01:10.046 A:middle
+as we'll look at optimizing
+app updates, and we will get
+
+00:01:10.046 --> 00:01:13.756 A:middle
+into some of the
+implementation details.
+
+00:01:13.756 --> 00:01:17.936 A:middle
+So why? Why did we do
+this on-demand resources?
+
+00:01:17.986 --> 00:01:20.846 A:middle
+Well, if we look at a
+traditional application,
+
+00:01:20.986 --> 00:01:24.526 A:middle
+it's composed of an application
+binary and a bunch of resources,
+
+00:01:24.636 --> 00:01:26.796 A:middle
+and together these
+make your app bundle.
+
+00:01:26.856 --> 00:01:29.486 A:middle
+This is what gets mastered,
+uploaded to the store,
+
+00:01:29.856 --> 00:01:33.036 A:middle
+and this is what your
+customers download and install,
+
+00:01:33.036 --> 00:01:34.536 A:middle
+and over time, they'll download
+
+00:01:34.536 --> 00:01:36.446 A:middle
+and install a bunch
+of applications.
+
+00:01:37.296 --> 00:01:39.996 A:middle
+But if we look at the use
+patterns of these applications,
+
+00:01:39.996 --> 00:01:45.236 A:middle
+what we notice is that only some
+of the resources are used a lot.
+
+00:01:45.876 --> 00:01:47.666 A:middle
+Some of the resources
+may have been used once
+
+00:01:47.666 --> 00:01:49.736 A:middle
+at the tutorial level
+or something like that,
+
+00:01:50.416 --> 00:01:53.366 A:middle
+and this ends up eating
+up a lot of disk space.
+
+00:01:53.976 --> 00:01:56.386 A:middle
+And it also means the
+user has to kind of think
+
+00:01:56.386 --> 00:01:58.426 A:middle
+about what they want to keep and
+what they don't want to keep,
+
+00:01:58.426 --> 00:01:59.996 A:middle
+and we don't really
+want to make our users
+
+00:01:59.996 --> 00:02:01.236 A:middle
+into system administrators.
+
+00:01:59.996 --> 00:02:01.236 A:middle
+into system administrators.
+
+00:02:02.756 --> 00:02:06.356 A:middle
+So with an on-demand resources
+app, what we're really trying
+
+00:02:06.356 --> 00:02:09.015 A:middle
+to optimize is optimize
+that resource usage
+
+00:02:09.015 --> 00:02:11.196 A:middle
+up around what is being used,
+
+00:02:11.366 --> 00:02:14.946 A:middle
+and make sure it's available
+before the user actually notices
+
+00:02:14.946 --> 00:02:16.016 A:middle
+it needs to be downloaded.
+
+00:02:17.186 --> 00:02:20.606 A:middle
+So we take your traditional app,
+and we divide those resources
+
+00:02:20.606 --> 00:02:24.796 A:middle
+up into the bundled resources
+and the on-demand resources
+
+00:02:24.796 --> 00:02:26.516 A:middle
+that are not actually
+on the system
+
+00:02:26.516 --> 00:02:28.276 A:middle
+when the app is installed
+necessarily.
+
+00:02:29.246 --> 00:02:33.386 A:middle
+Now, there was some
+misconceptions in the last year
+
+00:02:33.546 --> 00:02:35.946 A:middle
+about the size of
+tvOS applications.
+
+00:02:37.006 --> 00:02:38.606 A:middle
+There was a, this notion
+
+00:02:38.606 --> 00:02:40.626 A:middle
+that they were limited
+to 200 megabytes.
+
+00:02:40.746 --> 00:02:41.866 A:middle
+That's not actually true.
+
+00:02:42.556 --> 00:02:48.256 A:middle
+On tvOS, the main app bundle
+is 200 megabytes, and iOS,
+
+00:02:48.256 --> 00:02:51.236 A:middle
+it can be up to 4 gigabytes,
+however, in both cases,
+
+00:02:51.276 --> 00:02:54.096 A:middle
+they can have up to 20 gigabytes
+of on-demand resources.
+
+00:02:55.996 --> 00:02:58.156 A:middle
+So on-demand resources.
+
+00:02:58.926 --> 00:03:02.356 A:middle
+They provide dynamically
+loaded content that's available
+
+00:02:58.926 --> 00:03:02.356 A:middle
+They provide dynamically
+loaded content that's available
+
+00:03:02.356 --> 00:03:05.516 A:middle
+on demand or can be downloaded
+when the app's installed.
+
+00:03:06.816 --> 00:03:08.056 A:middle
+It's hosted on the App Store,
+
+00:03:08.556 --> 00:03:10.576 A:middle
+including hosting
+across versions.
+
+00:03:10.806 --> 00:03:12.716 A:middle
+So upgrades aren't a problem.
+
+00:03:12.866 --> 00:03:14.276 A:middle
+Obviously, if you have
+a user that sticks
+
+00:03:14.276 --> 00:03:15.816 A:middle
+on an old version,
+it'll still work.
+
+00:03:18.126 --> 00:03:20.656 A:middle
+These are downloadable during
+application installation.
+
+00:03:20.656 --> 00:03:23.916 A:middle
+They're also downloadable
+during runtime by your request,
+
+00:03:24.666 --> 00:03:27.546 A:middle
+and you can control the priority
+with which they're downloaded,
+
+00:03:27.546 --> 00:03:28.916 A:middle
+and you can shuffle
+that priority
+
+00:03:28.916 --> 00:03:32.026 A:middle
+around as the user may change
+their mind and move around
+
+00:03:32.026 --> 00:03:33.426 A:middle
+and do whatever they want to do.
+
+00:03:34.326 --> 00:03:36.976 A:middle
+As well, all of this works
+together with the system
+
+00:03:36.976 --> 00:03:39.686 A:middle
+to provide intelligent
+content caching as well
+
+00:03:39.686 --> 00:03:40.756 A:middle
+as intelligent purging.
+
+00:03:41.636 --> 00:03:43.626 A:middle
+Again, let's get the
+user out of the game
+
+00:03:43.626 --> 00:03:44.946 A:middle
+of administrating their systems.
+
+00:03:44.946 --> 00:03:49.446 A:middle
+So the benefits to your app
+are small or main app bundle,
+
+00:03:50.186 --> 00:03:51.866 A:middle
+which means it's fast
+or initial download.
+
+00:03:52.166 --> 00:03:54.216 A:middle
+What it means it's a
+faster period of time
+
+00:03:54.216 --> 00:03:55.826 A:middle
+between which they
+click that buy button
+
+00:03:55.826 --> 00:03:57.146 A:middle
+and they're using your program.
+
+00:03:57.696 --> 00:04:03.466 A:middle
+As well, you get a lot richer
+app content, up to 20 gigs.
+
+00:03:57.696 --> 00:04:03.466 A:middle
+As well, you get a lot richer
+app content, up to 20 gigs.
+
+00:04:03.516 --> 00:04:07.066 A:middle
+I mean, that's a lot of space.
+
+00:04:07.186 --> 00:04:10.196 A:middle
+And you can, there can be more
+apps installed on the system.
+
+00:04:10.276 --> 00:04:13.286 A:middle
+They're ready to run,
+and it reduces the need
+
+00:04:13.286 --> 00:04:14.356 A:middle
+to manage that storage.
+
+00:04:14.546 --> 00:04:16.846 A:middle
+It also means that, you know,
+they take a bunch of pictures,
+
+00:04:16.846 --> 00:04:19.016 A:middle
+and some of the on-demand
+might get flushed out,
+
+00:04:19.156 --> 00:04:20.926 A:middle
+and that's all automatic.
+
+00:04:22.055 --> 00:04:24.296 A:middle
+So how do we do this?
+
+00:04:24.296 --> 00:04:25.176 A:middle
+How do we adopt this?
+
+00:04:25.176 --> 00:04:28.156 A:middle
+Well, the first thing you have
+to do is you have to assign tags
+
+00:04:28.396 --> 00:04:31.696 A:middle
+to all those resources,
+and you do that by looking
+
+00:04:31.696 --> 00:04:34.176 A:middle
+within your application,
+looking at all those resources,
+
+00:04:34.176 --> 00:04:37.126 A:middle
+and figuring out the roles each
+resource plays within your app,
+
+00:04:37.556 --> 00:04:38.486 A:middle
+and when you need them.
+
+00:04:39.016 --> 00:04:42.596 A:middle
+And then you go into
+Xcode, and you assign tags.
+
+00:04:42.596 --> 00:04:43.986 A:middle
+Now tags are nothing magical.
+
+00:04:43.986 --> 00:04:44.966 A:middle
+They're just strings.
+
+00:04:45.896 --> 00:04:49.986 A:middle
+Just any old string you
+want, Level 1, whatever,
+
+00:04:50.746 --> 00:04:52.846 A:middle
+and they can be applied
+to a single asset
+
+00:04:52.846 --> 00:04:55.286 A:middle
+or a single resource,
+a sound file,
+
+00:04:55.286 --> 00:04:58.686 A:middle
+a texture, an image, whatever.
+
+00:04:58.756 --> 00:05:01.986 A:middle
+Pure data, or they can be
+assigned to entire folders.
+
+00:04:58.756 --> 00:05:01.986 A:middle
+Pure data, or they can be
+assigned to entire folders.
+
+00:05:02.556 --> 00:05:05.346 A:middle
+As well, any given resource
+can have multiple tags
+
+00:05:05.346 --> 00:05:07.446 A:middle
+because it might
+play multiple roles.
+
+00:05:08.336 --> 00:05:11.506 A:middle
+So let's go back and let's look
+at our GreatGame, and let's look
+
+00:05:11.506 --> 00:05:13.666 A:middle
+at those resources,
+and, specifically,
+
+00:05:13.666 --> 00:05:15.806 A:middle
+let's break those
+resources out by role.
+
+00:05:16.516 --> 00:05:16.946 A:middle
+So in this,
+
+00:05:16.946 --> 00:05:19.336 A:middle
+it's a straightforward
+level-based application,
+
+00:05:20.576 --> 00:05:23.356 A:middle
+and it has resources
+that are required always.
+
+00:05:23.526 --> 00:05:25.416 A:middle
+These are the ones that,
+like, your launch screen,
+
+00:05:25.416 --> 00:05:27.376 A:middle
+your splash screen,
+maybe the setting screen.
+
+00:05:27.376 --> 00:05:27.946 A:middle
+That kind of thing.
+
+00:05:27.946 --> 00:05:31.596 A:middle
+And then it has resources that
+are in the role of supplying
+
+00:05:31.776 --> 00:05:35.406 A:middle
+for each level as well as maybe
+something for a purchasable item
+
+00:05:35.406 --> 00:05:36.486 A:middle
+or an in-app purchase.
+
+00:05:38.136 --> 00:05:40.466 A:middle
+And to tag these, it's
+pretty straightforward.
+
+00:05:40.626 --> 00:05:42.366 A:middle
+Just give them the same
+name as their role.
+
+00:05:44.616 --> 00:05:47.766 A:middle
+So when we do these,
+when we look at these,
+
+00:05:47.766 --> 00:05:49.706 A:middle
+what's the strategy for
+tagging these things?
+
+00:05:50.036 --> 00:05:53.116 A:middle
+Well, only put in the
+main bundle the resources
+
+00:05:53.116 --> 00:05:54.576 A:middle
+that are absolutely
+positively needed
+
+00:05:54.576 --> 00:05:55.866 A:middle
+by the application all the time.
+
+00:05:56.646 --> 00:05:57.806 A:middle
+Your loading screen.
+
+00:05:57.806 --> 00:05:58.536 A:middle
+Your splash screen.
+
+00:05:58.536 --> 00:06:00.696 A:middle
+That kind of thing.
+
+00:05:58.536 --> 00:06:00.696 A:middle
+That kind of thing.
+
+00:06:00.886 --> 00:06:04.386 A:middle
+And then you apply tags to
+everything else that's there.
+
+00:06:05.406 --> 00:06:09.466 A:middle
+And each tag can be applied
+to up to 512 megabyte
+
+00:06:09.576 --> 00:06:11.196 A:middle
+of assets or resources.
+
+00:06:11.636 --> 00:06:13.536 A:middle
+However, we really
+recommend that you stick
+
+00:06:13.536 --> 00:06:15.716 A:middle
+around that 64-megabyte
+limit simply
+
+00:06:15.716 --> 00:06:18.396 A:middle
+because that makes the
+downloads that much faster
+
+00:06:18.396 --> 00:06:19.966 A:middle
+and less perceptible
+to the user.
+
+00:06:20.926 --> 00:06:23.686 A:middle
+And, again, you can have more
+than one tag per resource,
+
+00:06:24.216 --> 00:06:27.426 A:middle
+and it, whenever you use one
+of the tags, it will pull
+
+00:06:27.426 --> 00:06:29.856 A:middle
+down all the resources
+as appropriate.
+
+00:06:30.266 --> 00:06:34.916 A:middle
+So now that we've got
+everything organized and tagged,
+
+00:06:35.136 --> 00:06:36.776 A:middle
+let's look at the runtime side.
+
+00:06:37.456 --> 00:06:42.086 A:middle
+Within the runtime, we tried to
+make the API very simple, and,
+
+00:06:42.086 --> 00:06:43.706 A:middle
+in fact, it's only one class.
+
+00:06:44.706 --> 00:06:47.066 A:middle
+There's the bundle
+resource request class.
+
+00:06:47.736 --> 00:06:51.986 A:middle
+Now you create an instance of
+this to manage all the access
+
+00:06:51.986 --> 00:06:53.346 A:middle
+to your on-demand resources.
+
+00:06:53.996 --> 00:06:56.626 A:middle
+It's created with a
+tag or a set of tags,
+
+00:06:56.926 --> 00:06:59.366 A:middle
+and it has some other
+options for managing it.
+
+00:06:59.766 --> 00:07:03.096 A:middle
+You use it to begin and end
+accessing to those resources.
+
+00:06:59.766 --> 00:07:03.096 A:middle
+You use it to begin and end
+accessing to those resources.
+
+00:07:03.176 --> 00:07:06.366 A:middle
+Begin accessing is what triggers
+a download if necessary,
+
+00:07:06.856 --> 00:07:09.426 A:middle
+and end accessing is what tells
+the system, hey, I'm done.
+
+00:07:10.416 --> 00:07:12.756 A:middle
+And on this object, you
+can also set the priority.
+
+00:07:12.966 --> 00:07:14.856 A:middle
+If you have a particularly
+large download
+
+00:07:14.856 --> 00:07:16.336 A:middle
+or a particularly
+slow connection,
+
+00:07:16.336 --> 00:07:19.416 A:middle
+you can track progress, and
+there's also the possibility
+
+00:07:19.416 --> 00:07:21.896 A:middle
+of an error, which we'll
+talk about in a minute.
+
+00:07:22.436 --> 00:07:23.366 A:middle
+One of the interesting things
+
+00:07:23.366 --> 00:07:25.996 A:middle
+about this class is each
+instance is one shot.
+
+00:07:25.996 --> 00:07:28.356 A:middle
+They are very lightweight,
+very cheap to create.
+
+00:07:28.356 --> 00:07:30.106 A:middle
+So that means when
+you create one,
+
+00:07:30.606 --> 00:07:32.296 A:middle
+and you call begin
+accessing on it
+
+00:07:32.376 --> 00:07:34.976 A:middle
+after you've called end
+accessing, that object's done.
+
+00:07:35.476 --> 00:07:39.386 A:middle
+Create a new one.
+
+00:07:39.386 --> 00:07:42.836 A:middle
+And one concept that we find
+is very important to take
+
+00:07:42.836 --> 00:07:47.636 A:middle
+to heart is that the request
+is decoupled from access.
+
+00:07:48.606 --> 00:07:52.506 A:middle
+So you decouple when
+you make that request
+
+00:07:52.506 --> 00:07:54.816 A:middle
+from when you're going to
+use the resource, and we can,
+
+00:07:54.816 --> 00:07:56.516 A:middle
+we'll cover this in
+the predictive loading.
+
+00:07:56.646 --> 00:07:58.446 A:middle
+So we can predict what
+the user's going to do
+
+00:07:58.446 --> 00:08:00.316 A:middle
+to make sure they never
+see those loading screens.
+
+00:07:58.446 --> 00:08:00.316 A:middle
+to make sure they never
+see those loading screens.
+
+00:08:00.316 --> 00:08:06.666 A:middle
+So looking at the actual code,
+it's really straightforward
+
+00:08:06.666 --> 00:08:08.946 A:middle
+to initialize a bundle
+resource request.
+
+00:08:08.946 --> 00:08:11.986 A:middle
+Just give it a set of tags,
+and you have your request.
+
+00:08:12.726 --> 00:08:14.806 A:middle
+If you want to begin the
+accessing those tags,
+
+00:08:15.166 --> 00:08:18.576 A:middle
+you call begin accessing, and
+it has a completion handler,
+
+00:08:18.576 --> 00:08:20.806 A:middle
+and that completion handler
+will be called with an error
+
+00:08:20.806 --> 00:08:22.846 A:middle
+if there is an error, or
+it will be called no error,
+
+00:08:23.176 --> 00:08:24.826 A:middle
+and you're resources
+are available.
+
+00:08:25.676 --> 00:08:28.336 A:middle
+To get at the resources,
+you use the bundle API.
+
+00:08:28.336 --> 00:08:31.206 A:middle
+So you grab the NS bundle
+instance, I'm sorry,
+
+00:08:31.466 --> 00:08:34.846 A:middle
+the bundle instance [inaudible]
+renaming, from the request,
+
+00:08:34.905 --> 00:08:38.216 A:middle
+and you just use the normal
+resource request methods
+
+00:08:38.216 --> 00:08:40.346 A:middle
+on bundle to get a hold of that.
+
+00:08:40.626 --> 00:08:44.145 A:middle
+And once you're done, it's very
+important to call end accessing.
+
+00:08:44.496 --> 00:08:46.916 A:middle
+This tells the system that
+you're done with that resource.
+
+00:08:47.216 --> 00:08:48.176 A:middle
+Now it's very important to note
+
+00:08:48.176 --> 00:08:50.156 A:middle
+that that doesn't mean the
+system's actually going
+
+00:08:50.156 --> 00:08:51.046 A:middle
+to delete the resource.
+
+00:08:51.496 --> 00:08:53.376 A:middle
+Our systems are very lazy.
+
+00:08:53.376 --> 00:08:54.836 A:middle
+They don't want to
+do any extra work,
+
+00:08:55.006 --> 00:08:57.896 A:middle
+and deleting stuff's extra work.
+
+00:08:58.086 --> 00:09:00.676 A:middle
+So when you're loading
+resources,
+
+00:08:58.086 --> 00:09:00.676 A:middle
+So when you're loading
+resources,
+
+00:09:00.976 --> 00:09:02.306 A:middle
+you can control the priority.
+
+00:09:02.526 --> 00:09:04.946 A:middle
+Like, say you're moving
+through your, a game, and,
+
+00:09:04.946 --> 00:09:06.326 A:middle
+and the users change their mind,
+
+00:09:06.326 --> 00:09:07.946 A:middle
+and you were downloading
+this level over here,
+
+00:09:07.946 --> 00:09:09.416 A:middle
+now you need to download
+Level 5.
+
+00:09:10.276 --> 00:09:12.096 A:middle
+Well, you start at
+the begin access.
+
+00:09:12.096 --> 00:09:14.006 A:middle
+You can go, and you can
+change the loading priority
+
+00:09:14.006 --> 00:09:16.086 A:middle
+to bump the priority
+on the Level 5 stuff
+
+00:09:16.416 --> 00:09:18.286 A:middle
+and decrease the
+priority on Level 3
+
+00:09:18.286 --> 00:09:20.386 A:middle
+if you think they might go
+back, or you can end it.
+
+00:09:21.616 --> 00:09:23.386 A:middle
+It's just a value
+from zero to one,
+
+00:09:24.016 --> 00:09:26.456 A:middle
+but there is the
+special urgent priority.
+
+00:09:27.116 --> 00:09:30.906 A:middle
+There will be times when the
+player has decided to go off
+
+00:09:30.906 --> 00:09:33.016 A:middle
+in a direction that you couldn't
+possibly have predicted,
+
+00:09:33.486 --> 00:09:36.106 A:middle
+and you need to just
+download everything right now.
+
+00:09:36.586 --> 00:09:40.736 A:middle
+And in this case, this special
+high urgency loading priority
+
+00:09:40.866 --> 00:09:41.646 A:middle
+can be used.
+
+00:09:42.006 --> 00:09:43.546 A:middle
+It suspends all other download,
+
+00:09:44.266 --> 00:09:46.366 A:middle
+and it also maximizes
+the throughput.
+
+00:09:46.366 --> 00:09:47.606 A:middle
+So there's no network
+throttling,
+
+00:09:48.306 --> 00:09:51.636 A:middle
+and it also maximizes CPU usage
+dedicated to that download.
+
+00:09:54.716 --> 00:09:57.246 A:middle
+Finally, there's
+conditional requests.
+
+00:09:57.696 --> 00:10:00.546 A:middle
+Now a conditional request
+can be used to check to see
+
+00:09:57.696 --> 00:10:00.546 A:middle
+Now a conditional request
+can be used to check to see
+
+00:10:00.546 --> 00:10:01.976 A:middle
+if the resources has
+already been downloaded.
+
+00:10:03.286 --> 00:10:06.436 A:middle
+So if you remember when I
+said end accessing doesn't
+
+00:10:06.436 --> 00:10:08.596 A:middle
+necessarily delete
+resources, well,
+
+00:10:09.496 --> 00:10:11.296 A:middle
+the player's been
+playing a game.
+
+00:10:11.296 --> 00:10:13.096 A:middle
+They've gone through
+Level 1, 2, and 3.
+
+00:10:13.326 --> 00:10:15.606 A:middle
+You've ended accessing
+to Level 1, 2, and 3.
+
+00:10:16.686 --> 00:10:17.696 A:middle
+They quit the game.
+
+00:10:17.696 --> 00:10:18.816 A:middle
+They've gone off and
+done something else.
+
+00:10:18.816 --> 00:10:20.256 A:middle
+They come back, relaunch
+the game,
+
+00:10:20.936 --> 00:10:22.566 A:middle
+and they want to replay Level 1.
+
+00:10:23.016 --> 00:10:26.046 A:middle
+Well, you can use conditionally
+at, or say they want
+
+00:10:26.046 --> 00:10:27.186 A:middle
+to select between levels.
+
+00:10:27.506 --> 00:10:30.146 A:middle
+You can use conditionally
+begin accessing
+
+00:10:30.596 --> 00:10:32.226 A:middle
+to check what levels
+are already downloaded,
+
+00:10:32.226 --> 00:10:33.436 A:middle
+and give them indication
+
+00:10:33.436 --> 00:10:34.766 A:middle
+of what's already
+available to play.
+
+00:10:35.366 --> 00:10:37.876 A:middle
+Or if they dive into a
+level, and you've broken
+
+00:10:37.876 --> 00:10:40.186 A:middle
+up your resources by
+role within the level,
+
+00:10:40.186 --> 00:10:42.306 A:middle
+maybe you optimize the
+first part of the level
+
+00:10:42.306 --> 00:10:45.686 A:middle
+to only showing the trees and
+bushes and enemies that happen
+
+00:10:45.686 --> 00:10:48.866 A:middle
+to be on disk at that time
+while you download the rest
+
+00:10:48.866 --> 00:10:49.706 A:middle
+of it in the background.
+
+00:10:50.516 --> 00:10:52.526 A:middle
+So all of this is
+about you being able
+
+00:10:52.526 --> 00:10:54.396 A:middle
+to avoid loading screens
+whenever possible.
+
+00:10:54.846 --> 00:10:58.176 A:middle
+And if the items are
+already downloaded,
+
+00:10:58.176 --> 00:11:00.596 A:middle
+this works exactly
+like begin accessing.
+
+00:10:58.176 --> 00:11:00.596 A:middle
+this works exactly
+like begin accessing.
+
+00:11:01.126 --> 00:11:04.876 A:middle
+And as well, as always,
+call end accessing,
+
+00:11:04.966 --> 00:11:08.776 A:middle
+even if you got the
+callback, and it was false,
+
+00:11:08.776 --> 00:11:11.256 A:middle
+and you decided you didn't
+want to trigger it download,
+
+00:11:11.446 --> 00:11:12.646 A:middle
+always call end accessing.
+
+00:11:14.676 --> 00:11:17.816 A:middle
+So now you have a
+working application,
+
+00:11:22.476 --> 00:11:24.296 A:middle
+but let's look at
+that first launch.
+
+00:11:24.716 --> 00:11:30.436 A:middle
+And let's look at a timeline
+in particular, and we're going
+
+00:11:30.436 --> 00:11:34.156 A:middle
+to go with a timeline from
+the moment the user buys the
+
+00:11:34.426 --> 00:11:37.506 A:middle
+application in the store, it
+gets downloaded, it's installed,
+
+00:11:38.846 --> 00:11:41.496 A:middle
+and then the first launch
+happens, and what do we do.
+
+00:11:41.496 --> 00:11:44.286 A:middle
+The first thing we do, we
+begin accessing Level 1,
+
+00:11:44.846 --> 00:11:45.816 A:middle
+which triggers a download,
+
+00:11:46.356 --> 00:11:48.846 A:middle
+and then the player can play
+the game, and then they get
+
+00:11:48.846 --> 00:11:51.936 A:middle
+to Level 2, and we
+do begin accessing,
+
+00:11:52.366 --> 00:11:53.806 A:middle
+and it downloads, and they wait.
+
+00:11:54.156 --> 00:11:56.406 A:middle
+They play, and we
+keep doing this.
+
+00:11:56.576 --> 00:11:58.976 A:middle
+Level 3, download, wait, play.
+
+00:12:00.046 --> 00:12:02.966 A:middle
+And even with the purchasable
+items, in-app purchases.
+
+00:12:03.496 --> 00:12:05.096 A:middle
+Download, wait, play.
+
+00:12:06.816 --> 00:12:09.506 A:middle
+That's not a good
+user experience.
+
+00:12:10.156 --> 00:12:13.396 A:middle
+Making the user constantly
+look at loading screens, no.
+
+00:12:13.706 --> 00:12:14.526 A:middle
+We're not going to do that.
+
+00:12:14.706 --> 00:12:16.766 A:middle
+So the first thing we're
+going to do is we're going
+
+00:12:16.766 --> 00:12:19.086 A:middle
+to take advantage of features
+and on-demand resources
+
+00:12:19.086 --> 00:12:22.646 A:middle
+that are built in to
+optimize that first launch
+
+00:12:22.646 --> 00:12:24.566 A:middle
+from the get go, and the
+first thing we're going
+
+00:12:24.566 --> 00:12:27.016 A:middle
+to use is initial install tags.
+
+00:12:27.986 --> 00:12:33.296 A:middle
+And the next thing we'll
+use are the pre-fetch tags.
+
+00:12:33.296 --> 00:12:37.136 A:middle
+And with these in place, then
+that Level 1 will be downloaded
+
+00:12:37.136 --> 00:12:38.806 A:middle
+and installed when
+the app is purchased,
+
+00:12:39.316 --> 00:12:42.426 A:middle
+and Level 2 will be downloaded
+and installed immediately after,
+
+00:12:42.966 --> 00:12:45.546 A:middle
+and hopefully the user can
+dive in and just start playing.
+
+00:12:46.046 --> 00:12:48.886 A:middle
+And then we'll look at
+predictive download,
+
+00:12:48.886 --> 00:12:51.136 A:middle
+but first let's take
+a step and look
+
+00:12:51.136 --> 00:12:53.186 A:middle
+at how we can configure
+the initial pre-fetch.
+
+00:12:54.336 --> 00:12:57.386 A:middle
+So initial install tags.
+
+00:12:57.386 --> 00:13:01.206 A:middle
+These are tags that are marked
+up in Xcode to be downloaded
+
+00:12:57.386 --> 00:13:01.206 A:middle
+These are tags that are marked
+up in Xcode to be downloaded
+
+00:13:01.206 --> 00:13:03.386 A:middle
+as a part of your
+application installation.
+
+00:13:04.146 --> 00:13:05.616 A:middle
+You can have up to 2 gigabytes
+
+00:13:05.616 --> 00:13:07.286 A:middle
+with these resources,
+which is a lot.
+
+00:13:08.566 --> 00:13:11.496 A:middle
+It's part of the size shown in
+the App Store, and, in fact,
+
+00:13:11.496 --> 00:13:14.126 A:middle
+when the little download
+progress indicator goes,
+
+00:13:14.126 --> 00:13:16.856 A:middle
+that reflects the initial
+install tags as well.
+
+00:13:17.186 --> 00:13:20.086 A:middle
+The pre-fetch tags, they're
+a little bit different,
+
+00:13:20.726 --> 00:13:23.546 A:middle
+but you can have as many
+pre-fetch that's as you want
+
+00:13:23.616 --> 00:13:27.216 A:middle
+up to 4 gigabytes minus the
+size of the initial install.
+
+00:13:28.326 --> 00:13:30.416 A:middle
+And it follows an order
+specified in Xcode,
+
+00:13:30.536 --> 00:13:33.686 A:middle
+and the pre-fetch tags
+are downloaded immediately
+
+00:13:33.686 --> 00:13:36.726 A:middle
+after the initial, and they
+don't prevent app launch.
+
+00:13:37.716 --> 00:13:40.036 A:middle
+So the user will be able
+to dive into the game
+
+00:13:40.036 --> 00:13:42.276 A:middle
+and start playing even though
+the pre-fetch stuff's coming
+
+00:13:42.276 --> 00:13:43.176 A:middle
+down in the background.
+
+00:13:44.166 --> 00:13:48.996 A:middle
+And in Xcode, this user
+interface looks like this.
+
+00:13:48.996 --> 00:13:52.476 A:middle
+This is the resource
+tags inspector inside
+
+00:13:52.476 --> 00:13:54.486 A:middle
+of your target editor
+for your application.
+
+00:13:54.656 --> 00:13:57.716 A:middle
+It's got three sections:
+The initial, the pre-fetch,
+
+00:13:57.816 --> 00:13:59.566 A:middle
+and the download
+only on demand tags.
+
+00:14:00.276 --> 00:14:01.456 A:middle
+You move stuff in the initial.
+
+00:14:01.456 --> 00:14:03.706 A:middle
+These are the ones that will
+be bundled with your app
+
+00:14:04.086 --> 00:14:05.576 A:middle
+and installed at the same time.
+
+00:14:06.766 --> 00:14:08.376 A:middle
+The pre-fetch, these
+will be downloaded
+
+00:14:08.376 --> 00:14:11.806 A:middle
+after in the order you see on
+the screen, and then, finally,
+
+00:14:11.806 --> 00:14:14.226 A:middle
+the download only on
+demand are the ones
+
+00:14:14.226 --> 00:14:15.376 A:middle
+who will only be downloaded
+
+00:14:15.376 --> 00:14:17.446 A:middle
+when you begin accessing
+on those tags.
+
+00:14:18.996 --> 00:14:21.156 A:middle
+So going back to our timeline.
+
+00:14:21.156 --> 00:14:23.706 A:middle
+We talked about predictive
+loading very briefly,
+
+00:14:23.706 --> 00:14:25.056 A:middle
+but what does that really mean?
+
+00:14:25.336 --> 00:14:26.926 A:middle
+Well, we got our initial.
+
+00:14:27.366 --> 00:14:28.406 A:middle
+We got our pre-fetched,
+
+00:14:28.406 --> 00:14:30.896 A:middle
+and we're still making
+the user wait at Level 3.
+
+00:14:31.566 --> 00:14:35.506 A:middle
+So, instead, if we simply begin
+accessing the Level 3 tags
+
+00:14:36.126 --> 00:14:39.396 A:middle
+somewhere in Level 1 or 2, it'll
+probably be downloaded and ready
+
+00:14:39.396 --> 00:14:41.796 A:middle
+to play by the time the
+player gets to there.
+
+00:14:42.336 --> 00:14:45.866 A:middle
+As well with purchasable items,
+if you have a particular point
+
+00:14:45.866 --> 00:14:50.916 A:middle
+in your app, game, or whatever,
+that you think it's likely
+
+00:14:50.916 --> 00:14:53.556 A:middle
+or you hope the player's going
+to go and do an in-app purchase,
+
+00:14:53.966 --> 00:14:55.366 A:middle
+go ahead and begin
+accessing there.
+
+00:14:55.926 --> 00:14:57.906 A:middle
+You don't give them access
+until you got the receipt,
+
+00:14:58.176 --> 00:15:00.276 A:middle
+but at least it'll be there,
+and there'll be no waiting.
+
+00:14:58.176 --> 00:15:00.276 A:middle
+but at least it'll be there,
+and there'll be no waiting.
+
+00:15:00.796 --> 00:15:04.146 A:middle
+Now we've got one big green
+timeline and a very happy user.
+
+00:15:05.936 --> 00:15:09.656 A:middle
+We've talked about
+this level-based game,
+
+00:15:10.066 --> 00:15:12.116 A:middle
+which is a very linear
+access pattern.
+
+00:15:12.806 --> 00:15:14.886 A:middle
+It's very convenient for
+making beautiful slides.
+
+00:15:14.966 --> 00:15:15.996 A:middle
+It's not the real world.
+
+00:15:16.696 --> 00:15:20.026 A:middle
+In a linear access
+pattern, the majority
+
+00:15:20.026 --> 00:15:21.606 A:middle
+of the assets are
+going to be used.
+
+00:15:21.676 --> 00:15:23.366 A:middle
+They're very much going
+to be used in order.
+
+00:15:23.996 --> 00:15:26.206 A:middle
+Your tag size isn't
+really that critical
+
+00:15:26.576 --> 00:15:29.226 A:middle
+because you can always stay
+well ahead of the user in terms
+
+00:15:29.226 --> 00:15:35.006 A:middle
+of getting accessing, but
+the issue is that, of course,
+
+00:15:35.196 --> 00:15:36.416 A:middle
+nothing's ever linear.
+
+00:15:37.296 --> 00:15:40.946 A:middle
+And in particular, a lot
+of times we'll have an app
+
+00:15:40.946 --> 00:15:42.946 A:middle
+that has a very random
+access pattern,
+
+00:15:43.976 --> 00:15:45.836 A:middle
+and the player may go
+all over the place,
+
+00:15:45.836 --> 00:15:48.226 A:middle
+or there may be things that are
+shared amongst levels, or they,
+
+00:15:48.276 --> 00:15:50.906 A:middle
+you know, they may select
+certain configurations,
+
+00:15:50.906 --> 00:15:54.266 A:middle
+or they may buy certain in-app
+purchases, and in this case,
+
+00:15:54.516 --> 00:15:58.126 A:middle
+the goal is really to try to
+predict as much as possible
+
+00:15:58.126 --> 00:16:00.166 A:middle
+to try to pull down stuff
+before the user needs it,
+
+00:15:58.126 --> 00:16:00.166 A:middle
+to try to pull down stuff
+before the user needs it,
+
+00:16:00.166 --> 00:16:03.406 A:middle
+but in the case where you have
+to pull it down really on demand
+
+00:16:03.406 --> 00:16:06.876 A:middle
+at that moment, stick
+to small tag groups,
+
+00:16:07.916 --> 00:16:10.466 A:middle
+and that will make
+very fast downloads.
+
+00:16:11.166 --> 00:16:13.746 A:middle
+And you can download
+sets of tags proactively.
+
+00:16:13.746 --> 00:16:16.196 A:middle
+It's OK to go and kind of
+just guess at what's going
+
+00:16:16.196 --> 00:16:20.176 A:middle
+to be needed and let them
+be, put down on disk because,
+
+00:16:20.176 --> 00:16:22.356 A:middle
+of course, we have this
+intelligent caching mechanism
+
+00:16:22.356 --> 00:16:24.176 A:middle
+that's working in the
+background to make sure
+
+00:16:24.176 --> 00:16:25.826 A:middle
+that the right things
+get deleted
+
+00:16:25.916 --> 00:16:27.196 A:middle
+if there is disk pressure.
+
+00:16:28.186 --> 00:16:30.746 A:middle
+And, again, end accessing
+doesn't mean deletion.
+
+00:16:30.886 --> 00:16:33.006 A:middle
+So if you go off, and you
+predictively download a bunch
+
+00:16:33.006 --> 00:16:34.946 A:middle
+of stuff, and then you don't
+ever need it, well, that's OK.
+
+00:16:34.946 --> 00:16:36.946 A:middle
+Just end accessing, and
+it'll probably still be there
+
+00:16:36.946 --> 00:16:39.596 A:middle
+when you do need it
+whenever in the future.
+
+00:16:41.056 --> 00:16:43.656 A:middle
+Now there's another pattern,
+which is kind of in between,
+
+00:16:44.646 --> 00:16:46.576 A:middle
+and that's your explorative
+access pattern,
+
+00:16:46.576 --> 00:16:49.596 A:middle
+and this is the one where it's,
+you know, the, that you wonder
+
+00:16:49.596 --> 00:16:52.726 A:middle
+from village to village on
+quests and things like that.
+
+00:16:52.726 --> 00:16:54.696 A:middle
+And in this case, there
+is limited prediction.
+
+00:16:55.346 --> 00:16:59.806 A:middle
+Many possibilities will not
+be used, but you often are
+
+00:16:59.806 --> 00:17:01.556 A:middle
+at a branch, and when
+you're at the branch,
+
+00:16:59.806 --> 00:17:01.556 A:middle
+at a branch, and when
+you're at the branch,
+
+00:17:01.716 --> 00:17:03.746 A:middle
+you can load a subset
+of your tags.
+
+00:17:03.926 --> 00:17:05.566 A:middle
+Oh, the user make a
+left, make a right.
+
+00:17:05.566 --> 00:17:08.445 A:middle
+So I'll load the left tag and
+the right tag, and then as soon
+
+00:17:08.445 --> 00:17:11.566 A:middle
+as the user makes the
+decision, expresses their intent
+
+00:17:11.566 --> 00:17:14.915 A:middle
+to go right into accessing on
+left, let that download stop,
+
+00:17:15.396 --> 00:17:19.046 A:middle
+focus on the right, and start
+predicting a one step ahead.
+
+00:17:20.876 --> 00:17:23.996 A:middle
+So now we have this working app.
+
+00:17:23.996 --> 00:17:27.336 A:middle
+We've got a great user
+experience, and that's all well
+
+00:17:27.336 --> 00:17:31.436 A:middle
+and good, but let's look at some
+of the implementation details
+
+00:17:31.436 --> 00:17:35.466 A:middle
+that are going on behind the
+scenes that you can be aware
+
+00:17:35.466 --> 00:17:37.886 A:middle
+of to optimize this
+experience even further.
+
+00:17:41.556 --> 00:17:46.386 A:middle
+And in particular, as I said,
+the app bundles, they're limited
+
+00:17:46.386 --> 00:17:50.186 A:middle
+to 4 gigs on iOS, 200 megabytes
+on tvOS, but you can have
+
+00:17:50.186 --> 00:17:54.046 A:middle
+up to 20 gigabytes of on-demand
+resources, and of those,
+
+00:17:54.046 --> 00:17:56.416 A:middle
+up to 2 gigs will be downloaded
+and installed with the app,
+
+00:17:56.416 --> 00:18:00.406 A:middle
+and up to 4 gigs will be
+pre-fetched minus those 2 gigs
+
+00:17:56.416 --> 00:18:00.406 A:middle
+and up to 4 gigs will be
+pre-fetched minus those 2 gigs
+
+00:18:00.406 --> 00:18:01.846 A:middle
+or up to 2 gigs of install.
+
+00:18:02.826 --> 00:18:04.946 A:middle
+There's some additional
+numbers to keep in mind.
+
+00:18:06.426 --> 00:18:07.816 A:middle
+You can have up to 2 gigabytes
+
+00:18:07.816 --> 00:18:10.016 A:middle
+of resources active
+at any one time.
+
+00:18:10.356 --> 00:18:13.066 A:middle
+So you go and you begin
+accessing on up to 2 gigabytes
+
+00:18:13.066 --> 00:18:15.156 A:middle
+of tags, and those
+will be downloaded,
+
+00:18:15.156 --> 00:18:17.076 A:middle
+and they'll be made
+available, and that's great.
+
+00:18:17.746 --> 00:18:20.386 A:middle
+When you go over the 2
+gigabytes, what happens is
+
+00:18:20.386 --> 00:18:25.186 A:middle
+that the begin accessing method,
+that callback gets an NS error
+
+00:18:25.186 --> 00:18:28.576 A:middle
+that indicates that you are
+out of tagged resource space.
+
+00:18:28.976 --> 00:18:31.516 A:middle
+You need to go in to end
+accessing on some current set
+
+00:18:31.516 --> 00:18:35.336 A:middle
+of tags to free up some space
+to allow more to be accessed.
+
+00:18:35.816 --> 00:18:38.496 A:middle
+Now, reiterating this point
+because there was another point
+
+00:18:38.496 --> 00:18:42.956 A:middle
+of confusion, if you have 2 gigs
+of tags that are pinned down,
+
+00:18:43.566 --> 00:18:46.556 A:middle
+and you want to access more,
+and you go into accessing on,
+
+00:18:46.556 --> 00:18:51.226 A:middle
+on 500 meg of them, and pin
+another 250, that 500 meg
+
+00:18:51.226 --> 00:18:53.666 A:middle
+of resources are probably
+not going to be deleted.
+
+00:18:54.046 --> 00:18:57.036 A:middle
+They'll be around and available,
+but it just lets the system know
+
+00:18:57.036 --> 00:19:01.566 A:middle
+if things get dire, it
+can go and clean them up.
+
+00:18:57.036 --> 00:19:01.566 A:middle
+if things get dire, it
+can go and clean them up.
+
+00:19:01.826 --> 00:19:04.246 A:middle
+Any one tag, again,
+up to 512 meg,
+
+00:19:04.376 --> 00:19:06.156 A:middle
+try to stick to 64
+megs or lower.
+
+00:19:06.156 --> 00:19:11.916 A:middle
+And you can have up to
+1,000 total asset packs.
+
+00:19:13.176 --> 00:19:14.726 A:middle
+What the heck's an asset pack?
+
+00:19:14.726 --> 00:19:16.966 A:middle
+Haven't mentioned
+that word yet at all.
+
+00:19:17.296 --> 00:19:22.196 A:middle
+Well, an asset pack is fallout
+from the Xcode build system.
+
+00:19:22.196 --> 00:19:24.256 A:middle
+It's the way your application
+is built and mastered.
+
+00:19:24.256 --> 00:19:26.986 A:middle
+It's the way the on-demand
+resources are compiled together
+
+00:19:27.306 --> 00:19:28.946 A:middle
+and managed by the store.
+
+00:19:30.246 --> 00:19:32.876 A:middle
+If we look at our great
+game, in this case,
+
+00:19:32.876 --> 00:19:35.966 A:middle
+a role-playing game,
+it doesn't matter.
+
+00:19:35.966 --> 00:19:40.786 A:middle
+We have our tags, and as is
+very typical, resources tend
+
+00:19:40.786 --> 00:19:42.256 A:middle
+to be used more than once.
+
+00:19:42.556 --> 00:19:44.676 A:middle
+Things get used from
+Level 1 to Level 2.
+
+00:19:45.036 --> 00:19:46.226 A:middle
+Enemies become friends.
+
+00:19:46.226 --> 00:19:47.006 A:middle
+That kind of thing.
+
+00:19:47.976 --> 00:19:51.516 A:middle
+So we have these
+two resources here
+
+00:19:51.856 --> 00:19:53.436 A:middle
+that then get used on Level 2.
+
+00:19:54.026 --> 00:19:57.586 A:middle
+So they're tagged with Level
+1 tags and Level 2 tags.
+
+00:20:01.426 --> 00:20:03.266 A:middle
+So our tag set looks like this.
+
+00:20:03.386 --> 00:20:06.736 A:middle
+We've got four resources with
+one tag and two resources
+
+00:20:06.736 --> 00:20:11.006 A:middle
+with two tags, and while
+we only have four tags,
+
+00:20:12.296 --> 00:20:13.996 A:middle
+this ends up with
+six asset packs.
+
+00:20:14.606 --> 00:20:18.496 A:middle
+Now if you think through
+like a random access game,
+
+00:20:19.156 --> 00:20:21.526 A:middle
+this could be a stumbling block.
+
+00:20:21.526 --> 00:20:24.446 A:middle
+If you have a lot resources
+that are shared across lots
+
+00:20:24.446 --> 00:20:26.286 A:middle
+of different roles
+such that many
+
+00:20:26.286 --> 00:20:30.146 A:middle
+of those resources
+have five, 10, 15 tags,
+
+00:20:30.556 --> 00:20:34.036 A:middle
+then the cross product of all
+those could end up exceeding
+
+00:20:34.036 --> 00:20:36.916 A:middle
+that 1,000 tag or
+1,000 asset pack limit,
+
+00:20:36.916 --> 00:20:39.246 A:middle
+and that is something
+to be aware of.
+
+00:20:40.796 --> 00:20:46.246 A:middle
+So in the life cycle of any game
+or any application, of course,
+
+00:20:46.246 --> 00:20:47.786 A:middle
+you're going to have
+application updates.
+
+00:20:48.516 --> 00:20:50.176 A:middle
+You want to improve
+that user experience,
+
+00:20:50.176 --> 00:20:53.326 A:middle
+get the users coming back.
+
+00:20:53.516 --> 00:20:57.076 A:middle
+And on-demand resources
+have been optimized
+
+00:20:57.076 --> 00:20:58.546 A:middle
+for application updates as well.
+
+00:20:58.996 --> 00:21:01.666 A:middle
+A little bit, maybe
+a little surprising,
+
+00:20:58.996 --> 00:21:01.666 A:middle
+A little bit, maybe
+a little surprising,
+
+00:21:02.846 --> 00:21:04.896 A:middle
+but if you think it
+through, it makes sense.
+
+00:21:04.896 --> 00:21:08.296 A:middle
+In particular, we start out
+with our version 1.0 game,
+
+00:21:08.296 --> 00:21:12.606 A:middle
+and we have a bunch of resources
+in that game, bunch of tag ones
+
+00:21:12.606 --> 00:21:16.476 A:middle
+and some main bundle ones, and
+when we ship version 2, well,
+
+00:21:16.476 --> 00:21:18.556 A:middle
+we've modified something
+in the main bundle.
+
+00:21:18.556 --> 00:21:20.876 A:middle
+We may have added some
+resources to Level 1,
+
+00:21:21.416 --> 00:21:23.346 A:middle
+modified a couple
+things on Level 2.
+
+00:21:23.346 --> 00:21:27.886 A:middle
+We added a whole new level,
+and that's all well and good.
+
+00:21:27.886 --> 00:21:30.036 A:middle
+So what happens across
+the updates?
+
+00:21:30.596 --> 00:21:36.476 A:middle
+So the first thing is
+when you update resources,
+
+00:21:36.476 --> 00:21:41.226 A:middle
+update tagged resources, nothing
+is redownloaded automatically.
+
+00:21:41.636 --> 00:21:43.896 A:middle
+It's redownloaded when
+it's first accessed.
+
+00:21:45.426 --> 00:21:48.316 A:middle
+We don't want to
+redownload the tutorial level
+
+00:21:48.666 --> 00:21:51.506 A:middle
+when the user's way beyond that.
+
+00:21:52.576 --> 00:21:55.636 A:middle
+Any unchanged resources
+will just stay on disk,
+
+00:21:56.036 --> 00:21:58.916 A:middle
+and they can be accessed
+without download.
+
+00:22:00.316 --> 00:22:03.296 A:middle
+New resources, they'll be
+downloaded when accessed.
+
+00:22:03.706 --> 00:22:06.186 A:middle
+So, really, once again, it's
+the system taking a very lazy
+
+00:22:06.186 --> 00:22:06.896 A:middle
+approach to this.
+
+00:22:06.896 --> 00:22:10.046 A:middle
+In this case, because we can't
+predict what changes you've made
+
+00:22:10.106 --> 00:22:11.996 A:middle
+to the app that are
+going to be required
+
+00:22:11.996 --> 00:22:14.766 A:middle
+by whatever state the player or
+the user is left your app in,
+
+00:22:15.436 --> 00:22:16.766 A:middle
+we're going to leave
+it up to you
+
+00:22:16.766 --> 00:22:20.976 A:middle
+to trigger the begin accessing
+to trigger the updates
+
+00:22:20.976 --> 00:22:22.166 A:middle
+and pull down the new stuff.
+
+00:22:22.166 --> 00:22:24.596 A:middle
+And, in fact, on first
+launch, you might want to go
+
+00:22:24.596 --> 00:22:27.906 A:middle
+and begin accessing a couple of
+your changed things to make sure
+
+00:22:27.906 --> 00:22:30.996 A:middle
+that they are made available
+before the user notices.
+
+00:22:32.816 --> 00:22:38.056 A:middle
+So best practices for this.
+
+00:22:38.466 --> 00:22:41.106 A:middle
+Just avoid making
+unnecessary modifications
+
+00:22:41.106 --> 00:22:44.436 A:middle
+to tagged resources, including
+things, like, you know,
+
+00:22:44.606 --> 00:22:47.666 A:middle
+we had a situation where
+somebody made a spelling change
+
+00:22:47.726 --> 00:22:48.696 A:middle
+and was surprised
+
+00:22:48.696 --> 00:22:52.266 A:middle
+when everything got redownloaded
+the first time they accessed it.
+
+00:22:53.016 --> 00:22:57.206 A:middle
+If you change one
+resource in an asset pack,
+
+00:22:57.926 --> 00:22:59.226 A:middle
+it's going to trigger
+the download
+
+00:22:59.226 --> 00:23:01.516 A:middle
+of the whole asset
+pack, and this is a,
+
+00:22:59.226 --> 00:23:01.516 A:middle
+of the whole asset
+pack, and this is a,
+
+00:23:01.766 --> 00:23:03.236 A:middle
+just an implementation detail.
+
+00:23:03.586 --> 00:23:04.666 A:middle
+So keep that in mind.
+
+00:23:04.666 --> 00:23:07.006 A:middle
+So what you can do instead
+is, like, say, for example,
+
+00:23:07.006 --> 00:23:09.866 A:middle
+in the case where we added
+a couple of extra resources
+
+00:23:09.866 --> 00:23:13.776 A:middle
+to Level 1, we can make
+Level 1 update one tag,
+
+00:23:14.146 --> 00:23:16.916 A:middle
+and then begin accessing on
+both of those, pull them down,
+
+00:23:16.916 --> 00:23:17.936 A:middle
+and when they're both available,
+
+00:23:18.106 --> 00:23:19.886 A:middle
+then allow the user
+to play Level 1.
+
+00:23:20.426 --> 00:23:23.156 A:middle
+Keep those tags consistent,
+
+00:23:23.696 --> 00:23:28.576 A:middle
+and from the beginning
+you really want to design
+
+00:23:28.866 --> 00:23:30.876 A:middle
+with a separation of
+updateable content
+
+00:23:30.876 --> 00:23:32.586 A:middle
+versus static content in mind.
+
+00:23:33.096 --> 00:23:38.806 A:middle
+And all that means is, you
+know, where you may have a tag
+
+00:23:38.806 --> 00:23:41.876 A:middle
+for one single role in your
+application, maybe you want
+
+00:23:41.876 --> 00:23:45.096 A:middle
+to divide that tag into multiple
+tags where it's something
+
+00:23:45.096 --> 00:23:46.936 A:middle
+that you know will
+probably never, ever change
+
+00:23:47.316 --> 00:23:52.226 A:middle
+and a handful that will.
+
+00:23:52.426 --> 00:23:54.366 A:middle
+Now how does all this contribute
+
+00:23:54.366 --> 00:23:58.576 A:middle
+to the intelligent
+content caching?
+
+00:23:58.696 --> 00:24:02.636 A:middle
+So on tvOS, one of
+the goals of the OS is
+
+00:23:58.696 --> 00:24:02.636 A:middle
+So on tvOS, one of
+the goals of the OS is
+
+00:24:02.796 --> 00:24:07.286 A:middle
+to never have the user
+be aware of this usage.
+
+00:24:07.956 --> 00:24:10.006 A:middle
+Never have to go
+and delete anything.
+
+00:24:10.636 --> 00:24:12.766 A:middle
+Never even have to
+think about it.
+
+00:24:13.556 --> 00:24:16.596 A:middle
+And as a part of that, there's
+this whole cache management
+
+00:24:16.596 --> 00:24:18.226 A:middle
+system and automatic
+purging system.
+
+00:24:19.436 --> 00:24:22.706 A:middle
+And the system's going to
+purge resources from the disk
+
+00:24:22.886 --> 00:24:24.836 A:middle
+when there's a dire
+need for disk space,
+
+00:24:24.876 --> 00:24:27.286 A:middle
+and there's multiple
+levels to it, and it starts
+
+00:24:27.286 --> 00:24:29.406 A:middle
+out the lowest priority,
+and we'll clean up caches
+
+00:24:29.406 --> 00:24:30.406 A:middle
+and whatever, and
+then it'll move
+
+00:24:30.406 --> 00:24:31.816 A:middle
+up to higher and
+higher priority.
+
+00:24:32.366 --> 00:24:37.586 A:middle
+And so, again, pounding on
+this point, it's important
+
+00:24:37.586 --> 00:24:41.366 A:middle
+to ending access to a resource
+when you're done with it,
+
+00:24:41.536 --> 00:24:42.946 A:middle
+and that does not mean deletion.
+
+00:24:46.456 --> 00:24:48.176 A:middle
+There's a number of variables
+
+00:24:48.176 --> 00:24:50.106 A:middle
+that inform the system
+about purge order.
+
+00:24:50.646 --> 00:24:55.266 A:middle
+Obviously, least recently used
+go away first, to a degree.
+
+00:24:55.996 --> 00:24:59.816 A:middle
+You also have control over
+the preservation priority.
+
+00:25:00.436 --> 00:25:02.346 A:middle
+This preservation
+priority can be a sign
+
+00:25:02.346 --> 00:25:06.646 A:middle
+to the bundled resource request,
+and it's a number from zero
+
+00:25:06.646 --> 00:25:08.206 A:middle
+to one that just
+determines when,
+
+00:25:08.456 --> 00:25:10.846 A:middle
+what order the system
+will delete stuff.
+
+00:25:11.376 --> 00:25:13.336 A:middle
+It's isolated to
+your application.
+
+00:25:13.336 --> 00:25:14.156 A:middle
+So there's no cheating.
+
+00:25:14.156 --> 00:25:17.006 A:middle
+It doesn't help you to
+set everything to one.
+
+00:25:17.006 --> 00:25:17.706 A:middle
+It just means we're going
+
+00:25:17.706 --> 00:25:20.346 A:middle
+to blow everything away
+if it gets that bad.
+
+00:25:20.896 --> 00:25:23.106 A:middle
+And if your application's
+running,
+
+00:25:23.986 --> 00:25:26.206 A:middle
+it's going to be the
+last one the system tries
+
+00:25:26.206 --> 00:25:27.426 A:middle
+to purge resources from.
+
+00:25:31.116 --> 00:25:33.476 A:middle
+And this is very important.
+
+00:25:33.616 --> 00:25:35.606 A:middle
+Don't use temp or caches.
+
+00:25:35.916 --> 00:25:37.686 A:middle
+I mean, obviously use them
+
+00:25:37.686 --> 00:25:41.566 A:middle
+if you need some temporary stuff
+or, you know, per session cache,
+
+00:25:42.686 --> 00:25:45.856 A:middle
+but because we can't know
+anything about the structure
+
+00:25:45.856 --> 00:25:49.306 A:middle
+of the data in a temporary
+cache, the system's going
+
+00:25:49.306 --> 00:25:53.106 A:middle
+to treat those are purgable
+at a pretty low priority.
+
+00:25:53.686 --> 00:25:56.316 A:middle
+They're going to be purged
+first, and when they're purged,
+
+00:25:56.316 --> 00:26:00.246 A:middle
+they're purged in
+their entirety.
+
+00:25:56.316 --> 00:26:00.246 A:middle
+they're purged in
+their entirety.
+
+00:26:00.246 --> 00:26:08.066 A:middle
+So, finally, in conclusion,
+use on-demand resources.
+
+00:26:08.286 --> 00:26:11.186 A:middle
+In particular on tvOS, the use
+
+00:26:11.186 --> 00:26:14.166 A:middle
+of on-demand resources
+really provides
+
+00:26:14.166 --> 00:26:16.206 A:middle
+for a much more optimal
+user experience.
+
+00:26:16.206 --> 00:26:18.736 A:middle
+It leverages that always
+on network connection.
+
+00:26:19.376 --> 00:26:21.506 A:middle
+On iOS, things can be
+a little bit trickier,
+
+00:26:21.796 --> 00:26:22.956 A:middle
+but there's a number of ways
+
+00:26:22.956 --> 00:26:24.396 A:middle
+that it can be used
+very successfully.
+
+00:26:24.996 --> 00:26:28.756 A:middle
+It will give you that
+smaller app bundle,
+
+00:26:29.286 --> 00:26:32.826 A:middle
+which gives you a much faster
+customer acquirement time
+
+00:26:33.516 --> 00:26:38.726 A:middle
+from store to your customer
+playing your game using your
+
+00:26:39.346 --> 00:26:42.046 A:middle
+program doing whatever
+with your content.
+
+00:26:42.616 --> 00:26:46.986 A:middle
+You get this richer app content.
+
+00:26:46.986 --> 00:26:49.316 A:middle
+You now have 20 gigabytes
+of space to play
+
+00:26:49.316 --> 00:26:52.446 A:middle
+with to put together
+whatever you want.
+
+00:26:54.316 --> 00:26:57.016 A:middle
+And it also means for the user,
+
+00:26:57.206 --> 00:26:58.336 A:middle
+they don't have to
+think about it.
+
+00:26:58.436 --> 00:27:00.796 A:middle
+They can just install as many
+applications as they want.
+
+00:26:58.436 --> 00:27:00.796 A:middle
+They can just install as many
+applications as they want.
+
+00:27:00.826 --> 00:27:03.076 A:middle
+They don't have a barrier to
+entry there, and they don't have
+
+00:27:03.106 --> 00:27:04.286 A:middle
+to think about the storage.
+
+00:27:05.996 --> 00:27:09.846 A:middle
+So that's on-demand
+resources optimization.
+
+00:27:10.316 --> 00:27:15.606 A:middle
+For more information, there's a
+whole web page devoted to this.
+
+00:27:16.156 --> 00:27:17.246 A:middle
+There was also a number
+
+00:27:17.246 --> 00:27:19.366 A:middle
+of related sessions
+earlier in the week.
+
+00:27:19.836 --> 00:27:20.836 A:middle
+Encourage you to review them.
+
+00:27:21.346 --> 00:27:21.686 A:middle
+Thank you.

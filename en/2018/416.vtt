@@ -1,0 +1,5461 @@
+WEBVTT
+
+00:00:07.016 --> 00:00:15.500 A:middle
+[ Music ]
+
+00:00:23.516 --> 00:00:27.616 A:middle
+[ Applause ]
+
+00:00:28.116 --> 00:00:28.656 A:middle
+&gt;&gt; Hi, everyone.
+
+00:00:29.016 --> 00:00:29.686 A:middle
+My name's Kyle.
+
+00:00:29.686 --> 00:00:30.776 A:middle
+I'm a software engineer at Apple
+
+00:00:30.876 --> 00:00:32.195 A:middle
+and today we'd like to take a
+
+00:00:32.195 --> 00:00:33.386 A:middle
+deep dive into iOS memory.
+
+00:00:34.066 --> 00:00:35.986 A:middle
+Now, just as a quick note, even
+
+00:00:35.986 --> 00:00:36.986 A:middle
+though this is focused on iOS, a
+
+00:00:36.986 --> 00:00:38.536 A:middle
+lot of what we're covering will
+
+00:00:38.536 --> 00:00:41.386 A:middle
+apply to other platforms as
+
+00:00:42.396 --> 00:00:42.546 A:middle
+well.
+
+00:00:43.186 --> 00:00:44.626 A:middle
+So the first thing we'd want to
+
+00:00:44.626 --> 00:00:46.386 A:middle
+talk about is, why reduce
+
+00:00:46.386 --> 00:00:46.706 A:middle
+memory?
+
+00:00:48.886 --> 00:00:50.836 A:middle
+And when we want to reduce
+
+00:00:50.836 --> 00:00:51.746 A:middle
+memory, really, we're talking
+
+00:00:51.746 --> 00:00:52.676 A:middle
+about reducing our memory
+
+00:00:52.676 --> 00:00:53.116 A:middle
+footprint.
+
+00:00:53.296 --> 00:00:53.976 A:middle
+So we'll talk about that.
+
+00:00:55.326 --> 00:00:56.586 A:middle
+We have some tools for how to
+
+00:00:56.586 --> 00:00:57.986 A:middle
+profile a memory footprint.
+
+00:00:59.146 --> 00:01:00.706 A:middle
+We have some special notes on
+
+00:00:59.146 --> 00:01:00.706 A:middle
+We have some special notes on
+
+00:01:00.706 --> 00:01:02.676 A:middle
+images, optimizing when in the
+
+00:01:02.676 --> 00:01:03.116 A:middle
+background.
+
+00:01:03.196 --> 00:01:04.465 A:middle
+And then, we'll wrap it all up
+
+00:01:04.465 --> 00:01:05.096 A:middle
+with a nice demo.
+
+00:01:06.446 --> 00:01:08.786 A:middle
+So why reduce memory?
+
+00:01:10.496 --> 00:01:12.196 A:middle
+The easy answer is users have a
+
+00:01:12.196 --> 00:01:13.086 A:middle
+better experience.
+
+00:01:13.396 --> 00:01:14.586 A:middle
+Not only will your app launch
+
+00:01:14.586 --> 00:01:14.986 A:middle
+faster.
+
+00:01:15.056 --> 00:01:16.276 A:middle
+The system will perform better.
+
+00:01:16.906 --> 00:01:18.016 A:middle
+Your app will stay in memory
+
+00:01:18.016 --> 00:01:18.436 A:middle
+longer.
+
+00:01:18.666 --> 00:01:19.646 A:middle
+Other apps will stay in memory
+
+00:01:19.646 --> 00:01:20.036 A:middle
+longer.
+
+00:01:20.266 --> 00:01:21.466 A:middle
+Pretty much everything's better.
+
+00:01:22.266 --> 00:01:23.176 A:middle
+Now, if you look to your left
+
+00:01:23.356 --> 00:01:24.586 A:middle
+and look to your right, you're
+
+00:01:24.586 --> 00:01:25.426 A:middle
+actually helping those
+
+00:01:25.426 --> 00:01:26.796 A:middle
+developers out as well by
+
+00:01:26.796 --> 00:01:27.676 A:middle
+reducing your memory.
+
+00:01:28.766 --> 00:01:30.716 A:middle
+Now, we're talking about
+
+00:01:30.716 --> 00:01:31.646 A:middle
+reducing memory, but really,
+
+00:01:31.646 --> 00:01:32.616 A:middle
+it's the memory footprint.
+
+00:01:32.976 --> 00:01:34.376 A:middle
+Not all memory is created equal.
+
+00:01:34.816 --> 00:01:35.616 A:middle
+What do I mean by that?
+
+00:01:36.856 --> 00:01:37.666 A:middle
+Well, we need to talk about
+
+00:01:37.666 --> 00:01:38.186 A:middle
+pages.
+
+00:01:38.656 --> 00:01:39.646 A:middle
+Not that type of pages.
+
+00:01:40.436 --> 00:01:41.566 A:middle
+We're talking about pages of
+
+00:01:41.566 --> 00:01:41.876 A:middle
+memory.
+
+00:01:42.436 --> 00:01:44.196 A:middle
+Now, a memory page is given to
+
+00:01:44.196 --> 00:01:46.096 A:middle
+you by the system, and it can
+
+00:01:46.096 --> 00:01:47.346 A:middle
+hold multiple objects on the
+
+00:01:47.346 --> 00:01:47.676 A:middle
+heap.
+
+00:01:48.126 --> 00:01:50.206 A:middle
+And some objects can actually
+
+00:01:50.206 --> 00:01:51.496 A:middle
+span multiple pages.
+
+00:01:52.056 --> 00:01:55.866 A:middle
+They're typically 16K in size,
+
+00:01:56.276 --> 00:01:57.816 A:middle
+and they can come in clean or
+
+00:01:57.816 --> 00:01:58.176 A:middle
+dirty.
+
+00:02:00.236 --> 00:02:01.806 A:middle
+The memory use of your app is
+
+00:02:01.806 --> 00:02:03.036 A:middle
+actually the number of pages
+
+00:02:03.116 --> 00:02:04.686 A:middle
+multiplied by the page size.
+
+00:02:05.366 --> 00:02:09.116 A:middle
+So as an example of clean and
+
+00:02:09.116 --> 00:02:10.586 A:middle
+dirty pages, let's say I
+
+00:02:10.586 --> 00:02:13.766 A:middle
+allocate an array of 20,000
+
+00:02:13.766 --> 00:02:14.196 A:middle
+integers.
+
+00:02:14.816 --> 00:02:16.406 A:middle
+The system may give me six
+
+00:02:16.406 --> 00:02:16.916 A:middle
+pages.
+
+00:02:18.036 --> 00:02:19.966 A:middle
+Now, these pages are clean when
+
+00:02:19.966 --> 00:02:20.676 A:middle
+I allocate them.
+
+00:02:21.156 --> 00:02:22.386 A:middle
+However, when I start writing to
+
+00:02:22.386 --> 00:02:23.816 A:middle
+the data buffers, for example,
+
+00:02:23.816 --> 00:02:25.406 A:middle
+if I write to the first place in
+
+00:02:25.406 --> 00:02:27.346 A:middle
+this array, that page has become
+
+00:02:27.436 --> 00:02:27.766 A:middle
+dirty.
+
+00:02:28.856 --> 00:02:30.996 A:middle
+Similarly, if I write to the
+
+00:02:30.996 --> 00:02:33.396 A:middle
+last page, that, or the last
+
+00:02:33.396 --> 00:02:34.646 A:middle
+place in the buffer, the last
+
+00:02:34.646 --> 00:02:35.686 A:middle
+page becomes dirty as well.
+
+00:02:36.436 --> 00:02:37.416 A:middle
+Note that the four pages in
+
+00:02:37.416 --> 00:02:38.566 A:middle
+between are still clean because
+
+00:02:38.566 --> 00:02:42.656 A:middle
+the app has not written to them
+
+00:02:42.806 --> 00:02:42.896 A:middle
+yet.
+
+00:02:42.896 --> 00:02:43.766 A:middle
+Another interesting thing to
+
+00:02:43.766 --> 00:02:45.156 A:middle
+talk about is memory-mapped
+
+00:02:45.206 --> 00:02:45.556 A:middle
+files.
+
+00:02:45.856 --> 00:02:48.206 A:middle
+Now, this is files that are on
+
+00:02:48.206 --> 00:02:49.306 A:middle
+disk but loaded in the memory.
+
+00:02:50.296 --> 00:02:51.506 A:middle
+Now, if you use read-only files,
+
+00:02:51.506 --> 00:02:52.266 A:middle
+these are always going to be
+
+00:02:52.266 --> 00:02:52.976 A:middle
+clean pages.
+
+00:02:53.846 --> 00:02:55.066 A:middle
+The kernel actually manages when
+
+00:02:55.066 --> 00:02:56.536 A:middle
+they come in and off of disk
+
+00:02:56.536 --> 00:02:57.056 A:middle
+into RAM.
+
+00:02:57.746 --> 00:03:00.026 A:middle
+So a good example of this would
+
+00:02:57.746 --> 00:03:00.026 A:middle
+So a good example of this would
+
+00:03:00.026 --> 00:03:01.266 A:middle
+be a JPEG.
+
+00:03:01.656 --> 00:03:03.036 A:middle
+If I have a JPEG that's, say, 50
+
+00:03:03.036 --> 00:03:05.586 A:middle
+kilobytes of size, when it's
+
+00:03:05.646 --> 00:03:07.416 A:middle
+memory mapped in, that actually
+
+00:03:07.416 --> 00:03:09.746 A:middle
+is mapped into four pages of
+
+00:03:09.746 --> 00:03:10.576 A:middle
+memory, give or take.
+
+00:03:10.976 --> 00:03:12.436 A:middle
+Now, the fourth page is actually
+
+00:03:12.436 --> 00:03:13.936 A:middle
+not completely full, so it can
+
+00:03:13.936 --> 00:03:14.876 A:middle
+be used for other things.
+
+00:03:14.876 --> 00:03:16.446 A:middle
+Memory's a little bit tricky
+
+00:03:16.446 --> 00:03:16.846 A:middle
+like that.
+
+00:03:16.936 --> 00:03:18.376 A:middle
+But those three pages before
+
+00:03:18.456 --> 00:03:21.306 A:middle
+will always be purgeable by the
+
+00:03:21.306 --> 00:03:21.736 A:middle
+system.
+
+00:03:22.056 --> 00:03:26.156 A:middle
+And when we talk about a typical
+
+00:03:26.446 --> 00:03:28.366 A:middle
+app, their footprint and profile
+
+00:03:28.366 --> 00:03:30.146 A:middle
+has a dirty, a compressed, and a
+
+00:03:30.146 --> 00:03:31.166 A:middle
+clean segment of memory.
+
+00:03:32.136 --> 00:03:32.926 A:middle
+Let's break these down.
+
+00:03:34.766 --> 00:03:37.156 A:middle
+So clean memory is data that can
+
+00:03:37.156 --> 00:03:37.826 A:middle
+be paged out.
+
+00:03:38.346 --> 00:03:39.666 A:middle
+Now, these are the memory-mapped
+
+00:03:39.666 --> 00:03:40.676 A:middle
+files we just talked about.
+
+00:03:41.016 --> 00:03:43.216 A:middle
+Could be images, data Blobs,
+
+00:03:43.566 --> 00:03:44.376 A:middle
+training models.
+
+00:03:44.916 --> 00:03:47.126 A:middle
+They can also be frameworks.
+
+00:03:48.546 --> 00:03:50.566 A:middle
+So every framework has a DATA
+
+00:03:50.566 --> 00:03:51.486 A:middle
+CONST section.
+
+00:03:52.506 --> 00:03:53.466 A:middle
+Now, this is typically clean,
+
+00:03:53.466 --> 00:03:54.406 A:middle
+but if you do any runtime
+
+00:03:54.406 --> 00:03:55.726 A:middle
+shenanigans like swizzling, that
+
+00:03:55.726 --> 00:04:00.876 A:middle
+can actually make it dirty.
+
+00:03:55.726 --> 00:04:00.876 A:middle
+can actually make it dirty.
+
+00:04:01.056 --> 00:04:03.146 A:middle
+Dirty memory is any memory that
+
+00:04:03.146 --> 00:04:04.556 A:middle
+has been written to by your app.
+
+00:04:05.676 --> 00:04:07.516 A:middle
+Now, these can be objects,
+
+00:04:07.946 --> 00:04:09.016 A:middle
+anything that has been malloced
+
+00:04:09.146 --> 00:04:10.416 A:middle
+-- strings, arrays, et cetera.
+
+00:04:11.056 --> 00:04:14.186 A:middle
+It can be decoded image buffers,
+
+00:04:14.366 --> 00:04:15.426 A:middle
+which we'll talk about in a bit.
+
+00:04:15.926 --> 00:04:18.576 A:middle
+And it can also be frameworks.
+
+00:04:19.305 --> 00:04:21.196 A:middle
+Frameworks have a data section
+
+00:04:21.196 --> 00:04:23.136 A:middle
+and a data dirty section as
+
+00:04:23.136 --> 00:04:23.356 A:middle
+well.
+
+00:04:24.256 --> 00:04:25.226 A:middle
+Now, those are always going to
+
+00:04:25.226 --> 00:04:26.786 A:middle
+count towards dirty memory.
+
+00:04:27.926 --> 00:04:29.216 A:middle
+And if you might have noticed, I
+
+00:04:29.216 --> 00:04:30.446 A:middle
+brought up frameworks twice.
+
+00:04:30.776 --> 00:04:32.486 A:middle
+Yes, frameworks that you link
+
+00:04:32.486 --> 00:04:34.976 A:middle
+actually use memory and dirty
+
+00:04:34.976 --> 00:04:35.286 A:middle
+memory.
+
+00:04:35.766 --> 00:04:36.976 A:middle
+Now, this is just a necessary
+
+00:04:36.976 --> 00:04:39.066 A:middle
+part of linking frameworks, but
+
+00:04:39.066 --> 00:04:39.756 A:middle
+if you maintain your own
+
+00:04:39.756 --> 00:04:41.776 A:middle
+framework, singletons and global
+
+00:04:41.776 --> 00:04:43.726 A:middle
+initializers are a great way to
+
+00:04:43.726 --> 00:04:45.256 A:middle
+reduce the amount of dirty
+
+00:04:45.256 --> 00:04:46.786 A:middle
+memory they use because a
+
+00:04:46.786 --> 00:04:48.146 A:middle
+singleton's always going to be
+
+00:04:48.226 --> 00:04:49.246 A:middle
+in memory after it's been
+
+00:04:49.366 --> 00:04:51.376 A:middle
+created, and these initializers
+
+00:04:51.376 --> 00:04:52.696 A:middle
+are also run whenever the
+
+00:04:52.696 --> 00:04:53.766 A:middle
+framework is linked or the class
+
+00:04:53.766 --> 00:04:53.976 A:middle
+is loaded.
+
+00:04:57.346 --> 00:04:59.546 A:middle
+Now, compressed memory is pretty
+
+00:05:00.716 --> 00:05:00.986 A:middle
+cool.
+
+00:05:00.986 --> 00:05:01.996 A:middle
+iOS doesn't have a traditional
+
+00:05:01.996 --> 00:05:03.066 A:middle
+disk swap system.
+
+00:05:03.946 --> 00:05:05.976 A:middle
+Instead, it uses a memory
+
+00:05:05.976 --> 00:05:06.446 A:middle
+compressor.
+
+00:05:06.626 --> 00:05:07.926 A:middle
+This was introduced in iOS 7.
+
+00:05:08.626 --> 00:05:10.606 A:middle
+Now, a memory compressor or the
+
+00:05:10.606 --> 00:05:12.526 A:middle
+memory compressor will take
+
+00:05:12.526 --> 00:05:13.776 A:middle
+unaccessed pages and squeeze
+
+00:05:13.776 --> 00:05:14.946 A:middle
+them down, which can actually
+
+00:05:14.946 --> 00:05:15.656 A:middle
+create more space.
+
+00:05:16.366 --> 00:05:17.586 A:middle
+But on access, the compressor
+
+00:05:17.586 --> 00:05:19.226 A:middle
+will then decompress them so the
+
+00:05:19.516 --> 00:05:20.266 A:middle
+memory can be read.
+
+00:05:20.936 --> 00:05:22.076 A:middle
+Let's look at an example.
+
+00:05:23.296 --> 00:05:24.526 A:middle
+Say I have a dictionary that I'm
+
+00:05:24.526 --> 00:05:25.316 A:middle
+using for caching.
+
+00:05:25.876 --> 00:05:27.336 A:middle
+Now, it uses up three pages of
+
+00:05:27.336 --> 00:05:29.796 A:middle
+memory right now, but if I
+
+00:05:29.796 --> 00:05:31.266 A:middle
+haven't accessed this in a while
+
+00:05:31.266 --> 00:05:32.436 A:middle
+and it needs to, the system
+
+00:05:32.436 --> 00:05:33.366 A:middle
+needs some space, it can
+
+00:05:33.366 --> 00:05:34.836 A:middle
+actually squeeze it down into
+
+00:05:34.836 --> 00:05:35.436 A:middle
+one page.
+
+00:05:35.896 --> 00:05:38.156 A:middle
+Now, this is now compressed, but
+
+00:05:38.716 --> 00:05:40.806 A:middle
+I'm actually saving space or
+
+00:05:40.806 --> 00:05:42.246 A:middle
+I've got two extra pages.
+
+00:05:42.896 --> 00:05:44.056 A:middle
+So if, some point in the future,
+
+00:05:44.056 --> 00:05:45.786 A:middle
+I access it, it will grow back.
+
+00:05:46.456 --> 00:05:47.876 A:middle
+So let's talk about memory
+
+00:05:47.876 --> 00:05:48.696 A:middle
+warnings for a second.
+
+00:05:49.446 --> 00:05:51.586 A:middle
+The app is not always the cause
+
+00:05:51.946 --> 00:05:52.876 A:middle
+of a memory warning.
+
+00:05:53.736 --> 00:05:54.736 A:middle
+So if you're on a low-memory
+
+00:05:54.736 --> 00:05:57.196 A:middle
+device and you get a phone call,
+
+00:05:57.256 --> 00:05:58.156 A:middle
+that could trigger a memory
+
+00:05:58.156 --> 00:05:59.036 A:middle
+warning, and you're out.
+
+00:05:59.126 --> 00:06:00.586 A:middle
+So don't necessarily assume that
+
+00:05:59.126 --> 00:06:00.586 A:middle
+So don't necessarily assume that
+
+00:06:00.996 --> 00:06:02.826 A:middle
+a memory warning is your cause.
+
+00:06:03.986 --> 00:06:06.386 A:middle
+So this compressor complicates
+
+00:06:06.386 --> 00:06:08.636 A:middle
+freeing memory because,
+
+00:06:09.516 --> 00:06:10.146 A:middle
+depending on what it's
+
+00:06:10.146 --> 00:06:11.236 A:middle
+compressed, you can actually use
+
+00:06:11.236 --> 00:06:12.106 A:middle
+more memory than before.
+
+00:06:12.356 --> 00:06:14.336 A:middle
+So instead, we recommend policy
+
+00:06:14.336 --> 00:06:15.986 A:middle
+changes, such as maybe not
+
+00:06:15.986 --> 00:06:17.136 A:middle
+caching anything for a little
+
+00:06:17.686 --> 00:06:18.896 A:middle
+bit or kind of throttling some
+
+00:06:18.896 --> 00:06:20.146 A:middle
+of the background work when a
+
+00:06:20.146 --> 00:06:21.106 A:middle
+memory warning occurs.
+
+00:06:22.536 --> 00:06:24.386 A:middle
+Now, some of us may have this in
+
+00:06:24.386 --> 00:06:24.846 A:middle
+our apps.
+
+00:06:25.476 --> 00:06:27.726 A:middle
+We get a memory warning, and we
+
+00:06:27.726 --> 00:06:28.826 A:middle
+decide to remove all objects
+
+00:06:28.826 --> 00:06:31.126 A:middle
+from our cache.
+
+00:06:31.336 --> 00:06:32.766 A:middle
+Going back to that example of
+
+00:06:32.766 --> 00:06:33.856 A:middle
+the compressed dictionary,
+
+00:06:34.646 --> 00:06:35.606 A:middle
+what's going to happen?
+
+00:06:35.896 --> 00:06:37.446 A:middle
+Well, since I'm now accessing
+
+00:06:37.446 --> 00:06:39.496 A:middle
+that dictionary, I'm now using
+
+00:06:39.496 --> 00:06:41.216 A:middle
+up more pages than I was before.
+
+00:06:42.046 --> 00:06:43.866 A:middle
+This is not what we want to do
+
+00:06:43.926 --> 00:06:44.896 A:middle
+in a memory-constrained
+
+00:06:45.066 --> 00:06:45.546 A:middle
+environment.
+
+00:06:46.466 --> 00:06:47.726 A:middle
+And because I'm removing all the
+
+00:06:47.726 --> 00:06:50.186 A:middle
+objects, I'm doing a lot of work
+
+00:06:50.186 --> 00:06:51.306 A:middle
+just to get it back down to one
+
+00:06:51.306 --> 00:06:52.356 A:middle
+page, which is what it was when
+
+00:06:52.356 --> 00:06:53.016 A:middle
+it was compressed.
+
+00:06:54.246 --> 00:06:55.346 A:middle
+So we really got to be careful
+
+00:06:55.346 --> 00:06:57.486 A:middle
+about memory warnings in
+
+00:06:57.486 --> 00:06:57.796 A:middle
+general.
+
+00:06:59.376 --> 00:07:01.326 A:middle
+Now, this brings up an important
+
+00:06:59.376 --> 00:07:01.326 A:middle
+Now, this brings up an important
+
+00:07:01.586 --> 00:07:02.466 A:middle
+point about caching.
+
+00:07:03.276 --> 00:07:04.826 A:middle
+When we cache, we are really
+
+00:07:04.826 --> 00:07:05.926 A:middle
+trying to save the CPU from
+
+00:07:05.926 --> 00:07:07.466 A:middle
+doing repeated work, but if we
+
+00:07:07.466 --> 00:07:08.826 A:middle
+cache too much, we're going to
+
+00:07:08.826 --> 00:07:10.306 A:middle
+use up all of our memory, and
+
+00:07:10.716 --> 00:07:12.076 A:middle
+that can have problems with the
+
+00:07:12.076 --> 00:07:12.476 A:middle
+system.
+
+00:07:13.436 --> 00:07:15.316 A:middle
+So try and remember that there's
+
+00:07:15.316 --> 00:07:16.536 A:middle
+a memory compressor and cache,
+
+00:07:16.696 --> 00:07:17.966 A:middle
+you know, get that balance just
+
+00:07:17.966 --> 00:07:19.076 A:middle
+right on what to cache and what
+
+00:07:19.076 --> 00:07:20.326 A:middle
+to kind of recompute.
+
+00:07:21.386 --> 00:07:22.676 A:middle
+One other note is that if you
+
+00:07:22.676 --> 00:07:23.796 A:middle
+use an NSCache instead of a
+
+00:07:23.796 --> 00:07:25.706 A:middle
+dictionary, that's a threat-safe
+
+00:07:25.706 --> 00:07:28.146 A:middle
+way to store cached objects.
+
+00:07:28.506 --> 00:07:30.336 A:middle
+And because of the way NSCache
+
+00:07:30.336 --> 00:07:31.326 A:middle
+allocates its memory, it's
+
+00:07:31.326 --> 00:07:32.806 A:middle
+actually purgeable, so it works
+
+00:07:32.806 --> 00:07:33.396 A:middle
+even better in a
+
+00:07:33.396 --> 00:07:34.436 A:middle
+memory-constrained environment.
+
+00:07:34.876 --> 00:07:38.396 A:middle
+Going back to our typical app
+
+00:07:38.396 --> 00:07:40.136 A:middle
+with those three sections, when
+
+00:07:40.136 --> 00:07:41.166 A:middle
+we talk about the app's
+
+00:07:41.166 --> 00:07:42.636 A:middle
+footprint, we're really talking
+
+00:07:42.636 --> 00:07:44.046 A:middle
+about the dirty and compressed
+
+00:07:44.146 --> 00:07:44.656 A:middle
+segments.
+
+00:07:45.096 --> 00:07:46.556 A:middle
+Clean memory doesn't really
+
+00:07:46.556 --> 00:07:46.766 A:middle
+count.
+
+00:07:47.876 --> 00:07:51.396 A:middle
+Now, every app has a footprint
+
+00:07:51.396 --> 00:07:51.646 A:middle
+limit.
+
+00:07:53.016 --> 00:07:54.816 A:middle
+Now, this limit's fairly high
+
+00:07:54.816 --> 00:07:56.486 A:middle
+for an app, but keep in mind
+
+00:07:56.556 --> 00:07:57.786 A:middle
+that, depending on the device,
+
+00:07:58.276 --> 00:07:59.386 A:middle
+your limit will change.
+
+00:07:59.506 --> 00:08:01.346 A:middle
+So you won't be able to use as
+
+00:07:59.506 --> 00:08:01.346 A:middle
+So you won't be able to use as
+
+00:08:01.346 --> 00:08:02.556 A:middle
+much memory on a 1-gigabyte
+
+00:08:02.556 --> 00:08:03.946 A:middle
+device as you would on a
+
+00:08:03.946 --> 00:08:04.906 A:middle
+4-gigabyte device.
+
+00:08:05.456 --> 00:08:10.286 A:middle
+Now, there's also extensions.
+
+00:08:10.636 --> 00:08:11.896 A:middle
+Extensions have a much lower
+
+00:08:11.896 --> 00:08:13.726 A:middle
+footprint, so you really need to
+
+00:08:13.726 --> 00:08:15.076 A:middle
+be even more mindful about that
+
+00:08:15.076 --> 00:08:16.426 A:middle
+when you are using an extension.
+
+00:08:17.696 --> 00:08:19.836 A:middle
+When you exceed the footprint,
+
+00:08:19.836 --> 00:08:21.356 A:middle
+you will get a exception.
+
+00:08:22.146 --> 00:08:24.356 A:middle
+Now, these exceptions are the
+
+00:08:24.356 --> 00:08:26.196 A:middle
+EXC RESOURCE EXCEPTION.
+
+00:08:27.366 --> 00:08:30.066 A:middle
+So what I'd like to do now is
+
+00:08:30.066 --> 00:08:31.616 A:middle
+invite up James to talk about
+
+00:08:31.616 --> 00:08:32.405 A:middle
+how we can profile our
+
+00:08:32.405 --> 00:08:32.765 A:middle
+footprint.
+
+00:08:34.515 --> 00:08:36.775 A:middle
+[ Applause ]
+
+00:08:37.275 --> 00:08:37.686 A:middle
+Thanks, James.
+
+00:08:38.236 --> 00:08:38.616 A:middle
+&gt;&gt; Thank you.
+
+00:08:40.655 --> 00:08:41.066 A:middle
+Thanks, Kyle.
+
+00:08:41.256 --> 00:08:42.035 A:middle
+All right.
+
+00:08:42.226 --> 00:08:42.736 A:middle
+I'm James.
+
+00:08:42.736 --> 00:08:43.876 A:middle
+I'm a software engineer here at
+
+00:08:43.876 --> 00:08:44.155 A:middle
+Apple.
+
+00:08:44.456 --> 00:08:45.706 A:middle
+And I'd like to introduce some
+
+00:08:45.706 --> 00:08:46.816 A:middle
+of the more advanced tools we
+
+00:08:46.816 --> 00:08:47.886 A:middle
+have for profiling and
+
+00:08:47.886 --> 00:08:49.026 A:middle
+investigating your application's
+
+00:08:49.026 --> 00:08:49.406 A:middle
+footprint.
+
+00:08:51.456 --> 00:08:52.346 A:middle
+You're all probably already
+
+00:08:52.346 --> 00:08:53.546 A:middle
+familiar with the Xcode memory
+
+00:08:53.546 --> 00:08:53.906 A:middle
+gauge.
+
+00:08:54.436 --> 00:08:55.596 A:middle
+It shows up right here in the
+
+00:08:55.596 --> 00:08:57.036 A:middle
+debug navigator, and it's a
+
+00:08:57.166 --> 00:08:59.086 A:middle
+great way for quickly seeing the
+
+00:08:59.086 --> 00:09:00.546 A:middle
+memory footprint of your app.
+
+00:08:59.086 --> 00:09:00.546 A:middle
+memory footprint of your app.
+
+00:09:00.966 --> 00:09:03.086 A:middle
+In Xcode 10, it now shows you
+
+00:09:03.086 --> 00:09:04.516 A:middle
+the value that the system grades
+
+00:09:04.516 --> 00:09:05.696 A:middle
+you against, so don't be too
+
+00:09:05.696 --> 00:09:06.526 A:middle
+concerned if this looks
+
+00:09:06.526 --> 00:09:08.186 A:middle
+different from Xcode 9.
+
+00:09:09.226 --> 00:09:10.506 A:middle
+So I was running my app in
+
+00:09:10.546 --> 00:09:11.676 A:middle
+Xcode, and I saw that it was
+
+00:09:11.676 --> 00:09:12.606 A:middle
+consuming more memory.
+
+00:09:13.386 --> 00:09:14.256 A:middle
+What tool should I reach for
+
+00:09:14.256 --> 00:09:14.636 A:middle
+next?
+
+00:09:15.316 --> 00:09:17.306 A:middle
+Well, Instruments, obviously.
+
+00:09:18.356 --> 00:09:19.826 A:middle
+This provides a number of ways
+
+00:09:19.826 --> 00:09:20.796 A:middle
+to investigate your app's
+
+00:09:20.796 --> 00:09:21.186 A:middle
+footprint.
+
+00:09:21.916 --> 00:09:24.256 A:middle
+You're probably already familiar
+
+00:09:24.256 --> 00:09:25.556 A:middle
+with Allocations and Leaks.
+
+00:09:25.776 --> 00:09:27.316 A:middle
+Allocations profiles the heap
+
+00:09:27.316 --> 00:09:28.466 A:middle
+allocations made by your app,
+
+00:09:28.886 --> 00:09:29.866 A:middle
+and Leaks will check for memory
+
+00:09:29.866 --> 00:09:31.056 A:middle
+leaks in a process over time.
+
+00:09:31.226 --> 00:09:32.756 A:middle
+But you might not be so familiar
+
+00:09:32.756 --> 00:09:33.946 A:middle
+with the VM Tracker and the
+
+00:09:33.946 --> 00:09:34.826 A:middle
+Virtual Memory Trace.
+
+00:09:35.376 --> 00:09:37.326 A:middle
+If you remember back to when
+
+00:09:37.326 --> 00:09:38.066 A:middle
+Kyle was talking about the
+
+00:09:38.066 --> 00:09:39.416 A:middle
+primary classes of memory in
+
+00:09:39.486 --> 00:09:41.456 A:middle
+iOS, he was, he talked about
+
+00:09:41.456 --> 00:09:42.516 A:middle
+dirty and compressed memory.
+
+00:09:42.946 --> 00:09:44.556 A:middle
+Well, the VM Tracker provides a
+
+00:09:44.556 --> 00:09:45.806 A:middle
+great way to profile this.
+
+00:09:47.116 --> 00:09:48.616 A:middle
+It has separate tracks for dirty
+
+00:09:48.616 --> 00:09:50.046 A:middle
+and swapped, which, in iOS, is
+
+00:09:50.046 --> 00:09:51.646 A:middle
+compressed memory, and tells you
+
+00:09:51.646 --> 00:09:52.386 A:middle
+some information about the
+
+00:09:52.386 --> 00:09:53.186 A:middle
+resident size.
+
+00:09:53.996 --> 00:09:55.176 A:middle
+I find this really useful for
+
+00:09:55.176 --> 00:09:56.576 A:middle
+investigating the dirty memory
+
+00:09:56.576 --> 00:09:57.926 A:middle
+size of my app.
+
+00:09:58.516 --> 00:09:59.866 A:middle
+Finally, in Instruments is the
+
+00:09:59.866 --> 00:10:01.046 A:middle
+VM Memory Trace.
+
+00:09:59.866 --> 00:10:01.046 A:middle
+VM Memory Trace.
+
+00:10:01.786 --> 00:10:03.326 A:middle
+This provides a deep view into
+
+00:10:03.326 --> 00:10:04.446 A:middle
+the virtual memory system's
+
+00:10:04.446 --> 00:10:05.806 A:middle
+performance with regards to your
+
+00:10:05.986 --> 00:10:06.726 A:middle
+app.
+
+00:10:08.736 --> 00:10:10.486 A:middle
+I find the By Operation tab
+
+00:10:10.486 --> 00:10:11.226 A:middle
+really useful here.
+
+00:10:11.916 --> 00:10:12.996 A:middle
+It gives you a virtual memory
+
+00:10:12.996 --> 00:10:14.386 A:middle
+system profile and will show you
+
+00:10:14.386 --> 00:10:16.376 A:middle
+things like page cache hits and
+
+00:10:16.376 --> 00:10:18.826 A:middle
+page zero fills for the VM.
+
+00:10:21.016 --> 00:10:22.536 A:middle
+Kyle mentioned earlier that if
+
+00:10:22.536 --> 00:10:23.726 A:middle
+you approach the memory limit of
+
+00:10:23.726 --> 00:10:25.146 A:middle
+the device, you'll receive an
+
+00:10:25.146 --> 00:10:26.766 A:middle
+EXC resource exception.
+
+00:10:27.276 --> 00:10:28.346 A:middle
+Well, if you're running your app
+
+00:10:28.346 --> 00:10:31.136 A:middle
+now in Xcode 10, Xcode will
+
+00:10:31.136 --> 00:10:32.586 A:middle
+catch this exception and pause
+
+00:10:32.586 --> 00:10:33.266 A:middle
+your app for you.
+
+00:10:33.636 --> 00:10:34.506 A:middle
+This means you can start the
+
+00:10:34.506 --> 00:10:35.636 A:middle
+memory debugger and begin your
+
+00:10:35.636 --> 00:10:36.816 A:middle
+investigation right from there.
+
+00:10:37.066 --> 00:10:38.066 A:middle
+I think this is really, really
+
+00:10:38.066 --> 00:10:38.436 A:middle
+useful.
+
+00:10:39.016 --> 00:10:42.006 A:middle
+The memory debugger for Xcode
+
+00:10:42.006 --> 00:10:43.606 A:middle
+was shipped in Xcode 8, and it
+
+00:10:43.606 --> 00:10:44.926 A:middle
+helps you track down object
+
+00:10:44.926 --> 00:10:46.546 A:middle
+dependencies, cycles, and leaks.
+
+00:10:46.996 --> 00:10:48.336 A:middle
+And in Xcode 10, it's been
+
+00:10:48.336 --> 00:10:49.716 A:middle
+updated with this great new
+
+00:10:49.716 --> 00:10:50.036 A:middle
+layout.
+
+00:10:50.536 --> 00:10:52.066 A:middle
+It's so good for viewing really
+
+00:10:52.066 --> 00:10:52.986 A:middle
+large Memgraphs.
+
+00:10:53.926 --> 00:10:55.836 A:middle
+Under the hood, Xcode uses the
+
+00:10:55.836 --> 00:10:57.456 A:middle
+Memgraph file format to store
+
+00:10:57.456 --> 00:10:58.916 A:middle
+information about the memory use
+
+00:10:58.916 --> 00:10:59.706 A:middle
+of your app.
+
+00:11:00.106 --> 00:11:01.356 A:middle
+What you may not have known is
+
+00:11:01.726 --> 00:11:03.066 A:middle
+that you can use Memgraphs with
+
+00:11:03.066 --> 00:11:04.106 A:middle
+a number of our command-line
+
+00:11:04.106 --> 00:11:04.496 A:middle
+tools.
+
+00:11:06.366 --> 00:11:07.566 A:middle
+First, you need to export a
+
+00:11:07.566 --> 00:11:08.586 A:middle
+Memgraph from Xcode.
+
+00:11:08.956 --> 00:11:09.856 A:middle
+This is really simple.
+
+00:11:10.976 --> 00:11:12.336 A:middle
+You just click the Export
+
+00:11:12.336 --> 00:11:14.006 A:middle
+Memgraph button in the File menu
+
+00:11:14.006 --> 00:11:14.686 A:middle
+and save it out.
+
+00:11:15.336 --> 00:11:18.216 A:middle
+Then, you can pass that Memgraph
+
+00:11:18.256 --> 00:11:19.506 A:middle
+to the command-line tool instead
+
+00:11:19.506 --> 00:11:20.456 A:middle
+of the target [inaudible] and
+
+00:11:20.456 --> 00:11:21.036 A:middle
+you're good to go.
+
+00:11:22.176 --> 00:11:23.796 A:middle
+So I was running my app in Xcode
+
+00:11:23.796 --> 00:11:25.216 A:middle
+10, and I received a memory
+
+00:11:25.216 --> 00:11:25.996 A:middle
+resource exception.
+
+00:11:26.356 --> 00:11:26.986 A:middle
+This isn't cool.
+
+00:11:27.176 --> 00:11:27.976 A:middle
+I should probably take a
+
+00:11:27.976 --> 00:11:29.256 A:middle
+Memgraph and investigate this
+
+00:11:29.256 --> 00:11:29.536 A:middle
+further.
+
+00:11:29.536 --> 00:11:30.536 A:middle
+But what do I do next?
+
+00:11:31.046 --> 00:11:32.526 A:middle
+Well, obviously to the terminal.
+
+00:11:33.176 --> 00:11:35.396 A:middle
+The first tool I often reach for
+
+00:11:35.536 --> 00:11:36.026 A:middle
+is vmmap.
+
+00:11:36.626 --> 00:11:37.486 A:middle
+It gives you a high-level
+
+00:11:37.486 --> 00:11:38.696 A:middle
+breakdown of memory consumption
+
+00:11:38.696 --> 00:11:40.306 A:middle
+in your app by printing the VM
+
+00:11:40.306 --> 00:11:41.496 A:middle
+regions that are allocated to
+
+00:11:41.496 --> 00:11:42.106 A:middle
+the process.
+
+00:11:43.576 --> 00:11:45.256 A:middle
+The summary flag is a great way
+
+00:11:45.256 --> 00:11:45.856 A:middle
+to get started.
+
+00:11:46.716 --> 00:11:49.866 A:middle
+It prints details of the size in
+
+00:11:49.866 --> 00:11:52.946 A:middle
+memory of the region, the amount
+
+00:11:52.946 --> 00:11:55.546 A:middle
+of the region that's dirty, and
+
+00:11:55.546 --> 00:11:56.286 A:middle
+the amount of memory that's
+
+00:11:56.286 --> 00:11:58.026 A:middle
+swapped or compressed in iOS.
+
+00:11:58.196 --> 00:11:59.466 A:middle
+And remember, it's this dirty
+
+00:11:59.466 --> 00:12:00.786 A:middle
+and swap that's really important
+
+00:11:59.466 --> 00:12:00.786 A:middle
+and swap that's really important
+
+00:12:00.786 --> 00:12:00.956 A:middle
+here.
+
+00:12:02.016 --> 00:12:03.646 A:middle
+One important point of note is
+
+00:12:03.646 --> 00:12:05.066 A:middle
+the swap size gives you the
+
+00:12:05.066 --> 00:12:07.486 A:middle
+precompressed size of your data,
+
+00:12:07.486 --> 00:12:08.746 A:middle
+not what it compressed down to.
+
+00:12:10.226 --> 00:12:11.686 A:middle
+If you really need to dig deeper
+
+00:12:11.756 --> 00:12:13.186 A:middle
+and you want more information,
+
+00:12:13.546 --> 00:12:14.956 A:middle
+you can just run vmmap against
+
+00:12:14.956 --> 00:12:16.186 A:middle
+the Memgraph , and you'll get
+
+00:12:16.186 --> 00:12:17.786 A:middle
+contents of all of the regions.
+
+00:12:17.896 --> 00:12:19.606 A:middle
+So we'll start by printing you
+
+00:12:19.606 --> 00:12:20.686 A:middle
+the nonwritable region, so,
+
+00:12:20.686 --> 00:12:22.156 A:middle
+like, your program's text or
+
+00:12:22.156 --> 00:12:24.536 A:middle
+executable code, and then the
+
+00:12:24.536 --> 00:12:26.156 A:middle
+writable regions, so the data
+
+00:12:26.156 --> 00:12:27.186 A:middle
+sections, for instance.
+
+00:12:27.256 --> 00:12:28.786 A:middle
+This is where your process heap
+
+00:12:29.286 --> 00:12:30.436 A:middle
+will be.
+
+00:12:30.676 --> 00:12:31.986 A:middle
+One really cool aside to all of
+
+00:12:31.986 --> 00:12:33.456 A:middle
+this is that all these tools
+
+00:12:33.456 --> 00:12:34.836 A:middle
+work really well with standard
+
+00:12:34.836 --> 00:12:35.976 A:middle
+command-line utilities.
+
+00:12:36.526 --> 00:12:38.286 A:middle
+So for example, I was profiling
+
+00:12:38.286 --> 00:12:39.356 A:middle
+my app in VM Tracker the other
+
+00:12:39.356 --> 00:12:41.506 A:middle
+day, and I saw the, an increase
+
+00:12:41.506 --> 00:12:42.526 A:middle
+in the amount of dirty memory.
+
+00:12:43.106 --> 00:12:45.316 A:middle
+So I took a Memgraph, and I want
+
+00:12:45.316 --> 00:12:48.036 A:middle
+to find out, are any frameworks
+
+00:12:48.036 --> 00:12:49.166 A:middle
+or libraries I'm linking to
+
+00:12:49.166 --> 00:12:52.076 A:middle
+contributing to this dirty data?
+
+00:12:52.276 --> 00:12:54.216 A:middle
+So here I've run vmmap against
+
+00:12:54.216 --> 00:12:55.296 A:middle
+the Memgraph I took.
+
+00:12:56.296 --> 00:12:58.456 A:middle
+And I've used the pages flag.
+
+00:12:58.866 --> 00:13:00.206 A:middle
+This means that vmmap will print
+
+00:12:58.866 --> 00:13:00.206 A:middle
+This means that vmmap will print
+
+00:13:00.206 --> 00:13:01.496 A:middle
+out the number of pages instead
+
+00:13:01.496 --> 00:13:02.376 A:middle
+of just raw bytes.
+
+00:13:02.866 --> 00:13:06.796 A:middle
+I then piped that into grep,
+
+00:13:06.886 --> 00:13:08.206 A:middle
+where I'm searching for a dylib,
+
+00:13:08.206 --> 00:13:09.456 A:middle
+so I need dynamic library here.
+
+00:13:11.046 --> 00:13:12.166 A:middle
+And then, finally, I pipe that
+
+00:13:12.166 --> 00:13:13.536 A:middle
+into a super simple awk script
+
+00:13:14.116 --> 00:13:15.816 A:middle
+to sum up the dirty column and
+
+00:13:15.816 --> 00:13:16.826 A:middle
+then print it out as the number
+
+00:13:16.826 --> 00:13:17.886 A:middle
+of dirty pages at the end.
+
+00:13:19.386 --> 00:13:20.556 A:middle
+I think this is super cool, and
+
+00:13:20.556 --> 00:13:22.286 A:middle
+I use it all the time.
+
+00:13:22.286 --> 00:13:23.676 A:middle
+It allows you to compose really
+
+00:13:23.676 --> 00:13:25.096 A:middle
+powerful debugging workflows for
+
+00:13:25.096 --> 00:13:26.216 A:middle
+you and your teams.
+
+00:13:26.656 --> 00:13:30.466 A:middle
+Another command-line utility
+
+00:13:30.466 --> 00:13:31.686 A:middle
+that macOS developers might be
+
+00:13:31.686 --> 00:13:33.066 A:middle
+familiar with already is leaks.
+
+00:13:33.836 --> 00:13:35.306 A:middle
+It tracks objects in the heap
+
+00:13:35.696 --> 00:13:36.906 A:middle
+that aren't rooted anywhere at
+
+00:13:36.906 --> 00:13:37.396 A:middle
+runtime.
+
+00:13:37.726 --> 00:13:38.586 A:middle
+So remember, if you see an
+
+00:13:38.586 --> 00:13:39.816 A:middle
+object in leaks, it's dirty
+
+00:13:39.816 --> 00:13:41.466 A:middle
+memory that you can never free.
+
+00:13:41.846 --> 00:13:44.266 A:middle
+Let's look at a leak in the
+
+00:13:44.266 --> 00:13:44.866 A:middle
+memory debugger.
+
+00:13:46.176 --> 00:13:48.176 A:middle
+Here I've got 3 objects, all
+
+00:13:48.176 --> 00:13:49.356 A:middle
+holding strong references to
+
+00:13:49.356 --> 00:13:50.546 A:middle
+each other, creating a classic
+
+00:13:50.546 --> 00:13:51.166 A:middle
+retain cycle.
+
+00:13:51.876 --> 00:13:53.766 A:middle
+So let's look at the same leak
+
+00:13:54.216 --> 00:13:56.446 A:middle
+in the leaks tool.
+
+00:13:56.646 --> 00:13:57.686 A:middle
+This year, leaks has been
+
+00:13:57.686 --> 00:13:59.676 A:middle
+updated to not only show the
+
+00:13:59.676 --> 00:14:02.936 A:middle
+leaked objects, but also the
+
+00:13:59.676 --> 00:14:02.936 A:middle
+leaked objects, but also the
+
+00:14:02.936 --> 00:14:05.186 A:middle
+retain cycles that they belong
+
+00:14:05.186 --> 00:14:05.396 A:middle
+to.
+
+00:14:05.396 --> 00:14:07.126 A:middle
+And if malloc stack logging was
+
+00:14:07.126 --> 00:14:08.856 A:middle
+enabled on the process, we'll
+
+00:14:08.856 --> 00:14:10.666 A:middle
+even give you a backtrace for
+
+00:14:11.786 --> 00:14:14.146 A:middle
+the root node.
+
+00:14:14.416 --> 00:14:15.796 A:middle
+One question I often ask myself
+
+00:14:15.906 --> 00:14:17.276 A:middle
+is, where's all my memory going?
+
+00:14:18.096 --> 00:14:19.606 A:middle
+I've looked in vmmap, and I see
+
+00:14:19.606 --> 00:14:20.716 A:middle
+the heap is really large, but
+
+00:14:20.966 --> 00:14:22.006 A:middle
+what do I do about it next?
+
+00:14:22.626 --> 00:14:24.426 A:middle
+Well, the heap tool provides all
+
+00:14:24.426 --> 00:14:25.366 A:middle
+sorts of information about
+
+00:14:25.366 --> 00:14:26.326 A:middle
+object allocations in the
+
+00:14:26.326 --> 00:14:26.836 A:middle
+process heap.
+
+00:14:27.046 --> 00:14:28.616 A:middle
+It helps you track down really
+
+00:14:28.616 --> 00:14:30.216 A:middle
+large allocations or just lots
+
+00:14:30.216 --> 00:14:32.086 A:middle
+of the same kind of object.
+
+00:14:34.036 --> 00:14:36.236 A:middle
+So here I've got a Memgraph that
+
+00:14:36.236 --> 00:14:37.516 A:middle
+I took when Xcode caught a
+
+00:14:37.516 --> 00:14:39.336 A:middle
+memory resource exception, and I
+
+00:14:39.336 --> 00:14:40.366 A:middle
+want to investigate the heap.
+
+00:14:40.906 --> 00:14:42.136 A:middle
+So I've passed it to heap, which
+
+00:14:42.136 --> 00:14:43.416 A:middle
+is giving me information about
+
+00:14:43.926 --> 00:14:45.186 A:middle
+the class name for each of those
+
+00:14:45.186 --> 00:14:49.696 A:middle
+objects, the number of them, and
+
+00:14:49.696 --> 00:14:50.546 A:middle
+some information about their
+
+00:14:50.546 --> 00:14:52.366 A:middle
+average size and the total size
+
+00:14:52.366 --> 00:14:54.976 A:middle
+for that class of object.
+
+00:14:54.976 --> 00:14:56.446 A:middle
+So here I kind of see, like,
+
+00:14:56.656 --> 00:14:58.156 A:middle
+not, lots and lots of small
+
+00:14:58.156 --> 00:14:58.976 A:middle
+objects, but I don't think
+
+00:14:58.976 --> 00:14:59.676 A:middle
+that's the problem.
+
+00:14:59.946 --> 00:15:01.066 A:middle
+I, that, I don't think that's
+
+00:14:59.946 --> 00:15:01.066 A:middle
+I, that, I don't think that's
+
+00:15:01.066 --> 00:15:01.786 A:middle
+really the problem here.
+
+00:15:05.336 --> 00:15:07.046 A:middle
+By default, heap will sort by
+
+00:15:07.046 --> 00:15:07.456 A:middle
+count.
+
+00:15:08.376 --> 00:15:09.786 A:middle
+But instead, what I want to see
+
+00:15:09.936 --> 00:15:11.176 A:middle
+is the largest objects, not the
+
+00:15:11.176 --> 00:15:12.586 A:middle
+most numerous, so passing the
+
+00:15:12.586 --> 00:15:14.086 A:middle
+sortBySize flag to heap will
+
+00:15:14.086 --> 00:15:15.176 A:middle
+cause it to sort by size.
+
+00:15:16.616 --> 00:15:17.606 A:middle
+Here I see a few of these
+
+00:15:17.606 --> 00:15:19.576 A:middle
+enormous NSConcreteData objects.
+
+00:15:19.926 --> 00:15:21.246 A:middle
+I should probably attach this
+
+00:15:21.246 --> 00:15:22.586 A:middle
+output and the Memgraph to a bug
+
+00:15:22.586 --> 00:15:24.726 A:middle
+report, but that's not going far
+
+00:15:24.726 --> 00:15:25.216 A:middle
+enough, really.
+
+00:15:25.216 --> 00:15:25.966 A:middle
+I should figure out where these
+
+00:15:25.966 --> 00:15:26.446 A:middle
+came from.
+
+00:15:27.806 --> 00:15:29.186 A:middle
+First, I need to get the address
+
+00:15:29.186 --> 00:15:30.436 A:middle
+for one of these NSConcreteData
+
+00:15:30.436 --> 00:15:30.896 A:middle
+objects.
+
+00:15:31.606 --> 00:15:33.006 A:middle
+The addresses flag in heap.
+
+00:15:33.396 --> 00:15:34.436 A:middle
+When you pass the addresses flag
+
+00:15:34.436 --> 00:15:35.456 A:middle
+to heap with the name of a
+
+00:15:35.456 --> 00:15:36.656 A:middle
+class, it'll give you an address
+
+00:15:36.656 --> 00:15:38.306 A:middle
+for each instance on the heap.
+
+00:15:39.516 --> 00:15:41.186 A:middle
+So now I have these addresses, I
+
+00:15:41.186 --> 00:15:42.226 A:middle
+can find out where one of these
+
+00:15:42.226 --> 00:15:42.656 A:middle
+came from.
+
+00:15:43.926 --> 00:15:44.866 A:middle
+This is where malloc stack
+
+00:15:44.866 --> 00:15:45.756 A:middle
+logging comes in handy.
+
+00:15:46.526 --> 00:15:47.976 A:middle
+When enabled, the system will
+
+00:15:47.976 --> 00:15:49.196 A:middle
+record a backtrace for each
+
+00:15:49.196 --> 00:15:49.826 A:middle
+allocation.
+
+00:15:50.316 --> 00:15:52.196 A:middle
+These logs get captured up when
+
+00:15:52.196 --> 00:15:53.576 A:middle
+we record a Memgraph, and
+
+00:15:53.576 --> 00:15:54.616 A:middle
+they're used to annotate
+
+00:15:54.616 --> 00:15:55.966 A:middle
+existing output for some of our
+
+00:15:55.966 --> 00:15:56.366 A:middle
+tools.
+
+00:15:57.136 --> 00:15:58.306 A:middle
+You can enable it really easily
+
+00:15:58.306 --> 00:15:59.666 A:middle
+in the scheme editor in the
+
+00:15:59.666 --> 00:16:00.576 A:middle
+diagnostics tab.
+
+00:15:59.666 --> 00:16:00.576 A:middle
+diagnostics tab.
+
+00:16:01.426 --> 00:16:02.576 A:middle
+I'd recommend using the live
+
+00:16:02.576 --> 00:16:03.696 A:middle
+allocations option if you're
+
+00:16:03.696 --> 00:16:06.726 A:middle
+going to use it with a Memgraph.
+
+00:16:06.726 --> 00:16:08.986 A:middle
+So my malloc's, my Memgraph was
+
+00:16:08.986 --> 00:16:09.846 A:middle
+captured in malloc stack
+
+00:16:09.846 --> 00:16:10.196 A:middle
+logging.
+
+00:16:10.866 --> 00:16:12.296 A:middle
+Now, to find the backtrace for
+
+00:16:12.296 --> 00:16:12.926 A:middle
+the allocation.
+
+00:16:13.226 --> 00:16:14.116 A:middle
+This is where malloc history
+
+00:16:14.116 --> 00:16:14.776 A:middle
+comes in helpful.
+
+00:16:15.566 --> 00:16:16.946 A:middle
+You just pass malloc history,
+
+00:16:17.136 --> 00:16:18.576 A:middle
+the Memgraph, and an address for
+
+00:16:18.576 --> 00:16:19.886 A:middle
+an instance in memory, and, if
+
+00:16:19.886 --> 00:16:20.876 A:middle
+there was a backtrace captured
+
+00:16:20.876 --> 00:16:24.016 A:middle
+for it, it'll give it to you.
+
+00:16:24.136 --> 00:16:25.276 A:middle
+So here I've taken the address
+
+00:16:25.276 --> 00:16:26.296 A:middle
+for one of those really big
+
+00:16:26.296 --> 00:16:27.276 A:middle
+NSConcreteDatas.
+
+00:16:27.496 --> 00:16:28.376 A:middle
+I've passed it to malloc
+
+00:16:28.376 --> 00:16:30.456 A:middle
+history, and I've got a
+
+00:16:30.456 --> 00:16:31.026 A:middle
+backtrace.
+
+00:16:31.486 --> 00:16:32.646 A:middle
+And, interestingly, it looks
+
+00:16:32.646 --> 00:16:34.166 A:middle
+like my NoirFilter's apply
+
+00:16:34.166 --> 00:16:35.256 A:middle
+method here is creating that
+
+00:16:35.356 --> 00:16:36.376 A:middle
+huge NS data.
+
+00:16:37.126 --> 00:16:38.526 A:middle
+I should probably attach this
+
+00:16:38.526 --> 00:16:40.186 A:middle
+and the Memgraph to a bug report
+
+00:16:40.186 --> 00:16:42.466 A:middle
+and get someone else to look at
+
+00:16:43.126 --> 00:16:43.206 A:middle
+it.
+
+00:16:43.476 --> 00:16:44.696 A:middle
+These are just a few of the ways
+
+00:16:44.696 --> 00:16:46.756 A:middle
+you can deeply investigate the
+
+00:16:46.756 --> 00:16:48.216 A:middle
+behavior of your app.
+
+00:16:48.626 --> 00:16:49.526 A:middle
+So when faced with a memory
+
+00:16:49.526 --> 00:16:51.086 A:middle
+problem, which tool do you pick?
+
+00:16:52.096 --> 00:16:53.176 A:middle
+Well, there are 3 ways to think
+
+00:16:53.176 --> 00:16:53.676 A:middle
+about this.
+
+00:16:53.956 --> 00:16:55.196 A:middle
+Do you want to see object
+
+00:16:55.196 --> 00:16:55.656 A:middle
+creation?
+
+00:16:55.656 --> 00:16:56.956 A:middle
+Do you want to see what
+
+00:16:56.956 --> 00:16:58.296 A:middle
+references an object or address
+
+00:16:58.296 --> 00:16:58.696 A:middle
+in memory?
+
+00:16:59.056 --> 00:16:59.916 A:middle
+Or do you just want to see how
+
+00:16:59.916 --> 00:17:00.926 A:middle
+large an instance is?
+
+00:16:59.916 --> 00:17:00.926 A:middle
+large an instance is?
+
+00:17:02.376 --> 00:17:03.366 A:middle
+If malloc stack logging was
+
+00:17:03.366 --> 00:17:05.046 A:middle
+enabled when you record, when
+
+00:17:05.046 --> 00:17:06.185 A:middle
+you, when your process was
+
+00:17:06.185 --> 00:17:08.175 A:middle
+started, malloc history can help
+
+00:17:08.175 --> 00:17:09.146 A:middle
+you find the backtrace for that
+
+00:17:09.146 --> 00:17:09.455 A:middle
+object.
+
+00:17:10.896 --> 00:17:11.646 A:middle
+If you just want to see what
+
+00:17:11.646 --> 00:17:12.896 A:middle
+references an object in memory,
+
+00:17:13.486 --> 00:17:15.576 A:middle
+you can use leaks and a bunch of
+
+00:17:15.576 --> 00:17:16.766 A:middle
+options that it has in the
+
+00:17:16.766 --> 00:17:17.715 A:middle
+[inaudible] page to help you
+
+00:17:17.715 --> 00:17:17.915 A:middle
+there.
+
+00:17:17.915 --> 00:17:20.366 A:middle
+And finally, if you just want to
+
+00:17:20.366 --> 00:17:21.435 A:middle
+see how large a region or an
+
+00:17:21.435 --> 00:17:23.296 A:middle
+instance is, vmmap and heap are
+
+00:17:23.296 --> 00:17:24.056 A:middle
+the go-to tools.
+
+00:17:24.626 --> 00:17:26.006 A:middle
+As a jumping off point, I'd
+
+00:17:26.006 --> 00:17:27.376 A:middle
+recommend just running vmmap
+
+00:17:27.376 --> 00:17:29.126 A:middle
+with the summary flag against a
+
+00:17:29.126 --> 00:17:30.436 A:middle
+Memgraph taken of your process
+
+00:17:30.626 --> 00:17:31.746 A:middle
+and then follow the thread down
+
+00:17:33.776 --> 00:17:34.096 A:middle
+there.
+
+00:17:34.096 --> 00:17:34.916 A:middle
+Now, I'd like to hand back to
+
+00:17:34.916 --> 00:17:36.286 A:middle
+Kyle, who's going to talk about
+
+00:17:36.436 --> 00:17:37.736 A:middle
+what can be some of the largest
+
+00:17:37.736 --> 00:17:39.446 A:middle
+objects in iOS apps, and that's
+
+00:17:39.446 --> 00:17:39.936 A:middle
+images.
+
+00:17:40.646 --> 00:17:40.856 A:middle
+Kyle?
+
+00:17:42.516 --> 00:17:45.856 A:middle
+[ Applause ]
+
+00:17:46.356 --> 00:17:46.916 A:middle
+&gt;&gt; Thanks, James.
+
+00:17:47.916 --> 00:17:49.486 A:middle
+So images.
+
+00:17:50.306 --> 00:17:51.586 A:middle
+The most important thing about
+
+00:17:51.586 --> 00:17:54.296 A:middle
+images to remember is that the
+
+00:17:54.296 --> 00:17:55.506 A:middle
+memory use is related to the
+
+00:17:55.506 --> 00:17:57.916 A:middle
+dimensions of the image, not its
+
+00:17:57.916 --> 00:17:58.536 A:middle
+file size.
+
+00:17:59.696 --> 00:18:01.846 A:middle
+As an example, I have this
+
+00:17:59.696 --> 00:18:01.846 A:middle
+As an example, I have this
+
+00:18:01.996 --> 00:18:03.786 A:middle
+really beautiful picture that I
+
+00:18:03.786 --> 00:18:04.986 A:middle
+want to use as a wallpaper for
+
+00:18:04.986 --> 00:18:05.496 A:middle
+an iPad app.
+
+00:18:06.646 --> 00:18:10.786 A:middle
+It measures 2048 by 1536, and
+
+00:18:10.786 --> 00:18:12.866 A:middle
+the file on disk is 590
+
+00:18:12.866 --> 00:18:13.436 A:middle
+kilobytes.
+
+00:18:13.966 --> 00:18:15.586 A:middle
+But how much memory does it use
+
+00:18:15.696 --> 00:18:16.086 A:middle
+really?
+
+00:18:18.516 --> 00:18:19.646 A:middle
+10 megabytes.
+
+00:18:20.056 --> 00:18:21.746 A:middle
+10 megs, that's huge!
+
+00:18:22.146 --> 00:18:23.746 A:middle
+And the reason why is because
+
+00:18:23.746 --> 00:18:25.066 A:middle
+multiplying the number of pixels
+
+00:18:25.066 --> 00:18:28.406 A:middle
+wide by high, 2048 by 1536, by 4
+
+00:18:28.406 --> 00:18:30.016 A:middle
+bytes per pixel gets you about
+
+00:18:30.016 --> 00:18:30.786 A:middle
+10 megabytes.
+
+00:18:31.706 --> 00:18:33.956 A:middle
+So why is it so much larger?
+
+00:18:35.016 --> 00:18:36.916 A:middle
+Well, we have to talk about how
+
+00:18:36.916 --> 00:18:38.076 A:middle
+images work on iOS.
+
+00:18:38.196 --> 00:18:39.676 A:middle
+There's a load, a decode, and a
+
+00:18:39.706 --> 00:18:40.346 A:middle
+render phase.
+
+00:18:41.306 --> 00:18:43.516 A:middle
+So the load phase takes this
+
+00:18:43.516 --> 00:18:45.646 A:middle
+590-kilobyte JPEG file, which is
+
+00:18:45.646 --> 00:18:48.236 A:middle
+compressed, loads it into
+
+00:18:48.236 --> 00:18:48.646 A:middle
+memory.
+
+00:18:49.856 --> 00:18:51.996 A:middle
+The decode converts that JPEG
+
+00:18:51.996 --> 00:18:54.836 A:middle
+file into a format that the GPU
+
+00:18:54.836 --> 00:18:55.366 A:middle
+can read.
+
+00:18:55.936 --> 00:18:56.966 A:middle
+Now, this needs to be
+
+00:18:56.966 --> 00:18:58.416 A:middle
+uncompressed, which makes it 10
+
+00:18:58.416 --> 00:18:58.996 A:middle
+megabytes.
+
+00:18:59.926 --> 00:19:01.446 A:middle
+Once it's been decoded, it can
+
+00:18:59.926 --> 00:19:01.446 A:middle
+Once it's been decoded, it can
+
+00:19:01.446 --> 00:19:02.556 A:middle
+be rendered at will.
+
+00:19:03.136 --> 00:19:05.206 A:middle
+For more information on images
+
+00:19:05.526 --> 00:19:06.936 A:middle
+and how to kind of optimize
+
+00:19:06.936 --> 00:19:08.346 A:middle
+them, I'd recommend checking out
+
+00:19:08.346 --> 00:19:10.296 A:middle
+the Images and Graphics Best
+
+00:19:10.416 --> 00:19:11.646 A:middle
+Practice session that was
+
+00:19:11.646 --> 00:19:13.946 A:middle
+earlier this week.
+
+00:19:14.216 --> 00:19:16.076 A:middle
+Now, 4 bytes per pixel we got by
+
+00:19:16.176 --> 00:19:17.286 A:middle
+the SRGB format.
+
+00:19:18.236 --> 00:19:19.186 A:middle
+This is typically the most
+
+00:19:19.186 --> 00:19:21.266 A:middle
+common format that images in
+
+00:19:21.266 --> 00:19:21.856 A:middle
+graphics are.
+
+00:19:22.356 --> 00:19:26.196 A:middle
+It's 8 bits per pixel, so you
+
+00:19:26.816 --> 00:19:28.776 A:middle
+have 1 byte for red, 1 byte for
+
+00:19:28.776 --> 00:19:30.816 A:middle
+green, and 1 byte for blue, and
+
+00:19:30.816 --> 00:19:31.596 A:middle
+an alpha component.
+
+00:19:33.126 --> 00:19:36.036 A:middle
+However, we can go larger.
+
+00:19:36.036 --> 00:19:38.806 A:middle
+iOS hardware can render wide
+
+00:19:38.806 --> 00:19:39.176 A:middle
+format.
+
+00:19:39.356 --> 00:19:40.736 A:middle
+Now, wide format, to get that
+
+00:19:40.736 --> 00:19:42.476 A:middle
+expressive colors, requires 2
+
+00:19:42.476 --> 00:19:44.356 A:middle
+bytes per pixel, so we double
+
+00:19:44.356 --> 00:19:45.456 A:middle
+the size of our image.
+
+00:19:46.356 --> 00:19:49.176 A:middle
+Cameras on the iPhone 7, 8, X,
+
+00:19:49.356 --> 00:19:51.006 A:middle
+and the, some of the iPad Pros
+
+00:19:51.436 --> 00:19:53.036 A:middle
+are great for capturing this
+
+00:19:53.266 --> 00:19:55.006 A:middle
+high-fidelity content.
+
+00:19:55.576 --> 00:19:56.966 A:middle
+You can also use it for super
+
+00:19:56.966 --> 00:19:57.976 A:middle
+accurate colors for, like,
+
+00:19:57.976 --> 00:19:58.946 A:middle
+sports logos and such.
+
+00:20:00.066 --> 00:20:01.706 A:middle
+But these are only really useful
+
+00:20:01.706 --> 00:20:02.856 A:middle
+on the wide format displays, so
+
+00:20:02.856 --> 00:20:03.766 A:middle
+we don't want to use this when
+
+00:20:03.766 --> 00:20:04.616 A:middle
+we don't need to.
+
+00:20:05.756 --> 00:20:06.836 A:middle
+On the flip side, we can
+
+00:20:06.836 --> 00:20:07.766 A:middle
+actually go smaller.
+
+00:20:08.356 --> 00:20:09.186 A:middle
+Now, there's a luminance and
+
+00:20:09.186 --> 00:20:10.066 A:middle
+alpha 8 format.
+
+00:20:10.606 --> 00:20:13.176 A:middle
+This format stores a grayscale
+
+00:20:13.176 --> 00:20:14.236 A:middle
+and an alpha value only.
+
+00:20:14.886 --> 00:20:16.486 A:middle
+This is typically used in
+
+00:20:16.486 --> 00:20:18.336 A:middle
+shaders, so like Metal apps and
+
+00:20:18.336 --> 00:20:18.626 A:middle
+stuff.
+
+00:20:19.306 --> 00:20:21.246 A:middle
+Not very common in our usage.
+
+00:20:21.446 --> 00:20:22.336 A:middle
+We can actually get even
+
+00:20:22.336 --> 00:20:22.776 A:middle
+smaller.
+
+00:20:23.736 --> 00:20:24.936 A:middle
+We can go down to what we call
+
+00:20:24.936 --> 00:20:26.086 A:middle
+the alpha 8 format.
+
+00:20:26.516 --> 00:20:28.096 A:middle
+Now, alpha 8 just has 1 channel,
+
+00:20:28.156 --> 00:20:28.996 A:middle
+1 byte per pixel.
+
+00:20:29.226 --> 00:20:30.196 A:middle
+Very small.
+
+00:20:30.196 --> 00:20:32.056 A:middle
+It's 75% smaller than SRGB.
+
+00:20:33.026 --> 00:20:34.546 A:middle
+Now, this is great for masks or
+
+00:20:34.546 --> 00:20:36.246 A:middle
+text that's monochrome because
+
+00:20:36.246 --> 00:20:37.966 A:middle
+we're using 75% less memory.
+
+00:20:39.096 --> 00:20:41.396 A:middle
+So if we look at the breakdown,
+
+00:20:42.296 --> 00:20:43.966 A:middle
+we can go from 1 byte per pixel
+
+00:20:44.006 --> 00:20:45.786 A:middle
+with alpha 8 all the way up to 8
+
+00:20:45.786 --> 00:20:46.816 A:middle
+bytes per pixel with wide
+
+00:20:46.816 --> 00:20:47.096 A:middle
+format.
+
+00:20:47.466 --> 00:20:48.606 A:middle
+There's a huge range.
+
+00:20:48.916 --> 00:20:50.806 A:middle
+So what we really need to do is
+
+00:20:50.806 --> 00:20:51.756 A:middle
+know how to pick the right
+
+00:20:51.756 --> 00:20:52.046 A:middle
+format.
+
+00:20:52.926 --> 00:20:53.956 A:middle
+So how do we pick the right
+
+00:20:53.956 --> 00:20:54.906 A:middle
+format?
+
+00:20:55.656 --> 00:20:57.676 A:middle
+The short answer is don't pick
+
+00:20:57.676 --> 00:20:58.126 A:middle
+the format.
+
+00:20:58.456 --> 00:20:59.646 A:middle
+Let the format pick you.
+
+00:21:01.106 --> 00:21:03.006 A:middle
+If you migrate away from using
+
+00:21:03.006 --> 00:21:04.876 A:middle
+the UIGraphics BeginImageContext
+
+00:21:04.876 --> 00:21:07.416 A:middle
+WithOptions API, which has been
+
+00:21:07.416 --> 00:21:09.276 A:middle
+in iOS since it began, and
+
+00:21:09.276 --> 00:21:10.816 A:middle
+instead switch to the UIGraphics
+
+00:21:10.856 --> 00:21:12.576 A:middle
+ImageRenderer format, you can
+
+00:21:12.576 --> 00:21:14.206 A:middle
+save a lot of memory because the
+
+00:21:15.036 --> 00:21:17.456 A:middle
+UIGraphics BeginImageContext
+
+00:21:17.456 --> 00:21:19.006 A:middle
+WithOptions is always a
+
+00:21:19.356 --> 00:21:20.916 A:middle
+4-byte-per-pixel format.
+
+00:21:21.886 --> 00:21:22.866 A:middle
+It's always SRGB.
+
+00:21:23.186 --> 00:21:24.416 A:middle
+So you don't get the wide format
+
+00:21:24.416 --> 00:21:25.446 A:middle
+if you want it, and you don't
+
+00:21:25.446 --> 00:21:27.216 A:middle
+get the 1-byte-per-pixel A8
+
+00:21:27.216 --> 00:21:28.596 A:middle
+format if you need it.
+
+00:21:28.716 --> 00:21:29.346 A:middle
+Instead, if you use the
+
+00:21:29.346 --> 00:21:30.966 A:middle
+UIGraphics ImageRenderer API,
+
+00:21:31.566 --> 00:21:33.576 A:middle
+which came in iOS 10, as of iOS
+
+00:21:33.626 --> 00:21:35.156 A:middle
+12, it will automatically pick
+
+00:21:35.156 --> 00:21:36.236 A:middle
+the best graphics format for
+
+00:21:36.236 --> 00:21:36.396 A:middle
+you.
+
+00:21:36.866 --> 00:21:39.176 A:middle
+Here's an example.
+
+00:21:39.716 --> 00:21:40.976 A:middle
+Say I'm drawing a circle for a
+
+00:21:40.976 --> 00:21:41.146 A:middle
+mask.
+
+00:21:41.956 --> 00:21:43.666 A:middle
+Now, using the old API with the
+
+00:21:43.666 --> 00:21:45.626 A:middle
+highlighted code here is my
+
+00:21:45.626 --> 00:21:46.866 A:middle
+drawing code, I'm getting a
+
+00:21:46.866 --> 00:21:48.326 A:middle
+4-byte-per-pixel format just to
+
+00:21:48.326 --> 00:21:49.586 A:middle
+draw a black circle.
+
+00:21:51.026 --> 00:21:52.366 A:middle
+If I instead switch to the new
+
+00:21:52.366 --> 00:21:54.336 A:middle
+API, I'm using the exact same
+
+00:21:54.336 --> 00:21:54.826 A:middle
+drawing code.
+
+00:21:55.676 --> 00:21:57.406 A:middle
+Just using the new API, I'm now
+
+00:21:57.406 --> 00:21:58.826 A:middle
+getting a 1-byte-per-pixel
+
+00:21:58.826 --> 00:21:59.096 A:middle
+image.
+
+00:21:59.176 --> 00:22:01.396 A:middle
+This means that it's 75% less
+
+00:21:59.176 --> 00:22:01.396 A:middle
+This means that it's 75% less
+
+00:22:01.706 --> 00:22:02.346 A:middle
+memory use.
+
+00:22:02.786 --> 00:22:04.316 A:middle
+That's a great savings and the
+
+00:22:04.316 --> 00:22:05.086 A:middle
+same fidelity.
+
+00:22:05.676 --> 00:22:10.906 A:middle
+As an additional bonus, if I
+
+00:22:10.906 --> 00:22:11.916 A:middle
+want to use this mask over
+
+00:22:11.916 --> 00:22:13.476 A:middle
+again, I can change the tint
+
+00:22:13.476 --> 00:22:16.006 A:middle
+color on an image view, and that
+
+00:22:16.006 --> 00:22:17.366 A:middle
+will just change it with a
+
+00:22:17.366 --> 00:22:19.676 A:middle
+multiply, meaning that I don't
+
+00:22:19.676 --> 00:22:20.556 A:middle
+have to allocate any more
+
+00:22:20.556 --> 00:22:20.906 A:middle
+memory.
+
+00:22:21.216 --> 00:22:23.006 A:middle
+So I can use this not just as a
+
+00:22:23.006 --> 00:22:24.196 A:middle
+black circle, but as a blue
+
+00:22:24.196 --> 00:22:25.646 A:middle
+circle, red circle, green circle
+
+00:22:25.646 --> 00:22:26.896 A:middle
+with no additional memory cost.
+
+00:22:27.216 --> 00:22:27.826 A:middle
+It's really cool.
+
+00:22:32.236 --> 00:22:32.866 A:middle
+One other thing that we
+
+00:22:32.866 --> 00:22:34.136 A:middle
+typically do with images is
+
+00:22:34.136 --> 00:22:34.876 A:middle
+downsample them.
+
+00:22:35.516 --> 00:22:36.936 A:middle
+So when we want to make like a
+
+00:22:36.936 --> 00:22:38.286 A:middle
+thumbnail or something, we want
+
+00:22:38.286 --> 00:22:38.866 A:middle
+to scale it down.
+
+00:22:39.196 --> 00:22:41.426 A:middle
+What we don't want to do is use
+
+00:22:41.426 --> 00:22:42.836 A:middle
+a UIImage for the downscaling.
+
+00:22:42.956 --> 00:22:44.336 A:middle
+If we actually use UIImage to
+
+00:22:44.336 --> 00:22:46.126 A:middle
+draw, it's a little bit less
+
+00:22:46.126 --> 00:22:47.126 A:middle
+performant due to internal
+
+00:22:47.126 --> 00:22:48.856 A:middle
+coordinate space transforms.
+
+00:22:49.316 --> 00:22:50.946 A:middle
+And, as we saw earlier, it would
+
+00:22:50.946 --> 00:22:52.256 A:middle
+decompress the entire image in
+
+00:22:52.256 --> 00:22:52.656 A:middle
+the memory.
+
+00:22:53.616 --> 00:22:55.476 A:middle
+Instead, there's this ImageIO
+
+00:22:55.476 --> 00:22:55.886 A:middle
+framework.
+
+00:22:56.536 --> 00:22:58.196 A:middle
+ImageIO can actually downsample
+
+00:22:58.196 --> 00:23:00.036 A:middle
+the image, and it will use a
+
+00:22:58.196 --> 00:23:00.036 A:middle
+the image, and it will use a
+
+00:23:00.036 --> 00:23:01.466 A:middle
+streaming API such that you only
+
+00:23:01.466 --> 00:23:03.136 A:middle
+pay the dirty memory cost of the
+
+00:23:03.136 --> 00:23:03.996 A:middle
+resulting image.
+
+00:23:04.196 --> 00:23:05.256 A:middle
+So this will save you a memory
+
+00:23:05.256 --> 00:23:05.566 A:middle
+spike.
+
+00:23:06.076 --> 00:23:09.126 A:middle
+As an example, here's some code
+
+00:23:09.196 --> 00:23:10.346 A:middle
+where I get a file on disk.
+
+00:23:10.506 --> 00:23:11.526 A:middle
+This could also be a file I
+
+00:23:11.526 --> 00:23:11.996 A:middle
+downloaded.
+
+00:23:12.916 --> 00:23:16.456 A:middle
+And I'm using the UIImage to
+
+00:23:16.546 --> 00:23:17.696 A:middle
+draw into a smaller rect.
+
+00:23:18.106 --> 00:23:19.216 A:middle
+This is still going to have that
+
+00:23:19.216 --> 00:23:19.796 A:middle
+big spike.
+
+00:23:21.036 --> 00:23:22.626 A:middle
+Now, instead, if I switch to
+
+00:23:22.626 --> 00:23:24.376 A:middle
+ImageIO, I still have to load
+
+00:23:24.376 --> 00:23:25.236 A:middle
+the file from disk.
+
+00:23:25.896 --> 00:23:27.846 A:middle
+I set up some parameters because
+
+00:23:27.846 --> 00:23:29.476 A:middle
+it's a lower-level API to say
+
+00:23:29.476 --> 00:23:30.936 A:middle
+how big I want this image to be,
+
+00:23:31.186 --> 00:23:33.126 A:middle
+and then I just ask it to create
+
+00:23:33.126 --> 00:23:34.206 A:middle
+it with CGImageSource
+
+00:23:34.246 --> 00:23:35.346 A:middle
+CreateThumbnail AtIndex.
+
+00:23:35.916 --> 00:23:37.506 A:middle
+Now, that CG image I can wrap in
+
+00:23:37.506 --> 00:23:38.956 A:middle
+a UIImage, and I'm good to go.
+
+00:23:39.096 --> 00:23:40.246 A:middle
+I've got a much smaller image,
+
+00:23:40.526 --> 00:23:42.046 A:middle
+and it's about 50% faster than
+
+00:23:42.046 --> 00:23:43.486 A:middle
+that previous code.
+
+00:23:45.146 --> 00:23:47.086 A:middle
+Now, another thing we want to
+
+00:23:47.086 --> 00:23:48.406 A:middle
+talk about is how to optimize
+
+00:23:48.406 --> 00:23:49.096 A:middle
+when in the background.
+
+00:23:49.946 --> 00:23:53.316 A:middle
+Say I have an image in an app,
+
+00:23:53.616 --> 00:23:54.196 A:middle
+full screen.
+
+00:23:54.196 --> 00:23:54.886 A:middle
+It's beautiful.
+
+00:23:54.886 --> 00:23:55.446 A:middle
+I'm loving it.
+
+00:23:55.906 --> 00:23:57.376 A:middle
+But then, I need to go to my
+
+00:23:57.376 --> 00:23:58.706 A:middle
+Home screen to take care of a
+
+00:23:58.706 --> 00:24:00.376 A:middle
+notification or go to a
+
+00:23:58.706 --> 00:24:00.376 A:middle
+notification or go to a
+
+00:24:00.376 --> 00:24:01.316 A:middle
+different app.
+
+00:24:01.986 --> 00:24:03.586 A:middle
+That image is still in memory.
+
+00:24:04.626 --> 00:24:06.806 A:middle
+So as a good rule of thumb, we
+
+00:24:06.806 --> 00:24:08.486 A:middle
+recommend unloading large
+
+00:24:08.486 --> 00:24:09.826 A:middle
+resources you cannot see.
+
+00:24:10.276 --> 00:24:13.756 A:middle
+There are 2 ways to do this.
+
+00:24:13.986 --> 00:24:15.246 A:middle
+The first is the app life cycle.
+
+00:24:15.296 --> 00:24:16.466 A:middle
+So if you background your app or
+
+00:24:16.466 --> 00:24:17.656 A:middle
+foreground it, the app life
+
+00:24:17.656 --> 00:24:19.976 A:middle
+cycle events are great to, are a
+
+00:24:19.976 --> 00:24:20.736 A:middle
+great way to know.
+
+00:24:21.686 --> 00:24:22.926 A:middle
+Now, this applies to mostly the
+
+00:24:22.926 --> 00:24:24.486 A:middle
+on-screen views because those
+
+00:24:24.536 --> 00:24:25.316 A:middle
+don't conform to the
+
+00:24:25.316 --> 00:24:26.796 A:middle
+UIViewController appearance life
+
+00:24:26.796 --> 00:24:27.106 A:middle
+cycle.
+
+00:24:27.756 --> 00:24:28.886 A:middle
+UIViewController methods are
+
+00:24:28.886 --> 00:24:30.576 A:middle
+great for, like, tab controllers
+
+00:24:31.476 --> 00:24:32.526 A:middle
+or navigation controllers
+
+00:24:32.526 --> 00:24:33.306 A:middle
+because you're going to have
+
+00:24:33.306 --> 00:24:34.446 A:middle
+multiple view controllers, but
+
+00:24:34.446 --> 00:24:35.676 A:middle
+only 1 of them is on screen at
+
+00:24:35.676 --> 00:24:36.066 A:middle
+once.
+
+00:24:36.716 --> 00:24:37.486 A:middle
+So if you leverage like the
+
+00:24:37.486 --> 00:24:38.296 A:middle
+viewWillAppear and
+
+00:24:38.296 --> 00:24:39.946 A:middle
+viewDidDisappear code or
+
+00:24:40.176 --> 00:24:41.516 A:middle
+callbacks, you can keep your
+
+00:24:41.726 --> 00:24:42.766 A:middle
+memory footprint smaller.
+
+00:24:44.036 --> 00:24:46.476 A:middle
+Now, as an example, if I
+
+00:24:46.476 --> 00:24:48.246 A:middle
+register for the notifications
+
+00:24:48.246 --> 00:24:49.466 A:middle
+for the application entering the
+
+00:24:49.566 --> 00:24:50.916 A:middle
+background, I can unload my
+
+00:24:50.916 --> 00:24:52.296 A:middle
+large assets -- in this case,
+
+00:24:52.296 --> 00:24:52.726 A:middle
+images.
+
+00:24:53.826 --> 00:24:54.696 A:middle
+When the app comes back to the
+
+00:24:54.696 --> 00:24:56.016 A:middle
+foreground, I get a notification
+
+00:24:56.016 --> 00:24:56.786 A:middle
+for that.
+
+00:24:57.556 --> 00:24:59.686 A:middle
+If I reload my images there, I'm
+
+00:24:59.856 --> 00:25:00.746 A:middle
+saving memory when in the
+
+00:24:59.856 --> 00:25:00.746 A:middle
+saving memory when in the
+
+00:25:00.746 --> 00:25:02.406 A:middle
+background, and I'm keeping the
+
+00:25:02.406 --> 00:25:03.746 A:middle
+same fidelity when the user
+
+00:25:03.746 --> 00:25:04.206 A:middle
+comes back.
+
+00:25:04.396 --> 00:25:05.436 A:middle
+It's completely transparent to
+
+00:25:05.436 --> 00:25:07.226 A:middle
+them, but more memory is
+
+00:25:07.226 --> 00:25:10.476 A:middle
+available to the system.
+
+00:25:10.476 --> 00:25:12.306 A:middle
+Similarly, if I'm in a nav
+
+00:25:12.306 --> 00:25:14.056 A:middle
+controller or a tab controller,
+
+00:25:14.536 --> 00:25:15.776 A:middle
+my view controllers can unload
+
+00:25:15.776 --> 00:25:16.626 A:middle
+their images when they
+
+00:25:16.626 --> 00:25:17.146 A:middle
+disappear.
+
+00:25:17.746 --> 00:25:18.976 A:middle
+And before they come back with
+
+00:25:18.976 --> 00:25:21.336 A:middle
+the viewWillAppear method, I can
+
+00:25:21.336 --> 00:25:21.916 A:middle
+reload them.
+
+00:25:22.116 --> 00:25:23.076 A:middle
+So again, the user doesn't
+
+00:25:23.076 --> 00:25:24.066 A:middle
+notice anything's different.
+
+00:25:24.216 --> 00:25:25.506 A:middle
+Our apps are just using less
+
+00:25:25.506 --> 00:25:26.696 A:middle
+memory, which is great.
+
+00:25:27.286 --> 00:25:31.176 A:middle
+And now, I'd like to invite up
+
+00:25:31.216 --> 00:25:32.746 A:middle
+Kris to kind of bring this all
+
+00:25:32.746 --> 00:25:33.566 A:middle
+together in a nice demo.
+
+00:25:34.376 --> 00:25:34.646 A:middle
+Kris?
+
+00:25:35.516 --> 00:25:39.586 A:middle
+[ Applause ]
+
+00:25:40.086 --> 00:25:41.436 A:middle
+&gt;&gt; Okay. I'm going to switch to
+
+00:25:41.436 --> 00:25:42.376 A:middle
+the demo machine.
+
+00:25:43.316 --> 00:25:43.756 A:middle
+There we go.
+
+00:25:44.116 --> 00:25:45.206 A:middle
+So I've been working on this
+
+00:25:45.206 --> 00:25:45.526 A:middle
+app.
+
+00:25:45.606 --> 00:25:47.596 A:middle
+What it does is it starts with
+
+00:25:47.636 --> 00:25:50.386 A:middle
+these really high-resolution
+
+00:25:50.796 --> 00:25:52.426 A:middle
+images from our solar system
+
+00:25:52.426 --> 00:25:54.056 A:middle
+that I got from NASA, and it
+
+00:25:54.056 --> 00:25:55.526 A:middle
+lets you apply different filters
+
+00:25:55.526 --> 00:25:55.866 A:middle
+to them.
+
+00:25:56.406 --> 00:25:57.416 A:middle
+And here we can see a quick
+
+00:25:57.416 --> 00:25:59.546 A:middle
+example, applying a filter to
+
+00:25:59.546 --> 00:26:00.386 A:middle
+our Sun.
+
+00:25:59.546 --> 00:26:00.386 A:middle
+our Sun.
+
+00:26:00.996 --> 00:26:02.496 A:middle
+I'm really pleased with how it's
+
+00:26:02.496 --> 00:26:04.396 A:middle
+going so far, so I sent it off
+
+00:26:04.396 --> 00:26:05.926 A:middle
+to James to get his opinion on
+
+00:26:05.926 --> 00:26:07.956 A:middle
+it, and he sent me back an email
+
+00:26:08.056 --> 00:26:09.146 A:middle
+with 2 attachments.
+
+00:26:09.826 --> 00:26:12.196 A:middle
+One was a Memgraph file, and the
+
+00:26:12.196 --> 00:26:13.626 A:middle
+other one was this image.
+
+00:26:15.776 --> 00:26:17.846 A:middle
+Now, James is a pretty reserved
+
+00:26:17.846 --> 00:26:19.916 A:middle
+and understated guy, so when
+
+00:26:19.916 --> 00:26:21.676 A:middle
+he's got 2 red exclamation
+
+00:26:21.676 --> 00:26:23.746 A:middle
+points and a scream emoji, I
+
+00:26:23.746 --> 00:26:24.706 A:middle
+know he's pretty upset.
+
+00:26:25.546 --> 00:26:27.156 A:middle
+So I went to James and I said,
+
+00:26:27.516 --> 00:26:28.496 A:middle
+"You know, I don't understand
+
+00:26:28.496 --> 00:26:29.386 A:middle
+what the big deal is.
+
+00:26:29.736 --> 00:26:31.626 A:middle
+I clearly have at least half a
+
+00:26:31.626 --> 00:26:33.026 A:middle
+gigabyte before I'm even in the
+
+00:26:33.086 --> 00:26:34.266 A:middle
+red, you know.
+
+00:26:34.266 --> 00:26:35.416 A:middle
+I have all this available
+
+00:26:35.416 --> 00:26:35.776 A:middle
+memory.
+
+00:26:35.866 --> 00:26:36.796 A:middle
+Shouldn't I be using it?"
+
+00:26:37.826 --> 00:26:39.646 A:middle
+And James, who's a much better
+
+00:26:39.646 --> 00:26:41.016 A:middle
+developer than I am, pointed out
+
+00:26:41.016 --> 00:26:42.736 A:middle
+a few things that's, a few
+
+00:26:42.736 --> 00:26:43.516 A:middle
+things that are wrong with my
+
+00:26:43.516 --> 00:26:43.926 A:middle
+logic.
+
+00:26:44.156 --> 00:26:46.976 A:middle
+First of all, this gauge is
+
+00:26:47.026 --> 00:26:49.026 A:middle
+measuring a device with 2
+
+00:26:49.026 --> 00:26:49.926 A:middle
+gigabytes of memory.
+
+00:26:50.566 --> 00:26:51.866 A:middle
+Not all our devices have that
+
+00:26:51.866 --> 00:26:52.406 A:middle
+much memory.
+
+00:26:52.876 --> 00:26:54.106 A:middle
+If this code was running on a
+
+00:26:54.106 --> 00:26:55.696 A:middle
+device with a, only 1 gigabyte
+
+00:26:55.696 --> 00:26:57.306 A:middle
+of memory, there's a good chance
+
+00:26:57.306 --> 00:26:58.316 A:middle
+our app would already be
+
+00:26:58.316 --> 00:26:59.606 A:middle
+terminated by the operating
+
+00:26:59.606 --> 00:27:00.056 A:middle
+system.
+
+00:26:59.606 --> 00:27:00.056 A:middle
+system.
+
+00:27:00.866 --> 00:27:04.076 A:middle
+Second, the operating system
+
+00:27:04.076 --> 00:27:06.796 A:middle
+doesn't just, doesn't use just
+
+00:27:06.926 --> 00:27:08.396 A:middle
+how much memory your app is
+
+00:27:08.396 --> 00:27:09.606 A:middle
+using when designing when to
+
+00:27:09.606 --> 00:27:11.176 A:middle
+terminate your app, but also
+
+00:27:11.176 --> 00:27:12.246 A:middle
+what else is going on in the
+
+00:27:12.246 --> 00:27:13.206 A:middle
+operating system.
+
+00:27:13.696 --> 00:27:15.446 A:middle
+So just because we're not to the
+
+00:27:15.446 --> 00:27:16.956 A:middle
+red yet doesn't mean we're not
+
+00:27:16.956 --> 00:27:19.176 A:middle
+in danger of being terminated.
+
+00:27:20.076 --> 00:27:22.196 A:middle
+And third, this represents a
+
+00:27:22.376 --> 00:27:23.606 A:middle
+terrible experience for the
+
+00:27:23.606 --> 00:27:24.076 A:middle
+user.
+
+00:27:24.636 --> 00:27:25.706 A:middle
+In fact, if you look at the
+
+00:27:25.706 --> 00:27:27.736 A:middle
+usage comparison chart, you can
+
+00:27:27.736 --> 00:27:29.776 A:middle
+see other processes has zero
+
+00:27:29.776 --> 00:27:30.856 A:middle
+kilobytes of memory.
+
+00:27:31.496 --> 00:27:32.726 A:middle
+That's because they've all been
+
+00:27:32.726 --> 00:27:33.866 A:middle
+jettisoned by the operating
+
+00:27:33.866 --> 00:27:36.906 A:middle
+system to make room for our app.
+
+00:27:36.906 --> 00:27:38.266 A:middle
+You should all take a good look
+
+00:27:38.266 --> 00:27:39.856 A:middle
+at me and give me the stink eye
+
+00:27:40.376 --> 00:27:41.686 A:middle
+because now when the user has to
+
+00:27:41.686 --> 00:27:43.156 A:middle
+go watch your app, you have to
+
+00:27:43.156 --> 00:27:44.076 A:middle
+load from scratch.
+
+00:27:45.246 --> 00:27:47.046 A:middle
+So James makes some pretty good
+
+00:27:47.046 --> 00:27:48.316 A:middle
+points, so I think, in general,
+
+00:27:48.316 --> 00:27:49.566 A:middle
+we want to get this needle as
+
+00:27:49.566 --> 00:27:51.856 A:middle
+far to the left as possible
+
+00:27:51.856 --> 00:27:53.216 A:middle
+instead of as far to the right.
+
+00:27:54.076 --> 00:27:55.766 A:middle
+So let's see what we can do.
+
+00:27:56.256 --> 00:27:57.496 A:middle
+Let me go ahead and take a look
+
+00:27:57.496 --> 00:27:58.706 A:middle
+at the Memgraph file.
+
+00:27:59.266 --> 00:28:03.496 A:middle
+And I have a couple go-to tricks
+
+00:27:59.266 --> 00:28:03.496 A:middle
+And I have a couple go-to tricks
+
+00:28:04.286 --> 00:28:06.686 A:middle
+that I use when working with a
+
+00:28:06.686 --> 00:28:08.216 A:middle
+Memgraph file or go-to
+
+00:28:08.216 --> 00:28:08.946 A:middle
+strategies.
+
+00:28:09.426 --> 00:28:10.756 A:middle
+And the first -- actually, let
+
+00:28:10.856 --> 00:28:12.636 A:middle
+me bring this up a little bit --
+
+00:28:13.076 --> 00:28:14.846 A:middle
+is to look for leaks.
+
+00:28:15.406 --> 00:28:18.286 A:middle
+So if I go down to the Filter
+
+00:28:18.286 --> 00:28:19.846 A:middle
+toolbar and click on the leaks
+
+00:28:19.846 --> 00:28:22.106 A:middle
+filter, that'll show me just any
+
+00:28:22.106 --> 00:28:23.386 A:middle
+leaks that are in my Memgraph
+
+00:28:23.386 --> 00:28:23.736 A:middle
+file.
+
+00:28:24.666 --> 00:28:27.076 A:middle
+Turns out this Memgraph file has
+
+00:28:27.076 --> 00:28:27.746 A:middle
+no leaks.
+
+00:28:27.986 --> 00:28:29.526 A:middle
+Well, that's both kind of good
+
+00:28:29.526 --> 00:28:30.656 A:middle
+news and bad news.
+
+00:28:31.136 --> 00:28:32.136 A:middle
+It's great that there are no
+
+00:28:32.136 --> 00:28:33.516 A:middle
+leaks, but now I have to figure
+
+00:28:33.516 --> 00:28:34.826 A:middle
+out what's actually going on
+
+00:28:34.826 --> 00:28:35.046 A:middle
+here.
+
+00:28:35.906 --> 00:28:37.746 A:middle
+The other thing that Memgraph is
+
+00:28:37.746 --> 00:28:40.046 A:middle
+really good for is showing me
+
+00:28:40.046 --> 00:28:41.926 A:middle
+how many instances of an object
+
+00:28:41.926 --> 00:28:43.036 A:middle
+are in memory and if there's
+
+00:28:43.036 --> 00:28:44.226 A:middle
+more than I expect.
+
+00:28:44.876 --> 00:28:46.166 A:middle
+But if I look at this Memgraph,
+
+00:28:46.166 --> 00:28:47.476 A:middle
+I can see if I actually just
+
+00:28:47.476 --> 00:28:49.136 A:middle
+focus specifically on the
+
+00:28:49.136 --> 00:28:52.146 A:middle
+objects from my code, there's
+
+00:28:52.146 --> 00:28:53.966 A:middle
+only 5 in memory, and there's
+
+00:28:53.966 --> 00:28:55.156 A:middle
+actually only 1 of each of
+
+00:28:55.156 --> 00:28:55.526 A:middle
+these.
+
+00:28:56.136 --> 00:28:57.266 A:middle
+If there were, you know,
+
+00:28:57.266 --> 00:28:59.066 A:middle
+multiple root view controllers,
+
+00:28:59.336 --> 00:29:01.586 A:middle
+or multiple noir filters, or
+
+00:28:59.336 --> 00:29:01.586 A:middle
+or multiple noir filters, or
+
+00:29:01.586 --> 00:29:03.366 A:middle
+multiple filters in memory, more
+
+00:29:03.366 --> 00:29:04.676 A:middle
+than I expect, that's something
+
+00:29:04.676 --> 00:29:05.716 A:middle
+else I could investigate.
+
+00:29:06.496 --> 00:29:09.736 A:middle
+Well, there's no more instances
+
+00:29:09.736 --> 00:29:10.816 A:middle
+here than I expect, but maybe
+
+00:29:10.816 --> 00:29:12.076 A:middle
+one of these is really big.
+
+00:29:12.186 --> 00:29:13.726 A:middle
+It's not very likely, but I
+
+00:29:13.726 --> 00:29:14.366 A:middle
+might as well check.
+
+00:29:14.566 --> 00:29:16.956 A:middle
+So I'm going to go to the memory
+
+00:29:16.956 --> 00:29:17.386 A:middle
+inspector.
+
+00:29:17.386 --> 00:29:18.206 A:middle
+I'm going to look at these.
+
+00:29:18.286 --> 00:29:19.576 A:middle
+Each of them, it lists the size
+
+00:29:19.576 --> 00:29:20.666 A:middle
+for each of the objects.
+
+00:29:21.016 --> 00:29:22.296 A:middle
+So I can see my app delegate is
+
+00:29:22.366 --> 00:29:23.486 A:middle
+32 bytes.
+
+00:29:23.966 --> 00:29:24.896 A:middle
+The data view controller is
+
+00:29:24.896 --> 00:29:25.796 A:middle
+1500.
+
+00:29:26.216 --> 00:29:27.556 A:middle
+As I go through each of these,
+
+00:29:28.506 --> 00:29:30.056 A:middle
+none of these are clearly
+
+00:29:30.056 --> 00:29:33.596 A:middle
+responsible for the, you know, 1
+
+00:29:33.596 --> 00:29:35.876 A:middle
+plus gigabytes of memory my app
+
+00:29:35.876 --> 00:29:36.436 A:middle
+is using.
+
+00:29:37.096 --> 00:29:38.766 A:middle
+So that's it for my bag of
+
+00:29:38.766 --> 00:29:40.246 A:middle
+tricks in dealing with Memgraph
+
+00:29:40.246 --> 00:29:40.936 A:middle
+in Xcode.
+
+00:29:41.466 --> 00:29:42.436 A:middle
+Where do I go now?
+
+00:29:43.256 --> 00:29:45.106 A:middle
+Well, I just watched this great
+
+00:29:45.356 --> 00:29:48.236 A:middle
+WWDC session about using
+
+00:29:48.366 --> 00:29:50.276 A:middle
+command-line tools in Memgraph
+
+00:29:50.276 --> 00:29:50.646 A:middle
+files.
+
+00:29:51.516 --> 00:29:53.276 A:middle
+So let me see if I can find
+
+00:29:53.276 --> 00:29:55.876 A:middle
+anything by trying that.
+
+00:29:55.876 --> 00:29:57.236 A:middle
+And thinking back, the first
+
+00:29:57.236 --> 00:29:59.036 A:middle
+thing James suggested was using
+
+00:29:59.036 --> 00:30:01.636 A:middle
+vmmap with the summary flag.
+
+00:29:59.036 --> 00:30:01.636 A:middle
+vmmap with the summary flag.
+
+00:30:02.846 --> 00:30:04.196 A:middle
+So let me give that a try, and
+
+00:30:04.386 --> 00:30:06.816 A:middle
+let me pass in my Memgraph file.
+
+00:30:06.886 --> 00:30:10.286 A:middle
+And let's take a look at this
+
+00:30:10.286 --> 00:30:10.696 A:middle
+output.
+
+00:30:11.756 --> 00:30:13.016 A:middle
+So now, what should I be looking
+
+00:30:13.016 --> 00:30:13.706 A:middle
+for in here?
+
+00:30:14.476 --> 00:30:15.716 A:middle
+Now, in general, I'm looking for
+
+00:30:15.716 --> 00:30:16.776 A:middle
+really big numbers.
+
+00:30:16.776 --> 00:30:17.846 A:middle
+I'm trying to figure out what's
+
+00:30:17.846 --> 00:30:19.196 A:middle
+using all this memory, and the
+
+00:30:19.196 --> 00:30:20.656 A:middle
+bigger numbers mean more memory
+
+00:30:20.656 --> 00:30:20.946 A:middle
+use.
+
+00:30:21.566 --> 00:30:23.566 A:middle
+Now, there's a number of columns
+
+00:30:23.566 --> 00:30:25.876 A:middle
+here, and, you know, some of
+
+00:30:25.876 --> 00:30:26.776 A:middle
+them are more important than
+
+00:30:26.776 --> 00:30:27.196 A:middle
+others.
+
+00:30:27.806 --> 00:30:30.166 A:middle
+First of all, virtual size, I
+
+00:30:30.166 --> 00:30:32.226 A:middle
+mean, virtual means not real.
+
+00:30:32.516 --> 00:30:34.126 A:middle
+I can almost practically ignore
+
+00:30:34.126 --> 00:30:34.846 A:middle
+this column.
+
+00:30:34.916 --> 00:30:36.246 A:middle
+It's memory that the app has
+
+00:30:36.246 --> 00:30:37.566 A:middle
+requested but isn't necessarily
+
+00:30:37.566 --> 00:30:38.056 A:middle
+using.
+
+00:30:38.736 --> 00:30:40.356 A:middle
+Dirty sounds like something I
+
+00:30:40.356 --> 00:30:42.036 A:middle
+definitely don't want in my app.
+
+00:30:42.546 --> 00:30:44.466 A:middle
+I'd much rather my app be clean
+
+00:30:44.466 --> 00:30:45.896 A:middle
+than dirty, so that's probably
+
+00:30:45.896 --> 00:30:46.916 A:middle
+something I want smaller.
+
+00:30:47.356 --> 00:30:48.416 A:middle
+And then, swapped, which,
+
+00:30:48.446 --> 00:30:49.456 A:middle
+because this is iOS, is
+
+00:30:49.456 --> 00:30:52.316 A:middle
+compressed, remembering back to
+
+00:30:52.316 --> 00:30:55.156 A:middle
+both Kyle and James pointed out
+
+00:30:55.236 --> 00:30:57.386 A:middle
+that it's the dirty size plus
+
+00:30:57.386 --> 00:30:59.606 A:middle
+the compressed size that the
+
+00:30:59.606 --> 00:31:00.816 A:middle
+operating system uses to
+
+00:30:59.606 --> 00:31:00.816 A:middle
+operating system uses to
+
+00:31:00.816 --> 00:31:02.586 A:middle
+determine how much memory my app
+
+00:31:02.586 --> 00:31:03.726 A:middle
+is really using.
+
+00:31:04.266 --> 00:31:05.516 A:middle
+So those are the two columns I
+
+00:31:05.516 --> 00:31:06.796 A:middle
+really want to concentrate on,
+
+00:31:06.796 --> 00:31:07.856 A:middle
+so let's look for some big
+
+00:31:07.856 --> 00:31:08.596 A:middle
+numbers there.
+
+00:31:08.596 --> 00:31:11.126 A:middle
+I can see immediately CG image
+
+00:31:11.126 --> 00:31:11.636 A:middle
+jumps out.
+
+00:31:11.636 --> 00:31:13.996 A:middle
+It has a very big dirty size and
+
+00:31:13.996 --> 00:31:15.206 A:middle
+a very big swapped size.
+
+00:31:15.256 --> 00:31:16.906 A:middle
+That's a giant red flag, but
+
+00:31:16.956 --> 00:31:17.846 A:middle
+let's keep looking.
+
+00:31:18.496 --> 00:31:21.616 A:middle
+I can see this is IOSurface has
+
+00:31:21.616 --> 00:31:23.676 A:middle
+a pretty big dirty size but no
+
+00:31:23.676 --> 00:31:24.686 A:middle
+swapped size.
+
+00:31:25.156 --> 00:31:27.776 A:middle
+MALLOC LARGE has a big dirty
+
+00:31:27.776 --> 00:31:29.876 A:middle
+size but a really small or
+
+00:31:30.146 --> 00:31:31.256 A:middle
+smaller swapped size.
+
+00:31:31.256 --> 00:31:33.396 A:middle
+And there's nothing else in here
+
+00:31:33.396 --> 00:31:35.056 A:middle
+that's really that big.
+
+00:31:35.576 --> 00:31:37.696 A:middle
+So I think, based on what I see
+
+00:31:37.696 --> 00:31:39.036 A:middle
+here, I really want to
+
+00:31:39.036 --> 00:31:41.476 A:middle
+concentrate on the CG image VM
+
+00:31:41.476 --> 00:31:42.376 A:middle
+regions.
+
+00:31:43.096 --> 00:31:43.986 A:middle
+So I'm going to go ahead and
+
+00:31:43.986 --> 00:31:44.606 A:middle
+copy that.
+
+00:31:45.586 --> 00:31:47.426 A:middle
+So what's the next step?
+
+00:31:48.096 --> 00:31:50.266 A:middle
+Well, we want to know more about
+
+00:31:50.266 --> 00:31:52.326 A:middle
+some virtual memory, so vmmap
+
+00:31:52.326 --> 00:31:53.496 A:middle
+seems like the place to go
+
+00:31:53.496 --> 00:31:53.986 A:middle
+again.
+
+00:31:54.636 --> 00:31:55.616 A:middle
+This time, instead of the
+
+00:31:55.616 --> 00:31:57.216 A:middle
+summary flag, I'm just going to
+
+00:31:57.216 --> 00:32:00.376 A:middle
+pass my Memgraph file.
+
+00:31:57.216 --> 00:32:00.376 A:middle
+pass my Memgraph file.
+
+00:32:01.266 --> 00:32:02.806 A:middle
+But I really only care about the
+
+00:32:02.896 --> 00:32:04.126 A:middle
+CG image memory.
+
+00:32:04.336 --> 00:32:05.936 A:middle
+I don't care about all the other
+
+00:32:05.936 --> 00:32:09.186 A:middle
+virtual memory regions that
+
+00:32:09.186 --> 00:32:10.516 A:middle
+vmmap will tell me about.
+
+00:32:10.516 --> 00:32:12.026 A:middle
+So I'm going to go ahead and use
+
+00:32:12.026 --> 00:32:15.876 A:middle
+grep to just show me the lines
+
+00:32:15.906 --> 00:32:17.736 A:middle
+that talk about CG image.
+
+00:32:18.016 --> 00:32:18.896 A:middle
+So let's see what that looks
+
+00:32:18.896 --> 00:32:19.116 A:middle
+like.
+
+00:32:20.016 --> 00:32:21.336 A:middle
+So now, I have three lines.
+
+00:32:21.646 --> 00:32:24.636 A:middle
+I see there's two virtual memory
+
+00:32:24.636 --> 00:32:25.096 A:middle
+regions.
+
+00:32:25.426 --> 00:32:26.646 A:middle
+There, and I see their start
+
+00:32:26.646 --> 00:32:28.576 A:middle
+address and their end address.
+
+00:32:28.906 --> 00:32:30.416 A:middle
+And then, I can see these are
+
+00:32:30.416 --> 00:32:31.636 A:middle
+the same columns as above.
+
+00:32:31.636 --> 00:32:34.006 A:middle
+This is virtual, resident,
+
+00:32:34.516 --> 00:32:36.066 A:middle
+dirty, and compressed.
+
+00:32:36.686 --> 00:32:37.736 A:middle
+And this last line here is
+
+00:32:37.736 --> 00:32:39.586 A:middle
+actually the summary line again.
+
+00:32:40.536 --> 00:32:43.216 A:middle
+So that's the same data that was
+
+00:32:43.216 --> 00:32:43.666 A:middle
+above.
+
+00:32:44.506 --> 00:32:45.966 A:middle
+Looking at my two regions, I can
+
+00:32:45.966 --> 00:32:47.616 A:middle
+see I have a really small region
+
+00:32:47.696 --> 00:32:49.026 A:middle
+and a really big region.
+
+00:32:49.416 --> 00:32:50.986 A:middle
+That big region is clearly what
+
+00:32:50.986 --> 00:32:53.706 A:middle
+I want to know more about.
+
+00:32:53.906 --> 00:32:55.876 A:middle
+So how can I find out more about
+
+00:32:55.876 --> 00:32:58.286 A:middle
+that particular VM region?
+
+00:32:58.936 --> 00:33:00.366 A:middle
+Well, I went looking through the
+
+00:32:58.936 --> 00:33:00.366 A:middle
+Well, I went looking through the
+
+00:33:00.366 --> 00:33:02.286 A:middle
+documentation from vmmap, and I
+
+00:33:02.286 --> 00:33:03.746 A:middle
+noticed it has this verbose
+
+00:33:03.746 --> 00:33:05.786 A:middle
+flag, which, as the name
+
+00:33:05.786 --> 00:33:07.526 A:middle
+implies, outputs a lot more
+
+00:33:07.696 --> 00:33:08.506 A:middle
+information.
+
+00:33:08.806 --> 00:33:10.256 A:middle
+And I wonder what that can tell
+
+00:33:10.256 --> 00:33:10.446 A:middle
+me.
+
+00:33:11.486 --> 00:33:12.676 A:middle
+So let's go ahead and pass
+
+00:33:12.706 --> 00:33:16.186 A:middle
+verbose and the Memgraph file.
+
+00:33:17.536 --> 00:33:21.266 A:middle
+And again, I only care about CG
+
+00:33:22.306 --> 00:33:24.226 A:middle
+image regions, so I want to use
+
+00:33:24.226 --> 00:33:25.946 A:middle
+grep to filter to just those.
+
+00:33:26.886 --> 00:33:28.396 A:middle
+Oh, now I see there's actually a
+
+00:33:28.396 --> 00:33:29.616 A:middle
+lot more regions.
+
+00:33:30.156 --> 00:33:31.116 A:middle
+What's going on here?
+
+00:33:31.826 --> 00:33:33.576 A:middle
+Well, it turns out that vmmap,
+
+00:33:33.576 --> 00:33:35.166 A:middle
+by default, if it finds
+
+00:33:35.256 --> 00:33:37.686 A:middle
+contiguous regions, it collapses
+
+00:33:37.686 --> 00:33:38.466 A:middle
+them together.
+
+00:33:38.856 --> 00:33:39.896 A:middle
+And in fact, if you look
+
+00:33:39.896 --> 00:33:41.276 A:middle
+starting on the second line
+
+00:33:41.276 --> 00:33:43.346 A:middle
+here, the end address of this
+
+00:33:43.346 --> 00:33:44.596 A:middle
+region is the same as the
+
+00:33:44.596 --> 00:33:46.106 A:middle
+starting address of this one.
+
+00:33:46.426 --> 00:33:47.756 A:middle
+And that pattern continues all
+
+00:33:47.756 --> 00:33:48.496 A:middle
+the way down.
+
+00:33:48.966 --> 00:33:51.076 A:middle
+So vmmap, by default, collapses
+
+00:33:51.076 --> 00:33:52.426 A:middle
+those into a single region.
+
+00:33:52.886 --> 00:33:54.086 A:middle
+But looking at the details here,
+
+00:33:54.086 --> 00:33:54.976 A:middle
+I can see there are actually
+
+00:33:54.976 --> 00:33:55.776 A:middle
+some differences.
+
+00:33:55.836 --> 00:33:57.746 A:middle
+And in particular, some of these
+
+00:33:57.746 --> 00:34:00.826 A:middle
+use a lot more dirty memory and
+
+00:33:57.746 --> 00:34:00.826 A:middle
+use a lot more dirty memory and
+
+00:34:00.826 --> 00:34:02.016 A:middle
+some have a lot more compressed
+
+00:34:02.016 --> 00:34:04.426 A:middle
+memory, so this gives me an idea
+
+00:34:04.426 --> 00:34:05.506 A:middle
+of maybe something I want to
+
+00:34:05.506 --> 00:34:06.126 A:middle
+focus on.
+
+00:34:06.126 --> 00:34:07.626 A:middle
+But I'm actually going to use a
+
+00:34:07.626 --> 00:34:08.786 A:middle
+different strategy here.
+
+00:34:09.216 --> 00:34:10.775 A:middle
+I know that the operating
+
+00:34:10.775 --> 00:34:14.266 A:middle
+system, not necessarily, but as
+
+00:34:14.266 --> 00:34:17.076 A:middle
+a general rule, the later the VM
+
+00:34:17.166 --> 00:34:19.696 A:middle
+region was created, the later in
+
+00:34:19.846 --> 00:34:21.565 A:middle
+my app's life cycle it happened.
+
+00:34:22.136 --> 00:34:23.466 A:middle
+And since this Memgraph was
+
+00:34:23.466 --> 00:34:25.576 A:middle
+taken during this huge spike in
+
+00:34:25.576 --> 00:34:27.596 A:middle
+memory use, chances are these
+
+00:34:27.666 --> 00:34:29.775 A:middle
+later regions are more closely
+
+00:34:29.896 --> 00:34:31.315 A:middle
+tied to whatever caused that
+
+00:34:31.315 --> 00:34:31.775 A:middle
+spike.
+
+00:34:32.426 --> 00:34:33.686 A:middle
+So instead of trying to find the
+
+00:34:33.686 --> 00:34:35.295 A:middle
+one with the biggest dirty and
+
+00:34:35.295 --> 00:34:36.565 A:middle
+compressed size, I'm going to go
+
+00:34:36.565 --> 00:34:37.815 A:middle
+ahead and just start at the end
+
+00:34:37.815 --> 00:34:38.056 A:middle
+here.
+
+00:34:38.676 --> 00:34:40.666 A:middle
+I'm going to grab the beginning
+
+00:34:40.666 --> 00:34:42.406 A:middle
+address of that final region.
+
+00:34:43.166 --> 00:34:44.786 A:middle
+Now, where do I go from here?
+
+00:34:45.366 --> 00:34:47.755 A:middle
+Well, one of the tools that
+
+00:34:47.755 --> 00:34:50.815 A:middle
+James mentioned was heap, but
+
+00:34:50.815 --> 00:34:51.856 A:middle
+that's about objects on the
+
+00:34:51.856 --> 00:34:53.196 A:middle
+heap, and I'm dealing with a
+
+00:34:53.196 --> 00:34:54.766 A:middle
+virtual memory region, so that
+
+00:34:54.766 --> 00:34:56.366 A:middle
+doesn't help.
+
+00:34:56.366 --> 00:34:58.436 A:middle
+Then, there's leaks, but leaks,
+
+00:34:58.436 --> 00:34:59.516 A:middle
+I don't have a leak here.
+
+00:34:59.516 --> 00:35:00.466 A:middle
+I already know from looking at
+
+00:34:59.516 --> 00:35:00.466 A:middle
+I already know from looking at
+
+00:35:00.466 --> 00:35:01.796 A:middle
+the Memgraph there's no leaks,
+
+00:35:02.096 --> 00:35:03.346 A:middle
+so that doesn't seem like the
+
+00:35:03.346 --> 00:35:04.276 A:middle
+tool I want to use.
+
+00:35:04.696 --> 00:35:06.636 A:middle
+But I went looking through the
+
+00:35:06.776 --> 00:35:09.896 A:middle
+help information for leaks, and
+
+00:35:09.896 --> 00:35:11.466 A:middle
+it turns out leaks can do lots
+
+00:35:11.466 --> 00:35:14.016 A:middle
+of things and including telling
+
+00:35:14.016 --> 00:35:16.296 A:middle
+me who has references to either
+
+00:35:16.296 --> 00:35:17.986 A:middle
+an object on the heap or virtual
+
+00:35:17.986 --> 00:35:18.736 A:middle
+memory region.
+
+00:35:19.226 --> 00:35:20.236 A:middle
+So let's go ahead and see what
+
+00:35:20.236 --> 00:35:21.016 A:middle
+that tells us.
+
+00:35:21.696 --> 00:35:23.556 A:middle
+So I'm going to use leaks, and
+
+00:35:23.556 --> 00:35:25.746 A:middle
+then I'm going to pass this
+
+00:35:25.806 --> 00:35:27.326 A:middle
+traceTree flag.
+
+00:35:27.986 --> 00:35:29.146 A:middle
+And what that does is it gives
+
+00:35:29.146 --> 00:35:32.056 A:middle
+me a tree view of everything
+
+00:35:32.056 --> 00:35:33.556 A:middle
+that has a reference to the
+
+00:35:33.556 --> 00:35:34.826 A:middle
+address I'm passing in.
+
+00:35:34.826 --> 00:35:36.916 A:middle
+In this case, I'm passing in the
+
+00:35:36.916 --> 00:35:39.786 A:middle
+starting address of my virtual
+
+00:35:39.786 --> 00:35:41.886 A:middle
+memory region.
+
+00:35:42.446 --> 00:35:44.006 A:middle
+And then, finally, we give it
+
+00:35:44.006 --> 00:35:44.956 A:middle
+the Memgraph file.
+
+00:35:45.906 --> 00:35:47.276 A:middle
+So what does this look like?
+
+00:35:47.466 --> 00:35:49.526 A:middle
+So what we see here is this tree
+
+00:35:49.636 --> 00:35:50.936 A:middle
+of all these references.
+
+00:35:50.936 --> 00:35:52.136 A:middle
+If we scroll up to the top,
+
+00:35:53.196 --> 00:35:55.076 A:middle
+which is way up here, I can
+
+00:35:55.076 --> 00:35:56.746 A:middle
+actually see here's my VM
+
+00:35:56.746 --> 00:35:58.716 A:middle
+region, here's my CG image
+
+00:35:58.716 --> 00:35:59.856 A:middle
+region, and then I can see
+
+00:35:59.856 --> 00:36:02.346 A:middle
+there's a tree view here of all
+
+00:35:59.856 --> 00:36:02.346 A:middle
+there's a tree view here of all
+
+00:36:02.346 --> 00:36:03.336 A:middle
+the things that have references,
+
+00:36:03.336 --> 00:36:04.676 A:middle
+and what references them, and
+
+00:36:04.676 --> 00:36:06.006 A:middle
+what references them, and so on
+
+00:36:06.006 --> 00:36:06.616 A:middle
+and so forth.
+
+00:36:06.616 --> 00:36:08.646 A:middle
+And in fact, if we go back to
+
+00:36:08.646 --> 00:36:11.026 A:middle
+Xcode, and we actually filter on
+
+00:36:11.026 --> 00:36:14.066 A:middle
+the same address, and I go ahead
+
+00:36:14.066 --> 00:36:16.766 A:middle
+and look at this object, this
+
+00:36:16.766 --> 00:36:18.406 A:middle
+tree is the exact same tree I
+
+00:36:18.406 --> 00:36:19.246 A:middle
+see from leaks.
+
+00:36:19.436 --> 00:36:20.626 A:middle
+And if I wanted to, I could go
+
+00:36:20.626 --> 00:36:22.146 A:middle
+through and expand every single
+
+00:36:22.146 --> 00:36:23.876 A:middle
+one of these nodes and look at
+
+00:36:23.876 --> 00:36:25.436 A:middle
+the details for each of them,
+
+00:36:25.436 --> 00:36:26.946 A:middle
+but that's going to take a
+
+00:36:26.946 --> 00:36:28.306 A:middle
+while, and it's kind of tedious.
+
+00:36:28.386 --> 00:36:29.986 A:middle
+The nice thing about the leaks
+
+00:36:29.986 --> 00:36:32.566 A:middle
+output is not only can I kind of
+
+00:36:32.566 --> 00:36:33.946 A:middle
+quickly scan through it, if I
+
+00:36:33.946 --> 00:36:36.296 A:middle
+want to, I can search or filter
+
+00:36:36.296 --> 00:36:37.736 A:middle
+it, or I can put it into a bug
+
+00:36:37.736 --> 00:36:39.676 A:middle
+report or an email, which I
+
+00:36:39.676 --> 00:36:40.786 A:middle
+can't really do with the
+
+00:36:40.786 --> 00:36:42.786 A:middle
+graphical view that's in Xcode.
+
+00:36:43.686 --> 00:36:44.996 A:middle
+So what am I looking for here in
+
+00:36:44.996 --> 00:36:45.536 A:middle
+this output?
+
+00:36:46.116 --> 00:36:48.286 A:middle
+Well, ideally, I would find
+
+00:36:48.286 --> 00:36:49.876 A:middle
+something, a class that I'm
+
+00:36:49.876 --> 00:36:51.326 A:middle
+responsible for, a class from my
+
+00:36:51.326 --> 00:36:52.146 A:middle
+application.
+
+00:36:52.306 --> 00:36:54.066 A:middle
+I happen to have looked through
+
+00:36:54.066 --> 00:36:55.106 A:middle
+this already, and I know there's
+
+00:36:55.106 --> 00:36:56.846 A:middle
+none of my classes in here, so
+
+00:36:56.846 --> 00:36:57.976 A:middle
+what's the next best thing?
+
+00:36:58.376 --> 00:37:00.236 A:middle
+Well, a class that I know I'm
+
+00:36:58.376 --> 00:37:00.236 A:middle
+Well, a class that I know I'm
+
+00:37:00.236 --> 00:37:01.566 A:middle
+creating, like a framework
+
+00:37:01.566 --> 00:37:02.766 A:middle
+class, that's either being
+
+00:37:02.766 --> 00:37:04.156 A:middle
+created on my behalf or that I'm
+
+00:37:04.206 --> 00:37:05.186 A:middle
+directly creating.
+
+00:37:05.596 --> 00:37:06.766 A:middle
+So I know that, you know, my app
+
+00:37:06.766 --> 00:37:08.276 A:middle
+has UI views.
+
+00:37:08.276 --> 00:37:09.156 A:middle
+It has UI images.
+
+00:37:09.156 --> 00:37:11.966 A:middle
+And I'm using these core image
+
+00:37:12.156 --> 00:37:13.926 A:middle
+classes to do the filtering.
+
+00:37:13.926 --> 00:37:15.516 A:middle
+And so if we go ahead and we
+
+00:37:15.606 --> 00:37:17.356 A:middle
+look through here, and I'm using
+
+00:37:17.356 --> 00:37:18.866 A:middle
+a very sophisticated debugging
+
+00:37:18.866 --> 00:37:20.716 A:middle
+tool called my eyeballs.
+
+00:37:21.566 --> 00:37:23.576 A:middle
+And we go ahead and we look for
+
+00:37:23.786 --> 00:37:28.086 A:middle
+-- let me see if I can find what
+
+00:37:28.956 --> 00:37:29.346 A:middle
+I want.
+
+00:37:29.836 --> 00:37:32.576 A:middle
+It's a very big terminal output.
+
+00:37:32.826 --> 00:37:33.756 A:middle
+Makes it a little more
+
+00:37:33.756 --> 00:37:34.356 A:middle
+confusing.
+
+00:37:35.116 --> 00:37:36.686 A:middle
+Well, so, for example, you know,
+
+00:37:36.686 --> 00:37:38.376 A:middle
+here's a font reference, and I
+
+00:37:38.376 --> 00:37:39.546 A:middle
+know, you know, my application
+
+00:37:39.546 --> 00:37:42.196 A:middle
+uses fonts, but chances are the
+
+00:37:42.196 --> 00:37:44.706 A:middle
+fonts aren't responsible for a
+
+00:37:44.706 --> 00:37:46.156 A:middle
+lot of my memory use, so that's
+
+00:37:46.156 --> 00:37:47.886 A:middle
+not going to help.
+
+00:37:47.886 --> 00:37:49.126 A:middle
+If we go down further, I can
+
+00:37:49.126 --> 00:37:51.476 A:middle
+actually see there's a number of
+
+00:37:51.476 --> 00:37:54.976 A:middle
+these CI classes, and those are
+
+00:37:54.976 --> 00:37:56.346 A:middle
+the core image filters, or
+
+00:37:56.346 --> 00:37:57.666 A:middle
+that's core image, you know,
+
+00:37:57.666 --> 00:37:58.926 A:middle
+classes it's creating to do the
+
+00:37:58.926 --> 00:37:59.696 A:middle
+filtering work in my
+
+00:37:59.696 --> 00:38:00.346 A:middle
+application.
+
+00:37:59.696 --> 00:38:00.346 A:middle
+application.
+
+00:38:00.746 --> 00:38:02.076 A:middle
+So that may be something I want
+
+00:38:02.076 --> 00:38:04.036 A:middle
+to investigate further as well.
+
+00:38:04.036 --> 00:38:05.406 A:middle
+I happen to have already done
+
+00:38:05.406 --> 00:38:07.666 A:middle
+that and haven't found anything
+
+00:38:08.216 --> 00:38:08.906 A:middle
+useful.
+
+00:38:09.296 --> 00:38:11.286 A:middle
+So I can't really get anywhere
+
+00:38:11.286 --> 00:38:13.006 A:middle
+further looking at the leaks
+
+00:38:13.216 --> 00:38:15.566 A:middle
+output, which is unfortunate.
+
+00:38:15.666 --> 00:38:17.976 A:middle
+So what should I go to next?
+
+00:38:18.826 --> 00:38:21.716 A:middle
+Fortunately, James had
+
+00:38:23.106 --> 00:38:25.536 A:middle
+memory-backed trace recording,
+
+00:38:25.536 --> 00:38:26.456 A:middle
+allocation-backed trace
+
+00:38:26.456 --> 00:38:27.886 A:middle
+recording turned on when he
+
+00:38:27.886 --> 00:38:29.736 A:middle
+captured this Memgraph, which
+
+00:38:29.736 --> 00:38:31.366 A:middle
+means I can use the other tool
+
+00:38:31.366 --> 00:38:33.336 A:middle
+he talked about to look at the
+
+00:38:33.336 --> 00:38:36.896 A:middle
+creation backtrace of my object.
+
+00:38:36.896 --> 00:38:38.096 A:middle
+So I'm going to use malloc
+
+00:38:38.096 --> 00:38:38.566 A:middle
+history.
+
+00:38:40.096 --> 00:38:42.206 A:middle
+And this time, I pass it, the
+
+00:38:42.206 --> 00:38:43.866 A:middle
+Memgraph file, first.
+
+00:38:44.136 --> 00:38:47.306 A:middle
+And then, I'm going to pass it
+
+00:38:47.306 --> 00:38:48.836 A:middle
+from the help documentation,
+
+00:38:48.836 --> 00:38:50.256 A:middle
+this fullStacks flag.
+
+00:38:51.046 --> 00:38:52.546 A:middle
+And what that does is it prints
+
+00:38:52.546 --> 00:38:55.216 A:middle
+out each frame on its own line,
+
+00:38:55.216 --> 00:38:56.196 A:middle
+makes it a lot more human
+
+00:38:56.196 --> 00:38:56.646 A:middle
+readable.
+
+00:38:57.096 --> 00:38:58.366 A:middle
+And then, I'm going to pass it
+
+00:38:58.556 --> 00:39:00.156 A:middle
+the starting memory address of
+
+00:38:58.556 --> 00:39:00.156 A:middle
+the starting memory address of
+
+00:39:00.156 --> 00:39:01.096 A:middle
+my VM region.
+
+00:39:01.806 --> 00:39:02.856 A:middle
+Let's see what this looks like.
+
+00:39:04.036 --> 00:39:05.386 A:middle
+Well, this actually is not that
+
+00:39:05.386 --> 00:39:06.566 A:middle
+big of a backtrace, and I can
+
+00:39:06.566 --> 00:39:09.066 A:middle
+see actually my code appears on,
+
+00:39:09.066 --> 00:39:10.126 A:middle
+here on several lines.
+
+00:39:10.576 --> 00:39:12.676 A:middle
+Lines 6 through 9 actually come
+
+00:39:12.676 --> 00:39:14.106 A:middle
+straight from my application
+
+00:39:14.106 --> 00:39:16.066 A:middle
+code, and I can see here on line
+
+00:39:16.066 --> 00:39:19.046 A:middle
+6 that my NoirFilter apply
+
+00:39:19.046 --> 00:39:21.186 A:middle
+function is what is responsible
+
+00:39:21.186 --> 00:39:23.376 A:middle
+for creating this particular VM
+
+00:39:23.726 --> 00:39:24.486 A:middle
+region.
+
+00:39:24.996 --> 00:39:27.626 A:middle
+So that's pretty good smoking
+
+00:39:27.626 --> 00:39:28.826 A:middle
+gun as to where I want to look
+
+00:39:28.826 --> 00:39:30.576 A:middle
+in my app for who's creating all
+
+00:39:30.576 --> 00:39:31.216 A:middle
+this memory.
+
+00:39:31.746 --> 00:39:33.566 A:middle
+And in fact, if we go back to
+
+00:39:33.566 --> 00:39:34.806 A:middle
+the Memgraph file, I can
+
+00:39:34.806 --> 00:39:36.586 A:middle
+actually see that's the same
+
+00:39:36.586 --> 00:39:38.296 A:middle
+backtrace that appears in Xcode
+
+00:39:38.296 --> 00:39:38.626 A:middle
+here.
+
+00:39:39.186 --> 00:39:40.446 A:middle
+You can actually see right here
+
+00:39:40.446 --> 00:39:42.076 A:middle
+is also the NoirFilter apply
+
+00:39:42.076 --> 00:39:42.526 A:middle
+method.
+
+00:39:42.886 --> 00:39:44.046 A:middle
+We don't get the nice
+
+00:39:44.046 --> 00:39:45.646 A:middle
+highlighting you normally see in
+
+00:39:45.646 --> 00:39:47.176 A:middle
+the backtrace view here because
+
+00:39:47.176 --> 00:39:48.286 A:middle
+we're not debugging a live
+
+00:39:48.286 --> 00:39:48.796 A:middle
+process.
+
+00:39:48.796 --> 00:39:50.116 A:middle
+We're loading a Memgraph file.
+
+00:39:50.526 --> 00:39:51.686 A:middle
+But you can see it's the exact
+
+00:39:51.686 --> 00:39:52.796 A:middle
+same output as we get from
+
+00:39:52.796 --> 00:39:53.566 A:middle
+malloc history.
+
+00:39:53.926 --> 00:39:57.786 A:middle
+And in fact, to just kind of a
+
+00:39:57.986 --> 00:39:59.616 A:middle
+confirm things even further, if
+
+00:39:59.616 --> 00:40:02.036 A:middle
+I go ahead and I look at my full
+
+00:39:59.616 --> 00:40:02.036 A:middle
+I go ahead and I look at my full
+
+00:40:02.136 --> 00:40:05.956 A:middle
+list of CG image VM regions and
+
+00:40:05.956 --> 00:40:09.066 A:middle
+I collect, I grab the second one
+
+00:40:09.066 --> 00:40:10.156 A:middle
+from the bottom, the next one
+
+00:40:10.156 --> 00:40:11.916 A:middle
+up, and let's look at the
+
+00:40:11.916 --> 00:40:13.176 A:middle
+backtrace for that one.
+
+00:40:15.146 --> 00:40:16.686 A:middle
+And it turns out it's the same
+
+00:40:16.686 --> 00:40:17.326 A:middle
+backtrace.
+
+00:40:17.526 --> 00:40:18.896 A:middle
+So the same code path is
+
+00:40:18.896 --> 00:40:20.056 A:middle
+responsible for that region as
+
+00:40:20.056 --> 00:40:20.496 A:middle
+well.
+
+00:40:20.966 --> 00:40:23.486 A:middle
+And in fact, looking at several
+
+00:40:23.486 --> 00:40:24.976 A:middle
+of those regions, it actually
+
+00:40:24.976 --> 00:40:26.276 A:middle
+uses the same backtrace.
+
+00:40:26.766 --> 00:40:27.886 A:middle
+So now, I have a really good
+
+00:40:27.886 --> 00:40:30.086 A:middle
+idea of what in my application
+
+00:40:30.086 --> 00:40:32.326 A:middle
+is responsible for creating
+
+00:40:32.326 --> 00:40:33.636 A:middle
+these VM regions that are using
+
+00:40:33.636 --> 00:40:34.896 A:middle
+up a whole bunch of the memory
+
+00:40:34.896 --> 00:40:35.776 A:middle
+in my application.
+
+00:40:36.706 --> 00:40:37.836 A:middle
+So what can we do about it?
+
+00:40:38.636 --> 00:40:40.186 A:middle
+Well, let's go back to Xcode,
+
+00:40:40.186 --> 00:40:41.266 A:middle
+and I can go ahead and close the
+
+00:40:41.266 --> 00:40:42.276 A:middle
+Memgraph file.
+
+00:40:43.396 --> 00:40:46.196 A:middle
+And the first thing I want to do
+
+00:40:46.196 --> 00:40:47.386 A:middle
+is let's take a look at the code
+
+00:40:47.386 --> 00:40:47.626 A:middle
+here.
+
+00:40:48.406 --> 00:40:52.536 A:middle
+If I look at my filter, I can
+
+00:40:52.536 --> 00:40:54.436 A:middle
+see right here is the apply
+
+00:40:54.436 --> 00:40:55.926 A:middle
+function, and I can actually see
+
+00:40:55.926 --> 00:40:57.026 A:middle
+right away something jumps out
+
+00:40:57.026 --> 00:40:58.776 A:middle
+at me, which is I'm using the
+
+00:40:58.776 --> 00:41:00.746 A:middle
+UIGraphicsBegin ImageContext
+
+00:40:58.776 --> 00:41:00.746 A:middle
+UIGraphicsBegin ImageContext
+
+00:41:00.746 --> 00:41:02.886 A:middle
+WithOptions and the
+
+00:41:02.886 --> 00:41:04.866 A:middle
+UIGraphicsEnd ImageContext,
+
+00:41:04.866 --> 00:41:06.086 A:middle
+which I remember Kyle said you
+
+00:41:06.086 --> 00:41:06.846 A:middle
+shouldn't be using.
+
+00:41:06.846 --> 00:41:08.126 A:middle
+There's a better API to use in
+
+00:41:08.126 --> 00:41:08.986 A:middle
+those circumstances.
+
+00:41:09.346 --> 00:41:10.946 A:middle
+So that's something I definitely
+
+00:41:10.946 --> 00:41:12.386 A:middle
+want to come back to, but the
+
+00:41:12.386 --> 00:41:13.606 A:middle
+first thing I need is I need
+
+00:41:13.606 --> 00:41:14.576 A:middle
+some kind of baseline.
+
+00:41:14.576 --> 00:41:15.716 A:middle
+I need to get an idea of how
+
+00:41:15.716 --> 00:41:17.736 A:middle
+much memory my app is using so I
+
+00:41:17.736 --> 00:41:18.886 A:middle
+can make sure my changes are
+
+00:41:18.886 --> 00:41:19.826 A:middle
+making a difference.
+
+00:41:20.496 --> 00:41:21.726 A:middle
+So I'm going to go ahead and run
+
+00:41:21.726 --> 00:41:24.566 A:middle
+the application, and I'm going
+
+00:41:24.566 --> 00:41:26.786 A:middle
+to go to the debug navigator and
+
+00:41:26.786 --> 00:41:28.456 A:middle
+look at the memory report.
+
+00:41:28.626 --> 00:41:30.896 A:middle
+So now, I can see the memory my
+
+00:41:30.896 --> 00:41:32.566 A:middle
+app is using as I run it.
+
+00:41:33.366 --> 00:41:35.946 A:middle
+Now, I really like this image of
+
+00:41:35.946 --> 00:41:37.266 A:middle
+Saturn's north pole.
+
+00:41:37.836 --> 00:41:39.766 A:middle
+It's this weird hexagon shape,
+
+00:41:39.836 --> 00:41:41.346 A:middle
+which is both kind of cool and a
+
+00:41:41.346 --> 00:41:42.356 A:middle
+little freaky.
+
+00:41:42.816 --> 00:41:44.326 A:middle
+So let's take a look at that,
+
+00:41:44.326 --> 00:41:45.996 A:middle
+and let's apply the filter and
+
+00:41:45.996 --> 00:41:46.716 A:middle
+see what we get.
+
+00:41:47.706 --> 00:41:51.336 A:middle
+So 1 gig, 3 gigs, 4 gigs, 6
+
+00:41:51.336 --> 00:41:52.576 A:middle
+gigs, 7 gigs.
+
+00:41:53.156 --> 00:41:54.706 A:middle
+This is bad.
+
+00:41:54.856 --> 00:41:58.636 A:middle
+And actually, this actually
+
+00:41:58.636 --> 00:41:59.846 A:middle
+brings up a good point, which is
+
+00:41:59.946 --> 00:42:01.466 A:middle
+this would not fly on a device
+
+00:41:59.946 --> 00:42:01.466 A:middle
+this would not fly on a device
+
+00:42:01.466 --> 00:42:02.006 A:middle
+at all.
+
+00:42:02.336 --> 00:42:03.186 A:middle
+So when you're running in the
+
+00:42:03.186 --> 00:42:04.586 A:middle
+simulator, you have to remember
+
+00:42:04.586 --> 00:42:06.036 A:middle
+that it's useful for debugging
+
+00:42:06.036 --> 00:42:07.226 A:middle
+and testing changes, but you
+
+00:42:07.226 --> 00:42:08.706 A:middle
+need to validate all that stuff
+
+00:42:08.706 --> 00:42:09.796 A:middle
+on devices as well.
+
+00:42:09.796 --> 00:42:11.206 A:middle
+But the other thing that's nice
+
+00:42:11.206 --> 00:42:13.116 A:middle
+is the simulator is never going
+
+00:42:13.116 --> 00:42:13.976 A:middle
+to run out of memory.
+
+00:42:14.276 --> 00:42:15.616 A:middle
+So if I have a case where my app
+
+00:42:15.616 --> 00:42:16.736 A:middle
+is getting shut down on a
+
+00:42:16.736 --> 00:42:18.116 A:middle
+device, maybe try it in the
+
+00:42:18.116 --> 00:42:18.876 A:middle
+simulator.
+
+00:42:19.106 --> 00:42:20.296 A:middle
+I could see what's, you know, I
+
+00:42:20.296 --> 00:42:21.836 A:middle
+can wait for a really big
+
+00:42:21.836 --> 00:42:23.476 A:middle
+allocation, not get shut down,
+
+00:42:23.476 --> 00:42:24.616 A:middle
+and then investigate it from
+
+00:42:24.616 --> 00:42:24.946 A:middle
+there.
+
+00:42:25.666 --> 00:42:26.716 A:middle
+And one thing I would like to
+
+00:42:26.716 --> 00:42:28.786 A:middle
+point out is actually we do show
+
+00:42:28.786 --> 00:42:30.526 A:middle
+you the high-water mark over
+
+00:42:31.046 --> 00:42:31.336 A:middle
+here.
+
+00:42:31.336 --> 00:42:33.786 A:middle
+And in this case, I'm up to 7.7
+
+00:42:33.786 --> 00:42:34.406 A:middle
+gigabytes.
+
+00:42:35.226 --> 00:42:35.816 A:middle
+It's terrible.
+
+00:42:36.636 --> 00:42:38.616 A:middle
+So let's see what we can do
+
+00:42:38.616 --> 00:42:39.126 A:middle
+about that.
+
+00:42:39.226 --> 00:42:42.286 A:middle
+I'm going to go back to my apply
+
+00:42:43.176 --> 00:42:43.706 A:middle
+function.
+
+00:42:44.326 --> 00:42:46.386 A:middle
+And now, you know, I do want to
+
+00:42:46.386 --> 00:42:47.026 A:middle
+come back to this
+
+00:42:47.026 --> 00:42:48.396 A:middle
+beginImageContext WithOptions
+
+00:42:48.396 --> 00:42:50.086 A:middle
+thing, but thinking back to what
+
+00:42:50.086 --> 00:42:52.046 A:middle
+Kyle said, when you're dealing
+
+00:42:52.046 --> 00:42:54.296 A:middle
+with images, what's the most
+
+00:42:54.296 --> 00:42:55.466 A:middle
+important thing in terms of
+
+00:42:55.466 --> 00:42:56.236 A:middle
+memory use?
+
+00:42:56.696 --> 00:42:58.986 A:middle
+It's the image size, so let's
+
+00:42:58.986 --> 00:43:00.236 A:middle
+take a look at what that looks
+
+00:42:58.986 --> 00:43:00.236 A:middle
+take a look at what that looks
+
+00:43:00.236 --> 00:43:00.446 A:middle
+like.
+
+00:43:00.446 --> 00:43:03.056 A:middle
+I'm going to go ahead and apply
+
+00:43:03.056 --> 00:43:04.176 A:middle
+the filter again.
+
+00:43:04.536 --> 00:43:07.896 A:middle
+And then, once I'm stopped in
+
+00:43:07.896 --> 00:43:11.936 A:middle
+the debugger, I want to go ahead
+
+00:43:11.936 --> 00:43:14.476 A:middle
+and see the size of this image.
+
+00:43:14.546 --> 00:43:15.556 A:middle
+And I'm actually just going to
+
+00:43:15.836 --> 00:43:18.456 A:middle
+take a sip of water before I hit
+
+00:43:18.456 --> 00:43:19.516 A:middle
+return here.
+
+00:43:19.586 --> 00:43:22.006 A:middle
+Actually, I'm not going to have
+
+00:43:22.006 --> 00:43:22.836 A:middle
+any water.
+
+00:43:24.646 --> 00:43:27.466 A:middle
+This is 15,000 by 13,000.
+
+00:43:27.986 --> 00:43:28.956 A:middle
+Now, I checked in the
+
+00:43:28.956 --> 00:43:29.876 A:middle
+documentation.
+
+00:43:29.956 --> 00:43:32.196 A:middle
+On UIImage that size, that's
+
+00:43:32.476 --> 00:43:33.766 A:middle
+points, not pixels.
+
+00:43:33.766 --> 00:43:36.656 A:middle
+If this is a 2X device or a 3X
+
+00:43:36.656 --> 00:43:38.896 A:middle
+device, you have to multiply
+
+00:43:38.896 --> 00:43:40.906 A:middle
+that by a big number.
+
+00:43:41.446 --> 00:43:43.026 A:middle
+You know, Kyle was upset because
+
+00:43:43.026 --> 00:43:44.086 A:middle
+an image was taking 10
+
+00:43:44.086 --> 00:43:44.846 A:middle
+megabytes.
+
+00:43:45.276 --> 00:43:47.146 A:middle
+Nobody tell him about this.
+
+00:43:47.986 --> 00:43:49.816 A:middle
+And in fact, just to confirm
+
+00:43:49.816 --> 00:43:51.486 A:middle
+things, I want to try this.
+
+00:43:51.486 --> 00:43:55.396 A:middle
+I'm going to do a, the 15,000
+
+00:43:56.126 --> 00:44:00.786 A:middle
+times 13,000, and the iPhone X
+
+00:43:56.126 --> 00:44:00.786 A:middle
+times 13,000, and the iPhone X
+
+00:44:00.786 --> 00:44:02.766 A:middle
+is a 3X device, so it's 3 times
+
+00:44:02.766 --> 00:44:06.436 A:middle
+the width times 3 times the
+
+00:44:06.436 --> 00:44:09.696 A:middle
+height times 4 bytes per pixel.
+
+00:44:10.506 --> 00:44:13.036 A:middle
+That number looks kind of
+
+00:44:13.036 --> 00:44:13.706 A:middle
+familiar.
+
+00:44:15.876 --> 00:44:17.786 A:middle
+So I'm pretty sure I know
+
+00:44:17.786 --> 00:44:19.306 A:middle
+exactly what's using up my
+
+00:44:19.306 --> 00:44:20.886 A:middle
+7-and-a-half gigabytes of
+
+00:44:20.886 --> 00:44:24.386 A:middle
+memory, and it's not necessarily
+
+00:44:24.386 --> 00:44:25.966 A:middle
+my beginImageContext thing.
+
+00:44:25.966 --> 00:44:27.376 A:middle
+It's the size of this image.
+
+00:44:27.746 --> 00:44:29.186 A:middle
+And there's no reason the image
+
+00:44:29.186 --> 00:44:30.506 A:middle
+needs to be this big.
+
+00:44:30.966 --> 00:44:32.146 A:middle
+What I want to do is scale it
+
+00:44:32.146 --> 00:44:33.826 A:middle
+down so it's the same dimensions
+
+00:44:33.826 --> 00:44:34.666 A:middle
+as my view.
+
+00:44:34.666 --> 00:44:36.086 A:middle
+And that way, it'll take up far
+
+00:44:36.086 --> 00:44:36.826 A:middle
+less memory.
+
+00:44:37.526 --> 00:44:38.766 A:middle
+So if I go back to the image
+
+00:44:38.766 --> 00:44:40.026 A:middle
+loading code that's up here --
+
+00:44:40.136 --> 00:44:41.216 A:middle
+actually, before I do that, I
+
+00:44:41.216 --> 00:44:42.276 A:middle
+want to go ahead and disable
+
+00:44:42.276 --> 00:44:45.146 A:middle
+this break point -- so let's
+
+00:44:45.146 --> 00:44:46.286 A:middle
+take a look at what this does.
+
+00:44:46.286 --> 00:44:46.886 A:middle
+Well, it's pretty
+
+00:44:46.886 --> 00:44:47.666 A:middle
+straightforward.
+
+00:44:47.666 --> 00:44:49.016 A:middle
+It's getting the URL from a
+
+00:44:49.016 --> 00:44:51.176 A:middle
+bundle, it's loading some data
+
+00:44:51.176 --> 00:44:52.796 A:middle
+from that URL and loading it
+
+00:44:52.796 --> 00:44:55.166 A:middle
+into UIImage, then that, then,
+
+00:44:55.346 --> 00:44:56.856 A:middle
+which gets passed to the filter.
+
+00:44:57.406 --> 00:44:58.906 A:middle
+So what I want to do is, before
+
+00:44:58.906 --> 00:45:00.276 A:middle
+I send it to the filter, I want
+
+00:44:58.906 --> 00:45:00.276 A:middle
+I send it to the filter, I want
+
+00:45:00.276 --> 00:45:01.746 A:middle
+to scale down the image.
+
+00:45:02.096 --> 00:45:03.846 A:middle
+However, I remember what Kyle
+
+00:45:03.846 --> 00:45:04.226 A:middle
+said.
+
+00:45:04.536 --> 00:45:05.656 A:middle
+I don't want to do the scaling
+
+00:45:05.656 --> 00:45:07.406 A:middle
+on UIImage because it still ends
+
+00:45:07.406 --> 00:45:08.816 A:middle
+up just loading that whole image
+
+00:45:08.816 --> 00:45:10.266 A:middle
+into memory anyway, which is
+
+00:45:10.266 --> 00:45:11.396 A:middle
+what I'm trying to avoid.
+
+00:45:11.906 --> 00:45:13.876 A:middle
+So I'm going to go ahead and
+
+00:45:13.986 --> 00:45:15.826 A:middle
+let's collapse this function.
+
+00:45:16.106 --> 00:45:17.556 A:middle
+And I'm going to replace it with
+
+00:45:17.676 --> 00:45:19.946 A:middle
+the code Kyle suggested.
+
+00:45:20.496 --> 00:45:23.386 A:middle
+Okay, so let's take a look at
+
+00:45:23.386 --> 00:45:24.656 A:middle
+what this code is doing.
+
+00:45:25.886 --> 00:45:28.696 A:middle
+So here again, we're getting the
+
+00:45:28.996 --> 00:45:31.286 A:middle
+image from the bundle, but now,
+
+00:45:31.286 --> 00:45:33.206 A:middle
+this time -- just a little
+
+00:45:33.206 --> 00:45:35.376 A:middle
+lighter -- I'm calling
+
+00:45:35.746 --> 00:45:38.066 A:middle
+CGImageSource CreateWithURL to
+
+00:45:38.066 --> 00:45:39.796 A:middle
+get a reference to the image and
+
+00:45:39.796 --> 00:45:41.016 A:middle
+then passing that to
+
+00:45:41.096 --> 00:45:43.066 A:middle
+CGImageSource CreateThumbnail
+
+00:45:43.066 --> 00:45:43.816 A:middle
+AtIndex.
+
+00:45:44.156 --> 00:45:45.906 A:middle
+So now, I can scale the image to
+
+00:45:45.906 --> 00:45:47.526 A:middle
+the size I want without having
+
+00:45:47.526 --> 00:45:48.636 A:middle
+to load the whole thing into
+
+00:45:48.636 --> 00:45:49.026 A:middle
+memory.
+
+00:45:49.656 --> 00:45:51.366 A:middle
+Let's give this a shot and see
+
+00:45:51.366 --> 00:45:52.506 A:middle
+if it makes a difference.
+
+00:45:52.626 --> 00:45:53.506 A:middle
+I'm going to go ahead and
+
+00:45:53.506 --> 00:45:56.866 A:middle
+rebuild and wait for it to
+
+00:45:56.866 --> 00:45:58.176 A:middle
+launch on the application.
+
+00:45:59.486 --> 00:46:02.356 A:middle
+And then, once it's there -- oh,
+
+00:45:59.486 --> 00:46:02.356 A:middle
+And then, once it's there -- oh,
+
+00:46:02.356 --> 00:46:05.636 A:middle
+there's a warning.
+
+00:46:06.216 --> 00:46:09.566 A:middle
+I have an extra this.
+
+00:46:10.996 --> 00:46:11.676 A:middle
+Let's see.
+
+00:46:12.786 --> 00:46:14.226 A:middle
+Okay, building.
+
+00:46:15.256 --> 00:46:16.466 A:middle
+Building, building, building.
+
+00:46:17.236 --> 00:46:18.036 A:middle
+Okay, launching.
+
+00:46:18.356 --> 00:46:19.576 A:middle
+Good. All right.
+
+00:46:19.636 --> 00:46:20.406 A:middle
+Now, let's go ahead and take a
+
+00:46:20.406 --> 00:46:21.526 A:middle
+look at the memory report.
+
+00:46:22.886 --> 00:46:25.646 A:middle
+Let's go back to Saturn's north
+
+00:46:25.686 --> 00:46:27.036 A:middle
+pole, which is something I've
+
+00:46:27.036 --> 00:46:28.556 A:middle
+always wanted to say.
+
+00:46:29.926 --> 00:46:32.036 A:middle
+And let's apply our image and
+
+00:46:32.036 --> 00:46:33.496 A:middle
+see what it goes to now.
+
+00:46:33.496 --> 00:46:35.936 A:middle
+So now, we're at 75, 93
+
+00:46:35.936 --> 00:46:36.456 A:middle
+megabytes.
+
+00:46:36.966 --> 00:46:38.786 A:middle
+Our high-water mark in this case
+
+00:46:38.786 --> 00:46:41.046 A:middle
+is 93 megabytes.
+
+00:46:41.626 --> 00:46:42.866 A:middle
+Significant improvement.
+
+00:46:44.946 --> 00:46:46.816 A:middle
+[applause] Much better than the
+
+00:46:46.816 --> 00:46:48.126 A:middle
+almost guaranteed to get shut
+
+00:46:48.176 --> 00:46:50.886 A:middle
+down 7-and-a-half gigabytes.
+
+00:46:51.516 --> 00:46:53.076 A:middle
+But now, I remember there's
+
+00:46:53.076 --> 00:46:55.126 A:middle
+actually, I want to go back, and
+
+00:46:55.126 --> 00:46:58.186 A:middle
+let's go ahead and stop.
+
+00:46:58.186 --> 00:46:59.806 A:middle
+And I still want to go back to
+
+00:46:59.806 --> 00:47:03.556 A:middle
+my filter method and change this
+
+00:46:59.806 --> 00:47:03.556 A:middle
+my filter method and change this
+
+00:47:03.556 --> 00:47:05.456 A:middle
+UIBeginImageContext code and do
+
+00:47:05.456 --> 00:47:06.746 A:middle
+what Kyle suggested here.
+
+00:47:06.826 --> 00:47:08.206 A:middle
+So I'm going to go ahead and
+
+00:47:08.746 --> 00:47:12.136 A:middle
+delete this code and add in my
+
+00:47:12.136 --> 00:47:12.986 A:middle
+new filter.
+
+00:47:14.456 --> 00:47:16.126 A:middle
+So now, in this case, I'm going
+
+00:47:16.126 --> 00:47:18.136 A:middle
+ahead and creating a UIGraphics
+
+00:47:18.136 --> 00:47:19.076 A:middle
+ImageRenderer.
+
+00:47:19.356 --> 00:47:21.946 A:middle
+And I'm using my CI filter
+
+00:47:21.946 --> 00:47:24.136 A:middle
+within the renderer to do the
+
+00:47:24.786 --> 00:47:26.506 A:middle
+filter, apply the filter.
+
+00:47:26.956 --> 00:47:28.936 A:middle
+Let's go ahead and run this --
+
+00:47:29.306 --> 00:47:30.866 A:middle
+hopefully, it'll build -- and
+
+00:47:30.866 --> 00:47:32.076 A:middle
+see if this happens to make any
+
+00:47:32.076 --> 00:47:33.426 A:middle
+difference in terms of my memory
+
+00:47:33.426 --> 00:47:33.876 A:middle
+usage.
+
+00:47:35.316 --> 00:47:37.286 A:middle
+So let's go back to the debug
+
+00:47:37.286 --> 00:47:38.986 A:middle
+navigator and to the memory
+
+00:47:38.986 --> 00:47:39.616 A:middle
+report.
+
+00:47:40.586 --> 00:47:42.406 A:middle
+And once again, we get to go
+
+00:47:42.406 --> 00:47:46.516 A:middle
+back to Saturn, and let's go
+
+00:47:46.746 --> 00:47:50.306 A:middle
+ahead and apply our filter.
+
+00:47:51.076 --> 00:47:51.766 A:middle
+Now, let's see what our
+
+00:47:51.766 --> 00:47:54.056 A:middle
+high-water mark ends up this
+
+00:47:54.346 --> 00:47:54.846 A:middle
+time.
+
+00:47:54.846 --> 00:47:55.496 A:middle
+Ninety-eight.
+
+00:47:56.066 --> 00:47:59.136 A:middle
+So that's actually the same, but
+
+00:47:59.136 --> 00:48:00.206 A:middle
+it turns out that's, if you
+
+00:47:59.136 --> 00:48:00.206 A:middle
+it turns out that's, if you
+
+00:48:00.206 --> 00:48:01.216 A:middle
+think about it, that's what I
+
+00:48:01.216 --> 00:48:01.666 A:middle
+expect.
+
+00:48:02.216 --> 00:48:03.496 A:middle
+My image is still going to be
+
+00:48:03.496 --> 00:48:05.346 A:middle
+using, in this circumstance, 4
+
+00:48:05.346 --> 00:48:07.006 A:middle
+bytes per pixel, so I'm not
+
+00:48:07.006 --> 00:48:08.076 A:middle
+actually getting any memory
+
+00:48:08.076 --> 00:48:10.006 A:middle
+savings by using this new
+
+00:48:10.006 --> 00:48:10.476 A:middle
+method.
+
+00:48:10.906 --> 00:48:12.176 A:middle
+However, if there was an
+
+00:48:12.176 --> 00:48:13.926 A:middle
+opportunity for memory savings
+
+00:48:14.406 --> 00:48:16.006 A:middle
+-- for example, you know, if the
+
+00:48:16.006 --> 00:48:17.356 A:middle
+operating system could determine
+
+00:48:17.356 --> 00:48:18.956 A:middle
+that it could use fewer bytes
+
+00:48:18.956 --> 00:48:20.666 A:middle
+per pixel or if it determined
+
+00:48:20.666 --> 00:48:21.866 A:middle
+that it needed to use more, it
+
+00:48:21.866 --> 00:48:23.156 A:middle
+would do the right thing, and I
+
+00:48:23.156 --> 00:48:24.206 A:middle
+don't need to worry about it.
+
+00:48:24.546 --> 00:48:25.886 A:middle
+So even though I don't see a big
+
+00:48:25.886 --> 00:48:27.446 A:middle
+improvement, I know my code is
+
+00:48:27.446 --> 00:48:28.636 A:middle
+still better for having made
+
+00:48:28.636 --> 00:48:29.486 A:middle
+these changes.
+
+00:48:30.526 --> 00:48:32.546 A:middle
+So there's still more I could do
+
+00:48:32.546 --> 00:48:33.246 A:middle
+here, right.
+
+00:48:33.566 --> 00:48:34.756 A:middle
+I want to make sure we unload
+
+00:48:34.756 --> 00:48:35.956 A:middle
+the image when the app goes into
+
+00:48:35.956 --> 00:48:37.686 A:middle
+the background, and I want to
+
+00:48:37.686 --> 00:48:39.536 A:middle
+make sure we're not showing any
+
+00:48:39.536 --> 00:48:40.806 A:middle
+images in views that aren't on
+
+00:48:40.806 --> 00:48:41.346 A:middle
+screen.
+
+00:48:41.346 --> 00:48:42.286 A:middle
+There's a lot more I can do
+
+00:48:42.286 --> 00:48:44.026 A:middle
+here, but I'm really pleased
+
+00:48:44.026 --> 00:48:45.516 A:middle
+with these results, and I want
+
+00:48:45.516 --> 00:48:46.896 A:middle
+to send them back to James.
+
+00:48:47.156 --> 00:48:48.416 A:middle
+So I'm going to go ahead and
+
+00:48:48.416 --> 00:48:50.096 A:middle
+grab a screenshot and add a
+
+00:48:50.096 --> 00:48:53.236 A:middle
+little note to it for James just
+
+00:48:53.236 --> 00:48:54.886 A:middle
+to show him how pleased I am
+
+00:48:54.886 --> 00:48:55.716 A:middle
+with all of this.
+
+00:48:56.286 --> 00:48:57.476 A:middle
+And I think we're going to go
+
+00:48:57.476 --> 00:48:59.466 A:middle
+ahead and send him the
+
+00:49:01.516 --> 00:49:03.616 A:middle
+starry-eyed emoji.
+
+00:49:04.526 --> 00:49:06.166 A:middle
+And hopefully James will be
+
+00:49:06.166 --> 00:49:07.326 A:middle
+happy with these results.
+
+00:49:07.326 --> 00:49:10.316 A:middle
+So now, I'm going to hand it
+
+00:49:10.316 --> 00:49:11.876 A:middle
+back to Kyle, who's going to
+
+00:49:11.876 --> 00:49:12.816 A:middle
+wrap things up for us.
+
+00:49:13.326 --> 00:49:13.696 A:middle
+Thank you.
+
+00:49:14.386 --> 00:49:16.386 A:middle
+[ Applause ]
+
+00:49:16.756 --> 00:49:17.186 A:middle
+&gt;&gt; Thanks, Kris.
+
+00:49:20.096 --> 00:49:20.526 A:middle
+Thanks, Kris.
+
+00:49:21.566 --> 00:49:22.366 A:middle
+That was awesome.
+
+00:49:22.666 --> 00:49:24.096 A:middle
+With just a little bit of work,
+
+00:49:24.326 --> 00:49:25.856 A:middle
+we were able to greatly reduce
+
+00:49:25.856 --> 00:49:28.506 A:middle
+our memory use by orders of
+
+00:49:29.816 --> 00:49:30.076 A:middle
+magnitude.
+
+00:49:30.786 --> 00:49:34.896 A:middle
+So in summary, memory is finite
+
+00:49:34.896 --> 00:49:35.356 A:middle
+and shared.
+
+00:49:36.516 --> 00:49:37.786 A:middle
+The more we use, the less the
+
+00:49:37.786 --> 00:49:39.156 A:middle
+system has for others to use it.
+
+00:49:39.236 --> 00:49:40.076 A:middle
+We really need to be good
+
+00:49:40.076 --> 00:49:41.786 A:middle
+citizens, and be mindful of our
+
+00:49:41.786 --> 00:49:43.086 A:middle
+memory use, and only use what we
+
+00:49:43.086 --> 00:49:43.366 A:middle
+need.
+
+00:49:46.336 --> 00:49:47.706 A:middle
+When we're debugging, that
+
+00:49:47.706 --> 00:49:49.766 A:middle
+memory report in Xcode is
+
+00:49:49.846 --> 00:49:50.276 A:middle
+crucial.
+
+00:49:50.636 --> 00:49:51.726 A:middle
+We can just turn it on when our
+
+00:49:51.726 --> 00:49:52.756 A:middle
+app is running because then, as
+
+00:49:52.756 --> 00:49:54.516 A:middle
+we monitor it, the more we can
+
+00:49:54.516 --> 00:49:56.756 A:middle
+notice the regressions as we're
+
+00:49:56.756 --> 00:49:57.206 A:middle
+debugging.
+
+00:49:59.076 --> 00:50:01.076 A:middle
+We want to make sure that iOS
+
+00:49:59.076 --> 00:50:01.076 A:middle
+We want to make sure that iOS
+
+00:50:01.956 --> 00:50:03.496 A:middle
+picks our image formats for us.
+
+00:50:03.746 --> 00:50:06.156 A:middle
+We can save 75% memory from SRGB
+
+00:50:06.156 --> 00:50:08.766 A:middle
+to alpha 8 just by picking the
+
+00:50:08.766 --> 00:50:10.576 A:middle
+or by using the new UIImage
+
+00:50:10.846 --> 00:50:11.996 A:middle
+GraphicsRenderer APIs.
+
+00:50:11.996 --> 00:50:14.316 A:middle
+It's really great for masks and
+
+00:50:14.316 --> 00:50:14.596 A:middle
+text.
+
+00:50:16.376 --> 00:50:18.166 A:middle
+Also, we want to use ImageIO
+
+00:50:18.936 --> 00:50:20.446 A:middle
+when we downsample our images.
+
+00:50:21.176 --> 00:50:22.836 A:middle
+It provides us or prevents a
+
+00:50:22.836 --> 00:50:24.646 A:middle
+memory spike, and it's faster
+
+00:50:24.646 --> 00:50:25.836 A:middle
+than trying to draw a UIImage
+
+00:50:25.836 --> 00:50:26.776 A:middle
+into a smaller context.
+
+00:50:27.176 --> 00:50:30.856 A:middle
+Finally, we want to unload large
+
+00:50:30.856 --> 00:50:32.706 A:middle
+images and resources that are
+
+00:50:32.706 --> 00:50:33.516 A:middle
+not on the screen.
+
+00:50:33.886 --> 00:50:34.886 A:middle
+There's no sense in using that
+
+00:50:34.886 --> 00:50:36.516 A:middle
+memory because the user can't
+
+00:50:36.516 --> 00:50:36.836 A:middle
+see them.
+
+00:50:38.166 --> 00:50:39.936 A:middle
+And even after all of that,
+
+00:50:40.156 --> 00:50:40.896 A:middle
+we're still not done.
+
+00:50:42.006 --> 00:50:44.216 A:middle
+As we just saw, using Memgraphs
+
+00:50:44.326 --> 00:50:45.926 A:middle
+can help us further understand
+
+00:50:46.346 --> 00:50:47.606 A:middle
+what's going on and reduce our
+
+00:50:47.606 --> 00:50:48.306 A:middle
+memory footprint.
+
+00:50:48.686 --> 00:50:49.576 A:middle
+That combined with malloc
+
+00:50:49.576 --> 00:50:50.906 A:middle
+history gives us great insight
+
+00:50:50.906 --> 00:50:52.006 A:middle
+into where our memory's going
+
+00:50:52.006 --> 00:50:52.966 A:middle
+and what it's being used by.
+
+00:50:54.026 --> 00:50:56.046 A:middle
+So what I'd recommend is
+
+00:50:56.046 --> 00:50:58.456 A:middle
+everyone go out, turn on malloc
+
+00:50:58.456 --> 00:51:00.426 A:middle
+history, profile your tool, and
+
+00:50:58.456 --> 00:51:00.426 A:middle
+history, profile your tool, and
+
+00:51:00.426 --> 00:51:02.106 A:middle
+start digging in.
+
+00:51:03.256 --> 00:51:04.726 A:middle
+So for more information, you can
+
+00:51:04.726 --> 00:51:06.816 A:middle
+go to our slide presentation.
+
+00:51:07.426 --> 00:51:10.246 A:middle
+And also, we'll be down in the
+
+00:51:10.246 --> 00:51:11.956 A:middle
+technology labs shortly after
+
+00:51:11.956 --> 00:51:12.686 A:middle
+this for a little bit if you
+
+00:51:12.686 --> 00:51:13.676 A:middle
+have additional questions for
+
+00:51:13.676 --> 00:51:13.786 A:middle
+us.
+
+00:51:15.116 --> 00:51:15.906 A:middle
+Thanks, and have a great
+
+00:51:15.906 --> 00:51:17.286 A:middle
+remainder of WWDC.
+
+00:51:18.516 --> 00:51:22.500 A:middle
+[ Applause ]

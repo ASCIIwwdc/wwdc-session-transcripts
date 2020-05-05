@@ -1,0 +1,2636 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:19.500 A:middle
+[ Music ]
+
+00:00:29.516 --> 00:00:32.546 A:middle
+[ Applause ]
+
+00:00:33.046 --> 00:00:33.576 A:middle
+&gt;&gt; Good afternoon.
+
+00:00:35.086 --> 00:00:38.386 A:middle
+So I'm going to talk to you
+this afternoon about how
+
+00:00:38.386 --> 00:00:41.056 A:middle
+to structure your programs
+with concurrent programming
+
+00:00:41.056 --> 00:00:44.816 A:middle
+and what we've done this year
+that's new in GCD in Swift 3.
+
+00:00:45.656 --> 00:00:46.216 A:middle
+My name is Matt.
+
+00:00:46.816 --> 00:00:48.476 A:middle
+I'm going to be joined
+later by Pierre.
+
+00:00:49.476 --> 00:00:53.996 A:middle
+We're both on the Darwin
+Runtime team here at Apple.
+
+00:00:54.196 --> 00:00:56.936 A:middle
+So when you create a new
+project, you're going
+
+00:00:56.936 --> 00:00:59.366 A:middle
+to have something that looks
+a little bit like this.
+
+00:00:59.716 --> 00:01:00.816 A:middle
+You have your application.
+
+00:00:59.716 --> 00:01:00.816 A:middle
+You have your application.
+
+00:01:01.016 --> 00:01:03.376 A:middle
+That application
+gets its main thread.
+
+00:01:04.676 --> 00:01:08.316 A:middle
+That main thread is responsible
+for running all of the code
+
+00:01:08.316 --> 00:01:09.816 A:middle
+that powers your user interface.
+
+00:01:10.336 --> 00:01:16.426 A:middle
+As you start to add code to
+your application, you're going
+
+00:01:16.426 --> 00:01:19.316 A:middle
+to find the performance of
+your application changes
+
+00:01:19.316 --> 00:01:20.066 A:middle
+quite drastically.
+
+00:01:20.606 --> 00:01:24.316 A:middle
+For instance, if you start to
+introduce large items of work,
+
+00:01:24.316 --> 00:01:29.796 A:middle
+say data transforms or image
+processing, on your main thread,
+
+00:01:29.796 --> 00:01:32.416 A:middle
+you're going to find
+that your user interface
+
+00:01:32.736 --> 00:01:33.946 A:middle
+suffers drastically.
+
+00:01:34.786 --> 00:01:38.896 A:middle
+On macOS, this can be the
+spinning wheel appearing.
+
+00:01:39.146 --> 00:01:41.466 A:middle
+On iOS, it could be
+something more subtle.
+
+00:01:41.466 --> 00:01:42.906 A:middle
+Your user interface
+will slow down,
+
+00:01:42.906 --> 00:01:44.426 A:middle
+or maybe even stop entirely.
+
+00:01:44.766 --> 00:01:48.726 A:middle
+So I'm going to take you
+through some basics on how
+
+00:01:48.726 --> 00:01:51.416 A:middle
+to struct your application to
+avoid this kind of problem.
+
+00:01:51.616 --> 00:01:54.456 A:middle
+And later on in the talk, Pierre
+is going to come and take you
+
+00:01:54.456 --> 00:01:56.866 A:middle
+through some more
+advanced topics.
+
+00:01:57.556 --> 00:02:01.206 A:middle
+So how do we deal with
+this kind of problem?
+
+00:01:57.556 --> 00:02:01.206 A:middle
+So how do we deal with
+this kind of problem?
+
+00:02:05.216 --> 00:02:07.456 A:middle
+We have to start by
+introducing the idea
+
+00:02:07.456 --> 00:02:08.985 A:middle
+of concurrency to
+your application.
+
+00:02:09.175 --> 00:02:12.336 A:middle
+Concurrency allows multiple
+parts of your application
+
+00:02:12.336 --> 00:02:13.636 A:middle
+to run at the same time.
+
+00:02:14.216 --> 00:02:17.116 A:middle
+On our system, you achieve
+concurrency by creating threads.
+
+00:02:17.926 --> 00:02:20.956 A:middle
+A CPU core can execute one of
+your threads at any given time,
+
+00:02:21.496 --> 00:02:23.966 A:middle
+but the payoff for
+introducing concurrency,
+
+00:02:24.116 --> 00:02:25.726 A:middle
+the penalty for introducing
+concurrency
+
+00:02:25.726 --> 00:02:28.226 A:middle
+to your application is
+it's much more difficult
+
+00:02:28.576 --> 00:02:29.916 A:middle
+to maintain your thread safety.
+
+00:02:30.406 --> 00:02:32.886 A:middle
+The other threads that you've
+introduced can observe the
+
+00:02:32.886 --> 00:02:35.716 A:middle
+effects of you breaking your
+code invariants while you're
+
+00:02:35.716 --> 00:02:37.296 A:middle
+performing operations
+on other threads.
+
+00:02:38.266 --> 00:02:39.966 A:middle
+This becomes a bit of a problem.
+
+00:02:41.456 --> 00:02:42.266 A:middle
+So how can we help?
+
+00:02:42.546 --> 00:02:45.926 A:middle
+Well, GCD is the concurrency
+library on our platform.
+
+00:02:46.336 --> 00:02:50.116 A:middle
+It helps you write code,
+multi-threaded code that works
+
+00:02:50.116 --> 00:02:51.866 A:middle
+on everything from
+an Apple Watch
+
+00:02:52.276 --> 00:02:53.796 A:middle
+through all of our iOS devices.
+
+00:02:54.306 --> 00:02:56.616 A:middle
+Apple TVs and all
+the way up to a Mac.
+
+00:02:57.996 --> 00:03:00.656 A:middle
+So in order to help you
+with your concurrency,
+
+00:02:57.996 --> 00:03:00.656 A:middle
+So in order to help you
+with your concurrency,
+
+00:03:00.656 --> 00:03:04.056 A:middle
+we introduce some abstractions
+on top of threads themselves.
+
+00:03:05.166 --> 00:03:08.206 A:middle
+That is, dispatch
+queues and run loops.
+
+00:03:08.506 --> 00:03:12.986 A:middle
+A dispatch queue is a construct
+that allows you to submit items
+
+00:03:12.986 --> 00:03:14.286 A:middle
+of work to that queue.
+
+00:03:14.546 --> 00:03:15.906 A:middle
+In Swift, this is closures.
+
+00:03:16.376 --> 00:03:19.366 A:middle
+And dispatch will
+bring up a thread
+
+00:03:20.266 --> 00:03:21.646 A:middle
+and service that work for you.
+
+00:03:22.076 --> 00:03:24.666 A:middle
+And when dispatch is finished
+running all of the work
+
+00:03:24.666 --> 00:03:26.056 A:middle
+on that thread, it can tear
+
+00:03:26.056 --> 00:03:28.036 A:middle
+that worker thread
+down for you itself.
+
+00:03:29.016 --> 00:03:32.046 A:middle
+As I said before, you can
+also create your own threads,
+
+00:03:33.056 --> 00:03:35.026 A:middle
+and on those threads,
+you might run run loops.
+
+00:03:35.216 --> 00:03:39.816 A:middle
+And then finally, on the first
+slide we saw you get your main
+
+00:03:39.816 --> 00:03:41.336 A:middle
+thread, and the main
+thread is special.
+
+00:03:41.526 --> 00:03:44.616 A:middle
+It gets both a main run
+loop and a main queue.
+
+00:03:45.776 --> 00:03:50.316 A:middle
+So dispatch queues have two main
+ways that you can submit work
+
+00:03:50.316 --> 00:03:53.536 A:middle
+for them, the first of which
+is asynchronous execution.
+
+00:03:54.366 --> 00:03:57.256 A:middle
+This is where you can queue
+up multiple items of work
+
+00:03:57.436 --> 00:04:00.656 A:middle
+to your dispatch queue,
+and then dispatch, again,
+
+00:03:57.436 --> 00:04:00.656 A:middle
+to your dispatch queue,
+and then dispatch, again,
+
+00:04:01.066 --> 00:04:03.946 A:middle
+will bring up a thread
+to execute that work.
+
+00:04:04.636 --> 00:04:07.006 A:middle
+Dispatch will one by
+one take items off
+
+00:04:07.006 --> 00:04:08.046 A:middle
+that queue and execute them.
+
+00:04:12.076 --> 00:04:14.466 A:middle
+And then when it's finished
+with all items on the queue,
+
+00:04:14.616 --> 00:04:15.826 A:middle
+the system will reclaim
+the thread
+
+00:04:15.826 --> 00:04:16.685 A:middle
+that it bought up for you.
+
+00:04:17.146 --> 00:04:21.305 A:middle
+The second mode of execution
+asynchronous execution.
+
+00:04:22.236 --> 00:04:25.566 A:middle
+This is where, for instance,
+if we have the same setup
+
+00:04:25.566 --> 00:04:27.486 A:middle
+as we had before,
+the dispatch queue
+
+00:04:27.486 --> 00:04:28.646 A:middle
+with some asynchronous work.
+
+00:04:28.826 --> 00:04:32.206 A:middle
+But you have your own
+thread, and that thread wants
+
+00:04:32.206 --> 00:04:34.726 A:middle
+to run code on that queue
+and wait for it to happen.
+
+00:04:35.056 --> 00:04:38.766 A:middle
+You can submit that work
+to the dispatch queue,
+
+00:04:39.386 --> 00:04:40.546 A:middle
+and then that's where
+it will block.
+
+00:04:41.296 --> 00:04:43.536 A:middle
+It will wait there until
+the item that you've asked
+
+00:04:43.536 --> 00:04:44.986 A:middle
+to execute has completed.
+
+00:04:45.506 --> 00:04:47.846 A:middle
+We might add some more
+asynchronous work to that queue,
+
+00:04:47.846 --> 00:04:50.706 A:middle
+and then dispatch will
+bring up a thread in order
+
+00:04:50.706 --> 00:04:52.236 A:middle
+to service the items
+on that queue.
+
+00:04:52.826 --> 00:04:54.886 A:middle
+Again, the asynchronous
+items will be executed there,
+
+00:04:54.886 --> 00:04:57.846 A:middle
+and then when it comes time
+to run the synchronous item
+
+00:04:57.846 --> 00:04:58.726 A:middle
+that you've asked to run.
+
+00:04:59.456 --> 00:05:02.476 A:middle
+The dispatch queue will pass
+control over to the thread
+
+00:04:59.456 --> 00:05:02.476 A:middle
+The dispatch queue will pass
+control over to the thread
+
+00:05:02.476 --> 00:05:06.646 A:middle
+that was waiting, execute
+that item, and then control
+
+00:05:06.646 --> 00:05:08.486 A:middle
+of the dispatch queue
+will return back
+
+00:05:08.556 --> 00:05:10.616 A:middle
+to a worker thread
+controlled by dispatch.
+
+00:05:11.396 --> 00:05:14.246 A:middle
+It will continue to drain the
+rest of the items on that queue,
+
+00:05:15.116 --> 00:05:17.926 A:middle
+and then also reclaim the
+thread that it was using.
+
+00:05:18.696 --> 00:05:21.016 A:middle
+So now I've shown you how
+you actually submit work
+
+00:05:21.136 --> 00:05:21.716 A:middle
+to dispatch.
+
+00:05:22.006 --> 00:05:24.566 A:middle
+How do we use that to help
+us solve the problem we
+
+00:05:24.566 --> 00:05:25.156 A:middle
+had earlier?
+
+00:05:26.236 --> 00:05:29.766 A:middle
+What we want to do is get the
+work off your main thread that's
+
+00:05:29.766 --> 00:05:32.276 A:middle
+causing you to block
+your user interface,
+
+00:05:32.516 --> 00:05:36.086 A:middle
+and we do that by taking
+the transform that we had
+
+00:05:36.086 --> 00:05:38.856 A:middle
+on that main thread and
+running it on a different queue.
+
+00:05:38.856 --> 00:05:42.996 A:middle
+So you can take the
+transform, and you can back it
+
+00:05:42.996 --> 00:05:43.996 A:middle
+with a dispatch queue.
+
+00:05:44.716 --> 00:05:46.776 A:middle
+And now when you want
+to transform data,
+
+00:05:47.166 --> 00:05:51.286 A:middle
+you can move the value of that
+data to your transform code
+
+00:05:51.896 --> 00:05:55.386 A:middle
+on the other queue,
+transform it,
+
+00:05:55.386 --> 00:05:56.956 A:middle
+and then send it back
+to your main thread.
+
+00:05:57.946 --> 00:05:59.036 A:middle
+This allows you to perform
+
+00:05:59.036 --> 00:06:02.516 A:middle
+that work while the main thread
+is idle and servicing events.
+
+00:05:59.036 --> 00:06:02.516 A:middle
+that work while the main thread
+is idle and servicing events.
+
+00:06:03.526 --> 00:06:05.376 A:middle
+So what does that look
+like in real code?
+
+00:06:06.696 --> 00:06:07.866 A:middle
+Well, it's really simple.
+
+00:06:08.366 --> 00:06:10.876 A:middle
+So first of all, you can
+create the dispatch queue
+
+00:06:11.126 --> 00:06:13.836 A:middle
+to submit your work to by just
+creating a DispatchQueue object.
+
+00:06:14.096 --> 00:06:17.386 A:middle
+It takes a label, and that
+label is visible in debugger
+
+00:06:17.386 --> 00:06:18.736 A:middle
+as you're writing
+your application.
+
+00:06:20.536 --> 00:06:23.726 A:middle
+Dispatch queues execute
+the work that you give them
+
+00:06:23.726 --> 00:06:25.266 A:middle
+in first in, first out order.
+
+00:06:25.466 --> 00:06:27.686 A:middle
+That is, the order that
+they were submitted
+
+00:06:27.686 --> 00:06:29.986 A:middle
+to the queue is the order that
+dispatch will run them in.
+
+00:06:31.076 --> 00:06:34.346 A:middle
+And then you can use the async
+method on your dispatch queue
+
+00:06:34.636 --> 00:06:37.356 A:middle
+to submit work to that queue.
+
+00:06:38.086 --> 00:06:41.016 A:middle
+So now that we've actually
+submitted our resize operation
+
+00:06:41.016 --> 00:06:43.226 A:middle
+here to a different
+queue, well how do we get
+
+00:06:43.226 --> 00:06:44.246 A:middle
+that back to the main thread?
+
+00:06:45.366 --> 00:06:46.846 A:middle
+That's very simple too.
+
+00:06:47.256 --> 00:06:50.316 A:middle
+The dispatch main queue
+services all of the items
+
+00:06:50.316 --> 00:06:52.896 A:middle
+that you execute on it on
+the main thread itself.
+
+00:06:54.696 --> 00:06:58.016 A:middle
+This means you can just
+call DispatchQueue main
+
+00:06:58.156 --> 00:07:00.646 A:middle
+and then call async
+on that main queue,
+
+00:06:58.156 --> 00:07:00.646 A:middle
+and then call async
+on that main queue,
+
+00:07:01.006 --> 00:07:02.296 A:middle
+and that code will execute,
+
+00:07:02.296 --> 00:07:04.626 A:middle
+and you can update your
+user interface from there.
+
+00:07:05.456 --> 00:07:08.566 A:middle
+As you can see, it's very simple
+to chain work from one queue
+
+00:07:08.566 --> 00:07:10.656 A:middle
+to another queue and back
+to your main queue again.
+
+00:07:11.126 --> 00:07:14.826 A:middle
+So now we've seen how to
+get control of your code
+
+00:07:14.826 --> 00:07:15.876 A:middle
+and put it on different threads.
+
+00:07:16.876 --> 00:07:18.966 A:middle
+It comes at somewhat of a cost.
+
+00:07:20.106 --> 00:07:23.816 A:middle
+You have to control a
+concurrency in your application.
+
+00:07:24.436 --> 00:07:28.896 A:middle
+The thread pool that dispatch
+uses will limit the concurrency
+
+00:07:29.036 --> 00:07:33.216 A:middle
+you achieve in order to use all
+of the calls in your device.
+
+00:07:34.516 --> 00:07:37.436 A:middle
+However, when you
+block those threads,
+
+00:07:37.436 --> 00:07:40.076 A:middle
+if you wait for other parts of
+your application or you wait
+
+00:07:40.076 --> 00:07:42.976 A:middle
+in sys calls those
+worker threads
+
+00:07:42.976 --> 00:07:45.346 A:middle
+that are blocked can cause
+more worker threads to spawn.
+
+00:07:45.516 --> 00:07:48.276 A:middle
+Dispatch is trying to give you
+the concurrency you deserve
+
+00:07:48.576 --> 00:07:51.696 A:middle
+by giving you a new thread to
+continue executing code on.
+
+00:07:52.556 --> 00:07:54.856 A:middle
+This means it's very important
+to choose the right number
+
+00:07:54.856 --> 00:07:57.786 A:middle
+of dispatch queues to
+use to execute code.
+
+00:07:58.346 --> 00:08:00.106 A:middle
+Otherwise, you can
+block one thread.
+
+00:07:58.346 --> 00:08:00.106 A:middle
+Otherwise, you can
+block one thread.
+
+00:08:00.826 --> 00:08:01.666 A:middle
+Another thread will come up,
+
+00:08:01.666 --> 00:08:03.996 A:middle
+and you will block
+another one, and so on.
+
+00:08:03.996 --> 00:08:06.476 A:middle
+And this pattern is something
+that we call thread explosion.
+
+00:08:07.266 --> 00:08:09.396 A:middle
+We covered thread
+explosion and its problems
+
+00:08:09.616 --> 00:08:11.956 A:middle
+in last year's talk,
+Building Responsive
+
+00:08:11.956 --> 00:08:13.286 A:middle
+and Efficient Apps with GCD.
+
+00:08:13.696 --> 00:08:18.206 A:middle
+So I recommend you go back
+and watch that from last year.
+
+00:08:20.476 --> 00:08:22.636 A:middle
+So now we've seen how
+you do simple things,
+
+00:08:22.636 --> 00:08:25.586 A:middle
+like getting work off of the
+main thread onto another queue.
+
+00:08:25.856 --> 00:08:27.916 A:middle
+But how do we actually apply
+this to your application?
+
+00:08:28.396 --> 00:08:32.296 A:middle
+Well, if we go back to
+the system we had before,
+
+00:08:32.525 --> 00:08:35.586 A:middle
+what you want to do is identify
+areas of your application
+
+00:08:35.806 --> 00:08:37.066 A:middle
+with independent data flow.
+
+00:08:37.436 --> 00:08:39.596 A:middle
+So as we've seen, it
+might be image transform,
+
+00:08:39.976 --> 00:08:41.206 A:middle
+or you might have a database.
+
+00:08:41.515 --> 00:08:44.816 A:middle
+You want to take those
+areas, and split them
+
+00:08:45.046 --> 00:08:48.186 A:middle
+into distinct subsystems,
+and then you want
+
+00:08:48.186 --> 00:08:51.246 A:middle
+to back those subsystems
+with a dispatch queue each.
+
+00:08:52.356 --> 00:08:54.856 A:middle
+This will give each subsystem
+a queue to execute work
+
+00:08:54.856 --> 00:08:57.936 A:middle
+on independently without
+suffering from the problems
+
+00:08:57.936 --> 00:08:59.806 A:middle
+of having too many queues
+and too many threads.
+
+00:09:00.346 --> 00:09:03.196 A:middle
+And we saw a couple of
+slides ago how easy it is
+
+00:09:03.196 --> 00:09:04.156 A:middle
+to chain work together.
+
+00:09:04.956 --> 00:09:08.176 A:middle
+That is where you can
+async one block to another,
+
+00:09:08.176 --> 00:09:09.456 A:middle
+and then to another queue,
+
+00:09:09.796 --> 00:09:11.286 A:middle
+and then back to,
+say, the main queue.
+
+00:09:12.126 --> 00:09:14.436 A:middle
+But there's a second
+pattern I want to show you
+
+00:09:14.436 --> 00:09:15.846 A:middle
+that we feel is equally useful.
+
+00:09:15.846 --> 00:09:19.096 A:middle
+That is grouping work and
+waiting for that work to finish.
+
+00:09:20.456 --> 00:09:22.376 A:middle
+If you have a single
+thing that wants
+
+00:09:22.376 --> 00:09:25.686 A:middle
+to spawn multiple different
+works items, and you only want
+
+00:09:25.686 --> 00:09:27.466 A:middle
+to make progress if
+those work items,
+
+00:09:27.526 --> 00:09:30.416 A:middle
+when those work items is
+finished, well, you can do that.
+
+00:09:31.316 --> 00:09:34.416 A:middle
+And in order to do that,
+dispatch can help you.
+
+00:09:35.446 --> 00:09:38.146 A:middle
+So if we do back to the
+diagram we had before,
+
+00:09:38.376 --> 00:09:42.486 A:middle
+if the user interface spawns off
+three separate work items here,
+
+00:09:43.466 --> 00:09:45.486 A:middle
+you can create a dispatch group.
+
+00:09:46.586 --> 00:09:49.116 A:middle
+Dispatch groups are here
+to help you track work,
+
+00:09:50.176 --> 00:09:53.036 A:middle
+and they're very simple
+to create in Swift.
+
+00:09:53.206 --> 00:09:55.256 A:middle
+You just create a
+DispatchGroup object.
+
+00:09:56.576 --> 00:10:01.476 A:middle
+And now when you submit work to
+dispatch, you can add the group
+
+00:09:56.576 --> 00:10:01.476 A:middle
+And now when you submit work to
+dispatch, you can add the group
+
+00:10:01.776 --> 00:10:03.866 A:middle
+as an optional parameter
+to your async call.
+
+00:10:05.046 --> 00:10:07.636 A:middle
+You can add more work to
+that group, and you can do it
+
+00:10:07.636 --> 00:10:08.556 A:middle
+to different queues,
+
+00:10:08.876 --> 00:10:10.416 A:middle
+but associate it
+with the same group.
+
+00:10:10.616 --> 00:10:14.216 A:middle
+And each time you
+submit work to the group,
+
+00:10:14.536 --> 00:10:16.356 A:middle
+the group will increment
+the counter of items
+
+00:10:16.356 --> 00:10:17.696 A:middle
+that it's expecting to complete.
+
+00:10:19.816 --> 00:10:22.126 A:middle
+Then finally, once you've
+submitted all your work,
+
+00:10:22.666 --> 00:10:25.456 A:middle
+you can ask the group
+to notify you when all
+
+00:10:25.456 --> 00:10:27.246 A:middle
+that work is finished,
+and you can tell it do
+
+00:10:27.246 --> 00:10:30.456 A:middle
+so on a queue that
+you've chosen.
+
+00:10:30.986 --> 00:10:34.106 A:middle
+So now one by one, these
+items will start to execute,
+
+00:10:34.716 --> 00:10:37.766 A:middle
+and as they execute the count
+
+00:10:37.766 --> 00:10:40.196 A:middle
+in the group will
+decrement every time a work
+
+00:10:40.196 --> 00:10:41.056 A:middle
+item completes.
+
+00:10:41.716 --> 00:10:44.636 A:middle
+And when, finally, the last
+work item has finished,
+
+00:10:45.246 --> 00:10:48.106 A:middle
+the group will go ahead and
+submit your notification block
+
+00:10:48.386 --> 00:10:51.816 A:middle
+to the queue that
+you've requested.
+
+00:10:51.816 --> 00:10:54.636 A:middle
+So here, we submitted
+the group, the block back
+
+00:10:54.636 --> 00:10:57.546 A:middle
+to the main queue, and it
+will run on the main thread.
+
+00:10:58.076 --> 00:11:03.636 A:middle
+Now there's a third pattern
+that I feel we should show.
+
+00:10:58.076 --> 00:11:03.636 A:middle
+Now there's a third pattern
+that I feel we should show.
+
+00:11:04.286 --> 00:11:08.096 A:middle
+These two have been asynchronous
+execution, and the third one is
+
+00:11:08.146 --> 00:11:09.666 A:middle
+to deal with synchronous
+execution.
+
+00:11:10.196 --> 00:11:12.946 A:middle
+You can use synchronous
+execution
+
+00:11:13.286 --> 00:11:16.506 A:middle
+to help you serialize
+state between subsystems.
+
+00:11:17.716 --> 00:11:20.626 A:middle
+Serial queues, dispatch
+queues are serial by natural.
+
+00:11:21.566 --> 00:11:24.626 A:middle
+And you can use this for its
+mutual exclusion properties.
+
+00:11:24.976 --> 00:11:28.176 A:middle
+That is, when you submit work
+synchronously to that queue,
+
+00:11:28.436 --> 00:11:30.456 A:middle
+you know the work that
+the subsystem is running
+
+00:11:30.456 --> 00:11:32.416 A:middle
+on that queue isn't
+running at the same time.
+
+00:11:33.756 --> 00:11:36.436 A:middle
+You can use this to build
+very simple accesses
+
+00:11:36.436 --> 00:11:38.466 A:middle
+to the thread safe
+that access properties
+
+00:11:38.466 --> 00:11:40.556 A:middle
+from your subsystem
+from other places.
+
+00:11:41.166 --> 00:11:43.536 A:middle
+So for instance, here
+you can call queue sync,
+
+00:11:43.946 --> 00:11:45.956 A:middle
+and you can return a
+value out of queue sync,
+
+00:11:46.466 --> 00:11:49.436 A:middle
+and we will capture that value
+on the queue, and then return it
+
+00:11:49.436 --> 00:11:51.906 A:middle
+to you as that work
+item completes.
+
+00:11:52.376 --> 00:11:56.696 A:middle
+However, you have to be
+careful when you start
+
+00:11:56.696 --> 00:11:58.806 A:middle
+to introduce this
+pattern, because you start
+
+00:11:58.806 --> 00:12:01.746 A:middle
+to introduce a lock ordering
+graph between your subsystems.
+
+00:11:58.806 --> 00:12:01.746 A:middle
+to introduce a lock ordering
+graph between your subsystems.
+
+00:12:01.826 --> 00:12:03.986 A:middle
+Now, what does that mean?
+
+00:12:04.176 --> 00:12:07.686 A:middle
+Well, if you have the subsystems
+that we had before, and you sync
+
+00:12:07.686 --> 00:12:10.276 A:middle
+from one place to another
+and then to another,
+
+00:12:10.566 --> 00:12:13.486 A:middle
+and then finally, you end up
+syncing back to the first one.
+
+00:12:13.866 --> 00:12:15.066 A:middle
+Well, now we have a deadlock.
+
+00:12:16.226 --> 00:12:17.466 A:middle
+Pierre's going to come and talk
+
+00:12:17.466 --> 00:12:19.856 A:middle
+about deadlocks later
+on in this talk.
+
+00:12:27.046 --> 00:12:29.986 A:middle
+So now we've seen a bit how
+to structure dispatch use
+
+00:12:30.356 --> 00:12:31.756 A:middle
+in your application as a whole.
+
+00:12:31.936 --> 00:12:35.706 A:middle
+How can we also apply it to
+your usage inside the subsystem?
+
+00:12:36.486 --> 00:12:39.056 A:middle
+Well, you can use dispatch
+to classify the work
+
+00:12:39.056 --> 00:12:41.256 A:middle
+that you submit, and to do so,
+
+00:12:41.256 --> 00:12:44.586 A:middle
+we need to introduce
+quality of service classes.
+
+00:12:45.116 --> 00:12:48.116 A:middle
+These are classes that provide
+an explicit classification
+
+00:12:48.156 --> 00:12:50.046 A:middle
+of the work that you are
+submitting to dispatch.
+
+00:12:50.636 --> 00:12:54.136 A:middle
+So it allows you as the
+developer to indicate the intent
+
+00:12:54.136 --> 00:12:56.006 A:middle
+of the code that you are
+submitting to dispatch.
+
+00:12:56.476 --> 00:13:00.116 A:middle
+And dispatch can use that to
+affect how it executes the code
+
+00:12:56.476 --> 00:13:00.116 A:middle
+And dispatch can use that to
+affect how it executes the code
+
+00:13:00.116 --> 00:13:01.656 A:middle
+that you've given us.
+
+00:13:02.036 --> 00:13:04.016 A:middle
+That is, the code
+could be executed
+
+00:13:04.016 --> 00:13:05.226 A:middle
+at a different CPU priority,
+
+00:13:05.416 --> 00:13:07.706 A:middle
+different IO scheduling
+priority, and so on.
+
+00:13:08.296 --> 00:13:12.246 A:middle
+And we covered QoS in detail in
+the same talk from last year,
+
+00:13:12.246 --> 00:13:14.326 A:middle
+Building Responsive and
+Efficient Apps with GCD.
+
+00:13:15.296 --> 00:13:17.436 A:middle
+So how do we actually
+use the QoS classes?
+
+00:13:18.866 --> 00:13:20.796 A:middle
+Well, it's as simple
+as it was before.
+
+00:13:21.316 --> 00:13:23.956 A:middle
+You can pass the
+QoS class to async
+
+00:13:24.036 --> 00:13:25.246 A:middle
+as another optional parameter.
+
+00:13:25.246 --> 00:13:27.996 A:middle
+So here, we're submitting
+background work to our queue.
+
+00:13:29.166 --> 00:13:33.016 A:middle
+And if you come along later
+and submit queue out work
+
+00:13:33.016 --> 00:13:36.036 A:middle
+at a higher QoS, dispatch will
+help you resolve the priority
+
+00:13:36.036 --> 00:13:36.996 A:middle
+inversion that's created.
+
+00:13:37.656 --> 00:13:41.066 A:middle
+That is, it will raise the
+items in front of your work
+
+00:13:41.246 --> 00:13:43.616 A:middle
+on the dispatch queue
+to the higher QoS just
+
+00:13:44.606 --> 00:13:46.546 A:middle
+so that they execute quicker
+
+00:13:46.546 --> 00:13:48.786 A:middle
+and you actually get
+your item executed
+
+00:13:48.786 --> 00:13:50.196 A:middle
+through as quickly
+as you expected.
+
+00:13:51.206 --> 00:13:53.196 A:middle
+However, it's important
+to note at this point,
+
+00:13:53.646 --> 00:13:55.536 A:middle
+this doesn't help your
+work jump the line.
+
+00:13:55.756 --> 00:13:58.516 A:middle
+All that does here is elevate
+all the work in front of you,
+
+00:13:58.516 --> 00:14:01.406 A:middle
+so it executes as quickly as
+the work that you've submitted.
+
+00:13:58.516 --> 00:14:01.406 A:middle
+so it executes as quickly as
+the work that you've submitted.
+
+00:14:02.646 --> 00:14:06.106 A:middle
+And then you can also
+create dispatch queues
+
+00:14:06.366 --> 00:14:08.086 A:middle
+that have a specific QoS class.
+
+00:14:08.486 --> 00:14:09.846 A:middle
+This is very helpful,
+for instance,
+
+00:14:10.156 --> 00:14:12.936 A:middle
+if you have background work
+that you always want to execute
+
+00:14:12.936 --> 00:14:14.926 A:middle
+at background, you
+can create a queue
+
+00:14:15.116 --> 00:14:16.806 A:middle
+that executes all
+that as background.
+
+00:14:16.806 --> 00:14:18.826 A:middle
+And when you submit
+work to that queue,
+
+00:14:19.076 --> 00:14:21.006 A:middle
+that's the QoS that we'll get.
+
+00:14:21.756 --> 00:14:26.726 A:middle
+So on a more granular
+level, when you async
+
+00:14:27.616 --> 00:14:30.676 A:middle
+to a dispatch queue, it
+captures the execution context
+
+00:14:30.676 --> 00:14:31.806 A:middle
+at the point where you async.
+
+00:14:32.916 --> 00:14:35.136 A:middle
+Now, execution context
+means things like QoS.
+
+00:14:35.646 --> 00:14:37.766 A:middle
+It also means the login
+context that you currently have.
+
+00:14:38.826 --> 00:14:41.336 A:middle
+But if you want more
+control over this,
+
+00:14:41.606 --> 00:14:45.346 A:middle
+you can use DispatchWorkItem
+to create items
+
+00:14:45.556 --> 00:14:47.646 A:middle
+where you have more control
+over how they execute.
+
+00:14:49.006 --> 00:14:52.886 A:middle
+For instance, here we're
+creating a work item
+
+00:14:53.076 --> 00:14:57.206 A:middle
+with assignCurrentContext,
+and that takes the QoS
+
+00:14:57.206 --> 00:15:00.696 A:middle
+of the execution context at the
+time you create the work item,
+
+00:14:57.206 --> 00:15:00.696 A:middle
+of the execution context at the
+time you create the work item,
+
+00:15:00.906 --> 00:15:02.576 A:middle
+rather than the time
+that you submit it
+
+00:15:02.576 --> 00:15:03.466 A:middle
+to your dispatch queue.
+
+00:15:04.506 --> 00:15:07.366 A:middle
+This means you can create
+that item, save it for later,
+
+00:15:07.366 --> 00:15:10.066 A:middle
+and when you do finally
+execute it, we will submit it
+
+00:15:10.066 --> 00:15:12.616 A:middle
+to dispatch with the properties
+of when you created it.
+
+00:15:13.336 --> 00:15:14.986 A:middle
+And now while we're
+talking about work item,
+
+00:15:15.246 --> 00:15:17.816 A:middle
+there's another part that's very
+useful for DispatchWorkItem,
+
+00:15:18.186 --> 00:15:20.106 A:middle
+and that is waiting
+for them to complete.
+
+00:15:20.186 --> 00:15:24.876 A:middle
+You can use the wait method on
+DispatchWorkItem to indicate
+
+00:15:24.876 --> 00:15:26.636 A:middle
+to dispatch that you
+need that work item
+
+00:15:26.636 --> 00:15:28.436 A:middle
+to complete before
+you can make progress.
+
+00:15:30.956 --> 00:15:33.486 A:middle
+Dispatch will respond by
+elevating the priority
+
+00:15:33.486 --> 00:15:35.936 A:middle
+of work ahead of
+it up to that QoS,
+
+00:15:35.936 --> 00:15:38.046 A:middle
+like it did with priority
+inversions before.
+
+00:15:38.046 --> 00:15:43.956 A:middle
+And it can do this because
+the DispatchWorkItem knows
+
+00:15:43.956 --> 00:15:46.316 A:middle
+where it was submitted, which
+queue you want to run it on.
+
+00:15:46.616 --> 00:15:49.756 A:middle
+And therefore, dispatch knows
+which queue it has to elevate
+
+00:15:49.886 --> 00:15:51.696 A:middle
+in order to get your
+work item completed.
+
+00:15:52.146 --> 00:15:56.156 A:middle
+And it's very important to
+note that, because waiting
+
+00:15:56.156 --> 00:15:58.656 A:middle
+on Semaphores and
+Groups don't store this
+
+00:15:58.656 --> 00:15:59.776 A:middle
+ownership information.
+
+00:16:00.096 --> 00:16:02.806 A:middle
+This means if you wait on
+a semaphore, it isn't going
+
+00:16:02.806 --> 00:16:05.446 A:middle
+to cause the things in front
+of your semaphore signal
+
+00:16:05.626 --> 00:16:06.786 A:middle
+to execute any quicker.
+
+00:16:07.466 --> 00:16:09.756 A:middle
+And now I'd like to invite
+Pierre on to the stage.
+
+00:16:09.836 --> 00:16:12.436 A:middle
+He's going to take you through
+more about synchronization.
+
+00:16:13.516 --> 00:16:19.646 A:middle
+[ Applause ]
+
+00:16:20.146 --> 00:16:20.566 A:middle
+&gt;&gt; Thank you, Matt.
+
+00:16:22.596 --> 00:16:25.976 A:middle
+So with Matt, we've
+seen how to use dispatch
+
+00:16:26.096 --> 00:16:28.096 A:middle
+from the perspective
+of your app.
+
+00:16:28.316 --> 00:16:30.796 A:middle
+I will walk you through more
+details about what it means
+
+00:16:31.056 --> 00:16:32.816 A:middle
+from the perspective
+of your objects now.
+
+00:16:33.946 --> 00:16:35.956 A:middle
+But first, a note about Swift.
+
+00:16:39.336 --> 00:16:42.536 A:middle
+Synchronization is not part
+of the language as of Swift 3.
+
+00:16:44.196 --> 00:16:47.826 A:middle
+You only have one grand key
+from the language today,
+
+00:16:47.826 --> 00:16:50.126 A:middle
+which is that your
+global viables are
+
+00:16:50.126 --> 00:16:51.416 A:middle
+initialized atomically.
+
+00:16:52.526 --> 00:16:55.106 A:middle
+But what you don't have is
+
+00:16:55.106 --> 00:16:59.516 A:middle
+that your class properties are
+not atomic, and lazy properties
+
+00:16:59.516 --> 00:17:01.296 A:middle
+of your classes aren't
+atomic either.
+
+00:16:59.516 --> 00:17:01.296 A:middle
+of your classes aren't
+atomic either.
+
+00:17:01.826 --> 00:17:05.016 A:middle
+What that means is that if
+you're calling these properties
+
+00:17:05.016 --> 00:17:07.415 A:middle
+in our initialize
+context at the same time,
+
+00:17:07.836 --> 00:17:10.516 A:middle
+your lazy initializer
+may actually run twice.
+
+00:17:11.705 --> 00:17:13.096 A:middle
+So you have to synchronize.
+
+00:17:14.326 --> 00:17:17.766 A:middle
+The language doesn't give us
+really a lot of tools today,
+
+00:17:18.175 --> 00:17:21.226 A:middle
+but that doesn't mean that
+races aren't a problem.
+
+00:17:22.226 --> 00:17:26.886 A:middle
+There is no such thing
+as a benign race.
+
+00:17:27.435 --> 00:17:31.756 A:middle
+What that means for you is
+
+00:17:31.756 --> 00:17:34.166 A:middle
+that if you forget a
+synchronization point,
+
+00:17:34.626 --> 00:17:37.976 A:middle
+you will end up with crashes
+or corrupting the data
+
+00:17:37.976 --> 00:17:40.236 A:middle
+of the user of your apps.
+
+00:17:41.496 --> 00:17:44.646 A:middle
+I invite you to go
+watch the talk
+
+00:17:44.646 --> 00:17:45.976 A:middle
+that happened earlier this week
+
+00:17:45.976 --> 00:17:49.906 A:middle
+about T San, which
+is a sanitizer.
+
+00:17:50.746 --> 00:17:53.766 A:middle
+Which is a tool that
+helps you find out where
+
+00:17:53.766 --> 00:17:56.476 A:middle
+in your app you're missing
+proper synchronization.
+
+00:17:56.726 --> 00:18:01.816 A:middle
+So what do we use
+for synchronization?
+
+00:17:56.726 --> 00:18:01.816 A:middle
+So what do we use
+for synchronization?
+
+00:18:02.876 --> 00:18:05.166 A:middle
+Traditionally you
+would use a lock.
+
+00:18:05.956 --> 00:18:10.086 A:middle
+And in Swift, since you have
+the entire Darwin module
+
+00:18:10.086 --> 00:18:13.796 A:middle
+at your disposition, you will
+actually see the struct based
+
+00:18:13.876 --> 00:18:15.346 A:middle
+traditional C locks.
+
+00:18:15.986 --> 00:18:18.936 A:middle
+However, Swift assumes
+that anything
+
+00:18:18.936 --> 00:18:22.066 A:middle
+that is taught can be
+moved, and that doesn't work
+
+00:18:22.256 --> 00:18:24.276 A:middle
+with a mutex or with a lock.
+
+00:18:24.656 --> 00:18:26.366 A:middle
+So we really discourage you
+
+00:18:26.366 --> 00:18:28.906 A:middle
+from using these kind
+of locks from Swift.
+
+00:18:32.056 --> 00:18:37.466 A:middle
+If you want to a traditional
+lock, what you can use, however,
+
+00:18:37.466 --> 00:18:41.326 A:middle
+is Foundation.Lock, because
+unlike the traditional struct
+
+00:18:41.326 --> 00:18:44.876 A:middle
+based C locks, it's a class,
+and it's not prone to any
+
+00:18:44.916 --> 00:18:46.766 A:middle
+of the problems I
+mentioned earlier.
+
+00:18:46.766 --> 00:18:49.966 A:middle
+However, suddenly that means
+
+00:18:49.966 --> 00:18:51.496 A:middle
+that you're locating
+your next object,
+
+00:18:51.686 --> 00:18:53.466 A:middle
+which may be undesirable
+for you.
+
+00:18:54.186 --> 00:18:56.716 A:middle
+And if you want something
+that's smaller and that looks
+
+00:18:56.716 --> 00:19:00.096 A:middle
+like the locks that you have
+in C, then you have to call
+
+00:18:56.716 --> 00:19:00.096 A:middle
+like the locks that you have
+in C, then you have to call
+
+00:19:00.096 --> 00:19:04.236 A:middle
+into Objective-C and introduce
+a base class in Objective-C
+
+00:19:04.236 --> 00:19:06.236 A:middle
+that has your lock as an ivar.
+
+00:19:07.626 --> 00:19:10.486 A:middle
+And then you will expose
+a lock and unlock methods
+
+00:19:10.576 --> 00:19:14.246 A:middle
+and a try lock if you need it
+as well that you will be able
+
+00:19:14.246 --> 00:19:18.856 A:middle
+to call from Swift when you
+will subclass this class.
+
+00:19:20.406 --> 00:19:24.556 A:middle
+You will notice on that slide
+we're using unfair lock.
+
+00:19:24.816 --> 00:19:26.926 A:middle
+It's a new API that
+we introduced.
+
+00:19:26.926 --> 00:19:29.676 A:middle
+It's not prone to
+pirate invasions.
+
+00:19:30.006 --> 00:19:33.566 A:middle
+It doesn't spin, unlike the
+spin lock that we duplicated.
+
+00:19:34.536 --> 00:19:38.026 A:middle
+It's most important
+to come back to life.
+
+00:19:38.676 --> 00:19:43.106 A:middle
+That being said, this is a GCD
+talk, so what we encourage you
+
+00:19:43.106 --> 00:19:46.806 A:middle
+to do is to use dispatch queues
+for synchronization purposes.
+
+00:19:47.996 --> 00:19:50.946 A:middle
+The first reason why is that
+these are significantly easier
+
+00:19:50.946 --> 00:19:54.566 A:middle
+to misuse than a
+traditional lock.
+
+00:19:55.046 --> 00:19:57.746 A:middle
+Your code will run
+in a scoped way,
+
+00:19:57.746 --> 00:20:00.036 A:middle
+which means that you
+cannot forget to unlock.
+
+00:19:57.746 --> 00:20:00.036 A:middle
+which means that you
+cannot forget to unlock.
+
+00:20:01.106 --> 00:20:03.916 A:middle
+The other thing is that
+queues actually are way better
+
+00:20:03.916 --> 00:20:06.976 A:middle
+integrated with the run time
+in Xcode in debugging tools.
+
+00:20:08.596 --> 00:20:12.066 A:middle
+So how do we use
+queues to synchronize?
+
+00:20:12.286 --> 00:20:15.196 A:middle
+I will walk you through
+a problem
+
+00:20:15.376 --> 00:20:17.966 A:middle
+of implementing an
+atomic property.
+
+00:20:19.106 --> 00:20:23.926 A:middle
+So here we have this object
+that has an internal state
+
+00:20:24.426 --> 00:20:26.816 A:middle
+that we want to access
+in a safe way.
+
+00:20:26.876 --> 00:20:29.666 A:middle
+We will use a queue
+to synchronize.
+
+00:20:30.816 --> 00:20:33.406 A:middle
+How do we write our
+getter and our setter?
+
+00:20:34.626 --> 00:20:35.456 A:middle
+The getter is just
+
+00:20:35.456 --> 00:20:38.976 A:middle
+about returning this
+internal state with sync.
+
+00:20:40.056 --> 00:20:41.536 A:middle
+It gives us mutual exclusion.
+
+00:20:41.746 --> 00:20:43.086 A:middle
+Matt talked about this earlier.
+
+00:20:43.086 --> 00:20:45.866 A:middle
+And the setter is as simple.
+
+00:20:46.086 --> 00:20:49.176 A:middle
+You will just set your new
+state and the other protection
+
+00:20:49.266 --> 00:20:50.546 A:middle
+of sync and your queue.
+
+00:20:51.806 --> 00:20:55.096 A:middle
+This pattern is pretty simple,
+and you can actually extend it
+
+00:20:55.176 --> 00:20:59.686 A:middle
+to products significantly
+more complex in variants.
+
+00:21:00.236 --> 00:21:02.306 A:middle
+I told you that queues
+are better integrated
+
+00:21:02.306 --> 00:21:04.786 A:middle
+with your debugging tools.
+
+00:21:04.786 --> 00:21:06.606 A:middle
+They also have more features.
+
+00:21:07.166 --> 00:21:10.226 A:middle
+And new in this release, we
+let you express preconditions.
+
+00:21:11.526 --> 00:21:14.296 A:middle
+It lets you express that you
+have invariants in your code
+
+00:21:14.616 --> 00:21:17.796 A:middle
+that really need to hang
+on that given queue,
+
+00:21:18.366 --> 00:21:20.566 A:middle
+and you had that this way.
+
+00:21:22.126 --> 00:21:24.296 A:middle
+A dispatch precondition
+that you're on that queue.
+
+00:21:25.376 --> 00:21:27.586 A:middle
+Sometimes the opposite
+is actually useful.
+
+00:21:27.756 --> 00:21:31.536 A:middle
+You want to make sure that a
+given piece of code never runs
+
+00:21:31.536 --> 00:21:34.336 A:middle
+on that queue, because you
+know you may synchronize
+
+00:21:34.336 --> 00:21:38.556 A:middle
+with that queue, and you express
+this this way, a precondition
+
+00:21:39.446 --> 00:21:40.386 A:middle
+that you're not in the queue.
+
+00:21:41.676 --> 00:21:45.606 A:middle
+So that's about synchronization,
+synchronizing your state.
+
+00:21:47.176 --> 00:21:49.846 A:middle
+And as Matt said
+earlier, it's way better
+
+00:21:49.846 --> 00:21:52.696 A:middle
+if you can just organize
+your application in a way
+
+00:21:52.696 --> 00:21:54.196 A:middle
+that your passing
+values are hung
+
+00:21:54.196 --> 00:21:56.376 A:middle
+that don't need synchronization
+in the first place.
+
+00:21:57.026 --> 00:22:00.396 A:middle
+However, in real life code, you
+need some objects to be accessed
+
+00:21:57.026 --> 00:22:00.396 A:middle
+However, in real life code, you
+need some objects to be accessed
+
+00:22:00.396 --> 00:22:02.076 A:middle
+from simple, obvious subsystems.
+
+00:22:02.876 --> 00:22:06.346 A:middle
+What that means is that
+all these subsystems have a
+
+00:22:06.346 --> 00:22:08.726 A:middle
+reference in these
+objects, and getting rid
+
+00:22:08.726 --> 00:22:12.646 A:middle
+of them actually
+can be a challenge.
+
+00:22:14.166 --> 00:22:18.336 A:middle
+I will now walk you through
+a four-step state mission
+
+00:22:19.046 --> 00:22:22.116 A:middle
+that will help you get
+this height and not end
+
+00:22:22.116 --> 00:22:25.516 A:middle
+up with weird crashes that
+are hard to reproduce.
+
+00:22:27.356 --> 00:22:31.666 A:middle
+Your state machine starts
+with first thing setup.
+
+00:22:31.996 --> 00:22:33.916 A:middle
+Setup is about creating
+the object
+
+00:22:34.106 --> 00:22:42.166 A:middle
+and giving it the property you
+need it to have for its purpose.
+
+00:22:42.166 --> 00:22:45.066 A:middle
+Second, you will want
+to activate this object.
+
+00:22:45.526 --> 00:22:48.306 A:middle
+What that means is that you
+actually make this object be
+
+00:22:48.306 --> 00:22:49.826 A:middle
+known to other subsystems.
+
+00:22:50.076 --> 00:22:53.386 A:middle
+You start using it in
+a more concurrent world
+
+00:22:53.386 --> 00:22:54.956 A:middle
+in performance duties.
+
+00:22:56.306 --> 00:22:57.666 A:middle
+And then the hard part starts.
+
+00:22:57.666 --> 00:22:59.166 A:middle
+You want to get rid
+of that object.
+
+00:22:59.516 --> 00:23:02.356 A:middle
+And so the third
+step is invalidation.
+
+00:22:59.516 --> 00:23:02.356 A:middle
+And so the third
+step is invalidation.
+
+00:23:05.096 --> 00:23:09.566 A:middle
+Invalidation is about making
+sure that all the parts,
+
+00:23:09.566 --> 00:23:12.486 A:middle
+all your subsystems know that
+this object is going away
+
+00:23:12.946 --> 00:23:15.506 A:middle
+so that, fourth, it
+gets deallocated.
+
+00:23:16.086 --> 00:23:17.236 A:middle
+So let's look back.
+
+00:23:17.806 --> 00:23:21.626 A:middle
+Setup, activation,
+invalidation, deallocation.
+
+00:23:22.306 --> 00:23:29.076 A:middle
+This is quite abstract,
+so we will walk
+
+00:23:29.076 --> 00:23:31.996 A:middle
+through a more concrete example
+that I hope you will relate to.
+
+00:23:32.626 --> 00:23:35.956 A:middle
+Let's go back to the application
+that Matt introduced earlier
+
+00:23:36.636 --> 00:23:39.306 A:middle
+and focus on two
+of the subsystems.
+
+00:23:40.546 --> 00:23:42.916 A:middle
+First, we have our
+user interface,
+
+00:23:43.246 --> 00:23:48.166 A:middle
+which will handle stuff such
+as the title bar of your app.
+
+00:23:48.396 --> 00:23:52.246 A:middle
+And I will assume that you
+are able to observe some kind
+
+00:23:52.246 --> 00:23:55.736 A:middle
+of state changes in your
+subsystems so that here,
+
+00:23:55.736 --> 00:23:58.316 A:middle
+for example, for our
+data transform subsystem,
+
+00:23:58.706 --> 00:24:00.756 A:middle
+when it starts performing
+some work,
+
+00:23:58.706 --> 00:24:00.756 A:middle
+when it starts performing
+some work,
+
+00:24:00.756 --> 00:24:03.706 A:middle
+we present a visual
+indication to the user.
+
+00:24:04.636 --> 00:24:08.986 A:middle
+And then when the data transform
+subsystem stops doing any work,
+
+00:24:08.986 --> 00:24:10.626 A:middle
+that visual indication
+goes away.
+
+00:24:11.766 --> 00:24:15.196 A:middle
+So how do we implement
+that BusyController?
+
+00:24:16.256 --> 00:24:19.416 A:middle
+So we remember the
+first step is setup.
+
+00:24:19.566 --> 00:24:23.536 A:middle
+Setup is about you picking
+the properties that you want
+
+00:24:23.626 --> 00:24:26.096 A:middle
+for your code, and the
+animation, and all that.
+
+00:24:26.196 --> 00:24:27.536 A:middle
+That's really up to you.
+
+00:24:28.886 --> 00:24:31.486 A:middle
+Then we'll want to
+start using that object,
+
+00:24:32.156 --> 00:24:34.026 A:middle
+and that's activation.
+
+00:24:34.146 --> 00:24:35.036 A:middle
+We activate it.
+
+00:24:35.526 --> 00:24:36.986 A:middle
+What does that mean
+for our controller?
+
+00:24:37.706 --> 00:24:38.726 A:middle
+What that means is that we want
+
+00:24:38.726 --> 00:24:41.556 A:middle
+to start receiving these
+state notifications,
+
+00:24:41.626 --> 00:24:44.266 A:middle
+state changes notifications,
+so we will register
+
+00:24:44.266 --> 00:24:48.686 A:middle
+with that subsystem, and
+ask for the notifications
+
+00:24:48.686 --> 00:24:49.936 A:middle
+to be received on
+the main queue.
+
+00:24:49.936 --> 00:24:54.806 A:middle
+We're doing UI we want to
+handle the logic there.
+
+00:24:55.026 --> 00:24:58.706 A:middle
+Now that it's activated,
+well, that's your code.
+
+00:24:59.046 --> 00:24:59.956 A:middle
+That you want to do.
+
+00:24:59.956 --> 00:25:00.946 A:middle
+That's your animation.
+
+00:24:59.956 --> 00:25:00.946 A:middle
+That's your animation.
+
+00:25:00.946 --> 00:25:04.686 A:middle
+That's your very nice
+UI for your application.
+
+00:25:06.016 --> 00:25:08.146 A:middle
+But then, there are
+some parts of your app
+
+00:25:08.146 --> 00:25:10.296 A:middle
+that maybe don't need
+that visual indication,
+
+00:25:10.476 --> 00:25:13.606 A:middle
+or that maybe don't use the
+data transform subsystem,
+
+00:25:13.606 --> 00:25:17.326 A:middle
+and you want to reclaim the
+resources of that controller,
+
+00:25:17.356 --> 00:25:20.026 A:middle
+and you want to get rid of it.
+
+00:25:20.246 --> 00:25:22.766 A:middle
+It's very tempting
+to say, "Okay,
+
+00:25:23.006 --> 00:25:25.216 A:middle
+the main thread is
+the only subsystem
+
+00:25:25.216 --> 00:25:27.156 A:middle
+that really owns
+this BusyController,
+
+00:25:27.156 --> 00:25:31.856 A:middle
+so I will get rid of it
+like this," and just deinit,
+
+00:25:32.306 --> 00:25:33.996 A:middle
+and register it from
+the subsystem,
+
+00:25:33.996 --> 00:25:35.136 A:middle
+and hope for the best.
+
+00:25:36.286 --> 00:25:38.276 A:middle
+That doesn't work,
+and I will walk you
+
+00:25:38.406 --> 00:25:40.436 A:middle
+through two examples of why.
+
+00:25:41.696 --> 00:25:43.906 A:middle
+So let's step back a bit.
+
+00:25:44.356 --> 00:25:47.136 A:middle
+Our BusyController is
+reference from your UI,
+
+00:25:47.136 --> 00:25:49.526 A:middle
+from the main queue and
+your user interface.
+
+00:25:50.396 --> 00:25:52.246 A:middle
+However, when we registered it
+
+00:25:52.716 --> 00:25:56.036 A:middle
+with the data transform
+subsystems, it was very likely
+
+00:25:56.336 --> 00:25:59.116 A:middle
+that reference was taken
+from the data structure
+
+00:25:59.326 --> 00:26:02.656 A:middle
+onto this object, which means
+that when we're getting rid
+
+00:25:59.326 --> 00:26:02.656 A:middle
+onto this object, which means
+that when we're getting rid
+
+00:26:02.656 --> 00:26:05.106 A:middle
+of the reference that
+the main thread has,
+
+00:26:06.696 --> 00:26:10.906 A:middle
+there's still one left, which
+means that deinit doesn't run,
+
+00:26:10.906 --> 00:26:13.016 A:middle
+which means that it
+get unregistered,
+
+00:26:13.016 --> 00:26:14.336 A:middle
+it doesn't get collected,
+
+00:26:14.336 --> 00:26:17.486 A:middle
+and you end up with
+abandoned memory.
+
+00:26:18.916 --> 00:26:21.506 A:middle
+However, you're very
+skilled developers,
+
+00:26:21.546 --> 00:26:23.186 A:middle
+and you know how to fix that.
+
+00:26:23.186 --> 00:26:26.106 A:middle
+Weak references, and I
+will say yes, you're right.
+
+00:26:26.936 --> 00:26:28.476 A:middle
+However, that's not
+the end of that story,
+
+00:26:29.186 --> 00:26:33.116 A:middle
+because this is not really
+what an app looks like.
+
+00:26:33.566 --> 00:26:36.186 A:middle
+The graph object is
+significantly more complex.
+
+00:26:36.886 --> 00:26:39.626 A:middle
+It's not uncommon to have
+objects that hold references
+
+00:26:39.626 --> 00:26:41.316 A:middle
+and a whole bunch
+of other objects,
+
+00:26:41.756 --> 00:26:46.986 A:middle
+such as this octopus
+object right here.
+
+00:26:48.726 --> 00:26:50.806 A:middle
+We will continue getting rid
+
+00:26:50.806 --> 00:26:52.326 A:middle
+of that reference
+from the main thread.
+
+00:26:52.326 --> 00:26:55.196 A:middle
+And unlike before, this
+is not abandoned memory,
+
+00:26:55.196 --> 00:26:58.166 A:middle
+because this octopus object
+knows it has this reference.
+
+00:26:59.216 --> 00:27:02.896 A:middle
+But then, if we get rid of that
+octopus object from the context
+
+00:26:59.216 --> 00:27:02.896 A:middle
+But then, if we get rid of that
+octopus object from the context
+
+00:27:02.896 --> 00:27:06.626 A:middle
+of the data transform
+subsystem, what will happen?
+
+00:27:06.866 --> 00:27:09.416 A:middle
+It will get rid of that
+reference that it has
+
+00:27:09.416 --> 00:27:12.276 A:middle
+on the BusyController,
+which, remember,
+
+00:27:12.276 --> 00:27:16.456 A:middle
+will run beyond discretion,
+because that's what deinit does.
+
+00:27:17.506 --> 00:27:20.306 A:middle
+And then you have a problem,
+because it's very likely
+
+00:27:20.306 --> 00:27:22.516 A:middle
+that to do that you
+need to synchronize
+
+00:27:22.516 --> 00:27:25.376 A:middle
+with the dispatch queue that
+owns that data structure.
+
+00:27:25.996 --> 00:27:34.016 A:middle
+And you guessed it, we
+end up with a deadlock.
+
+00:27:34.016 --> 00:27:36.596 A:middle
+Actually, that bug is so common
+
+00:27:37.276 --> 00:27:40.826 A:middle
+that we've made it an
+assertion, new in this release.
+
+00:27:40.826 --> 00:27:48.386 A:middle
+If you run that code on the
+last release, it will assert,
+
+00:27:48.836 --> 00:27:52.066 A:middle
+and on OS X or in the simulator,
+
+00:27:52.416 --> 00:27:55.576 A:middle
+the crash report you get
+actually will have an
+
+00:27:55.576 --> 00:27:57.526 A:middle
+application specific information
+
+00:27:57.766 --> 00:28:00.636 A:middle
+that actually points you toward
+the actual problem you have,
+
+00:27:57.766 --> 00:28:00.636 A:middle
+that actually points you toward
+the actual problem you have,
+
+00:28:00.846 --> 00:28:02.116 A:middle
+so that you can fix it easily.
+
+00:28:03.086 --> 00:28:05.346 A:middle
+Okay, so now we know
+we really don't want
+
+00:28:05.346 --> 00:28:06.646 A:middle
+to unregister from deinit.
+
+00:28:06.786 --> 00:28:09.866 A:middle
+How do we fix that?
+
+00:28:10.076 --> 00:28:14.056 A:middle
+We fix that by having our
+third step, invalidation,
+
+00:28:14.056 --> 00:28:15.836 A:middle
+be an explicit function call.
+
+00:28:16.256 --> 00:28:20.626 A:middle
+And under this invalidation,
+we do this in registration.
+
+00:28:23.516 --> 00:28:28.026 A:middle
+Also, since we have
+preconditions, let's use them,
+
+00:28:28.136 --> 00:28:30.056 A:middle
+because this object,
+this BusyController,
+
+00:28:30.056 --> 00:28:32.626 A:middle
+really should be managed from
+the main thread, and you want
+
+00:28:32.626 --> 00:28:35.466 A:middle
+to make sure that users of
+your API do that properly.
+
+00:28:35.966 --> 00:28:37.986 A:middle
+So you will want to
+have a precondition
+
+00:28:37.986 --> 00:28:40.426 A:middle
+that this only happens
+on the main thread,
+
+00:28:40.426 --> 00:28:42.246 A:middle
+or the main queue, even.
+
+00:28:42.686 --> 00:28:46.786 A:middle
+But that's not quite it.
+
+00:28:47.496 --> 00:28:48.976 A:middle
+We have a last problem.
+
+00:28:49.536 --> 00:28:52.636 A:middle
+Remember, this all
+happens on the main thread,
+
+00:28:53.546 --> 00:28:56.626 A:middle
+and you have this subsystem,
+the data transform subsystem,
+
+00:28:56.866 --> 00:29:00.006 A:middle
+who is sending you
+still state transitions,
+
+00:28:56.866 --> 00:29:00.006 A:middle
+who is sending you
+still state transitions,
+
+00:29:00.766 --> 00:29:02.816 A:middle
+and you may have some
+that are still happening
+
+00:29:02.816 --> 00:29:04.046 A:middle
+at the time you're invalidating.
+
+00:29:04.536 --> 00:29:05.536 A:middle
+How do we resolve that?
+
+00:29:06.266 --> 00:29:10.346 A:middle
+Well, you want to track
+invalidation as a real state.
+
+00:29:11.156 --> 00:29:12.016 A:middle
+And what does that mean?
+
+00:29:13.166 --> 00:29:14.486 A:middle
+Well, just what it is.
+
+00:29:14.926 --> 00:29:18.776 A:middle
+You want to track invalidation,
+for example, here, as a Boolean
+
+00:29:18.846 --> 00:29:21.036 A:middle
+in your object, and you
+remember when you did.
+
+00:29:21.996 --> 00:29:26.736 A:middle
+At the same time, let's
+throw in more preconditions,
+
+00:29:27.106 --> 00:29:28.946 A:middle
+and make sure, enforce,
+
+00:29:29.026 --> 00:29:30.756 A:middle
+that before your
+object is deallocated,
+
+00:29:30.756 --> 00:29:32.556 A:middle
+it has been properly
+invalidated.
+
+00:29:32.556 --> 00:29:33.836 A:middle
+It will help you find bugs.
+
+00:29:35.726 --> 00:29:36.786 A:middle
+Why is it interesting?
+
+00:29:37.026 --> 00:29:41.976 A:middle
+Because now, in your code
+that handles the notification
+
+00:29:41.976 --> 00:29:44.276 A:middle
+for the state transitions,
+we can observe
+
+00:29:44.276 --> 00:29:46.536 A:middle
+that the object was invalidated
+
+00:29:46.536 --> 00:29:48.756 A:middle
+and actually drop the
+notification on the floor
+
+00:29:48.756 --> 00:29:54.056 A:middle
+and update the UI in a
+way that would be open.
+
+00:29:54.266 --> 00:29:56.866 A:middle
+Okay, that was quite
+the complex example.
+
+00:29:57.536 --> 00:30:00.406 A:middle
+However, I hope that you
+will now go look back
+
+00:29:57.536 --> 00:30:00.406 A:middle
+However, I hope that you
+will now go look back
+
+00:30:00.406 --> 00:30:03.476 A:middle
+at your applications and your
+code, and try to find places
+
+00:30:03.476 --> 00:30:06.346 A:middle
+where this pattern will help
+you reduce the complexity
+
+00:30:06.346 --> 00:30:08.686 A:middle
+of your code, and
+maybe remove bugs.
+
+00:30:09.586 --> 00:30:12.886 A:middle
+It should also not
+surprise you that,
+
+00:30:12.926 --> 00:30:18.176 A:middle
+given that we're giving you
+this advice, that GCD objects,
+
+00:30:18.236 --> 00:30:21.476 A:middle
+whose purpose in life is
+to be used concurrently,
+
+00:30:21.476 --> 00:30:23.486 A:middle
+follow exactly the same pattern.
+
+00:30:25.176 --> 00:30:33.346 A:middle
+So let's look at the GCD
+object with that in mind.
+
+00:30:34.716 --> 00:30:37.436 A:middle
+So we remember the
+first step is setup.
+
+00:30:37.886 --> 00:30:40.586 A:middle
+Setup for dispatch objects
+is all the things you can do
+
+00:30:40.586 --> 00:30:43.326 A:middle
+when you build the object and
+all the attributes you can pass.
+
+00:30:43.576 --> 00:30:46.456 A:middle
+Matt already showed labels
+and queue attributes earlier.
+
+00:30:46.546 --> 00:30:50.726 A:middle
+And here, we also have
+a dispatch resource
+
+00:30:51.026 --> 00:30:53.756 A:middle
+where we monitor all the
+[inaudible] attributes.
+
+00:30:54.716 --> 00:30:56.906 A:middle
+Sources also have handlers,
+
+00:30:57.436 --> 00:30:59.706 A:middle
+and the event handler
+particularly is the code
+
+00:30:59.706 --> 00:31:03.656 A:middle
+that will run when the resource
+that your monitoring fires,
+
+00:30:59.706 --> 00:31:03.656 A:middle
+that will run when the resource
+that your monitoring fires,
+
+00:31:03.656 --> 00:31:04.856 A:middle
+and that is events pending.
+
+00:31:05.786 --> 00:31:08.406 A:middle
+For the resource that
+we have here, well,
+
+00:31:08.406 --> 00:31:10.346 A:middle
+that's when there is
+data taken available.
+
+00:31:10.956 --> 00:31:14.746 A:middle
+Once you've set up your
+object and it's ready to go,
+
+00:31:14.746 --> 00:31:19.486 A:middle
+you want to use it
+and activate it.
+
+00:31:20.936 --> 00:31:22.576 A:middle
+New in this release, we've made
+
+00:31:22.876 --> 00:31:26.866 A:middle
+that step an API
+[inaudible] called activate.
+
+00:31:27.816 --> 00:31:30.016 A:middle
+It used to be that
+for dispatch sources,
+
+00:31:30.106 --> 00:31:32.766 A:middle
+the initial resume had
+exactly that meaning.
+
+00:31:33.326 --> 00:31:35.756 A:middle
+We've actually now
+made suspension
+
+00:31:36.296 --> 00:31:38.836 A:middle
+and activation be two
+separate concepts.
+
+00:31:39.596 --> 00:31:43.056 A:middle
+Also in resume activate can
+be called several times,
+
+00:31:43.096 --> 00:31:44.896 A:middle
+and it only acts once.
+
+00:31:46.676 --> 00:31:49.046 A:middle
+The contract however is that
+once you've called activate,
+
+00:31:49.046 --> 00:31:51.876 A:middle
+you won't mutate the properties
+of your objects anymore.
+
+00:31:54.196 --> 00:31:59.766 A:middle
+We've also found that creating
+queues the way you use sources,
+
+00:32:00.186 --> 00:32:02.596 A:middle
+creating them initially
+inactive is useful,
+
+00:32:03.006 --> 00:32:06.646 A:middle
+and we've added a new attribute
+that lets you exactly do that,
+
+00:32:06.646 --> 00:32:09.456 A:middle
+and is actually named
+initiallyInactive.
+
+00:32:10.316 --> 00:32:13.026 A:middle
+Once the queue is created, you
+can pass it around, finish,
+
+00:32:13.346 --> 00:32:18.246 A:middle
+configure it the way you like,
+and finally, activate it.
+
+00:32:19.066 --> 00:32:22.746 A:middle
+Many of the dispatch objects
+don't really need explicit
+
+00:32:22.746 --> 00:32:25.076 A:middle
+invalidation, such
+as groups or queues,
+
+00:32:25.396 --> 00:32:27.856 A:middle
+because they become
+inactive by the sheer fact
+
+00:32:27.856 --> 00:32:28.966 A:middle
+of you stopping using them.
+
+00:32:30.286 --> 00:32:32.236 A:middle
+However, the story is quite
+different from sources,
+
+00:32:32.236 --> 00:32:35.706 A:middle
+and sources have an
+explicit invalidation.
+
+00:32:35.876 --> 00:32:36.686 A:middle
+It's called Cancel.
+
+00:32:37.756 --> 00:32:41.856 A:middle
+Cancellation in sources does
+the thing that you'd expect,
+
+00:32:41.856 --> 00:32:43.676 A:middle
+which is that you
+stop getting events
+
+00:32:43.866 --> 00:32:44.876 A:middle
+for the thing you're monitoring.
+
+00:32:45.956 --> 00:32:48.096 A:middle
+But it's not only that it does.
+
+00:32:48.446 --> 00:32:50.616 A:middle
+The second thing it
+does is that if you set
+
+00:32:50.616 --> 00:32:54.656 A:middle
+up a cancellation handler on
+your source, such as here,
+
+00:32:55.856 --> 00:32:58.736 A:middle
+it will run on the target of
+the queue at cancellation time.
+
+00:33:00.226 --> 00:33:04.496 A:middle
+It is actually where you want
+to get rid of the resource
+
+00:33:04.536 --> 00:33:07.396 A:middle
+that you're monitoring,
+such as closing [inaudible]
+
+00:33:07.396 --> 00:33:08.156 A:middle
+frame memory.
+
+00:33:08.736 --> 00:33:14.426 A:middle
+Last, but not least,
+cancellation for sources is
+
+00:33:14.426 --> 00:33:16.576 A:middle
+when your handlers
+are destroyed.
+
+00:33:17.546 --> 00:33:19.196 A:middle
+Handlers are closures.
+
+00:33:19.506 --> 00:33:22.276 A:middle
+They capture via subjects
+maybe even the source itself.
+
+00:33:23.036 --> 00:33:24.766 A:middle
+They can be part of
+the reading cycle.
+
+00:33:25.336 --> 00:33:30.956 A:middle
+Calling cancellation is how you
+can break that reading cycle.
+
+00:33:31.606 --> 00:33:40.046 A:middle
+It's why it's very important
+to always cancel your sources.
+
+00:33:40.696 --> 00:33:46.556 A:middle
+So you remember a bit earlier,
+we added a lot of preconditions
+
+00:33:46.556 --> 00:33:48.856 A:middle
+in our code, because
+we want to make sure
+
+00:33:49.616 --> 00:33:53.086 A:middle
+that concurrently used
+objects are always used
+
+00:33:53.166 --> 00:33:54.616 A:middle
+in a way that you can expect.
+
+00:33:56.096 --> 00:33:57.396 A:middle
+Dispatch is no different,
+
+00:33:57.796 --> 00:34:00.556 A:middle
+and expects that at the time
+your object gets deallocated,
+
+00:33:57.796 --> 00:34:00.556 A:middle
+and expects that at the time
+your object gets deallocated,
+
+00:34:00.556 --> 00:34:01.666 A:middle
+it's in a different state,
+
+00:34:02.846 --> 00:34:05.386 A:middle
+and dispatch expects
+two things from you.
+
+00:34:05.926 --> 00:34:08.386 A:middle
+First, that your
+objects are active.
+
+00:34:09.065 --> 00:34:13.036 A:middle
+And second, that they
+are not suspended.
+
+00:34:13.936 --> 00:34:17.366 A:middle
+The reason why is that being
+suspended or inactive means
+
+00:34:17.436 --> 00:34:20.565 A:middle
+that you as a developer
+don't think that it's safe
+
+00:34:20.565 --> 00:34:23.716 A:middle
+to run the code associated with
+it, but we need to run code
+
+00:34:23.775 --> 00:34:24.856 A:middle
+to get rid of the object.
+
+00:34:31.045 --> 00:34:37.686 A:middle
+Okay. So we've seen today how
+you can think about your app
+
+00:34:37.686 --> 00:34:42.005 A:middle
+in terms of data flows and how
+you should use that to divide it
+
+00:34:42.005 --> 00:34:45.565 A:middle
+into fairly independent
+subsystems that use value type
+
+00:34:46.406 --> 00:34:49.065 A:middle
+for communication purposes.
+
+00:34:49.616 --> 00:34:52.926 A:middle
+If you need to synchronize
+state,
+
+00:34:53.606 --> 00:34:58.026 A:middle
+we also showed you how you can
+use Dispatch Queues to do that.
+
+00:34:58.246 --> 00:35:00.656 A:middle
+And finally, when you
+have objects that are used
+
+00:34:58.246 --> 00:35:00.656 A:middle
+And finally, when you
+have objects that are used
+
+00:35:01.016 --> 00:35:05.056 A:middle
+in a very heavily concurrent
+world, how to use activation
+
+00:35:05.056 --> 00:35:07.386 A:middle
+and invalidation to
+get this pattern right.
+
+00:35:08.726 --> 00:35:14.436 A:middle
+Here is a link that will show
+you more resources associated
+
+00:35:14.436 --> 00:35:15.016 A:middle
+with this talk.
+
+00:35:15.976 --> 00:35:19.856 A:middle
+And a few related sessions
+that, if you're interested
+
+00:35:19.856 --> 00:35:22.676 A:middle
+with dispatch, you
+should probably check out,
+
+00:35:22.676 --> 00:35:24.686 A:middle
+because they are
+really interesting.
+
+00:35:25.796 --> 00:35:26.526 A:middle
+And that's it.
+
+00:35:26.716 --> 00:35:29.436 A:middle
+It was Concurrency with GCD.
+
+00:35:30.508 --> 00:35:32.508 A:middle
+[ Applause ]

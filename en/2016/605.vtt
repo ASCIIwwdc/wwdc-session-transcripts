@@ -1,0 +1,4418 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:17.500 A:middle
+[ Music ]
+
+00:00:21.516 --> 00:00:26.846 A:middle
+[ Applause ]
+
+00:00:27.346 --> 00:00:27.986 A:middle
+&gt;&gt; Welcome.
+
+00:00:28.846 --> 00:00:31.776 A:middle
+This is Part 2 of our
+What's New in Metal session.
+
+00:00:32.485 --> 00:00:36.746 A:middle
+My name is Charles Brissart,
+and I'm a GPU Software Engineer,
+
+00:00:36.746 --> 00:00:41.046 A:middle
+and together with my colleague,
+Dan Omachi and Ana Tikhonova,
+
+00:00:41.046 --> 00:00:43.726 A:middle
+I will be telling you about
+some of our new features.
+
+00:00:45.076 --> 00:00:47.876 A:middle
+But first, let's take a look
+
+00:00:48.326 --> 00:00:50.756 A:middle
+at the other Metal
+session at the WWDC.
+
+00:00:51.716 --> 00:00:56.456 A:middle
+The first two sessions I call
+Adopting Metal uncovered some
+
+00:00:56.456 --> 00:00:59.386 A:middle
+of the basic concepts
+of Metal as well
+
+00:00:59.386 --> 00:01:01.336 A:middle
+as some more advanced
+considerations.
+
+00:00:59.386 --> 00:01:01.336 A:middle
+as some more advanced
+considerations.
+
+00:01:02.956 --> 00:01:06.806 A:middle
+The What's New in Metal session
+covered our new features.
+
+00:01:08.046 --> 00:01:12.596 A:middle
+Finally, the Advanced Shadow
+Optimization session will tell
+
+00:01:12.596 --> 00:01:15.056 A:middle
+you how to get the best
+performance out of your shaders.
+
+00:01:15.916 --> 00:01:21.746 A:middle
+So this morning you were
+told about tessellation,
+
+00:01:21.916 --> 00:01:25.466 A:middle
+resource heaps, memoryless
+render targets as well
+
+00:01:25.466 --> 00:01:27.856 A:middle
+as some improvement
+for GPU tools.
+
+00:01:29.636 --> 00:01:32.776 A:middle
+This afternoon we'll tell you
+about function specialization,
+
+00:01:33.096 --> 00:01:38.076 A:middle
+function resource read-writes,
+wide color, texture assets,
+
+00:01:38.526 --> 00:01:41.736 A:middle
+as well as some addition to
+the Metal Performance Shaders.
+
+00:01:41.736 --> 00:01:46.726 A:middle
+So let's get started with
+function specialization.
+
+00:01:48.856 --> 00:01:51.566 A:middle
+It is a common pattern
+in a rendering engine
+
+00:01:52.336 --> 00:01:55.546 A:middle
+to define a few complex
+master functions
+
+00:01:55.816 --> 00:01:58.876 A:middle
+and then use those master
+functions to generator minimum
+
+00:01:58.876 --> 00:02:00.646 A:middle
+of specialized simple functions.
+
+00:01:58.876 --> 00:02:00.646 A:middle
+of specialized simple functions.
+
+00:02:01.706 --> 00:02:05.586 A:middle
+The idea is that the
+master function allow you
+
+00:02:05.586 --> 00:02:10.485 A:middle
+to avoid duplicating card while
+the specialized function are
+
+00:02:10.485 --> 00:02:14.086 A:middle
+simpler on those as a result
+of better performance.
+
+00:02:15.796 --> 00:02:17.056 A:middle
+So let's take an example.
+
+00:02:17.306 --> 00:02:20.386 A:middle
+If we are trying to write a
+material function you could
+
+00:02:20.386 --> 00:02:24.306 A:middle
+write a master function
+that implements every aspect
+
+00:02:24.536 --> 00:02:26.376 A:middle
+of any material that
+you might need.
+
+00:02:27.536 --> 00:02:30.466 A:middle
+But then, if you are trying
+to implement a shiny --
+
+00:02:30.736 --> 00:02:32.176 A:middle
+a simple shiny material,
+
+00:02:32.646 --> 00:02:34.336 A:middle
+you would probably
+not need reflection,
+
+00:02:34.466 --> 00:02:36.286 A:middle
+but you will need a
+specular highlight.
+
+00:02:37.876 --> 00:02:39.986 A:middle
+If you implement a
+reflected material
+
+00:02:39.986 --> 00:02:42.676 A:middle
+on the other hand you will
+need to add reflection
+
+00:02:42.986 --> 00:02:44.756 A:middle
+on also the specular highlights.
+
+00:02:45.606 --> 00:02:48.856 A:middle
+Our transition material will
+need subsurface scattering,
+
+00:02:48.896 --> 00:02:50.196 A:middle
+but probably no reflection
+
+00:02:50.196 --> 00:02:53.536 A:middle
+or may be no specular
+highlights either, and so on.
+
+00:02:53.946 --> 00:02:54.766 A:middle
+You get the idea.
+
+00:02:55.986 --> 00:02:59.766 A:middle
+So this is typically implemented
+using preprocessor macros.
+
+00:03:00.216 --> 00:03:05.566 A:middle
+The master function is
+compiled with a set of values
+
+00:03:05.566 --> 00:03:07.766 A:middle
+for the macro to create
+a specialized function.
+
+00:03:08.286 --> 00:03:12.146 A:middle
+This can be done at runtime,
+but this is expensive.
+
+00:03:12.146 --> 00:03:15.926 A:middle
+You can also try to
+precompile every single variant
+
+00:03:15.926 --> 00:03:20.356 A:middle
+of the precompiled function, but
+-- and then store them in Metal,
+
+00:03:20.406 --> 00:03:22.376 A:middle
+but this requires
+a lot of storage
+
+00:03:22.376 --> 00:03:24.166 A:middle
+because you can have
+many, many variants,
+
+00:03:24.316 --> 00:03:25.876 A:middle
+or maybe you don't know
+which one you will need.
+
+00:03:27.676 --> 00:03:30.486 A:middle
+Another approach is to
+use runtime constants.
+
+00:03:31.626 --> 00:03:34.776 A:middle
+Runtime constants avoid the need
+to recompile your functions.
+
+00:03:35.066 --> 00:03:37.586 A:middle
+However, you need to
+evaluate the values
+
+00:03:37.586 --> 00:03:39.146 A:middle
+of the constant at runtime.
+
+00:03:40.516 --> 00:03:43.106 A:middle
+That will impact the
+performance of your shaders.
+
+00:03:43.106 --> 00:03:46.536 A:middle
+So we are proposing a new way
+
+00:03:46.536 --> 00:03:49.736 A:middle
+to create specialized
+functions using what we call
+
+00:03:49.736 --> 00:03:50.656 A:middle
+function constants.
+
+00:03:51.446 --> 00:03:53.886 A:middle
+So function constants
+are constants
+
+00:03:54.506 --> 00:03:57.286 A:middle
+that are defined directly in
+the Metal shading language
+
+00:03:57.676 --> 00:04:01.116 A:middle
+and can be compiled into IR
+and stored in the Metal lib.
+
+00:03:57.676 --> 00:04:01.116 A:middle
+and can be compiled into IR
+and stored in the Metal lib.
+
+00:04:01.946 --> 00:04:05.516 A:middle
+Then at runtime you can provide
+the value of the constant
+
+00:04:05.896 --> 00:04:07.846 A:middle
+to create a specialized
+function.
+
+00:04:08.746 --> 00:04:11.526 A:middle
+The advantage of
+this approach is
+
+00:04:11.526 --> 00:04:13.866 A:middle
+that you can compile the
+master function offline
+
+00:04:13.866 --> 00:04:15.096 A:middle
+and store it in the Metal lib.
+
+00:04:15.816 --> 00:04:17.166 A:middle
+The storage requirement is small
+
+00:04:17.166 --> 00:04:19.356 A:middle
+because you only store
+the master functions.
+
+00:04:20.076 --> 00:04:23.146 A:middle
+And since we run a
+quick optimization pass
+
+00:04:23.146 --> 00:04:24.926 A:middle
+when we create the
+specialized function,
+
+00:04:25.446 --> 00:04:27.216 A:middle
+you still get the
+best performance.
+
+00:04:28.026 --> 00:04:31.036 A:middle
+So let's look at an example.
+
+00:04:31.716 --> 00:04:34.146 A:middle
+This is what a master
+function could look
+
+00:04:34.146 --> 00:04:35.716 A:middle
+like using a preprocessor macro.
+
+00:04:36.176 --> 00:04:38.566 A:middle
+Of course, this is
+a simple example.
+
+00:04:38.926 --> 00:04:40.696 A:middle
+A real one would be
+much more complex.
+
+00:04:41.266 --> 00:04:45.426 A:middle
+As you can see, different parts
+of the code surrounded by what
+
+00:04:45.426 --> 00:04:49.076 A:middle
+if statements so that
+you can eliminate
+
+00:04:49.146 --> 00:04:50.256 A:middle
+that section of the code.
+
+00:04:51.766 --> 00:04:54.206 A:middle
+Here is what it would look
+like with function constant.
+
+00:04:54.796 --> 00:04:57.696 A:middle
+As you can see at the top,
+we are defining a number
+
+00:04:57.696 --> 00:04:59.886 A:middle
+of constants, and then
+we use them in the code.
+
+00:05:00.696 --> 00:05:04.326 A:middle
+To define the constants, you use
+the constant keyword followed
+
+00:05:04.326 --> 00:05:08.476 A:middle
+by the type, in this case
+Boolean, and finally the name
+
+00:05:08.476 --> 00:05:12.236 A:middle
+of the constant and the
+function constant attribute.
+
+00:05:12.806 --> 00:05:16.026 A:middle
+The function constant attribute
+specifies that the value
+
+00:05:16.026 --> 00:05:18.846 A:middle
+of the constant is not going
+to be provided at compile time
+
+00:05:19.156 --> 00:05:20.926 A:middle
+but will be provided at runtime
+
+00:05:20.926 --> 00:05:22.616 A:middle
+when we create the
+specialized function.
+
+00:05:23.386 --> 00:05:25.546 A:middle
+You should also note that
+we are passing an index.
+
+00:05:26.166 --> 00:05:28.926 A:middle
+That index can be used
+in addition to the name
+
+00:05:28.926 --> 00:05:32.646 A:middle
+to identify the constant when we
+create the specialized function
+
+00:05:32.646 --> 00:05:33.326 A:middle
+at runtime.
+
+00:05:34.846 --> 00:05:37.676 A:middle
+You can then use the
+constant anywhere in your code
+
+00:05:37.676 --> 00:05:38.876 A:middle
+like your normal constant.
+
+00:05:39.426 --> 00:05:42.046 A:middle
+Here we have a simple if
+statement that is used
+
+00:05:42.046 --> 00:05:44.136 A:middle
+to conditionalize
+part of the code.
+
+00:05:45.426 --> 00:05:48.946 A:middle
+So once you've created your
+master function and compiled it
+
+00:05:48.946 --> 00:05:50.226 A:middle
+and stored it in a Metal lib,
+
+00:05:50.706 --> 00:05:53.706 A:middle
+you need to at runtime
+create specialized functions.
+
+00:05:53.706 --> 00:05:56.506 A:middle
+So you need to provide the
+values of the constant.
+
+00:05:57.456 --> 00:06:00.946 A:middle
+To do that, we use an MTL
+function constant values object
+
+00:05:57.456 --> 00:06:00.946 A:middle
+To do that, we use an MTL
+function constant values object
+
+00:06:01.276 --> 00:06:03.396 A:middle
+that will solve the values
+of multiple constants.
+
+00:06:04.106 --> 00:06:07.956 A:middle
+Once we created the object,
+we can then set the values
+
+00:06:07.956 --> 00:06:13.106 A:middle
+of a constant either by
+name, by index, or by name.
+
+00:06:15.006 --> 00:06:17.456 A:middle
+Once we have created an object,
+
+00:06:17.726 --> 00:06:20.396 A:middle
+we can then create the
+specialized function
+
+00:06:20.396 --> 00:06:22.746 A:middle
+by simply coding the
+new function with names
+
+00:06:23.176 --> 00:06:27.496 A:middle
+and constant values on the
+library, providing the name
+
+00:06:27.496 --> 00:06:32.446 A:middle
+of the master function as well
+as the values we just filled.
+
+00:06:33.016 --> 00:06:36.986 A:middle
+This will return a regular MTL
+function that can then be used
+
+00:06:36.986 --> 00:06:40.856 A:middle
+to create compute pipeline
+or render pipeline depending
+
+00:06:40.856 --> 00:06:41.946 A:middle
+on the type of the function.
+
+00:06:42.456 --> 00:06:45.696 A:middle
+So to better understand
+how this works,
+
+00:06:45.696 --> 00:06:47.906 A:middle
+let's look at the
+compilation pipeline.
+
+00:06:48.576 --> 00:06:52.646 A:middle
+So at build time, you use the
+source of your master function
+
+00:06:53.336 --> 00:06:55.666 A:middle
+and compile it and
+store into a Metal lib.
+
+00:06:56.586 --> 00:07:01.146 A:middle
+At runtime you load
+the Metal lib
+
+00:06:56.586 --> 00:07:01.146 A:middle
+At runtime you load
+the Metal lib
+
+00:07:01.146 --> 00:07:06.816 A:middle
+and create a new function using
+the MTL function constant values
+
+00:07:06.996 --> 00:07:08.366 A:middle
+to specialize the function.
+
+00:07:09.316 --> 00:07:11.596 A:middle
+At this point, we
+run some optimization
+
+00:07:11.596 --> 00:07:13.716 A:middle
+to eliminate any code
+that's not used anymore,
+
+00:07:14.366 --> 00:07:17.096 A:middle
+and then we have an interior
+function that we can use
+
+00:07:17.666 --> 00:07:21.246 A:middle
+to create a render pipeline
+or a compute pipeline.
+
+00:07:21.826 --> 00:07:27.976 A:middle
+You can declare constants
+of any scalar or vector type
+
+00:07:27.976 --> 00:07:30.216 A:middle
+that is [inaudible]
+in Metal , so float,
+
+00:07:30.216 --> 00:07:32.326 A:middle
+half, int, uint, and so on.
+
+00:07:32.886 --> 00:07:35.576 A:middle
+Here we are defining
+half4 color.
+
+00:07:37.076 --> 00:07:41.936 A:middle
+You can also create intermediate
+constants using the value
+
+00:07:41.936 --> 00:07:43.036 A:middle
+of function constants.
+
+00:07:43.406 --> 00:07:45.906 A:middle
+Here we're defining
+a Boolean constant
+
+00:07:45.906 --> 00:07:48.456 A:middle
+that has the opposite value
+of a function constant a.
+
+00:07:49.496 --> 00:07:51.936 A:middle
+Here we are calculating a
+value based on the value
+
+00:07:51.936 --> 00:07:53.506 A:middle
+of the value function constant.
+
+00:07:54.396 --> 00:07:58.376 A:middle
+We can also have
+optional constants.
+
+00:07:58.996 --> 00:08:01.596 A:middle
+Optional constants are constants
+for which you don't need
+
+00:07:58.996 --> 00:08:01.596 A:middle
+Optional constants are constants
+for which you don't need
+
+00:08:01.596 --> 00:08:04.346 A:middle
+to always provide the value when
+you specialize the function.
+
+00:08:04.876 --> 00:08:07.616 A:middle
+This is exactly the same
+thing as using a what ifdef
+
+00:08:07.616 --> 00:08:09.746 A:middle
+in your code when using
+preprocessor macros.
+
+00:08:10.866 --> 00:08:14.066 A:middle
+To do this, you use the if
+function constant defined built
+
+00:08:14.066 --> 00:08:17.106 A:middle
+in that will return true if
+the value has been provided
+
+00:08:17.466 --> 00:08:20.576 A:middle
+and false if otherwise.
+
+00:08:22.356 --> 00:08:24.876 A:middle
+You can also use
+function constant to add
+
+00:08:24.876 --> 00:08:27.176 A:middle
+or eliminate arguments
+from function.
+
+00:08:27.986 --> 00:08:31.796 A:middle
+This is useful to avoid, to
+making sure you don't have
+
+00:08:31.796 --> 00:08:34.135 A:middle
+to bind a buffer or texture
+
+00:08:34.135 --> 00:08:35.696 A:middle
+if you know it's not
+going to be used.
+
+00:08:36.346 --> 00:08:39.806 A:middle
+It's also useful to replace
+the type of an argument,
+
+00:08:40.336 --> 00:08:41.506 A:middle
+and we'll talk about --
+
+00:08:41.506 --> 00:08:43.706 A:middle
+we'll talk more about this
+in the next couple of slides.
+
+00:08:44.916 --> 00:08:46.286 A:middle
+So here we have an example.
+
+00:08:46.906 --> 00:08:51.906 A:middle
+This is a vertex function that
+can implement skinning depending
+
+00:08:51.906 --> 00:08:54.126 A:middle
+of the value of the
+doSkinning constant.
+
+00:08:55.166 --> 00:09:00.986 A:middle
+The first argument of the
+function is the matrices buffer
+
+00:08:55.166 --> 00:09:00.986 A:middle
+The first argument of the
+function is the matrices buffer
+
+00:09:01.156 --> 00:09:02.996 A:middle
+that will exist depending
+
+00:09:02.996 --> 00:09:06.336 A:middle
+on whether the doSkinning
+constant is true or false.
+
+00:09:06.806 --> 00:09:09.806 A:middle
+We use the function
+constant attribute to qualify
+
+00:09:09.806 --> 00:09:11.676 A:middle
+that argument as being optional.
+
+00:09:12.806 --> 00:09:17.076 A:middle
+In the code, you still need to
+use the same function constant
+
+00:09:17.336 --> 00:09:19.446 A:middle
+to protect the code
+that's using that argument.
+
+00:09:20.306 --> 00:09:23.106 A:middle
+So here we use doSkinning
+in the if statement,
+
+00:09:23.696 --> 00:09:29.706 A:middle
+and then we can use the
+matrices safely in our code.
+
+00:09:30.296 --> 00:09:34.626 A:middle
+You can as well use function
+constant to eliminate arguments
+
+00:09:34.626 --> 00:09:35.786 A:middle
+from the stage in struct.
+
+00:09:37.176 --> 00:09:39.046 A:middle
+Here, we have two
+color arguments.
+
+00:09:39.476 --> 00:09:44.696 A:middle
+The first color argument
+as type float4 on these use
+
+00:09:44.696 --> 00:09:46.886 A:middle
+for attributes, that
+is attribute 1.
+
+00:09:48.206 --> 00:09:54.096 A:middle
+The second lowp color is a
+lower precision color half4
+
+00:09:55.146 --> 00:09:57.926 A:middle
+but is overriding the
+same attribute index.
+
+00:09:59.046 --> 00:10:00.976 A:middle
+So you can have either
+one or the other.
+
+00:09:59.046 --> 00:10:00.976 A:middle
+So you can have either
+one or the other.
+
+00:10:01.046 --> 00:10:04.016 A:middle
+These are used to
+specifically change the type
+
+00:10:04.506 --> 00:10:07.066 A:middle
+of the color attributes
+in your code.
+
+00:10:08.206 --> 00:10:12.196 A:middle
+There are some limitations with
+function constants, namely,
+
+00:10:12.196 --> 00:10:15.746 A:middle
+you cannot really change the
+layout of a struct in memory,
+
+00:10:16.856 --> 00:10:18.966 A:middle
+and that can be a problem
+because you might want
+
+00:10:18.966 --> 00:10:22.696 A:middle
+to have different constants for
+different shaders and so on.
+
+00:10:23.956 --> 00:10:25.336 A:middle
+But you can work around that
+
+00:10:25.576 --> 00:10:28.446 A:middle
+but adding multiple arguments
+with different types.
+
+00:10:29.086 --> 00:10:31.746 A:middle
+So in this example, we
+have two buffer arguments
+
+00:10:32.566 --> 00:10:34.616 A:middle
+that are using buffer index 1.
+
+00:10:35.336 --> 00:10:37.036 A:middle
+They are controlled
+by function constants,
+
+00:10:37.036 --> 00:10:38.806 A:middle
+use ConstantA and ConstantB.
+
+00:10:41.606 --> 00:10:46.626 A:middle
+So these are used to
+select one or the other.
+
+00:10:46.626 --> 00:10:50.406 A:middle
+Note that we have -- we use
+an intermediate constant
+
+00:10:50.406 --> 00:10:52.756 A:middle
+that is the opposite
+of the first constant
+
+00:10:52.886 --> 00:10:54.116 A:middle
+to make sure only one
+
+00:10:54.116 --> 00:10:56.196 A:middle
+of the arguments will
+exist at a given time.
+
+00:10:56.656 --> 00:10:59.756 A:middle
+So in summary, you can
+use function constant
+
+00:11:00.196 --> 00:11:02.626 A:middle
+to create specialized
+function at runtime.
+
+00:11:03.226 --> 00:11:07.546 A:middle
+It avoids front end compilation,
+and because we only use --
+
+00:11:07.546 --> 00:11:09.796 A:middle
+and it only uses fast
+optimization phase
+
+00:11:09.796 --> 00:11:11.066 A:middle
+to eliminate unused code.
+
+00:11:11.606 --> 00:11:14.346 A:middle
+The storage is compact
+because you only need
+
+00:11:14.346 --> 00:11:16.506 A:middle
+to store the master
+function in your library.
+
+00:11:17.356 --> 00:11:18.756 A:middle
+You don't have to
+ship your source.
+
+00:11:18.756 --> 00:11:20.246 A:middle
+It can only ship the IR.
+
+00:11:20.246 --> 00:11:23.376 A:middle
+And finally, the unused
+code is eliminated,
+
+00:11:23.376 --> 00:11:24.806 A:middle
+which gives you the
+best performance.
+
+00:11:25.796 --> 00:11:31.036 A:middle
+So let's now talk about
+function resource read-writes.
+
+00:11:31.596 --> 00:11:35.076 A:middle
+So we're introducing
+two new features,
+
+00:11:35.686 --> 00:11:37.536 A:middle
+function buffered read-writes
+
+00:11:37.536 --> 00:11:39.486 A:middle
+and function texture
+read-writes.
+
+00:11:40.826 --> 00:11:44.006 A:middle
+Function buffered read-writes
+is the ability to read and write
+
+00:11:44.196 --> 00:11:49.146 A:middle
+to a buffer from any function
+type and also the ability
+
+00:11:49.146 --> 00:11:51.636 A:middle
+to use atomic operations
+on those buffers
+
+00:11:51.636 --> 00:11:52.646 A:middle
+from any function type.
+
+00:11:53.436 --> 00:11:56.276 A:middle
+As you guessed, function texture
+read-writes is the ability
+
+00:11:56.276 --> 00:12:00.166 A:middle
+to read and write to texture
+from any function type.
+
+00:11:56.276 --> 00:12:00.166 A:middle
+to read and write to texture
+from any function type.
+
+00:12:01.526 --> 00:12:05.996 A:middle
+Function buffer read-writes
+is available on iOS
+
+00:12:06.306 --> 00:12:09.446 A:middle
+with a 9 processor and macOS.
+
+00:12:10.116 --> 00:12:13.256 A:middle
+Function texture read-writes
+is available on macOS.
+
+00:12:13.256 --> 00:12:17.766 A:middle
+So let's talk about function
+buffered read-writes.
+
+00:12:18.276 --> 00:12:19.306 A:middle
+So what's new here?
+
+00:12:19.596 --> 00:12:21.896 A:middle
+What's new is the
+ability to write to buffer
+
+00:12:21.896 --> 00:12:25.816 A:middle
+from fragment function as well
+as using an atomic operation
+
+00:12:25.816 --> 00:12:27.466 A:middle
+in the text and fragment
+function.
+
+00:12:28.226 --> 00:12:31.026 A:middle
+These can be used to
+implement such things
+
+00:12:31.026 --> 00:12:35.186 A:middle
+as order-independent
+transparency, building lists
+
+00:12:35.186 --> 00:12:37.586 A:middle
+of lights that affect
+the given tile,
+
+00:12:38.036 --> 00:12:39.546 A:middle
+or simply to debug your shaders.
+
+00:12:41.306 --> 00:12:43.676 A:middle
+So let's look at
+the simple example.
+
+00:12:44.016 --> 00:12:47.196 A:middle
+Let's say we want to
+write the position
+
+00:12:47.516 --> 00:12:49.566 A:middle
+of the visible fragments
+we are rendering.
+
+00:12:50.096 --> 00:12:51.706 A:middle
+It could look like this.
+
+00:12:52.506 --> 00:12:54.006 A:middle
+So we have a fragment function
+
+00:12:54.596 --> 00:12:56.286 A:middle
+to which we pass
+an output buffer.
+
+00:12:56.286 --> 00:12:58.856 A:middle
+The output buffer is
+where we are going
+
+00:12:58.856 --> 00:13:02.376 A:middle
+to store the position
+of the fragments.
+
+00:12:58.856 --> 00:13:02.376 A:middle
+to store the position
+of the fragments.
+
+00:13:02.596 --> 00:13:07.346 A:middle
+Then we have a counter, so
+another buffer that we start
+
+00:13:07.346 --> 00:13:10.106 A:middle
+after [inaudible] that we
+use to find the position
+
+00:13:10.426 --> 00:13:12.046 A:middle
+into the buffer,
+the first buffer,
+
+00:13:12.046 --> 00:13:14.126 A:middle
+to which we want to write.
+
+00:13:15.166 --> 00:13:18.616 A:middle
+We can then use an atomic
+preparation to count the number
+
+00:13:18.616 --> 00:13:20.806 A:middle
+of fragments with that
+has been already written
+
+00:13:20.806 --> 00:13:22.396 A:middle
+to get an index in the buffer.
+
+00:13:22.926 --> 00:13:25.886 A:middle
+And then we can write into
+the buffer the position
+
+00:13:25.886 --> 00:13:26.606 A:middle
+of the fragments.
+
+00:13:27.016 --> 00:13:30.926 A:middle
+So this looks pretty good,
+but there is a small problem.
+
+00:13:32.416 --> 00:13:36.296 A:middle
+The depth and stencil
+test when you're writing
+
+00:13:36.296 --> 00:13:38.786 A:middle
+to buffer is actually
+always exhibited
+
+00:13:38.786 --> 00:13:39.956 A:middle
+after the fragment shader.
+
+00:13:40.646 --> 00:13:44.426 A:middle
+So this is a problem
+because we are going
+
+00:13:44.426 --> 00:13:46.406 A:middle
+to still perform the
+rights to the buffer,
+
+00:13:46.406 --> 00:13:47.566 A:middle
+which is not what we want.
+
+00:13:47.566 --> 00:13:49.206 A:middle
+We only want the
+visible fragments.
+
+00:13:50.116 --> 00:13:52.436 A:middle
+It's also something to be aware
+
+00:13:52.436 --> 00:13:54.426 A:middle
+of because it will
+impact your performance.
+
+00:13:54.496 --> 00:13:57.336 A:middle
+That means we don't have any
+early Z optimization here,
+
+00:13:57.416 --> 00:13:59.686 A:middle
+so we are going to
+exhibit fragment shader
+
+00:13:59.686 --> 00:14:01.756 A:middle
+when we probably
+wouldn't want to.
+
+00:13:59.686 --> 00:14:01.756 A:middle
+when we probably
+wouldn't want to.
+
+00:14:02.936 --> 00:14:06.326 A:middle
+Fortunately we have a new
+function qualifier early
+
+00:14:06.326 --> 00:14:09.846 A:middle
+fragment test that can be
+used to force the depth
+
+00:14:09.846 --> 00:14:12.906 A:middle
+and stencil test to appear
+before the fragment shader.
+
+00:14:12.906 --> 00:14:18.446 A:middle
+As a result, if the depth test
+fail, we will skip the execution
+
+00:14:18.446 --> 00:14:22.096 A:middle
+of the fragment shader and
+thus not write to the buffer.
+
+00:14:22.096 --> 00:14:26.526 A:middle
+So this is what we need here,
+to reach the final function
+
+00:14:27.126 --> 00:14:30.296 A:middle
+with the early fragment test
+attribute which otherwise
+
+00:14:30.296 --> 00:14:34.766 A:middle
+to only execute the function
+when the fragments are visible.
+
+00:14:34.766 --> 00:14:39.976 A:middle
+Now let's talk about
+function texture read-writes.
+
+00:14:40.826 --> 00:14:45.426 A:middle
+So what's new is the ability to
+write to texture from the vertex
+
+00:14:45.426 --> 00:14:49.806 A:middle
+and fragment functions as well
+as the ability to read and write
+
+00:14:50.516 --> 00:14:52.606 A:middle
+to a texture from
+a single function.
+
+00:14:53.376 --> 00:14:55.836 A:middle
+This can be used, for
+instance, to save memory
+
+00:14:55.836 --> 00:14:57.916 A:middle
+when implementing post
+processing effects
+
+00:14:58.376 --> 00:15:01.046 A:middle
+by using the same texture
+on both input and output.
+
+00:14:58.376 --> 00:15:01.046 A:middle
+by using the same texture
+on both input and output.
+
+00:15:04.156 --> 00:15:06.056 A:middle
+So writing to texture
+is fairly simple.
+
+00:15:06.476 --> 00:15:09.866 A:middle
+You just define your texture
+with the access qualifier write,
+
+00:15:09.866 --> 00:15:12.656 A:middle
+and then you can
+write to your texture.
+
+00:15:13.266 --> 00:15:18.786 A:middle
+Read-write texture, a texture
+to which you can both --
+
+00:15:18.786 --> 00:15:21.486 A:middle
+that you can both read
+and write in your shader.
+
+00:15:21.486 --> 00:15:25.486 A:middle
+Only a limited number of formats
+is reported for those textures.
+
+00:15:26.316 --> 00:15:29.466 A:middle
+To use the read-write texture
+you will use the access
+
+00:15:29.466 --> 00:15:34.376 A:middle
+qualifier of read-write, and
+then you can read to the texture
+
+00:15:35.236 --> 00:15:39.146 A:middle
+and write to it in your shader.
+
+00:15:39.146 --> 00:15:41.546 A:middle
+However, you have to be careful
+when you write to the texture
+
+00:15:41.546 --> 00:15:44.376 A:middle
+if you want to read the results,
+
+00:15:44.376 --> 00:15:47.566 A:middle
+if you want to read the same
+pixel again in your shader.
+
+00:15:48.046 --> 00:15:51.086 A:middle
+In this case, you need
+to use a texture fence.
+
+00:15:51.596 --> 00:15:53.186 A:middle
+The texture fence will ensure
+
+00:15:53.186 --> 00:15:56.106 A:middle
+that the writes have
+been committed to memory
+
+00:15:56.106 --> 00:15:58.146 A:middle
+so that you can read
+the proper value.
+
+00:15:59.366 --> 00:16:06.086 A:middle
+Here, we write to a given pixel,
+and then we use a texture fence
+
+00:15:59.366 --> 00:16:06.086 A:middle
+Here, we write to a given pixel,
+and then we use a texture fence
+
+00:16:06.216 --> 00:16:08.916 A:middle
+to make sure we can
+read that value again
+
+00:16:09.176 --> 00:16:11.546 A:middle
+and then we can finally
+read the value.
+
+00:16:11.546 --> 00:16:14.996 A:middle
+We should also be
+careful with texture fence
+
+00:16:14.996 --> 00:16:17.686 A:middle
+because they only apply
+on a single SIMD thread,
+
+00:16:18.786 --> 00:16:20.886 A:middle
+which means that if you have
+two threads that are writing
+
+00:16:20.886 --> 00:16:23.876 A:middle
+to a texture and the
+second thread is trying
+
+00:16:23.956 --> 00:16:28.386 A:middle
+to read the value that was
+written by the first thread,
+
+00:16:29.666 --> 00:16:32.806 A:middle
+even after a texture
+fence, this will not work.
+
+00:16:33.786 --> 00:16:38.886 A:middle
+What will work is if each thread
+is reading the pixel values
+
+00:16:38.886 --> 00:16:41.426 A:middle
+that it was writing
+to but not the ones
+
+00:16:41.426 --> 00:16:42.576 A:middle
+that are written
+by other threads.
+
+00:16:43.736 --> 00:16:47.376 A:middle
+So one note about reading,
+we talked a lot about writing
+
+00:16:47.376 --> 00:16:48.806 A:middle
+to buffers and textures.
+
+00:16:49.526 --> 00:16:51.706 A:middle
+With vertex and fragment
+functions,
+
+00:16:51.786 --> 00:16:52.826 A:middle
+you have to be careful.
+
+00:16:53.996 --> 00:16:56.736 A:middle
+In this example, fragment
+function is trying to write --
+
+00:16:56.736 --> 00:16:58.646 A:middle
+is writing to a buffer
+
+00:16:58.646 --> 00:17:01.066 A:middle
+and a vertex function is
+trying to read the results.
+
+00:16:58.646 --> 00:17:01.066 A:middle
+and a vertex function is
+trying to read the results.
+
+00:17:01.066 --> 00:17:02.476 A:middle
+However, this is
+not going to work
+
+00:17:02.476 --> 00:17:05.076 A:middle
+because of having the
+same RenderCommandEncoder.
+
+00:17:05.965 --> 00:17:10.336 A:middle
+To fix this, we need to use
+two RenderCommandEncoder.
+
+00:17:11.435 --> 00:17:13.326 A:middle
+The fragment function
+writes to the buffer
+
+00:17:13.326 --> 00:17:16.246 A:middle
+in the first
+RenderCommandEncoder while the
+
+00:17:16.246 --> 00:17:17.386 A:middle
+texture -- the vertex function
+
+00:17:17.386 --> 00:17:19.056 A:middle
+in the second
+RenderCommandEncoder can finally
+
+00:17:19.056 --> 00:17:20.996 A:middle
+read the result and
+get proper results.
+
+00:17:21.606 --> 00:17:24.816 A:middle
+You should note that
+with compute shader,
+
+00:17:24.816 --> 00:17:26.715 A:middle
+this is not necessary.
+
+00:17:26.715 --> 00:17:29.036 A:middle
+It can be done the same
+compute CommandEncoder.
+
+00:17:30.256 --> 00:17:32.876 A:middle
+So in summary, we
+introduced two new features,
+
+00:17:33.406 --> 00:17:36.626 A:middle
+function buffer read-writes and
+function texture read-writes.
+
+00:17:36.956 --> 00:17:40.686 A:middle
+You can use early fragment
+tests to make sure the depth
+
+00:17:40.686 --> 00:17:44.086 A:middle
+and stencil test is done
+because the execution
+
+00:17:44.086 --> 00:17:44.856 A:middle
+of the fragment shader.
+
+00:17:45.856 --> 00:17:48.616 A:middle
+You should use a texture fence
+if you are trying to read data
+
+00:17:48.616 --> 00:17:52.526 A:middle
+from a read-write texture
+that you have been writing to.
+
+00:17:52.826 --> 00:17:56.276 A:middle
+And finally, when using vertex
+and fragment shader to write
+
+00:17:56.276 --> 00:17:58.716 A:middle
+to buffers, you need
+to make sure
+
+00:17:58.716 --> 00:18:00.486 A:middle
+to use a different
+RenderCommandEncoder
+
+00:17:58.716 --> 00:18:00.486 A:middle
+to use a different
+RenderCommandEncoder
+
+00:18:00.486 --> 00:18:01.926 A:middle
+when you want to
+read the results.
+
+00:18:03.276 --> 00:18:08.416 A:middle
+So with this, I will hand the
+stage to Dan Omachi to talk
+
+00:18:08.416 --> 00:18:09.596 A:middle
+to you about wide color.
+
+00:18:10.516 --> 00:18:13.546 A:middle
+[ Applause ]
+
+00:18:14.046 --> 00:18:14.466 A:middle
+&gt;&gt; Thank you, Charles.
+
+00:18:14.466 --> 00:18:14.776 A:middle
+Thank you.
+
+00:18:15.646 --> 00:18:17.416 A:middle
+As Charles mentioned,
+my name is Dan Omachi.
+
+00:18:17.766 --> 00:18:20.746 A:middle
+I work as an engineer in Apple's
+GPU Software Frameworks Team
+
+00:18:21.336 --> 00:18:22.896 A:middle
+and I'd like to start
+off talking to you
+
+00:18:22.896 --> 00:18:25.716 A:middle
+about color management,
+which isn't a topic
+
+00:18:27.256 --> 00:18:31.016 A:middle
+that all developers are
+actually familiar with.
+
+00:18:32.266 --> 00:18:36.476 A:middle
+So if you are an
+artist at either the --
+
+00:18:36.476 --> 00:18:39.926 A:middle
+either a texture artist
+creating assets for a game
+
+00:18:40.416 --> 00:18:43.336 A:middle
+or a photographer editing
+photos for distribution,
+
+00:18:44.156 --> 00:18:46.276 A:middle
+you would have a particular
+color scheme in mind,
+
+00:18:46.276 --> 00:18:49.506 A:middle
+and you'd choose
+colors pretty carefully.
+
+00:18:50.366 --> 00:18:55.376 A:middle
+And you'd want consistency
+regardless of the display
+
+00:18:55.796 --> 00:18:57.556 A:middle
+on which your content is viewed.
+
+00:18:58.576 --> 00:19:00.686 A:middle
+Now it's our responsibility
+as developers
+
+00:18:58.576 --> 00:19:00.686 A:middle
+Now it's our responsibility
+as developers
+
+00:19:00.686 --> 00:19:04.106 A:middle
+and software engineers to
+guarantee that consistency.
+
+00:19:04.386 --> 00:19:08.616 A:middle
+If you're using a high level
+framework like SceneKit,
+
+00:19:08.846 --> 00:19:12.866 A:middle
+SpriteKit, or Core Graphics,
+much of this work is done
+
+00:19:12.866 --> 00:19:14.416 A:middle
+for you, and you
+
+00:19:14.416 --> 00:19:17.336 A:middle
+as app developers don't
+need to think about it.
+
+00:19:17.946 --> 00:19:20.786 A:middle
+Metal, however, is a
+much lower level API.
+
+00:19:22.806 --> 00:19:26.086 A:middle
+This offers increased
+performance and some flexibility
+
+00:19:26.086 --> 00:19:30.086 A:middle
+but also places some of this
+responsibility in your hands.
+
+00:19:32.096 --> 00:19:32.696 A:middle
+So why now?
+
+00:19:33.826 --> 00:19:36.066 A:middle
+You've been able to
+use different displays
+
+00:19:36.446 --> 00:19:37.916 A:middle
+with different color spaces
+
+00:19:38.456 --> 00:19:40.456 A:middle
+with Apple devices
+for many years now.
+
+00:19:41.786 --> 00:19:46.246 A:middle
+Well, late last year, Apple
+introduced a couple of iMacs
+
+00:19:46.656 --> 00:19:50.256 A:middle
+with a display capable
+of rendering colors
+
+00:19:50.536 --> 00:19:52.296 A:middle
+in the P3 color space.
+
+00:19:52.846 --> 00:19:57.956 A:middle
+And in April, we introduced
+the 9.7-inch iPad Pro,
+
+00:19:58.436 --> 00:20:00.566 A:middle
+which also has a P3 display.
+
+00:19:58.436 --> 00:20:00.566 A:middle
+which also has a P3 display.
+
+00:20:00.566 --> 00:20:03.726 A:middle
+So what is the P3 color space?
+
+00:20:04.196 --> 00:20:06.326 A:middle
+Well, this is a chromaticity
+diagram,
+
+00:20:06.496 --> 00:20:10.266 A:middle
+and conceptually this
+represents all of the colors
+
+00:20:10.346 --> 00:20:13.746 A:middle
+in the visual spectrum, in
+other words, all the colors
+
+00:20:13.906 --> 00:20:15.816 A:middle
+that the normal human
+eye can see.
+
+00:20:17.666 --> 00:20:20.786 A:middle
+Of that, within this
+triangle are colors
+
+00:20:21.116 --> 00:20:25.706 A:middle
+that a standard sRGB
+display can represent.
+
+00:20:26.336 --> 00:20:32.406 A:middle
+The P3 display is able
+to represent colors
+
+00:20:32.406 --> 00:20:35.106 A:middle
+of a much broader variety.
+
+00:20:36.676 --> 00:20:39.146 A:middle
+So here's how it works on macOS.
+
+00:20:41.186 --> 00:20:44.116 A:middle
+We want you to be able to
+render in any color space
+
+00:20:45.696 --> 00:20:50.076 A:middle
+and as I mentioned, high level
+frameworks take care of this,
+
+00:20:50.076 --> 00:20:52.116 A:middle
+this job of color
+management for you
+
+00:20:52.396 --> 00:20:54.756 A:middle
+by performing an operation
+called color matching
+
+00:20:55.066 --> 00:20:58.516 A:middle
+where your color and one
+color space is matched to that
+
+00:20:58.516 --> 00:21:01.816 A:middle
+of the display color space
+so that the same intensity
+
+00:20:58.516 --> 00:21:01.816 A:middle
+of the display color space
+so that the same intensity
+
+00:21:02.106 --> 00:21:04.286 A:middle
+on the display regardless
+of the color space
+
+00:21:04.286 --> 00:21:06.716 A:middle
+that you're working
+in is displayed.
+
+00:21:08.276 --> 00:21:13.626 A:middle
+Now, Metal views by default
+are not color managed.
+
+00:21:14.516 --> 00:21:16.176 A:middle
+This color match
+operation is skipped,
+
+00:21:16.286 --> 00:21:20.546 A:middle
+and this generally offers
+increased performance.
+
+00:21:21.596 --> 00:21:25.966 A:middle
+So by default, you're
+ignoring the color profile
+
+00:21:25.966 --> 00:21:28.806 A:middle
+of the display, and therefore,
+
+00:21:28.806 --> 00:21:33.476 A:middle
+the display will interpret
+colors in its own color space.
+
+00:21:34.966 --> 00:21:38.326 A:middle
+Now, this means that sRGB
+colors will be interpreted
+
+00:21:38.326 --> 00:21:42.296 A:middle
+as P3 colors, and rendering will
+be inconsistent between the two.
+
+00:21:42.516 --> 00:21:46.616 A:middle
+So if this is your application
+with an sRGB drawable
+
+00:21:47.576 --> 00:21:52.916 A:middle
+and this is the display, well,
+when you call present drawable,
+
+00:21:53.556 --> 00:21:56.356 A:middle
+these colors become
+much saturated.
+
+00:21:57.036 --> 00:21:57.906 A:middle
+So why does this happen?
+
+00:21:58.166 --> 00:22:01.086 A:middle
+Well, let's go back to
+our chromaticity diagram.
+
+00:21:58.166 --> 00:22:01.086 A:middle
+Well, let's go back to
+our chromaticity diagram.
+
+00:22:02.076 --> 00:22:06.476 A:middle
+This is the most green
+color that you can represent
+
+00:22:06.526 --> 00:22:11.356 A:middle
+in the sRGB color space,
+and in a fragment shader,
+
+00:22:12.156 --> 00:22:15.636 A:middle
+you'd represent this as
+0.0 in the red channel,
+
+00:22:15.906 --> 00:22:20.036 A:middle
+1.0 in the green channel
+and 0.0 in the blue channel.
+
+00:22:20.856 --> 00:22:24.746 A:middle
+Well, the P3 Display
+just takes that raw value
+
+00:22:24.746 --> 00:22:25.926 A:middle
+and interprets it,
+
+00:22:25.926 --> 00:22:29.716 A:middle
+and it basically thinks
+that it's a P3 color.
+
+00:22:30.316 --> 00:22:34.806 A:middle
+So you're getting the most
+green color of a P3 Display,
+
+00:22:35.086 --> 00:22:37.416 A:middle
+which happens to be a
+different green color.
+
+00:22:38.326 --> 00:22:43.546 A:middle
+Now, for content creation
+apps, it's pretty critical
+
+00:22:43.546 --> 00:22:48.266 A:middle
+that you get this right because
+artists have used careful
+
+00:22:48.266 --> 00:22:51.246 A:middle
+consideration to
+render their colors.
+
+00:22:51.246 --> 00:23:00.696 A:middle
+For games, the effect is more
+subtle, but if your designers
+
+00:22:51.246 --> 00:23:00.696 A:middle
+For games, the effect is more
+subtle, but if your designers
+
+00:23:01.066 --> 00:23:07.406 A:middle
+and artists are looking for this
+dark and gritty theme, well,
+
+00:23:07.406 --> 00:23:10.296 A:middle
+they're going to be disappointed
+when it looks much more cheerful
+
+00:23:10.296 --> 00:23:12.616 A:middle
+and happy when you
+plug in a P3 Display.
+
+00:23:13.816 --> 00:23:16.636 A:middle
+Also, this problem can get worse
+
+00:23:16.976 --> 00:23:20.966 A:middle
+as the industry moves towards
+even wider gamut displays.
+
+00:23:22.816 --> 00:23:27.956 A:middle
+So, the solution is
+really quite simple.
+
+00:23:28.926 --> 00:23:33.696 A:middle
+You enable color management
+on the NSWindow or CAMetal
+
+00:23:33.806 --> 00:23:36.696 A:middle
+by setting the color space
+to your working color space,
+
+00:23:36.696 --> 00:23:38.776 A:middle
+probably the sRGB color space.
+
+00:23:39.446 --> 00:23:43.146 A:middle
+This causes the OS to
+perform a color match as part
+
+00:23:43.146 --> 00:23:48.656 A:middle
+of its window server's
+normal compositing pass.
+
+00:23:48.786 --> 00:23:51.136 A:middle
+So if here's your
+display, or excuse me,
+
+00:23:51.136 --> 00:23:53.286 A:middle
+here's your application
+with sRGB drawable
+
+00:23:53.696 --> 00:23:54.746 A:middle
+and here's the display,
+
+00:23:56.506 --> 00:23:59.406 A:middle
+the window server takes your
+drawable when you call present
+
+00:23:59.406 --> 00:24:06.936 A:middle
+and performs the color match
+before slapping it on the glass.
+
+00:23:59.406 --> 00:24:06.936 A:middle
+and performs the color match
+before slapping it on the glass.
+
+00:24:07.056 --> 00:24:09.656 A:middle
+Now, all right, so now
+you've got that consistency.
+
+00:24:09.776 --> 00:24:12.346 A:middle
+What if you want to
+adopt wide color?
+
+00:24:13.066 --> 00:24:18.876 A:middle
+You want to purposefully render
+those more intense colors a wide
+
+00:24:18.996 --> 00:24:21.116 A:middle
+gamut display is only
+capable of rendering.
+
+00:24:21.746 --> 00:24:25.206 A:middle
+Well, first of all, you
+need to create some content.
+
+00:24:25.206 --> 00:24:27.716 A:middle
+You need your artist to
+create wider content,
+
+00:24:28.856 --> 00:24:33.826 A:middle
+and for that we recommend
+using the extended range sRGB
+
+00:24:33.896 --> 00:24:36.166 A:middle
+color space.
+
+00:24:37.436 --> 00:24:41.796 A:middle
+This allows existing assets that
+aren't offered for wide color
+
+00:24:42.036 --> 00:24:44.106 A:middle
+to continue working
+as they have,
+
+00:24:44.666 --> 00:24:47.776 A:middle
+and your shader pipelines don't
+need to do anything different.
+
+00:24:49.186 --> 00:24:53.896 A:middle
+However, your artists can
+create new wider color assets
+
+00:24:54.346 --> 00:24:56.606 A:middle
+that will provide much
+more intense colors.
+
+00:24:57.946 --> 00:25:03.356 A:middle
+So what exactly is the
+extended range sRGB?
+
+00:24:57.946 --> 00:25:03.356 A:middle
+So what exactly is the
+extended range sRGB?
+
+00:25:03.356 --> 00:25:08.666 A:middle
+Well here's the sRGB
+triangle and here's P3.
+
+00:25:10.946 --> 00:25:13.726 A:middle
+Extended range sRGB
+just goes out infinitely
+
+00:25:14.116 --> 00:25:19.436 A:middle
+in all directions, meaning
+values outside of 0 to 1
+
+00:25:19.736 --> 00:25:24.076 A:middle
+in your shader represent
+values that can only be viewed
+
+00:25:24.466 --> 00:25:28.316 A:middle
+on a wider than sRGB
+color display.
+
+00:25:30.516 --> 00:25:33.966 A:middle
+So I mentioned values
+outside of 0 to 1.
+
+00:25:34.406 --> 00:25:37.826 A:middle
+This means that you will need to
+use floating point pixel formats
+
+00:25:38.066 --> 00:25:43.016 A:middle
+to express such values, and for
+source textures we recommend a
+
+00:25:43.436 --> 00:25:44.516 A:middle
+couple of formats.
+
+00:25:45.136 --> 00:25:48.156 A:middle
+You can use the BC6H
+floating point format.
+
+00:25:48.486 --> 00:25:50.916 A:middle
+It's a compressed format
+offering high performance
+
+00:25:51.116 --> 00:25:54.456 A:middle
+as well as the pack float
+and shared exponent formats.
+
+00:25:55.406 --> 00:25:59.216 A:middle
+For your render targets, you
+can use this pack float format
+
+00:25:59.866 --> 00:26:04.436 A:middle
+or the RGBA half-float
+format, allowing you
+
+00:25:59.866 --> 00:26:04.436 A:middle
+or the RGBA half-float
+format, allowing you
+
+00:26:04.596 --> 00:26:07.256 A:middle
+to specify these
+more intense colors.
+
+00:26:09.346 --> 00:26:12.016 A:middle
+Color management on
+iOS is a bit simpler.
+
+00:26:12.956 --> 00:26:15.816 A:middle
+You always render in
+the sRGB color space,
+
+00:26:17.446 --> 00:26:19.526 A:middle
+even when targeting
+a P3 Display.
+
+00:26:19.526 --> 00:26:22.846 A:middle
+Colors are automatically matched
+with no performance penalty.
+
+00:26:24.206 --> 00:26:28.346 A:middle
+And if you want to use wide
+colors, you can make use
+
+00:26:28.406 --> 00:26:29.856 A:middle
+of some new pixel formats
+
+00:26:31.046 --> 00:26:33.516 A:middle
+that are natively
+readable by the display.
+
+00:26:34.106 --> 00:26:36.466 A:middle
+There's no compositing
+operation that needs to happen.
+
+00:26:37.826 --> 00:26:40.656 A:middle
+They can be gamma encoded,
+offering better blacks
+
+00:26:40.656 --> 00:26:43.716 A:middle
+and allowing you to do linear
+blending in your shaders,
+
+00:26:44.566 --> 00:26:47.796 A:middle
+and they're efficient for
+use as source textures.
+
+00:26:48.106 --> 00:26:49.176 A:middle
+All right.
+
+00:26:49.176 --> 00:26:52.096 A:middle
+Here are the bit layouts
+of these new formats.
+
+00:26:52.306 --> 00:26:56.386 A:middle
+So, there are -- there
+is a 32-bit RGB format
+
+00:26:56.806 --> 00:27:01.556 A:middle
+with 10 bits per channel
+and also an RGBA format
+
+00:26:56.806 --> 00:27:01.556 A:middle
+with 10 bits per channel
+and also an RGBA format
+
+00:27:01.876 --> 00:27:05.096 A:middle
+with 10 bits per channel
+spread across 64 bits.
+
+00:27:05.876 --> 00:27:11.016 A:middle
+Now, this, the values
+of this 10 bits are --
+
+00:27:11.016 --> 00:27:13.276 A:middle
+can express values
+outside of 0 to 1.
+
+00:27:13.686 --> 00:27:20.276 A:middle
+Values from 0 to 384 represent
+negative values, 384 to 894,
+
+00:27:20.576 --> 00:27:24.506 A:middle
+the next 510 values, represent
+values between 0 and 1
+
+00:27:24.826 --> 00:27:28.416 A:middle
+and those greater than
+894 represent these more
+
+00:27:28.416 --> 00:27:29.186 A:middle
+intense values.
+
+00:27:30.386 --> 00:27:37.426 A:middle
+Now, note here that the RGBA
+pixel format is twice as large
+
+00:27:37.426 --> 00:27:40.406 A:middle
+and therefore uses twice
+as much memory and twice
+
+00:27:40.406 --> 00:27:43.756 A:middle
+as much bandwidth
+as this RGB format.
+
+00:27:44.746 --> 00:27:49.096 A:middle
+So, in general, we recommend
+that you use this only
+
+00:27:49.096 --> 00:27:53.396 A:middle
+in the CAMetal Layer if
+you need destination alpha.
+
+00:27:54.056 --> 00:27:57.986 A:middle
+All right, so you've made
+the decision that you want
+
+00:27:57.986 --> 00:28:00.296 A:middle
+to create some wide
+gamut content.
+
+00:27:57.986 --> 00:28:00.296 A:middle
+to create some wide
+gamut content.
+
+00:28:00.946 --> 00:28:03.456 A:middle
+How can you do this?
+
+00:28:03.456 --> 00:28:04.686 A:middle
+Well, you have an artist --
+
+00:28:05.606 --> 00:28:09.156 A:middle
+author using image
+editor on macOS,
+
+00:28:09.156 --> 00:28:13.376 A:middle
+which supports the P3 color
+space, such as Adobe Photoshop.
+
+00:28:14.256 --> 00:28:19.496 A:middle
+You can save that image as
+a 16-bit per channel PNG
+
+00:28:19.496 --> 00:28:24.376 A:middle
+or JPEG using the
+display P3 color profile.
+
+00:28:24.776 --> 00:28:26.546 A:middle
+Now, once you've got this image,
+
+00:28:27.026 --> 00:28:28.926 A:middle
+how do you create
+textures from it?
+
+00:28:29.766 --> 00:28:30.976 A:middle
+Well, you've got
+two solutions here.
+
+00:28:31.566 --> 00:28:35.616 A:middle
+The first is you can create your
+own asset conditioning tool,
+
+00:28:36.306 --> 00:28:42.596 A:middle
+and from that 16-bit per channel
+Display P3 image you can convert
+
+00:28:43.046 --> 00:28:49.556 A:middle
+using the extended sRGB floating
+point color space using either
+
+00:28:49.556 --> 00:28:51.526 A:middle
+the ImageIO or vImage
+frameworks.
+
+00:28:52.106 --> 00:28:55.836 A:middle
+And then from that on
+macOS, you'd convert to one
+
+00:28:55.836 --> 00:28:58.186 A:middle
+of those floating point pixel
+formats I mentioned earlier,
+
+00:28:58.726 --> 00:29:00.576 A:middle
+and on iOS you'd convert to one
+
+00:28:58.726 --> 00:29:00.576 A:middle
+and on iOS you'd convert to one
+
+00:29:00.576 --> 00:29:03.196 A:middle
+of those extended range pixel
+formats I just mentioned.
+
+00:29:03.196 --> 00:29:06.206 A:middle
+All right, so that's option one
+
+00:29:06.206 --> 00:29:08.396 A:middle
+if you really want
+explicit control
+
+00:29:08.396 --> 00:29:09.746 A:middle
+of how your textures are built.
+
+00:29:11.636 --> 00:29:14.546 A:middle
+The next option is
+to use Xcode support
+
+00:29:14.746 --> 00:29:16.806 A:middle
+for textures in asset
+catalogues.
+
+00:29:17.536 --> 00:29:21.246 A:middle
+With that, will automatically
+create extended range sRGB
+
+00:29:21.246 --> 00:29:24.236 A:middle
+textures for devices
+with a P3 Display,
+
+00:29:24.236 --> 00:29:26.756 A:middle
+and I'll talk a little bit more
+
+00:29:26.756 --> 00:29:28.886 A:middle
+about asset catalogues
+right now.
+
+00:29:29.506 --> 00:29:36.006 A:middle
+So for a while now you've been
+able to put icons and images
+
+00:29:36.006 --> 00:29:39.336 A:middle
+into an asset catalogue
+within your Xcode project.
+
+00:29:40.706 --> 00:29:45.156 A:middle
+Last year, we introduced app
+thinning whereby you can create
+
+00:29:45.156 --> 00:29:46.406 A:middle
+a specialized version
+
+00:29:46.806 --> 00:29:50.076 A:middle
+for various devices based
+upon device capability
+
+00:29:50.076 --> 00:29:53.396 A:middle
+such as the amount of memory,
+the graphics features set,
+
+00:29:54.186 --> 00:30:00.746 A:middle
+or the type of device, whether
+it be an iPad, Mac or TV
+
+00:29:54.186 --> 00:30:00.746 A:middle
+or the type of device, whether
+it be an iPad, Mac or TV
+
+00:30:00.866 --> 00:30:03.676 A:middle
+or watch or even
+phone, of course.
+
+00:30:05.006 --> 00:30:08.906 A:middle
+And when your app was
+downloaded, you download
+
+00:30:08.906 --> 00:30:12.486 A:middle
+and install only the single
+version of that assess made
+
+00:30:12.486 --> 00:30:15.806 A:middle
+for that device with the
+capabilities you specified.
+
+00:30:16.446 --> 00:30:20.476 A:middle
+The asset was compressed over
+the wire and on the device,
+
+00:30:20.766 --> 00:30:24.556 A:middle
+saving a lot of storage
+on the user's device,
+
+00:30:25.366 --> 00:30:28.856 A:middle
+and there were numerous APIs,
+
+00:30:28.856 --> 00:30:31.676 A:middle
+which offer efficient
+access to those assets.
+
+00:30:32.696 --> 00:30:36.856 A:middle
+So now we've added texture
+sets to these asset catalogues.
+
+00:30:37.726 --> 00:30:39.446 A:middle
+So what does this offer?
+
+00:30:39.446 --> 00:30:41.796 A:middle
+Well, storage for mipmap levels.
+
+00:30:42.136 --> 00:30:45.466 A:middle
+Textures are more
+than just 2D images.
+
+00:30:46.656 --> 00:30:50.646 A:middle
+You can perform offline mipmap
+generation within Xcode,
+
+00:30:51.986 --> 00:30:55.106 A:middle
+will automatically color
+match this texture.
+
+00:30:55.416 --> 00:30:59.656 A:middle
+So if it's a wide gamut texture
+in some different color space,
+
+00:30:59.996 --> 00:31:04.616 A:middle
+will perform a color
+matching operation to the sRGB
+
+00:30:59.996 --> 00:31:04.616 A:middle
+will perform a color
+matching operation to the sRGB
+
+00:31:04.616 --> 00:31:07.246 A:middle
+or extended range
+sRGB color space.
+
+00:31:07.776 --> 00:31:13.306 A:middle
+And I think the most important
+feature of this ability here is
+
+00:31:13.536 --> 00:31:16.706 A:middle
+that we can choose the
+most optimal pixel format
+
+00:31:17.136 --> 00:31:20.446 A:middle
+for every device on
+which your app can run.
+
+00:31:20.756 --> 00:31:25.026 A:middle
+So on newer devices that support
+ASTC texture compression,
+
+00:31:25.756 --> 00:31:27.346 A:middle
+we can use that format.
+
+00:31:27.866 --> 00:31:29.956 A:middle
+On older devices which
+don't support that,
+
+00:31:30.176 --> 00:31:33.406 A:middle
+we can choose either
+a noncompressed format
+
+00:31:33.756 --> 00:31:35.526 A:middle
+or some other compressed format.
+
+00:31:36.526 --> 00:31:38.956 A:middle
+Additionally, we can
+choose a wide color format
+
+00:31:39.556 --> 00:31:44.786 A:middle
+for devices with a P3 Display.
+
+00:31:44.916 --> 00:31:46.136 A:middle
+So here's the basic workflow.
+
+00:31:47.486 --> 00:31:51.156 A:middle
+You create texture
+sets within Xcode.
+
+00:31:51.606 --> 00:31:54.996 A:middle
+You assign a name to the
+set, a unique identifier.
+
+00:31:56.236 --> 00:31:59.116 A:middle
+You'll add an image and
+indicate basically how
+
+00:31:59.116 --> 00:32:01.676 A:middle
+that texture will be used,
+whether it's a color texture
+
+00:31:59.116 --> 00:32:01.676 A:middle
+that texture will be used,
+whether it's a color texture
+
+00:32:02.136 --> 00:32:07.516 A:middle
+or some other type of data like
+a normal map or a height map.
+
+00:32:07.516 --> 00:32:11.616 A:middle
+Then, you'll -- can
+create this texture.
+
+00:32:11.616 --> 00:32:13.966 A:middle
+Xcode will build this texture
+
+00:32:13.966 --> 00:32:15.526 A:middle
+and deliver it to
+your application.
+
+00:32:15.656 --> 00:32:19.646 A:middle
+Now, you can create these
+texture sets via the Xcode UI
+
+00:32:19.646 --> 00:32:21.296 A:middle
+or programmatically.
+
+00:32:21.836 --> 00:32:26.876 A:middle
+Once your texture is on the
+device, you can supply the name
+
+00:32:27.026 --> 00:32:30.966 A:middle
+to MetalKit, and MetalKit
+will build a texture,
+
+00:32:31.086 --> 00:32:34.666 A:middle
+a Metal texture,
+from that asset.
+
+00:32:35.576 --> 00:32:38.806 A:middle
+So I'd like to walk you
+through the Xcode workflow
+
+00:32:38.986 --> 00:32:41.436 A:middle
+to introduce some of
+these concepts to you.
+
+00:32:43.136 --> 00:32:48.386 A:middle
+So, you'll first select
+the asset catalogue
+
+00:32:48.526 --> 00:32:51.736 A:middle
+in your projects
+navigator sidebar
+
+00:32:52.326 --> 00:32:56.196 A:middle
+and then hit this plus button
+here, which brings up this menu.
+
+00:32:56.606 --> 00:33:00.436 A:middle
+Now, here's where you can create
+the various types of sets.
+
+00:32:56.606 --> 00:33:00.436 A:middle
+Now, here's where you can create
+the various types of sets.
+
+00:33:00.436 --> 00:33:06.686 A:middle
+There are image sets, icon
+sets, generic data sets,
+
+00:33:06.686 --> 00:33:11.506 A:middle
+as well as texture and
+cube map texture sets.
+
+00:33:12.806 --> 00:33:15.366 A:middle
+So once you've created
+your texture set,
+
+00:33:15.956 --> 00:33:17.726 A:middle
+you need to name it.
+
+00:33:18.076 --> 00:33:20.956 A:middle
+Now, your naming
+hierarchy need not be flat.
+
+00:33:21.386 --> 00:33:24.526 A:middle
+If you have a number of textures
+that are called base texture,
+
+00:33:24.716 --> 00:33:27.956 A:middle
+one for each object, you can
+create a folder for each object
+
+00:33:28.246 --> 00:33:31.776 A:middle
+and stuff your base texture
+for that object in that folder,
+
+00:33:32.806 --> 00:33:36.326 A:middle
+and your hierarchy can be
+as complex as you'd like.
+
+00:33:37.266 --> 00:33:43.166 A:middle
+You add your image, and then
+you set the interpretation.
+
+00:33:43.716 --> 00:33:45.226 A:middle
+Now there are three
+options here.
+
+00:33:45.756 --> 00:33:49.866 A:middle
+Color, in color NonPremultiplied
+perform this color
+
+00:33:49.866 --> 00:33:51.106 A:middle
+match operation.
+
+00:33:52.066 --> 00:33:56.136 A:middle
+The NonPremultiplied option
+will multiply the alpha channel
+
+00:33:56.196 --> 00:33:57.726 A:middle
+by your R, B, and G --
+
+00:33:57.936 --> 00:34:01.196 A:middle
+RGB channels before
+building the texture.
+
+00:33:57.936 --> 00:34:01.196 A:middle
+RGB channels before
+building the texture.
+
+00:34:02.096 --> 00:34:08.716 A:middle
+The data option here will
+-- is used for normal maps,
+
+00:34:08.716 --> 00:34:15.005 A:middle
+height maps, roughness maps,
+textures of noncolor type.
+
+00:34:15.916 --> 00:34:17.576 A:middle
+Now, this is all you need to do.
+
+00:34:18.136 --> 00:34:21.136 A:middle
+Xcode will go off and
+build various versions
+
+00:34:21.136 --> 00:34:26.536 A:middle
+of this texture, and it
+will pick the most optimal
+
+00:34:26.536 --> 00:34:27.206 A:middle
+pixel format.
+
+00:34:28.966 --> 00:34:33.466 A:middle
+You can, however, have
+more explicit control.
+
+00:34:33.826 --> 00:34:35.846 A:middle
+You can select any number
+of these traits here,
+
+00:34:37.366 --> 00:34:39.516 A:middle
+which will open up
+a number of buckets
+
+00:34:39.516 --> 00:34:40.946 A:middle
+that you can select
+to customize.
+
+00:34:41.906 --> 00:34:44.826 A:middle
+You can add different
+images for each version.
+
+00:34:45.196 --> 00:34:47.516 A:middle
+You probably wouldn't
+use a different image,
+
+00:34:47.616 --> 00:34:49.906 A:middle
+but may be a different
+size of an image.
+
+00:34:49.906 --> 00:34:53.005 A:middle
+So on a device with
+lots of memory,
+
+00:34:53.036 --> 00:34:55.536 A:middle
+you can use a bigger
+texture, and a device
+
+00:34:55.536 --> 00:34:58.526 A:middle
+with a smaller memory, you would
+use a much smaller texture.
+
+00:34:58.986 --> 00:35:05.226 A:middle
+And then you can specify how
+or whether you want mipmaps.
+
+00:34:58.986 --> 00:35:05.226 A:middle
+And then you can specify how
+or whether you want mipmaps.
+
+00:35:05.896 --> 00:35:08.826 A:middle
+The all option will
+generate mipmaps all the way
+
+00:35:08.826 --> 00:35:14.436 A:middle
+down to the 1 by 1 level and the
+fixed option here will give you
+
+00:35:14.436 --> 00:35:17.866 A:middle
+some more explicit control,
+such as whether you want
+
+00:35:17.866 --> 00:35:21.406 A:middle
+to use a max level and
+also whether you want
+
+00:35:21.406 --> 00:35:24.366 A:middle
+to have different
+images for each level.
+
+00:35:24.936 --> 00:35:29.456 A:middle
+And finally, you can override
+our automatic selection
+
+00:35:30.026 --> 00:35:33.226 A:middle
+of pixel formats.
+
+00:35:33.226 --> 00:35:37.266 A:middle
+Now I mentioned that you can
+programmatically create these
+
+00:35:37.266 --> 00:35:38.036 A:middle
+texture sets.
+
+00:35:38.856 --> 00:35:40.886 A:middle
+You don't really want to
+go through the Xcode UI
+
+00:35:41.396 --> 00:35:44.036 A:middle
+if you've got thousands
+of assets.
+
+00:35:44.926 --> 00:35:48.336 A:middle
+So there's a pretty
+simple directory structure,
+
+00:35:48.336 --> 00:35:50.686 A:middle
+and within that directory
+structure are a number
+
+00:35:50.686 --> 00:35:52.036 A:middle
+of JSON files.
+
+00:35:52.636 --> 00:35:57.806 A:middle
+Now these files and directory
+structure is fully documented
+
+00:35:58.056 --> 00:36:02.146 A:middle
+on the asset catalogue
+reference.
+
+00:35:58.056 --> 00:36:02.146 A:middle
+on the asset catalogue
+reference.
+
+00:36:02.656 --> 00:36:05.216 A:middle
+So you can create your own
+asset conditioning tool
+
+00:36:05.446 --> 00:36:08.906 A:middle
+to set up your texture set.
+
+00:36:09.876 --> 00:36:12.726 A:middle
+So once you've got this
+asset on the device,
+
+00:36:12.726 --> 00:36:14.156 A:middle
+how do you make use of it?
+
+00:36:14.326 --> 00:36:19.086 A:middle
+Well, you create a MetalKit
+texture loader supplying your
+
+00:36:19.086 --> 00:36:24.136 A:middle
+Metal device, and then
+you supply the name along
+
+00:36:24.136 --> 00:36:26.796 A:middle
+with its hierarchy
+to the texture loader
+
+00:36:27.216 --> 00:36:29.396 A:middle
+and MetalKit will go off
+and build that texture.
+
+00:36:29.696 --> 00:36:32.636 A:middle
+You can supply a couple
+of other options here
+
+00:36:32.636 --> 00:36:34.976 A:middle
+such as scale factor if
+you have different versions
+
+00:36:34.976 --> 00:36:39.976 A:middle
+of the texture for different
+scale factors or the bundle
+
+00:36:40.046 --> 00:36:42.446 A:middle
+if the asset catalogue is
+
+00:36:42.496 --> 00:36:44.266 A:middle
+in something other
+than the main bundle.
+
+00:36:44.266 --> 00:36:45.406 A:middle
+There are also a couple
+
+00:36:45.406 --> 00:36:49.356 A:middle
+of options here that
+you can specify.
+
+00:36:49.726 --> 00:36:53.226 A:middle
+So I'd really like you to
+pay attention to color space
+
+00:36:53.586 --> 00:36:55.586 A:middle
+and set your apps apart
+
+00:36:55.676 --> 00:36:59.896 A:middle
+by creating content
+with wide color.
+
+00:37:00.886 --> 00:37:04.306 A:middle
+Asset catalogues can help
+you achieve that goal.
+
+00:37:04.306 --> 00:37:07.556 A:middle
+As well, they provide a
+number of other features
+
+00:37:07.826 --> 00:37:09.556 A:middle
+which you can make use of,
+
+00:37:09.646 --> 00:37:11.876 A:middle
+such as optimal pixel
+format selection.
+
+00:37:12.786 --> 00:37:18.386 A:middle
+I'd like to have my colleague
+Anna Tikhonova up here to talk
+
+00:37:18.386 --> 00:37:19.876 A:middle
+about some exciting improvements
+
+00:37:20.146 --> 00:37:21.976 A:middle
+to the Metal Performance
+Shaders framework.
+
+00:37:22.516 --> 00:37:27.796 A:middle
+[ Applause ]
+
+00:37:28.296 --> 00:37:29.616 A:middle
+&gt;&gt; Hi. Good afternoon.
+
+00:37:30.196 --> 00:37:31.726 A:middle
+Thank you, Dan, for
+the introduction.
+
+00:37:31.846 --> 00:37:33.266 A:middle
+As Dan said, my name is Anna.
+
+00:37:33.366 --> 00:37:35.416 A:middle
+I'm an engineer on
+the GPU Software Team.
+
+00:37:35.506 --> 00:37:37.386 A:middle
+So let's talk about
+some new additions
+
+00:37:37.456 --> 00:37:38.686 A:middle
+to the Metal Performance
+Shaders.
+
+00:37:40.686 --> 00:37:43.336 A:middle
+We introduced the Metal
+Performance Shaders framework
+
+00:37:43.336 --> 00:37:45.766 A:middle
+last year in the What's
+New in Metal Part 2 talk.
+
+00:37:46.006 --> 00:37:47.636 A:middle
+If you haven't seen
+that session,
+
+00:37:47.746 --> 00:37:49.256 A:middle
+you should definitely
+check out the video.
+
+00:37:50.336 --> 00:37:52.096 A:middle
+But just to give
+you a quick recap,
+
+00:37:52.626 --> 00:37:55.176 A:middle
+the Metal Performance Shaders
+framework is the framework
+
+00:37:55.176 --> 00:37:58.436 A:middle
+of optimized high performance
+data parallel algorithms
+
+00:37:58.436 --> 00:37:59.536 A:middle
+for the GPU in Metal .
+
+00:38:00.896 --> 00:38:02.866 A:middle
+The algorithms are
+optimized for iOS,
+
+00:38:03.056 --> 00:38:06.036 A:middle
+and they have been available
+for you since iOS 9, for the A8
+
+00:38:06.036 --> 00:38:07.836 A:middle
+and now the A9 processors.
+
+00:38:08.846 --> 00:38:12.066 A:middle
+The framework is designed
+to integrate easily
+
+00:38:12.176 --> 00:38:15.386 A:middle
+into your Metal applications
+and be very simple to use.
+
+00:38:16.536 --> 00:38:19.436 A:middle
+It should be as simple as
+calling a library function.
+
+00:38:20.066 --> 00:38:23.776 A:middle
+So last year, we talked
+about following a list
+
+00:38:23.776 --> 00:38:27.796 A:middle
+of supported image operations,
+and you should watch the video
+
+00:38:27.986 --> 00:38:30.066 A:middle
+for lots of details
+and examples.
+
+00:38:30.716 --> 00:38:32.996 A:middle
+But this year, we've added
+some more cool stuff for you.
+
+00:38:34.396 --> 00:38:36.846 A:middle
+We've added wide color
+conversion, which you can use
+
+00:38:36.846 --> 00:38:39.596 A:middle
+to convert your Metal textures
+between different color spaces.
+
+00:38:40.456 --> 00:38:45.326 A:middle
+You can convert between
+RGB, sRGB, grayscale, CMYK,
+
+00:38:45.636 --> 00:38:49.106 A:middle
+C3 and any color
+space you define.
+
+00:38:49.826 --> 00:38:53.536 A:middle
+We've also added Gaussian
+pyramids, which you can use
+
+00:38:53.536 --> 00:38:56.146 A:middle
+to create multiscaler
+presentations of image data
+
+00:38:56.386 --> 00:38:58.796 A:middle
+on the GPU to enable
+multiscale algorithms.
+
+00:38:59.726 --> 00:39:03.226 A:middle
+They can also be used for
+common optical flow algorithms,
+
+00:38:59.726 --> 00:39:03.226 A:middle
+They can also be used for
+common optical flow algorithms,
+
+00:39:03.886 --> 00:39:06.666 A:middle
+image blending, and
+high-quality mipmap generation.
+
+00:39:08.006 --> 00:39:11.196 A:middle
+And finally, we've added
+convolutional neural networks,
+
+00:39:11.406 --> 00:39:13.166 A:middle
+or CNNs, which are used
+
+00:39:13.356 --> 00:39:15.476 A:middle
+to accelerate deep
+learning algorithms.
+
+00:39:16.376 --> 00:39:18.286 A:middle
+This is going to be the
+main topic of this talk.
+
+00:39:18.586 --> 00:39:20.046 A:middle
+So let's just dive right in.
+
+00:39:20.636 --> 00:39:23.026 A:middle
+First of all, what
+is deep learning?
+
+00:39:24.336 --> 00:39:27.436 A:middle
+Deep learning is a field of
+machine learning which goal is
+
+00:39:27.436 --> 00:39:28.356 A:middle
+to answer this question.
+
+00:39:28.666 --> 00:39:31.896 A:middle
+Can a machine do the same
+task that a human can do?
+
+00:39:32.346 --> 00:39:34.346 A:middle
+Well, what types of
+tasks am I talking about?
+
+00:39:35.176 --> 00:39:36.946 A:middle
+Each one of you has an
+iPhone in your pocket.
+
+00:39:37.116 --> 00:39:38.996 A:middle
+You probably took a
+few pictures today,
+
+00:39:39.436 --> 00:39:42.896 A:middle
+and all of us are constantly
+exposed to images and videos
+
+00:39:42.896 --> 00:39:46.076 A:middle
+on the Web every day, on
+news sites, on social media.
+
+00:39:47.436 --> 00:39:50.866 A:middle
+When you see an image, you
+know instantly what is depicted
+
+00:39:50.866 --> 00:39:51.136 A:middle
+on it.
+
+00:39:51.796 --> 00:39:53.006 A:middle
+You can detect faces.
+
+00:39:53.496 --> 00:39:55.206 A:middle
+If you know these
+people, you can tag them.
+
+00:39:55.366 --> 00:39:56.606 A:middle
+You can annotate this image.
+
+00:39:56.936 --> 00:39:59.076 A:middle
+And this works well
+for a single image,
+
+00:40:00.006 --> 00:40:03.246 A:middle
+but what if you have more
+images and even more images?
+
+00:40:03.416 --> 00:40:06.946 A:middle
+Think about all of the images
+uploaded to the Web every day.
+
+00:40:07.716 --> 00:40:10.116 A:middle
+No human can hand
+annotate this many images.
+
+00:40:10.656 --> 00:40:12.766 A:middle
+So deep learning is a technique
+
+00:40:12.846 --> 00:40:14.256 A:middle
+for solving these
+kinds of problems.
+
+00:40:15.566 --> 00:40:18.176 A:middle
+It can be used for sifting
+through large amounts of data
+
+00:40:18.356 --> 00:40:21.536 A:middle
+and for answering questions
+such as, "Who's in this image?"
+
+00:40:21.536 --> 00:40:22.426 A:middle
+And "Where was it taken?"
+
+00:40:23.026 --> 00:40:25.926 A:middle
+But I'm using image-based
+examples in this talk
+
+00:40:25.926 --> 00:40:26.906 A:middle
+because they are visual.
+
+00:40:27.096 --> 00:40:29.846 A:middle
+So they are a great fit for
+this type of a presentation,
+
+00:40:30.246 --> 00:40:31.466 A:middle
+but I just want to mention
+
+00:40:31.746 --> 00:40:33.656 A:middle
+that deep learning
+algorithms can be used
+
+00:40:33.656 --> 00:40:34.736 A:middle
+for other types of data.
+
+00:40:34.956 --> 00:40:39.356 A:middle
+For example, other types
+of signal like audio
+
+00:40:39.506 --> 00:40:41.576 A:middle
+to do speech recognition
+and haptics
+
+00:40:41.666 --> 00:40:42.886 A:middle
+to create the sense of touch.
+
+00:40:45.316 --> 00:40:47.436 A:middle
+Deep learning algorithms
+have two phases.
+
+00:40:48.186 --> 00:40:49.916 A:middle
+The first one is
+the training phase.
+
+00:40:50.486 --> 00:40:53.426 A:middle
+So let's talk about it,
+give a specific example.
+
+00:40:53.846 --> 00:40:56.296 A:middle
+So image that you
+want train your system
+
+00:40:56.386 --> 00:40:58.176 A:middle
+to categorize images
+into classes.
+
+00:40:58.696 --> 00:40:59.626 A:middle
+This is an image of a cat.
+
+00:40:59.946 --> 00:41:01.026 A:middle
+This is an image of a dog.
+
+00:40:59.946 --> 00:41:01.026 A:middle
+This is an image of a dog.
+
+00:41:01.136 --> 00:41:02.186 A:middle
+This is the image of a rabbit.
+
+00:41:03.346 --> 00:41:07.186 A:middle
+This is a labor intensive task
+that requires a large number
+
+00:41:07.186 --> 00:41:10.596 A:middle
+of images, hand-labeled
+annotated images
+
+00:41:10.596 --> 00:41:12.706 A:middle
+for each one of these
+categories.
+
+00:41:13.846 --> 00:41:16.706 A:middle
+So for example, if you
+want to train your system
+
+00:41:16.706 --> 00:41:20.396 A:middle
+to recognize cats, you need to
+feed it a large number of images
+
+00:41:20.396 --> 00:41:24.146 A:middle
+of cats all labeled, and
+same for your rabbits
+
+00:41:24.226 --> 00:41:26.356 A:middle
+and all the other animals
+that you want your system
+
+00:41:26.356 --> 00:41:29.666 A:middle
+to be able to recognize.
+
+00:41:30.256 --> 00:41:34.436 A:middle
+This is a one-time
+computationally expensive step.
+
+00:41:34.836 --> 00:41:36.466 A:middle
+It's usually done offline,
+and there are plenty
+
+00:41:36.466 --> 00:41:38.116 A:middle
+of training packages
+available out there.
+
+00:41:38.596 --> 00:41:42.156 A:middle
+The result of the training
+phase is trained parameters.
+
+00:41:42.956 --> 00:41:45.186 A:middle
+So I will not talk
+about them right now,
+
+00:41:45.186 --> 00:41:46.596 A:middle
+but we will get back
+to them later.
+
+00:41:48.246 --> 00:41:51.266 A:middle
+The trained parameters are
+required for the next phase,
+
+00:41:51.396 --> 00:41:52.456 A:middle
+which is the inference phase.
+
+00:41:53.536 --> 00:41:56.686 A:middle
+This is the phase where
+your system is presented
+
+00:41:56.686 --> 00:41:59.496 A:middle
+with a new image that has
+never seen before, and it needs
+
+00:41:59.496 --> 00:42:00.716 A:middle
+to classify in real-time.
+
+00:41:59.496 --> 00:42:00.716 A:middle
+to classify in real-time.
+
+00:42:00.936 --> 00:42:03.966 A:middle
+So in this example, the system
+correctly classified this image
+
+00:42:03.996 --> 00:42:05.096 A:middle
+as an image of a cat.
+
+00:42:06.636 --> 00:42:09.446 A:middle
+We provide GPU acceleration
+for the inference phase.
+
+00:42:10.076 --> 00:42:12.646 A:middle
+Specifically, we give
+you the building blocks
+
+00:42:12.996 --> 00:42:15.686 A:middle
+to build your inference
+networks for the GPU.
+
+00:42:17.266 --> 00:42:20.246 A:middle
+So let's now talk about what
+are the convolutional neural
+
+00:42:20.246 --> 00:42:24.976 A:middle
+networks and what are these
+building blocks we provide?
+
+00:42:25.496 --> 00:42:27.456 A:middle
+The convolutional
+neural networks, or CNNs,
+
+00:42:27.696 --> 00:42:30.706 A:middle
+are biologically
+inspired and designed
+
+00:42:30.706 --> 00:42:32.146 A:middle
+to resemble the visual cortex.
+
+00:42:33.336 --> 00:42:36.826 A:middle
+When our brain processes visual
+input, the first hierarchy
+
+00:42:36.826 --> 00:42:38.686 A:middle
+of neurons that receive
+information
+
+00:42:38.826 --> 00:42:42.526 A:middle
+in the visual cortex are
+sensitive to specific edges
+
+00:42:42.526 --> 00:42:45.296 A:middle
+or blobs of color, while
+the brain regions further
+
+00:42:45.296 --> 00:42:49.256 A:middle
+down the visual pipeline respond
+to more complex structures
+
+00:42:49.496 --> 00:42:51.066 A:middle
+like faces or kinds of animals.
+
+00:42:51.676 --> 00:42:53.326 A:middle
+So in a very similar way,
+
+00:42:54.146 --> 00:42:57.246 A:middle
+the convolutional neural
+networks are organized
+
+00:42:57.486 --> 00:43:00.286 A:middle
+into layers of neurons
+which are trained
+
+00:42:57.486 --> 00:43:00.286 A:middle
+into layers of neurons
+which are trained
+
+00:43:00.356 --> 00:43:02.646 A:middle
+to recognize increasingly
+complex features.
+
+00:43:04.846 --> 00:43:08.426 A:middle
+So the first layers are trained
+to recognize low level features
+
+00:43:08.836 --> 00:43:11.216 A:middle
+like edges and blobs of color,
+
+00:43:11.636 --> 00:43:13.566 A:middle
+while the subsequent
+layers are trained
+
+00:43:13.566 --> 00:43:15.156 A:middle
+to recognize higher
+level features.
+
+00:43:15.156 --> 00:43:17.216 A:middle
+So for example, if we
+are doing face detection,
+
+00:43:17.566 --> 00:43:20.026 A:middle
+then will have layers that will
+recognize features like noses,
+
+00:43:20.326 --> 00:43:23.716 A:middle
+eyes, cheeks, and then
+combination of these features,
+
+00:43:23.816 --> 00:43:24.966 A:middle
+and then finally faces.
+
+00:43:26.586 --> 00:43:30.116 A:middle
+And then the final few layers
+combine all the generated
+
+00:43:30.116 --> 00:43:33.106 A:middle
+information to produce the
+final output for the network,
+
+00:43:33.346 --> 00:43:35.886 A:middle
+such as the probability that
+there is a face in the image.
+
+00:43:36.986 --> 00:43:38.336 A:middle
+And I keep mentioning features.
+
+00:43:39.026 --> 00:43:43.626 A:middle
+Think of a feature as a
+filter that filters the input
+
+00:43:43.626 --> 00:43:45.066 A:middle
+for that feature,
+such as a nose,
+
+00:43:45.786 --> 00:43:48.816 A:middle
+and if that information is
+found, it's passed along.
+
+00:43:49.686 --> 00:43:52.966 A:middle
+If that feature is found, this
+information is passed along
+
+00:43:53.356 --> 00:43:54.366 A:middle
+to the subsequent layers.
+
+00:43:54.916 --> 00:43:57.246 A:middle
+And, of course, we need to
+look for many such features.
+
+00:43:57.246 --> 00:43:59.946 A:middle
+So if we're doing face
+detection, then looking
+
+00:43:59.946 --> 00:44:01.946 A:middle
+for just noses is
+simply not enough.
+
+00:43:59.946 --> 00:44:01.946 A:middle
+for just noses is
+simply not enough.
+
+00:44:02.306 --> 00:44:04.906 A:middle
+We also need to look for other
+facial features like cheeks,
+
+00:44:05.406 --> 00:44:07.486 A:middle
+eyes, and then combinations
+of such features.
+
+00:44:07.916 --> 00:44:09.816 A:middle
+So we need many of
+these feature filters.
+
+00:44:11.736 --> 00:44:14.306 A:middle
+So now that I've covered
+convolutional neural networks,
+
+00:44:14.886 --> 00:44:16.646 A:middle
+let's talk about the
+building blocks we'll provide.
+
+00:44:17.436 --> 00:44:19.866 A:middle
+The first building
+block is your data.
+
+00:44:20.746 --> 00:44:24.176 A:middle
+We want you to use MPS images
+and MPS temporary images,
+
+00:44:24.266 --> 00:44:27.516 A:middle
+which we added specifically to
+support convolutional networks.
+
+00:44:28.246 --> 00:44:31.346 A:middle
+They provide and optimize layout
+for your data, for your input
+
+00:44:31.346 --> 00:44:32.436 A:middle
+and intermediate results.
+
+00:44:32.436 --> 00:44:37.986 A:middle
+Think of MPS temporary images
+as light-weight MPS images,
+
+00:44:39.146 --> 00:44:41.716 A:middle
+which we want you to
+use for image data
+
+00:44:41.836 --> 00:44:43.046 A:middle
+with a transient lifetime.
+
+00:44:44.286 --> 00:44:49.216 A:middle
+MPS temporary images are built
+using the Metal resource heaps,
+
+00:44:49.386 --> 00:44:54.536 A:middle
+which were described in the
+Part 1 of these sessions.
+
+00:44:55.546 --> 00:44:58.146 A:middle
+They address some of
+the reused cache memory,
+
+00:44:59.196 --> 00:45:02.866 A:middle
+and they avoid expensive
+allocation
+
+00:44:59.196 --> 00:45:02.866 A:middle
+and they avoid expensive
+allocation
+
+00:45:02.866 --> 00:45:04.686 A:middle
+and deallocation of
+texture resources.
+
+00:45:05.116 --> 00:45:06.936 A:middle
+So the goal is to save
+you lots of memory
+
+00:45:07.546 --> 00:45:10.196 A:middle
+and to help you manage
+intermediate resources.
+
+00:45:11.056 --> 00:45:14.946 A:middle
+We also provide a collection
+of layers, which you can use
+
+00:45:15.266 --> 00:45:17.376 A:middle
+to create your inference
+networks.
+
+00:45:17.986 --> 00:45:20.436 A:middle
+But you may be thinking
+right now, "How do I know
+
+00:45:20.756 --> 00:45:22.496 A:middle
+which building blocks
+I actually need
+
+00:45:22.756 --> 00:45:24.496 A:middle
+to build my own inference
+network?"
+
+00:45:25.856 --> 00:45:28.666 A:middle
+So the answer is
+trained parameters.
+
+00:45:29.626 --> 00:45:32.806 A:middle
+The trained parameters, I
+mentioned them previously
+
+00:45:32.806 --> 00:45:34.456 A:middle
+when we talked about
+the training phase.
+
+00:45:34.666 --> 00:45:37.786 A:middle
+The trained parameters give
+you a complete recipe for how
+
+00:45:37.786 --> 00:45:39.216 A:middle
+to build your inference
+networks.
+
+00:45:39.926 --> 00:45:42.976 A:middle
+They tell you how many
+layers you will have,
+
+00:45:43.276 --> 00:45:45.756 A:middle
+what kind they will be, in
+which order they will appear,
+
+00:45:45.756 --> 00:45:48.236 A:middle
+and you also get all those
+feature filters for every layer.
+
+00:45:50.286 --> 00:45:53.586 A:middle
+So we take care of everything
+under the hood to make sure
+
+00:45:53.586 --> 00:45:56.406 A:middle
+that the networks you build
+using these building blocks have
+
+00:45:56.496 --> 00:45:59.156 A:middle
+the best possible
+performance on all iOS GPUs.
+
+00:45:59.516 --> 00:46:01.736 A:middle
+All you have to do
+is to mine your data
+
+00:45:59.516 --> 00:46:01.736 A:middle
+All you have to do
+is to mine your data
+
+00:46:02.206 --> 00:46:04.536 A:middle
+into this optimized
+layout that we provide
+
+00:46:05.276 --> 00:46:08.216 A:middle
+and to call library
+functions to create the layers
+
+00:46:08.216 --> 00:46:09.026 A:middle
+that make up your network.
+
+00:46:10.636 --> 00:46:14.106 A:middle
+So now let's discuss all these
+building blocks in more detail,
+
+00:46:14.386 --> 00:46:17.006 A:middle
+but let's do it in a context
+of a specific example.
+
+00:46:20.416 --> 00:46:25.516 A:middle
+So in this demo, I have a system
+
+00:46:25.576 --> 00:46:27.726 A:middle
+that has been trained
+to detect smiles.
+
+00:46:28.736 --> 00:46:30.256 A:middle
+And what we'll have is
+
+00:46:30.256 --> 00:46:33.716 A:middle
+in real-time the system will
+detect whether I am smiling
+
+00:46:33.716 --> 00:46:33.956 A:middle
+or not.
+
+00:46:34.066 --> 00:46:35.736 A:middle
+So I will first smile,
+and then I will frown,
+
+00:46:36.306 --> 00:46:37.976 A:middle
+and you will see the
+system report just that.
+
+00:46:44.516 --> 00:46:46.946 A:middle
+[ Laughter ]
+
+00:46:47.446 --> 00:46:48.446 A:middle
+All right.
+
+00:46:48.446 --> 00:46:48.976 A:middle
+So that [inaudible] my demo.
+
+00:46:49.516 --> 00:46:54.646 A:middle
+[ Applause ]
+
+00:46:55.146 --> 00:46:58.376 A:middle
+Okay. So now let's take a
+look at the building blocks
+
+00:46:58.376 --> 00:47:00.726 A:middle
+that I needed to build
+this kind of a network.
+
+00:46:58.376 --> 00:47:00.726 A:middle
+that I needed to build
+this kind of a network.
+
+00:47:01.236 --> 00:47:03.206 A:middle
+So the first building
+block we're going to talk
+
+00:47:03.206 --> 00:47:04.836 A:middle
+about is the convolution layer.
+
+00:47:05.666 --> 00:47:08.206 A:middle
+It's the core building block of
+convolutional neural networks,
+
+00:47:08.536 --> 00:47:11.156 A:middle
+and its goal is to
+recognize features and input.
+
+00:47:11.156 --> 00:47:12.946 A:middle
+And it's called a
+convolutional layer
+
+00:47:13.256 --> 00:47:15.356 A:middle
+because it performs a
+convolution on the input.
+
+00:47:15.746 --> 00:47:18.536 A:middle
+So let's recall how
+regular convolution works.
+
+00:47:18.626 --> 00:47:21.176 A:middle
+You have your input and your
+output and in this case a 5
+
+00:47:21.176 --> 00:47:22.966 A:middle
+by 5 pixel filter
+with some weight.
+
+00:47:23.716 --> 00:47:26.086 A:middle
+And in order to compute
+the value of this pixel
+
+00:47:26.526 --> 00:47:27.476 A:middle
+in your output, you need
+
+00:47:27.476 --> 00:47:29.246 A:middle
+to convolve the filter
+with the input.
+
+00:47:30.636 --> 00:47:31.176 A:middle
+Pretty easy.
+
+00:47:32.036 --> 00:47:34.616 A:middle
+The convolution layer
+is a generalization
+
+00:47:34.646 --> 00:47:35.776 A:middle
+of regular convolution.
+
+00:47:36.746 --> 00:47:38.476 A:middle
+It allows you to have
+multiple filters.
+
+00:47:39.286 --> 00:47:42.306 A:middle
+The different filters are
+applied to the input separately,
+
+00:47:42.486 --> 00:47:44.106 A:middle
+resulting in different
+output channels.
+
+00:47:44.206 --> 00:47:45.706 A:middle
+So if you have 16 filters.
+
+00:47:45.706 --> 00:47:47.596 A:middle
+That means you have
+16 output channels.
+
+00:47:48.106 --> 00:47:51.426 A:middle
+So in order to get the value of
+this pixel in the first channel
+
+00:47:51.426 --> 00:47:54.216 A:middle
+of the output, you need
+to take the first filter
+
+00:47:54.456 --> 00:47:56.446 A:middle
+and convolve it with the input.
+
+00:47:56.446 --> 00:48:00.416 A:middle
+And in order to get the value of
+this pixel in the second channel
+
+00:47:56.446 --> 00:48:00.416 A:middle
+And in order to get the value of
+this pixel in the second channel
+
+00:48:00.416 --> 00:48:02.836 A:middle
+of the output, you need
+to take the second filter
+
+00:48:03.116 --> 00:48:04.336 A:middle
+and convolve it with your input.
+
+00:48:05.166 --> 00:48:07.546 A:middle
+Of course, in our examples,
+
+00:48:07.596 --> 00:48:09.896 A:middle
+mild detection we are
+dealing with color images.
+
+00:48:10.226 --> 00:48:13.376 A:middle
+So that means that your input
+actually has three separate
+
+00:48:13.376 --> 00:48:16.856 A:middle
+channels, and just because
+of how convolutional neural
+
+00:48:16.856 --> 00:48:20.886 A:middle
+networks work, you need
+three sets of 16 filters
+
+00:48:21.326 --> 00:48:23.846 A:middle
+where you have one set
+for each input channel.
+
+00:48:24.956 --> 00:48:28.166 A:middle
+And then you apply
+the different filters
+
+00:48:29.096 --> 00:48:37.106 A:middle
+to separate input channels
+and combine the results
+
+00:48:37.856 --> 00:48:42.616 A:middle
+to get a single output value.
+
+00:48:43.366 --> 00:48:45.426 A:middle
+So this is how you
+would create one
+
+00:48:45.426 --> 00:48:48.006 A:middle
+of these convolution
+layers in our framework.
+
+00:48:48.756 --> 00:48:51.596 A:middle
+You first create a descriptor
+and specify such parameters
+
+00:48:51.706 --> 00:48:54.516 A:middle
+as the width and height of the
+filters you're going to use
+
+00:48:54.906 --> 00:48:57.086 A:middle
+and then the number of
+input and output channels.
+
+00:48:57.846 --> 00:49:02.236 A:middle
+And then you create
+a convolution layer
+
+00:48:57.846 --> 00:49:02.236 A:middle
+And then you create
+a convolution layer
+
+00:49:02.236 --> 00:49:06.876 A:middle
+from this descriptor and
+provide the actual data
+
+00:49:07.226 --> 00:49:08.786 A:middle
+for the feature filters,
+which you get
+
+00:49:08.836 --> 00:49:09.866 A:middle
+from the trained parameters.
+
+00:49:12.846 --> 00:49:14.896 A:middle
+The next layer we are going to
+talk about is the pooling layer.
+
+00:49:15.866 --> 00:49:17.906 A:middle
+The function of the
+pooling layer is
+
+00:49:17.906 --> 00:49:21.546 A:middle
+to progressively reduce the
+spatial size of the network,
+
+00:49:21.686 --> 00:49:23.306 A:middle
+which reduces the
+amount of competition
+
+00:49:23.306 --> 00:49:24.296 A:middle
+for the subsequent layers.
+
+00:49:24.686 --> 00:49:26.626 A:middle
+And it's common to
+insert a pooling of the
+
+00:49:26.626 --> 00:49:28.726 A:middle
+in between successive
+convolution layers.
+
+00:49:29.646 --> 00:49:33.906 A:middle
+Another function of the
+pooling layer is to summarize
+
+00:49:33.956 --> 00:49:37.546 A:middle
+or condense information
+in a region of the input,
+
+00:49:37.546 --> 00:49:41.896 A:middle
+and it would provide two pooling
+operations, maximum and average.
+
+00:49:42.816 --> 00:49:48.496 A:middle
+So in this example, we take a 2
+by 2 pixel region of the input.
+
+00:49:49.536 --> 00:49:53.786 A:middle
+We take the maximum value
+and store it as our output.
+
+00:49:54.356 --> 00:49:58.306 A:middle
+And this is the API
+you need to use
+
+00:49:58.306 --> 00:50:00.706 A:middle
+in the Metal Performance
+Shaders framework to create one
+
+00:49:58.306 --> 00:50:00.706 A:middle
+in the Metal Performance
+Shaders framework to create one
+
+00:50:00.706 --> 00:50:01.586 A:middle
+of these pooling layers.
+
+00:50:02.086 --> 00:50:04.516 A:middle
+It's common to use
+the max operation
+
+00:50:06.226 --> 00:50:10.926 A:middle
+with a filter size of 2 by 2.
+
+00:50:11.316 --> 00:50:14.416 A:middle
+The fully connected layer is
+a layer where every neuron
+
+00:50:14.446 --> 00:50:17.466 A:middle
+in the input is connected to
+every neuron in the output.
+
+00:50:18.206 --> 00:50:20.926 A:middle
+But think about it as a special
+type of a convolution layer
+
+00:50:21.556 --> 00:50:24.836 A:middle
+where the filter size is
+the same as your input size.
+
+00:50:24.836 --> 00:50:28.306 A:middle
+So in this example, we have
+a filter of the same size
+
+00:50:28.306 --> 00:50:30.466 A:middle
+as the input, and
+we convolve them
+
+00:50:30.546 --> 00:50:32.036 A:middle
+to get a single output value.
+
+00:50:32.256 --> 00:50:35.736 A:middle
+So in this architecture,
+the convolution
+
+00:50:35.736 --> 00:50:38.666 A:middle
+and pooling layers operate
+on regions of input,
+
+00:50:38.976 --> 00:50:41.286 A:middle
+while the fully connected
+layer can be used
+
+00:50:41.496 --> 00:50:44.846 A:middle
+to aggregate information
+from across the entire input.
+
+00:50:45.506 --> 00:50:47.986 A:middle
+It's usually one of the
+last layers in your network,
+
+00:50:48.096 --> 00:50:50.746 A:middle
+and this is where your final
+decision-making is taking place
+
+00:50:51.216 --> 00:50:55.346 A:middle
+and you create -- you generate
+the output for the network,
+
+00:50:55.846 --> 00:50:58.276 A:middle
+such as the probability that
+there's a smile in the image.
+
+00:50:58.896 --> 00:51:03.276 A:middle
+And this is how you
+would create one
+
+00:50:58.896 --> 00:51:03.276 A:middle
+And this is how you
+would create one
+
+00:51:03.276 --> 00:51:04.506 A:middle
+of these fully connected layers
+
+00:51:04.676 --> 00:51:06.496 A:middle
+in the Metal Performance
+Shaders framework.
+
+00:51:07.196 --> 00:51:08.826 A:middle
+You create a convolution
+descriptor
+
+00:51:08.826 --> 00:51:11.016 A:middle
+because this is a special
+type of a convolution layer,
+
+00:51:11.446 --> 00:51:13.416 A:middle
+and then you create a
+fully connected layer
+
+00:51:14.176 --> 00:51:15.026 A:middle
+from this descriptor.
+
+00:51:15.616 --> 00:51:18.156 A:middle
+We'll also provide
+some additional layers,
+
+00:51:18.156 --> 00:51:20.636 A:middle
+which I'm not going to cover
+in detail in this presentation
+
+00:51:21.156 --> 00:51:23.266 A:middle
+but they are described
+in our documentation.
+
+00:51:23.526 --> 00:51:26.666 A:middle
+We provide the neural
+layer, which is usually used
+
+00:51:26.666 --> 00:51:28.516 A:middle
+in conjunction with
+the convolution layer,
+
+00:51:28.756 --> 00:51:31.796 A:middle
+and we also provide the soft
+max and normalization layers.
+
+00:51:32.816 --> 00:51:35.196 A:middle
+So now that we've
+covered all of the layers,
+
+00:51:35.606 --> 00:51:36.626 A:middle
+let's talk about your data.
+
+00:51:37.386 --> 00:51:39.396 A:middle
+I mentioned that you
+should be using MPS images.
+
+00:51:40.006 --> 00:51:40.856 A:middle
+So what are they really?
+
+00:51:42.356 --> 00:51:45.386 A:middle
+Most of you are already
+familiar with Metal textures.
+
+00:51:45.526 --> 00:51:50.596 A:middle
+So this is a 2D Metal
+texture with multiple channels
+
+00:51:50.906 --> 00:51:53.326 A:middle
+where every channel corresponds
+to a color channel and alpha.
+
+00:51:54.276 --> 00:51:56.906 A:middle
+And I mentioned in my
+previous examples that we need
+
+00:51:56.906 --> 00:52:00.026 A:middle
+to create images with
+multiple channels,
+
+00:51:56.906 --> 00:52:00.026 A:middle
+to create images with
+multiple channels,
+
+00:52:00.706 --> 00:52:01.946 A:middle
+for example, 32 channels.
+
+00:52:02.286 --> 00:52:04.046 A:middle
+If we have 32 feature filters,
+
+00:52:04.296 --> 00:52:05.706 A:middle
+we need to create
+an output channel --
+
+00:52:05.706 --> 00:52:08.486 A:middle
+an output image that
+has 32 channels.
+
+00:52:08.726 --> 00:52:09.466 A:middle
+So how do we do this?
+
+00:52:10.386 --> 00:52:15.456 A:middle
+So an MPS image is really
+a Metal 2D array texture
+
+00:52:15.456 --> 00:52:16.376 A:middle
+with multiple slices.
+
+00:52:16.946 --> 00:52:18.736 A:middle
+And when you're creating
+an MPS image,
+
+00:52:19.206 --> 00:52:21.016 A:middle
+all you really should
+care about is
+
+00:52:21.016 --> 00:52:25.006 A:middle
+that you are creating an image
+with 32 -- with 32 channels.
+
+00:52:25.546 --> 00:52:29.606 A:middle
+But sometimes you may need to
+reach the MPS image data back
+
+00:52:29.636 --> 00:52:31.586 A:middle
+to the CPU, or you may want
+
+00:52:31.586 --> 00:52:35.496 A:middle
+to use an existing Metal 2D
+array texture as your MPS image.
+
+00:52:35.916 --> 00:52:37.636 A:middle
+So for those cases,
+you need to know
+
+00:52:37.846 --> 00:52:41.656 A:middle
+that we use a special
+packed layout for your data.
+
+00:52:42.146 --> 00:52:44.106 A:middle
+So every pixel in a slice
+
+00:52:44.106 --> 00:52:47.156 A:middle
+of the structure contains
+the data for four channels.
+
+00:52:48.726 --> 00:52:52.516 A:middle
+So a 32-channel image would
+really just have eight slices.
+
+00:52:53.356 --> 00:52:57.046 A:middle
+And this is the API you
+need to use to create one
+
+00:52:57.046 --> 00:52:59.066 A:middle
+of the MPS images
+in our framework.
+
+00:52:59.606 --> 00:53:02.616 A:middle
+You first create a descriptor
+and specify such parameters
+
+00:52:59.606 --> 00:53:02.616 A:middle
+You first create a descriptor
+and specify such parameters
+
+00:53:02.656 --> 00:53:07.016 A:middle
+as the channel for data format
+with the height of the image
+
+00:53:07.266 --> 00:53:08.686 A:middle
+and the number of channels.
+
+00:53:09.886 --> 00:53:11.456 A:middle
+And then you create an MPS image
+
+00:53:11.606 --> 00:53:13.146 A:middle
+from this descriptor,
+pretty simple.
+
+00:53:14.376 --> 00:53:18.066 A:middle
+Of course, if you have
+small input images,
+
+00:53:18.136 --> 00:53:20.476 A:middle
+then you should batch them
+to better utilize the GPU,
+
+00:53:21.156 --> 00:53:24.066 A:middle
+and we provide a simple
+mechanism for you to do this.
+
+00:53:24.546 --> 00:53:28.696 A:middle
+So in this example, we create
+an array of 100 MPS images.
+
+00:53:30.596 --> 00:53:33.136 A:middle
+Okay, so now that we've
+covered all the layers,
+
+00:53:33.136 --> 00:53:35.866 A:middle
+we've covered data, and
+now let's take a look
+
+00:53:35.866 --> 00:53:39.426 A:middle
+at the actual network you need
+to build to do smile detection.
+
+00:53:40.166 --> 00:53:42.666 A:middle
+So we start with our
+inputs, and now we're going
+
+00:53:42.666 --> 00:53:45.126 A:middle
+to use the trained parameters
+that I keep mentioning
+
+00:53:46.096 --> 00:53:47.766 A:middle
+to help us build this network.
+
+00:53:48.346 --> 00:53:51.446 A:middle
+So the trained parameters
+tell us that the first layer
+
+00:53:51.546 --> 00:53:53.786 A:middle
+in this network is going
+to be a convolution layer,
+
+00:53:54.056 --> 00:53:56.066 A:middle
+which takes a three-channel
+images input
+
+00:53:56.426 --> 00:53:58.286 A:middle
+and outputs a 16-channel image.
+
+00:53:59.656 --> 00:54:03.456 A:middle
+The trained parameters also give
+us the three sets of 16 filters
+
+00:53:59.656 --> 00:54:03.456 A:middle
+The trained parameters also give
+us the three sets of 16 filters
+
+00:54:03.896 --> 00:54:07.796 A:middle
+for this layer, and these
+colorful blue images show you
+
+00:54:08.726 --> 00:54:12.136 A:middle
+the visualization of
+the output channels
+
+00:54:12.436 --> 00:54:14.496 A:middle
+after the filters have
+been applied to the input.
+
+00:54:16.686 --> 00:54:18.596 A:middle
+The next layer is
+a pooling layer,
+
+00:54:18.796 --> 00:54:22.336 A:middle
+which reduces the spatial
+resolution of the output
+
+00:54:22.336 --> 00:54:25.406 A:middle
+of the convolution layer by a
+factor of two in each dimension.
+
+00:54:27.166 --> 00:54:28.346 A:middle
+The trained parameters tell us
+
+00:54:28.346 --> 00:54:30.706 A:middle
+that the next layer is
+another convolution layer,
+
+00:54:31.056 --> 00:54:33.116 A:middle
+which takes a 16-channel
+images input
+
+00:54:33.336 --> 00:54:37.046 A:middle
+and outputs a 16-channel image,
+which is further down reduced
+
+00:54:37.046 --> 00:54:38.596 A:middle
+in size by the next
+pooling layer,
+
+00:54:39.206 --> 00:54:42.396 A:middle
+and so on until we
+get to our output.
+
+00:54:43.616 --> 00:54:46.656 A:middle
+As you can see, this
+network has a series
+
+00:54:46.656 --> 00:54:49.576 A:middle
+of convolution layers
+followed by the pooling layers,
+
+00:54:50.146 --> 00:54:53.136 A:middle
+and the last two layers are
+the fully connected layers,
+
+00:54:53.296 --> 00:54:56.546 A:middle
+which generate the final
+output for your network.
+
+00:54:58.126 --> 00:55:00.516 A:middle
+So now that we know what this
+network should look like,
+
+00:54:58.126 --> 00:55:00.516 A:middle
+So now that we know what this
+network should look like,
+
+00:55:00.516 --> 00:55:03.936 A:middle
+and this is very common for a
+convolutional neural network
+
+00:55:03.936 --> 00:55:07.036 A:middle
+for inference, so now
+let's write the code
+
+00:55:07.366 --> 00:55:08.596 A:middle
+to create it in our framework.
+
+00:55:09.746 --> 00:55:12.866 A:middle
+So the first step is
+to create the layers.
+
+00:55:13.576 --> 00:55:15.736 A:middle
+Once again, the trained
+parameters tell us that we need
+
+00:55:15.916 --> 00:55:20.376 A:middle
+to have four convolution layers
+in our network and I'm showing
+
+00:55:20.376 --> 00:55:23.026 A:middle
+that the code had to create
+one of them for simplicity
+
+00:55:23.406 --> 00:55:25.966 A:middle
+but as you can see, I'm
+using exactly the same API
+
+00:55:26.586 --> 00:55:27.636 A:middle
+that I've showed you before.
+
+00:55:28.356 --> 00:55:30.596 A:middle
+Then we need to create
+our pooling layer.
+
+00:55:31.426 --> 00:55:33.886 A:middle
+We just need one because
+we're always going
+
+00:55:33.886 --> 00:55:37.136 A:middle
+to be using the max operation
+with a filter size of 2 by 2.
+
+00:55:38.166 --> 00:55:40.716 A:middle
+And we also need to create
+two fully connected layers,
+
+00:55:41.036 --> 00:55:42.896 A:middle
+and once again I'm only
+showing you the code
+
+00:55:42.896 --> 00:55:44.416 A:middle
+for one for simplicity.
+
+00:55:45.226 --> 00:55:48.276 A:middle
+And now, we need to take
+care of our input and output.
+
+00:55:48.726 --> 00:55:51.546 A:middle
+In this particular
+example, I'm assuming
+
+00:55:51.546 --> 00:55:55.286 A:middle
+that we have an existing Metal
+app and you have some textures
+
+00:55:55.286 --> 00:55:57.196 A:middle
+that you would like to use
+for your input and output,
+
+00:55:57.616 --> 00:56:01.396 A:middle
+and this is the API that you
+need to use to create MPS images
+
+00:55:57.616 --> 00:56:01.396 A:middle
+and this is the API that you
+need to use to create MPS images
+
+00:56:01.766 --> 00:56:03.226 A:middle
+from existing Metal textures.
+
+00:56:03.846 --> 00:56:08.336 A:middle
+And so the last step is
+to encode all your layers
+
+00:56:08.716 --> 00:56:11.556 A:middle
+into an existing command
+buffer in the order prescribed
+
+00:56:11.616 --> 00:56:12.596 A:middle
+by the trained parameters.
+
+00:56:14.686 --> 00:56:18.256 A:middle
+So we have our input and our
+outputs, and now we notice
+
+00:56:18.256 --> 00:56:21.156 A:middle
+that we need one more
+thing to take care of.
+
+00:56:21.156 --> 00:56:24.306 A:middle
+We need to store the output
+of the first layer somewhere.
+
+00:56:24.476 --> 00:56:28.276 A:middle
+So let's use MPS
+temporary images for that.
+
+00:56:28.466 --> 00:56:31.106 A:middle
+This is how you would create
+an MPS temporary image.
+
+00:56:31.526 --> 00:56:33.306 A:middle
+As you can see, this
+is very similar
+
+00:56:33.306 --> 00:56:35.596 A:middle
+to the way you would
+create a regular MPS image.
+
+00:56:36.706 --> 00:56:40.286 A:middle
+And now we immediately use it
+when we encode the first layer.
+
+00:56:40.896 --> 00:56:43.756 A:middle
+And the temporary image
+will go away as soon
+
+00:56:43.756 --> 00:56:45.096 A:middle
+as the command buffer
+is submitted.
+
+00:56:45.986 --> 00:56:47.496 A:middle
+And then we continue.
+
+00:56:47.496 --> 00:56:50.396 A:middle
+We create another temporary
+image to store the output
+
+00:56:50.396 --> 00:56:54.516 A:middle
+of the second layer, and so
+on until we get to our output.
+
+00:56:56.026 --> 00:56:56.446 A:middle
+That's it.
+
+00:56:56.446 --> 00:56:59.586 A:middle
+And just to tie it
+all back together,
+
+00:57:00.146 --> 00:57:03.606 A:middle
+the order in which you encode
+the layers matches the network
+
+00:57:03.606 --> 00:57:06.016 A:middle
+diagram that I showed
+you earlier exactly,
+
+00:57:06.596 --> 00:57:09.016 A:middle
+so starting from the input
+and all the way to the output.
+
+00:57:10.156 --> 00:57:12.876 A:middle
+So now we worked through
+a pretty simple example.
+
+00:57:13.356 --> 00:57:15.146 A:middle
+Let's look at a more
+complex one.
+
+00:57:17.006 --> 00:57:18.956 A:middle
+We've ported the
+inception inference network
+
+00:57:18.956 --> 00:57:21.746 A:middle
+from tensor flow to run
+using the Metal Performance
+
+00:57:21.746 --> 00:57:22.426 A:middle
+Shaders framework.
+
+00:57:23.506 --> 00:57:26.056 A:middle
+This is a very commonly
+used inference network
+
+00:57:26.056 --> 00:57:28.776 A:middle
+for object detection, and
+this is the full diagram
+
+00:57:29.626 --> 00:57:30.216 A:middle
+for this network.
+
+00:57:31.366 --> 00:57:34.516 A:middle
+As you can see, this
+network is a lot more complex
+
+00:57:34.546 --> 00:57:35.846 A:middle
+that the previous
+one I showed you.
+
+00:57:36.686 --> 00:57:37.916 A:middle
+It has over 100 layers.
+
+00:57:38.296 --> 00:57:40.296 A:middle
+But just to remind you,
+all you have to do is
+
+00:57:40.296 --> 00:57:42.466 A:middle
+to call some library functions
+to create these layers.
+
+00:57:43.676 --> 00:57:45.976 A:middle
+And now first, let's take a
+look at this network in action.
+
+00:57:51.046 --> 00:57:53.726 A:middle
+So here I have a collection of
+images of different objects,
+
+00:57:54.226 --> 00:57:56.086 A:middle
+and as soon as I
+tap on this image,
+
+00:57:56.446 --> 00:58:00.446 A:middle
+we will run the inference
+network in real-time
+
+00:57:56.446 --> 00:58:00.446 A:middle
+we will run the inference
+network in real-time
+
+00:58:00.446 --> 00:58:02.686 A:middle
+and it will report
+the top five guesses
+
+00:58:02.686 --> 00:58:04.476 A:middle
+for what it thinks
+this object is.
+
+00:58:05.236 --> 00:58:07.836 A:middle
+So the top guess is
+that it's a zebra.
+
+00:58:09.606 --> 00:58:14.306 A:middle
+Then this is a pickup
+truck, and this a volcano.
+
+00:58:14.646 --> 00:58:16.886 A:middle
+So that looks pretty good
+to me, but of course,
+
+00:58:17.606 --> 00:58:20.256 A:middle
+let's do a real live demo
+right here on this stage.
+
+00:58:20.946 --> 00:58:24.816 A:middle
+And we'll take a picture
+of this water bottle,
+
+00:58:24.816 --> 00:58:30.866 A:middle
+and let's use this
+image, water bottle.
+
+00:58:31.516 --> 00:58:39.746 A:middle
+[ Applause ]
+
+00:58:40.246 --> 00:58:42.996 A:middle
+So what I wanted to show
+you with this live demo is
+
+00:58:42.996 --> 00:58:46.966 A:middle
+that even a large network
+with over 100 layers can run
+
+00:58:47.016 --> 00:58:49.616 A:middle
+in real-time using the Metal
+Performance Shaders framework,
+
+00:58:50.166 --> 00:58:50.976 A:middle
+but this is not all.
+
+00:58:51.766 --> 00:58:54.866 A:middle
+I also want to talk about
+the memory savings we got
+
+00:58:54.966 --> 00:58:57.446 A:middle
+from using MPS temporary
+images in this demo.
+
+00:58:58.286 --> 00:59:01.996 A:middle
+So in the first version of
+this demo, we used MPS images
+
+00:58:58.286 --> 00:59:01.996 A:middle
+So in the first version of
+this demo, we used MPS images
+
+00:59:02.146 --> 00:59:04.726 A:middle
+to store intermediate
+results, and we ended
+
+00:59:04.726 --> 00:59:08.796 A:middle
+up needing 74 MPS
+images totaling in size
+
+00:59:09.256 --> 00:59:12.076 A:middle
+over 80 megabytes for
+the entire network.
+
+00:59:12.786 --> 00:59:15.356 A:middle
+And of course, you don't
+have to use 74 images.
+
+00:59:15.356 --> 00:59:18.466 A:middle
+You can come up with your
+own clever scheme for how
+
+00:59:18.466 --> 00:59:22.766 A:middle
+to reuse these images, but
+this means more stuff to manage
+
+00:59:22.766 --> 00:59:25.306 A:middle
+in your code, and we want to
+make sure that our framework is
+
+00:59:25.306 --> 00:59:27.126 A:middle
+as easy for you to
+use as possible.
+
+00:59:28.006 --> 00:59:29.586 A:middle
+So in the second
+version of the demo,
+
+00:59:30.066 --> 00:59:33.936 A:middle
+we replaced all the MPS images
+with MPS temporary images,
+
+00:59:34.876 --> 00:59:36.566 A:middle
+and this gave us
+several advantages.
+
+00:59:37.016 --> 00:59:40.076 A:middle
+The first one is reduced
+CPU cost in terms of time
+
+00:59:40.076 --> 00:59:45.486 A:middle
+and energy, but also creating
+74 temporary images resulted
+
+00:59:45.526 --> 00:59:50.286 A:middle
+in just 5 underlying memory
+allocations, totaling just
+
+00:59:50.286 --> 00:59:53.986 A:middle
+over 20 megabytes and this
+is 76% of memory savings.
+
+00:59:54.616 --> 00:59:55.296 A:middle
+That's pretty huge.
+
+00:59:56.516 --> 01:00:00.446 A:middle
+So what I showed you with
+these two live demos is
+
+00:59:56.516 --> 01:00:00.446 A:middle
+So what I showed you with
+these two live demos is
+
+01:00:00.486 --> 01:00:02.816 A:middle
+that the Metal Performance
+Shaders framework provides
+
+01:00:03.216 --> 01:00:06.356 A:middle
+complete support for building
+convolutional neural networks
+
+01:00:06.466 --> 01:00:09.836 A:middle
+for inference, and it's
+optimized iOS GPU use.
+
+01:00:10.296 --> 01:00:12.606 A:middle
+So please, use the
+convolutional neural networks
+
+01:00:13.086 --> 01:00:15.266 A:middle
+to build some cool apps.
+
+01:00:15.776 --> 01:00:18.806 A:middle
+So this is the end of
+What's New in Metal talks,
+
+01:00:19.006 --> 01:00:22.656 A:middle
+and if you haven't seen the
+first session, please check
+
+01:00:22.656 --> 01:00:25.496 A:middle
+out the video so you can learn
+about such cool new features
+
+01:00:25.536 --> 01:00:29.306 A:middle
+as tessellation, resource heaps,
+and memoryless render targets
+
+01:00:29.626 --> 01:00:30.986 A:middle
+and improvements to our tools.
+
+01:00:31.886 --> 01:00:37.136 A:middle
+In this session, we talked
+about function specialization
+
+01:00:37.136 --> 01:00:39.636 A:middle
+and function resource
+read-writes, white color
+
+01:00:39.686 --> 01:00:42.026 A:middle
+and texture assets,
+and new additions
+
+01:00:42.026 --> 01:00:44.166 A:middle
+to the Metal performance
+tools, concentrating
+
+01:00:44.166 --> 01:00:45.506 A:middle
+on convolutional
+neural networks.
+
+01:00:46.816 --> 01:00:50.136 A:middle
+For more information about this
+session, please go to this URL.
+
+01:00:51.656 --> 01:00:53.946 A:middle
+You can catch the
+video and get links
+
+01:00:53.996 --> 01:00:56.206 A:middle
+to related documentation
+and sample code.
+
+01:00:57.696 --> 01:00:59.806 A:middle
+And here's some information
+on the related sessions.
+
+01:01:01.066 --> 01:01:03.006 A:middle
+You could always
+check out the videos
+
+01:01:03.456 --> 01:01:05.656 A:middle
+of the past Metal
+sessions online,
+
+01:01:06.006 --> 01:01:08.836 A:middle
+but you can also catch
+an advanced Metal shader
+
+01:01:08.836 --> 01:01:12.576 A:middle
+optimization talk later today,
+and just note the location
+
+01:01:12.576 --> 01:01:14.406 A:middle
+of this talk has
+changed to Knob Hill.
+
+01:01:15.986 --> 01:01:18.456 A:middle
+Tomorrow, you have an
+opportunity to catch the Working
+
+01:01:18.456 --> 01:01:21.046 A:middle
+with White Color talk
+and the Neural Networks
+
+01:01:21.046 --> 01:01:22.976 A:middle
+and Accelerate talk
+where you can learn how
+
+01:01:22.976 --> 01:01:23.956 A:middle
+to create neural networks
+
+01:01:23.956 --> 01:01:26.546 A:middle
+for the CPU using the
+Accelerate framework.
+
+01:01:27.316 --> 01:01:28.826 A:middle
+So thank you very
+much for coming,
+
+01:01:28.936 --> 01:01:30.916 A:middle
+and I hope you have
+a great WWDC.
+
+01:01:31.508 --> 01:01:33.508 A:middle
+[ Applause ]

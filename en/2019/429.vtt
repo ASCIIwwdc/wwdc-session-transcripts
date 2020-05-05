@@ -1,0 +1,2116 @@
+WEBVTT
+
+00:00:00.506 --> 00:00:04.500 A:middle
+[ Music ]
+
+00:00:07.626 --> 00:00:10.016 A:middle
+&gt;&gt; Hello, my name is Davide and
+
+00:00:10.016 --> 00:00:11.066 A:middle
+I am an engineer on the
+
+00:00:11.066 --> 00:00:12.826 A:middle
+Debugging Technologies Team at
+
+00:00:12.826 --> 00:00:13.126 A:middle
+Apple.
+
+00:00:13.866 --> 00:00:15.166 A:middle
+I'm here with my colleague
+
+00:00:15.166 --> 00:00:15.686 A:middle
+Jonas.
+
+00:00:16.306 --> 00:00:18.326 A:middle
+You might be familiar with po, a
+
+00:00:18.476 --> 00:00:20.576 A:middle
+way to print variables in LLDB.
+
+00:00:21.286 --> 00:00:23.426 A:middle
+Today, we will talk about it and
+
+00:00:23.426 --> 00:00:24.696 A:middle
+how it works.
+
+00:00:24.846 --> 00:00:26.846 A:middle
+We will also present other ways
+
+00:00:26.846 --> 00:00:28.286 A:middle
+to look at the variables in your
+
+00:00:28.286 --> 00:00:30.006 A:middle
+source code together with
+
+00:00:30.006 --> 00:00:32.906 A:middle
+powerful mechanisms to format
+
+00:00:33.786 --> 00:00:34.286 A:middle
+the output.
+
+00:00:34.286 --> 00:00:36.726 A:middle
+LLDB is the debugger that powers
+
+00:00:36.726 --> 00:00:38.256 A:middle
+the variable view in Xcode.
+
+00:00:39.426 --> 00:00:40.816 A:middle
+You can see the variables you
+
+00:00:40.816 --> 00:00:42.466 A:middle
+define and their types there.
+
+00:00:43.236 --> 00:00:45.086 A:middle
+While debugging in Xcode, you
+
+00:00:45.086 --> 00:00:47.016 A:middle
+can also directly send commands
+
+00:00:47.076 --> 00:00:49.156 A:middle
+and interact with LLDB through
+
+00:00:49.156 --> 00:00:50.866 A:middle
+the console in the bottom right
+
+00:00:50.866 --> 00:00:51.526 A:middle
+of the window.
+
+00:00:52.416 --> 00:00:53.946 A:middle
+This includes the ability to
+
+00:00:53.946 --> 00:00:55.176 A:middle
+print the values of the
+
+00:00:55.176 --> 00:00:56.516 A:middle
+variables to defining your
+
+00:00:56.516 --> 00:00:58.026 A:middle
+source code while you're
+
+00:00:58.026 --> 00:00:59.386 A:middle
+investigating a bug in your
+
+00:00:59.386 --> 00:01:00.076 A:middle
+application.
+
+00:00:59.386 --> 00:01:00.076 A:middle
+application.
+
+00:01:00.576 --> 00:01:02.926 A:middle
+LLDB offer several ways to
+
+00:01:02.926 --> 00:01:04.025 A:middle
+accomplish this task.
+
+00:01:04.426 --> 00:01:05.756 A:middle
+Each of which comes with a
+
+00:01:05.756 --> 00:01:07.306 A:middle
+different set of trade-offs.
+
+00:01:07.596 --> 00:01:08.516 A:middle
+Let's look at them.
+
+00:01:09.236 --> 00:01:11.456 A:middle
+As an example, suppose we have a
+
+00:01:11.456 --> 00:01:13.266 A:middle
+struct that represents a Trip,
+
+00:01:13.736 --> 00:01:15.616 A:middle
+consisting of a name and a list
+
+00:01:15.616 --> 00:01:16.576 A:middle
+of destinations.
+
+00:01:17.126 --> 00:01:18.516 A:middle
+Let's go on a cruise around the
+
+00:01:18.516 --> 00:01:19.336 A:middle
+Mediterranean.
+
+00:01:20.886 --> 00:01:22.236 A:middle
+The first command we are going
+
+00:01:22.236 --> 00:01:25.296 A:middle
+to explore is po, which you can
+
+00:01:25.296 --> 00:01:27.266 A:middle
+think as of standing for print
+
+00:01:27.266 --> 00:01:28.306 A:middle
+object description.
+
+00:01:28.476 --> 00:01:30.316 A:middle
+When we use this command, what
+
+00:01:30.316 --> 00:01:32.276 A:middle
+we get in return is the object
+
+00:01:32.276 --> 00:01:34.366 A:middle
+description which is a textual
+
+00:01:34.366 --> 00:01:36.266 A:middle
+representation of an instance of
+
+00:01:36.266 --> 00:01:36.816 A:middle
+your type.
+
+00:01:37.496 --> 00:01:39.106 A:middle
+The system runtime provides a
+
+00:01:39.106 --> 00:01:41.426 A:middle
+default one but it's possible to
+
+00:01:41.426 --> 00:01:42.246 A:middle
+customize it.
+
+00:01:43.126 --> 00:01:44.766 A:middle
+We can do this by adding a
+
+00:01:44.766 --> 00:01:46.116 A:middle
+conformance to the
+
+00:01:46.116 --> 00:01:48.096 A:middle
+CustomDebugStringConvertible
+
+00:01:48.096 --> 00:01:48.726 A:middle
+protocol.
+
+00:01:48.726 --> 00:01:51.426 A:middle
+This requires having a single
+
+00:01:51.426 --> 00:01:52.706 A:middle
+property called the
+
+00:01:52.706 --> 00:01:53.806 A:middle
+debugDescription.
+
+00:01:54.996 --> 00:01:57.056 A:middle
+Now, if we print the object
+
+00:01:57.056 --> 00:01:58.586 A:middle
+description in the debugger,
+
+00:01:59.076 --> 00:02:00.356 A:middle
+we'll see the description we
+
+00:01:59.076 --> 00:02:00.356 A:middle
+we'll see the description we
+
+00:02:00.356 --> 00:02:02.356 A:middle
+provided instead of the default
+
+00:02:02.356 --> 00:02:02.616 A:middle
+one.
+
+00:02:03.556 --> 00:02:04.786 A:middle
+The change only affects the
+
+00:02:04.786 --> 00:02:06.086 A:middle
+top-level description.
+
+00:02:06.086 --> 00:02:08.996 A:middle
+If you need to modify the
+
+00:02:08.996 --> 00:02:10.596 A:middle
+substructure, check the
+
+00:02:10.596 --> 00:02:11.796 A:middle
+documentation for the
+
+00:02:11.796 --> 00:02:13.586 A:middle
+CustomerReflectable protocol.
+
+00:02:14.406 --> 00:02:15.716 A:middle
+This can also be done for
+
+00:02:15.716 --> 00:02:17.496 A:middle
+Objective-C objects by
+
+00:02:17.496 --> 00:02:18.896 A:middle
+implementing the description
+
+00:02:18.896 --> 00:02:19.406 A:middle
+method.
+
+00:02:20.856 --> 00:02:23.306 A:middle
+But po does more than just print
+
+00:02:23.306 --> 00:02:23.976 A:middle
+variables.
+
+00:02:24.246 --> 00:02:26.406 A:middle
+For example, you can take the
+
+00:02:26.406 --> 00:02:28.226 A:middle
+name of our cruise and compute
+
+00:02:28.226 --> 00:02:30.606 A:middle
+an uppercase version of it or
+
+00:02:30.606 --> 00:02:32.396 A:middle
+get an alphabetically sorted
+
+00:02:32.396 --> 00:02:33.396 A:middle
+array of the cruise
+
+00:02:33.396 --> 00:02:34.236 A:middle
+destinations.
+
+00:02:35.216 --> 00:02:37.496 A:middle
+In general, it can evaluate
+
+00:02:37.496 --> 00:02:38.996 A:middle
+arbitrary expressions.
+
+00:02:39.376 --> 00:02:41.076 A:middle
+So, anything that would compile
+
+00:02:41.076 --> 00:02:42.876 A:middle
+at a given prompt in the program
+
+00:02:43.286 --> 00:02:44.826 A:middle
+can be passed as an argument to
+
+00:02:44.826 --> 00:02:45.456 A:middle
+the comment.
+
+00:02:46.836 --> 00:02:49.356 A:middle
+In fact, po is actually an alias
+
+00:02:49.356 --> 00:02:51.156 A:middle
+for a command called expression
+
+00:02:51.626 --> 00:02:53.216 A:middle
+with an argument for printing
+
+00:02:53.216 --> 00:02:54.256 A:middle
+the object description.
+
+00:02:54.316 --> 00:02:57.566 A:middle
+LECC and LLDB are a convenient
+
+00:02:57.566 --> 00:02:59.686 A:middle
+way to save keystrokes.
+
+00:02:59.746 --> 00:03:01.776 A:middle
+If you wanted to implement po
+
+00:02:59.746 --> 00:03:01.776 A:middle
+If you wanted to implement po
+
+00:03:01.776 --> 00:03:04.006 A:middle
+yourself, for example, you could
+
+00:03:04.006 --> 00:03:05.126 A:middle
+use command alias.
+
+00:03:05.306 --> 00:03:07.256 A:middle
+Specify your own command name as
+
+00:03:07.256 --> 00:03:08.946 A:middle
+the first argument, and then
+
+00:03:08.946 --> 00:03:10.336 A:middle
+follow with the command you want
+
+00:03:10.336 --> 00:03:10.976 A:middle
+to alias.
+
+00:03:11.306 --> 00:03:13.476 A:middle
+Once that's defined, you can use
+
+00:03:13.476 --> 00:03:15.096 A:middle
+it like any other commands in
+
+00:03:15.096 --> 00:03:15.636 A:middle
+LLDB.
+
+00:03:17.186 --> 00:03:18.996 A:middle
+Now that we know what po can do,
+
+00:03:19.236 --> 00:03:20.726 A:middle
+let's take a deeper look at how
+
+00:03:20.726 --> 00:03:21.306 A:middle
+it works.
+
+00:03:22.256 --> 00:03:24.026 A:middle
+Let's go through the steps that
+
+00:03:24.026 --> 00:03:25.626 A:middle
+po has to perform to deliver a
+
+00:03:25.626 --> 00:03:25.976 A:middle
+value.
+
+00:03:26.486 --> 00:03:28.406 A:middle
+To provide the full expressivity
+
+00:03:28.406 --> 00:03:29.696 A:middle
+of the language you are using
+
+00:03:30.076 --> 00:03:32.306 A:middle
+LLDB doesn't parse and evaluate
+
+00:03:32.306 --> 00:03:33.916 A:middle
+the expression itself.
+
+00:03:34.146 --> 00:03:36.566 A:middle
+Instead, it starts by generating
+
+00:03:36.566 --> 00:03:38.156 A:middle
+a piece of source code that can
+
+00:03:38.156 --> 00:03:39.886 A:middle
+be compiled from the expression
+
+00:03:39.886 --> 00:03:41.716 A:middle
+you gave it, similar to the
+
+00:03:41.716 --> 00:03:42.946 A:middle
+snippet shown here.
+
+00:03:43.396 --> 00:03:45.456 A:middle
+Then it uses the embedded Swift
+
+00:03:45.456 --> 00:03:47.306 A:middle
+and claim compilers to compile
+
+00:03:47.306 --> 00:03:50.016 A:middle
+the code which gets executed in
+
+00:03:50.016 --> 00:03:51.376 A:middle
+the context of your debugged
+
+00:03:51.376 --> 00:03:51.896 A:middle
+program.
+
+00:03:52.616 --> 00:03:54.636 A:middle
+Once the execution is complete,
+
+00:03:55.146 --> 00:03:57.196 A:middle
+LLDB has to access the resulting
+
+00:03:57.196 --> 00:03:57.536 A:middle
+value.
+
+00:03:59.716 --> 00:04:01.266 A:middle
+From there you need to get the
+
+00:03:59.716 --> 00:04:01.266 A:middle
+From there you need to get the
+
+00:04:01.266 --> 00:04:02.256 A:middle
+object description.
+
+00:04:02.616 --> 00:04:04.636 A:middle
+To do this, LLDB wraps the
+
+00:04:04.636 --> 00:04:06.606 A:middle
+previous result in another piece
+
+00:04:06.606 --> 00:04:07.366 A:middle
+of source code.
+
+00:04:08.026 --> 00:04:09.986 A:middle
+This also gets compiled and
+
+00:04:09.986 --> 00:04:11.656 A:middle
+executed in the context of your
+
+00:04:11.656 --> 00:04:13.316 A:middle
+debug process.
+
+00:04:13.316 --> 00:04:15.056 A:middle
+The result of this execution is
+
+00:04:15.056 --> 00:04:17.646 A:middle
+a string that LLDB will display
+
+00:04:17.646 --> 00:04:19.435 A:middle
+as the result of the po command.
+
+00:04:19.796 --> 00:04:21.435 A:middle
+Po is only the first of the
+
+00:04:21.435 --> 00:04:22.956 A:middle
+three ways we are presenting to
+
+00:04:22.956 --> 00:04:24.526 A:middle
+print variables in LLDB.
+
+00:04:24.926 --> 00:04:26.166 A:middle
+Let's look at the others.
+
+00:04:26.606 --> 00:04:28.176 A:middle
+The second way to print
+
+00:04:28.176 --> 00:04:30.026 A:middle
+variables in an LLDB is the
+
+00:04:30.026 --> 00:04:30.706 A:middle
+p-command.
+
+00:04:31.316 --> 00:04:32.896 A:middle
+You can think of it as print
+
+00:04:33.116 --> 00:04:34.746 A:middle
+without the object description.
+
+00:04:35.356 --> 00:04:36.746 A:middle
+Let's look at its output.
+
+00:04:37.576 --> 00:04:38.986 A:middle
+The first thing to notice is
+
+00:04:38.986 --> 00:04:40.356 A:middle
+that the representation is
+
+00:04:40.356 --> 00:04:41.946 A:middle
+slightly different from the one
+
+00:04:41.946 --> 00:04:44.006 A:middle
+provided by po, but it is
+
+00:04:44.006 --> 00:04:45.926 A:middle
+equivalent in that it contains
+
+00:04:45.926 --> 00:04:47.006 A:middle
+the same information.
+
+00:04:47.766 --> 00:04:49.176 A:middle
+The second thing to notice is
+
+00:04:49.176 --> 00:04:50.776 A:middle
+that the resulting value has
+
+00:04:50.776 --> 00:04:53.716 A:middle
+been given a name, $R0.
+
+00:04:53.866 --> 00:04:55.396 A:middle
+This is a special convention in
+
+00:04:55.396 --> 00:04:55.976 A:middle
+LLDB.
+
+00:04:56.686 --> 00:04:58.576 A:middle
+The result of each expression is
+
+00:04:58.576 --> 00:05:00.476 A:middle
+given an incrementing name, such
+
+00:04:58.576 --> 00:05:00.476 A:middle
+given an incrementing name, such
+
+00:05:00.476 --> 00:05:02.726 A:middle
+as $R1 and $R2.
+
+00:05:02.726 --> 00:05:05.156 A:middle
+And this name can be used in
+
+00:05:05.156 --> 00:05:06.786 A:middle
+later expressions in LLDB.
+
+00:05:07.516 --> 00:05:10.576 A:middle
+You can refer to $R0 the same
+
+00:05:10.576 --> 00:05:12.196 A:middle
+way as any other variable in
+
+00:05:12.196 --> 00:05:12.976 A:middle
+your project.
+
+00:05:13.496 --> 00:05:15.256 A:middle
+You can, for example, print the
+
+00:05:15.256 --> 00:05:16.376 A:middle
+fields of destruction.
+
+00:05:17.156 --> 00:05:19.316 A:middle
+Similar to po, p is not a
+
+00:05:19.316 --> 00:05:21.156 A:middle
+first-class command in LLDB.
+
+00:05:21.606 --> 00:05:22.966 A:middle
+It's just an alias for the
+
+00:05:22.966 --> 00:05:25.356 A:middle
+expression command, but without
+
+00:05:25.356 --> 00:05:27.686 A:middle
+the -- object description after
+
+00:05:28.586 --> 00:05:28.756 A:middle
+it.
+
+00:05:28.756 --> 00:05:30.386 A:middle
+As we previously did with po,
+
+00:05:30.756 --> 00:05:32.586 A:middle
+let's look at how po works under
+
+00:05:32.586 --> 00:05:33.056 A:middle
+the hood.
+
+00:05:35.166 --> 00:05:36.736 A:middle
+Since p doesn't have to get the
+
+00:05:36.736 --> 00:05:38.306 A:middle
+description, it doesn't have to
+
+00:05:38.306 --> 00:05:39.176 A:middle
+do as much work.
+
+00:05:39.846 --> 00:05:41.936 A:middle
+You may recall this diagram from
+
+00:05:41.936 --> 00:05:43.396 A:middle
+the earlier description of po.
+
+00:05:43.966 --> 00:05:45.746 A:middle
+In fact, the first part
+
+00:05:46.086 --> 00:05:47.636 A:middle
+compiling and evaluating the
+
+00:05:47.636 --> 00:05:49.656 A:middle
+expression is exactly the same
+
+00:05:49.656 --> 00:05:50.636 A:middle
+for both commands.
+
+00:05:51.266 --> 00:05:52.826 A:middle
+But once it gets the results
+
+00:05:53.266 --> 00:05:55.436 A:middle
+LLDB perform a step name dynamic
+
+00:05:55.436 --> 00:05:56.726 A:middle
+type resolution on it.
+
+00:05:57.486 --> 00:05:58.856 A:middle
+Let's describe it with more
+
+00:05:58.856 --> 00:05:59.436 A:middle
+details.
+
+00:06:00.146 --> 00:06:01.896 A:middle
+In order to do that, we have to
+
+00:06:01.896 --> 00:06:04.066 A:middle
+modify our code example a bit.
+
+00:06:04.446 --> 00:06:05.176 A:middle
+Let's see how.
+
+00:06:06.356 --> 00:06:08.096 A:middle
+We change our Trip struct to
+
+00:06:08.296 --> 00:06:09.916 A:middle
+conform to a protocol name
+
+00:06:09.916 --> 00:06:10.566 A:middle
+activity.
+
+00:06:11.666 --> 00:06:12.956 A:middle
+In Swift, the static
+
+00:06:12.956 --> 00:06:14.466 A:middle
+representation of a type in the
+
+00:06:14.466 --> 00:06:16.326 A:middle
+source code and the dynamic type
+
+00:06:16.326 --> 00:06:17.726 A:middle
+at the runtime, aren't
+
+00:06:17.726 --> 00:06:18.896 A:middle
+necessarily the same.
+
+00:06:18.986 --> 00:06:21.796 A:middle
+For example, a variable might be
+
+00:06:21.796 --> 00:06:23.396 A:middle
+declared using a protocol of
+
+00:06:23.396 --> 00:06:24.066 A:middle
+this type.
+
+00:06:25.006 --> 00:06:27.386 A:middle
+In this example, the static type
+
+00:06:27.386 --> 00:06:28.486 A:middle
+of cruise's Activity.
+
+00:06:29.156 --> 00:06:31.216 A:middle
+But at runtime, the variable
+
+00:06:31.216 --> 00:06:32.986 A:middle
+will have an instance of type
+
+00:06:32.986 --> 00:06:35.126 A:middle
+Trip which is the dynamic time.
+
+00:06:35.126 --> 00:06:38.046 A:middle
+If we print the value of cruise,
+
+00:06:38.046 --> 00:06:39.856 A:middle
+we get back an object of type
+
+00:06:39.856 --> 00:06:42.446 A:middle
+Trip because LLDB retell results
+
+00:06:42.446 --> 00:06:44.176 A:middle
+metadata to display the most
+
+00:06:44.176 --> 00:06:45.616 A:middle
+accurate type for a given
+
+00:06:45.616 --> 00:06:47.116 A:middle
+variable at a given program
+
+00:06:47.116 --> 00:06:47.466 A:middle
+point.
+
+00:06:47.466 --> 00:06:49.626 A:middle
+This is what we call dynamic
+
+00:06:49.626 --> 00:06:50.586 A:middle
+type resolution.
+
+00:06:51.096 --> 00:06:53.466 A:middle
+With the p-command, dynamic type
+
+00:06:53.466 --> 00:06:55.796 A:middle
+resolution is only performed on
+
+00:06:55.796 --> 00:06:57.146 A:middle
+the result of the expression.
+
+00:06:57.826 --> 00:06:59.346 A:middle
+Let's say we want to access one
+
+00:06:59.346 --> 00:07:00.386 A:middle
+of the field of cruise.
+
+00:06:59.346 --> 00:07:00.386 A:middle
+of the field of cruise.
+
+00:07:01.006 --> 00:07:02.966 A:middle
+When LLDB tries to evaluate this
+
+00:07:02.966 --> 00:07:05.016 A:middle
+expression through p, it sees
+
+00:07:05.016 --> 00:07:06.676 A:middle
+that cruise is an object of type
+
+00:07:06.676 --> 00:07:08.536 A:middle
+Activity and doesn't have a
+
+00:07:08.536 --> 00:07:09.506 A:middle
+member called name.
+
+00:07:09.776 --> 00:07:11.596 A:middle
+The evaluation fails with an
+
+00:07:11.596 --> 00:07:11.886 A:middle
+error.
+
+00:07:12.576 --> 00:07:14.476 A:middle
+This happens because if you
+
+00:07:14.476 --> 00:07:16.936 A:middle
+remember, LLDB compiles code
+
+00:07:16.936 --> 00:07:18.736 A:middle
+where running p and the only
+
+00:07:18.736 --> 00:07:20.616 A:middle
+type it sees is the one in your
+
+00:07:20.616 --> 00:07:22.326 A:middle
+source code, the static one.
+
+00:07:23.196 --> 00:07:24.616 A:middle
+It's the same thing as typing
+
+00:07:24.616 --> 00:07:26.506 A:middle
+the expression cruise.name in
+
+00:07:26.506 --> 00:07:27.406 A:middle
+your source code.
+
+00:07:27.836 --> 00:07:29.536 A:middle
+The static compiler will reject
+
+00:07:29.536 --> 00:07:30.336 A:middle
+it with an error.
+
+00:07:30.696 --> 00:07:32.956 A:middle
+If you want to evaluate the
+
+00:07:32.956 --> 00:07:34.846 A:middle
+expression without errors, you
+
+00:07:34.846 --> 00:07:36.536 A:middle
+need to first cast the object
+
+00:07:36.536 --> 00:07:39.136 A:middle
+explicitly to its dynamic type
+
+00:07:39.136 --> 00:07:40.596 A:middle
+and then access the field on the
+
+00:07:40.596 --> 00:07:41.116 A:middle
+result.
+
+00:07:41.586 --> 00:07:42.916 A:middle
+This is true both for the
+
+00:07:42.916 --> 00:07:44.626 A:middle
+debugger and your source code.
+
+00:07:46.526 --> 00:07:48.636 A:middle
+P is not yet done with its work.
+
+00:07:48.636 --> 00:07:50.936 A:middle
+After it performed dynamic type
+
+00:07:50.936 --> 00:07:53.516 A:middle
+resolution on the result, LLDB
+
+00:07:53.516 --> 00:07:55.236 A:middle
+passes the resulting object to
+
+00:07:55.236 --> 00:07:57.396 A:middle
+the formatter subsystem which is
+
+00:07:57.396 --> 00:07:59.306 A:middle
+the part of LLDB responsible for
+
+00:07:59.306 --> 00:08:01.286 A:middle
+printing a human readable
+
+00:07:59.306 --> 00:08:01.286 A:middle
+printing a human readable
+
+00:08:01.286 --> 00:08:02.556 A:middle
+description of objects.
+
+00:08:02.916 --> 00:08:04.026 A:middle
+Let's dive into it.
+
+00:08:05.096 --> 00:08:06.986 A:middle
+To show how formatters work,
+
+00:08:07.226 --> 00:08:08.626 A:middle
+we're going to display their
+
+00:08:08.626 --> 00:08:09.666 A:middle
+input and output.
+
+00:08:10.196 --> 00:08:12.056 A:middle
+Here's what that string looks
+
+00:08:12.056 --> 00:08:13.916 A:middle
+like if there was no formatter
+
+00:08:13.916 --> 00:08:14.676 A:middle
+for the type.
+
+00:08:15.586 --> 00:08:17.386 A:middle
+If you want to try yourself, you
+
+00:08:17.386 --> 00:08:19.616 A:middle
+can pass the -- raw option to p.
+
+00:08:19.616 --> 00:08:22.406 A:middle
+Standard library types even
+
+00:08:22.406 --> 00:08:23.996 A:middle
+simple ones like strings and
+
+00:08:23.996 --> 00:08:25.446 A:middle
+integers have complex
+
+00:08:25.446 --> 00:08:27.286 A:middle
+representation because they are
+
+00:08:27.286 --> 00:08:28.956 A:middle
+highly optimized for speed and
+
+00:08:28.956 --> 00:08:29.426 A:middle
+size.
+
+00:08:29.526 --> 00:08:32.176 A:middle
+After the formatter operates in
+
+00:08:32.176 --> 00:08:34.336 A:middle
+it a string looks exactly as you
+
+00:08:34.336 --> 00:08:35.696 A:middle
+expect, a sequence of
+
+00:08:35.696 --> 00:08:37.606 A:middle
+characters.
+
+00:08:37.606 --> 00:08:40.025 A:middle
+LLDB knows about a bunch of
+
+00:08:40.025 --> 00:08:41.936 A:middle
+commonly used types and provides
+
+00:08:41.936 --> 00:08:43.145 A:middle
+formatters for them.
+
+00:08:43.796 --> 00:08:45.766 A:middle
+You can also write for customize
+
+00:08:45.766 --> 00:08:46.416 A:middle
+formatters.
+
+00:08:46.676 --> 00:08:48.166 A:middle
+We'll talk about it shortly.
+
+00:08:49.236 --> 00:08:51.466 A:middle
+We talk about p and po.
+
+00:08:52.226 --> 00:08:53.986 A:middle
+We are now going to describe the
+
+00:08:53.986 --> 00:08:55.676 A:middle
+third way to print variables in
+
+00:08:55.676 --> 00:08:57.636 A:middle
+LLDB, the v-command.
+
+00:08:59.126 --> 00:09:01.506 A:middle
+The output of v is exactly the
+
+00:08:59.126 --> 00:09:01.506 A:middle
+The output of v is exactly the
+
+00:09:01.506 --> 00:09:03.916 A:middle
+same as p as it also relies on
+
+00:09:03.916 --> 00:09:05.626 A:middle
+the formatter we just described.
+
+00:09:06.866 --> 00:09:08.516 A:middle
+As with the other two commands,
+
+00:09:08.616 --> 00:09:10.846 A:middle
+v is just an alias we introduced
+
+00:09:10.846 --> 00:09:13.596 A:middle
+in Xcode 10.2 for the frame
+
+00:09:13.596 --> 00:09:14.566 A:middle
+variable command.
+
+00:09:14.926 --> 00:09:16.716 A:middle
+Unlike the other two mechanisms,
+
+00:09:16.966 --> 00:09:18.696 A:middle
+the v-command doesn't compile
+
+00:09:18.696 --> 00:09:20.476 A:middle
+and execute code at all which
+
+00:09:20.476 --> 00:09:22.246 A:middle
+makes it very fast.
+
+00:09:22.246 --> 00:09:24.726 A:middle
+Since v is not compiling code,
+
+00:09:24.726 --> 00:09:26.816 A:middle
+it does its own syntax which
+
+00:09:26.816 --> 00:09:28.636 A:middle
+will not necessarily be the same
+
+00:09:28.636 --> 00:09:29.486 A:middle
+as the language you are
+
+00:09:29.486 --> 00:09:30.096 A:middle
+debugging.
+
+00:09:30.666 --> 00:09:33.096 A:middle
+For example, it used the dot and
+
+00:09:33.096 --> 00:09:35.316 A:middle
+subscript operators to access
+
+00:09:35.316 --> 00:09:36.106 A:middle
+fields over time.
+
+00:09:36.646 --> 00:09:38.156 A:middle
+But it won't perform overload
+
+00:09:38.156 --> 00:09:39.906 A:middle
+the resolution and computed
+
+00:09:39.906 --> 00:09:41.906 A:middle
+properties cannot be evaluated
+
+00:09:42.526 --> 00:09:44.316 A:middle
+since that would require code to
+
+00:09:44.316 --> 00:09:45.266 A:middle
+be executed.
+
+00:09:46.026 --> 00:09:48.866 A:middle
+You can use p or po if you need
+
+00:09:48.866 --> 00:09:49.226 A:middle
+those.
+
+00:09:49.696 --> 00:09:52.206 A:middle
+As you can guess, v works fairly
+
+00:09:52.206 --> 00:09:53.716 A:middle
+differently from the other two
+
+00:09:53.716 --> 00:09:55.026 A:middle
+mechanisms for printing
+
+00:09:55.026 --> 00:09:55.726 A:middle
+variables.
+
+00:09:56.196 --> 00:09:58.016 A:middle
+Let's go ahead and clarify some
+
+00:09:58.016 --> 00:09:58.646 A:middle
+details.
+
+00:09:59.286 --> 00:10:00.746 A:middle
+In our grand tradition of
+
+00:09:59.286 --> 00:10:00.746 A:middle
+In our grand tradition of
+
+00:10:00.746 --> 00:10:02.766 A:middle
+diagrams here is one for v.
+
+00:10:03.446 --> 00:10:04.926 A:middle
+We want to print a variable.
+
+00:10:05.336 --> 00:10:07.816 A:middle
+To do so, v first consults the
+
+00:10:07.816 --> 00:10:09.376 A:middle
+program state to locate the
+
+00:10:09.376 --> 00:10:10.356 A:middle
+variable in memory.
+
+00:10:10.836 --> 00:10:12.886 A:middle
+Then it reads the value of the
+
+00:10:12.886 --> 00:10:13.996 A:middle
+variable from memory.
+
+00:10:14.376 --> 00:10:16.146 A:middle
+Then it performs dynamic type
+
+00:10:16.146 --> 00:10:17.156 A:middle
+resolution on it.
+
+00:10:17.506 --> 00:10:19.306 A:middle
+If the user asked to access
+
+00:10:19.306 --> 00:10:21.646 A:middle
+subfields, it repeats the step
+
+00:10:21.786 --> 00:10:23.176 A:middle
+for each of the subfields
+
+00:10:23.416 --> 00:10:24.846 A:middle
+performing dynamic type
+
+00:10:24.846 --> 00:10:26.226 A:middle
+resolution at each round.
+
+00:10:26.786 --> 00:10:29.176 A:middle
+Once it's done, it passes the
+
+00:10:29.176 --> 00:10:30.866 A:middle
+result to the data formatter
+
+00:10:30.866 --> 00:10:31.616 A:middle
+subsystem.
+
+00:10:32.356 --> 00:10:34.336 A:middle
+The fact that v performs dynamic
+
+00:10:34.336 --> 00:10:35.956 A:middle
+type resolution potentially
+
+00:10:35.956 --> 00:10:38.206 A:middle
+multiple times is an important
+
+00:10:38.206 --> 00:10:40.176 A:middle
+detail to remember and the big
+
+00:10:40.176 --> 00:10:42.286 A:middle
+difference in the way p and v
+
+00:10:42.286 --> 00:10:43.226 A:middle
+operates.
+
+00:10:43.226 --> 00:10:44.826 A:middle
+The formatter indeed performs
+
+00:10:44.826 --> 00:10:46.416 A:middle
+dynamic type resolution only
+
+00:10:46.416 --> 00:10:46.846 A:middle
+once.
+
+00:10:46.846 --> 00:10:48.796 A:middle
+Let's look at the scenario where
+
+00:10:48.796 --> 00:10:49.726 A:middle
+these matters.
+
+00:10:51.146 --> 00:10:53.146 A:middle
+We are back to our example where
+
+00:10:53.146 --> 00:10:54.666 A:middle
+p was failing to access the
+
+00:10:54.666 --> 00:10:55.546 A:middle
+member of cruise.
+
+00:10:56.266 --> 00:10:57.766 A:middle
+By performing dynamic type
+
+00:10:57.766 --> 00:10:59.396 A:middle
+resolution at each step of the
+
+00:10:59.396 --> 00:11:01.716 A:middle
+interpretation, v is able to
+
+00:10:59.396 --> 00:11:01.716 A:middle
+interpretation, v is able to
+
+00:11:01.716 --> 00:11:03.136 A:middle
+understand that cruise is an
+
+00:11:03.136 --> 00:11:05.576 A:middle
+object of type Trip and access
+
+00:11:05.576 --> 00:11:06.696 A:middle
+its field in memory.
+
+00:11:06.946 --> 00:11:09.516 A:middle
+This is a scenario where v is
+
+00:11:09.516 --> 00:11:11.206 A:middle
+strictly more powerful than p
+
+00:11:11.366 --> 00:11:13.016 A:middle
+and allows you to look at your
+
+00:11:13.016 --> 00:11:14.796 A:middle
+types where p doesn't or without
+
+00:11:14.796 --> 00:11:15.886 A:middle
+an explicit cast.
+
+00:11:17.126 --> 00:11:18.606 A:middle
+We are done describing the three
+
+00:11:18.606 --> 00:11:20.226 A:middle
+different ways for printing
+
+00:11:20.226 --> 00:11:21.506 A:middle
+variables in LLDB.
+
+00:11:23.356 --> 00:11:24.986 A:middle
+Let's have a recap and the
+
+00:11:24.986 --> 00:11:27.046 A:middle
+side-by-side comparison of how
+
+00:11:27.046 --> 00:11:29.556 A:middle
+the po, p and v commands differ.
+
+00:11:30.466 --> 00:11:32.116 A:middle
+The first point we want to make
+
+00:11:32.116 --> 00:11:33.856 A:middle
+is about how objects are
+
+00:11:33.856 --> 00:11:34.556 A:middle
+presented.
+
+00:11:35.326 --> 00:11:37.366 A:middle
+The po command uses the object
+
+00:11:37.366 --> 00:11:39.636 A:middle
+description, whereas the p and v
+
+00:11:39.636 --> 00:11:42.066 A:middle
+commands use the data formatters
+
+00:11:42.066 --> 00:11:43.226 A:middle
+to display the object.
+
+00:11:43.916 --> 00:11:45.476 A:middle
+We also want to remember how our
+
+00:11:45.476 --> 00:11:46.686 A:middle
+results are computed.
+
+00:11:47.376 --> 00:11:48.886 A:middle
+Both po and p compile
+
+00:11:48.886 --> 00:11:50.676 A:middle
+expressions and have access to
+
+00:11:50.676 --> 00:11:51.546 A:middle
+the full language.
+
+00:11:52.136 --> 00:11:54.276 A:middle
+V instead has its own syntax
+
+00:11:54.366 --> 00:11:56.436 A:middle
+interprets the expression and
+
+00:11:56.436 --> 00:11:58.366 A:middle
+performs dynamic type resolution
+
+00:11:58.366 --> 00:11:59.346 A:middle
+for each step of the
+
+00:11:59.346 --> 00:12:00.216 A:middle
+interpretation.
+
+00:11:59.346 --> 00:12:00.216 A:middle
+interpretation.
+
+00:12:02.176 --> 00:12:04.516 A:middle
+We mentioned earlier that LLDB
+
+00:12:04.516 --> 00:12:06.336 A:middle
+formatting can be customized.
+
+00:12:06.686 --> 00:12:08.706 A:middle
+To talk more about that, here is
+
+00:12:08.706 --> 00:12:09.786 A:middle
+my colleague Jonas.
+
+00:12:10.236 --> 00:12:12.996 A:middle
+&gt;&gt; Hi, I'm Jonas, and I'm also
+
+00:12:12.996 --> 00:12:14.266 A:middle
+an engineer on the Debugging
+
+00:12:14.266 --> 00:12:15.186 A:middle
+Technologies Team.
+
+00:12:16.026 --> 00:12:18.096 A:middle
+In LLDB, data formatter is
+
+00:12:18.096 --> 00:12:19.556 A:middle
+defined how variables are
+
+00:12:19.556 --> 00:12:20.856 A:middle
+displayed in the debugger.
+
+00:12:22.436 --> 00:12:24.086 A:middle
+There are building formatters
+
+00:12:24.086 --> 00:12:25.086 A:middle
+for common types.
+
+00:12:25.476 --> 00:12:27.456 A:middle
+For instance, when using the
+
+00:12:27.456 --> 00:12:28.906 A:middle
+v-commands, we can print the
+
+00:12:28.906 --> 00:12:30.866 A:middle
+destinations of our cruise and
+
+00:12:30.866 --> 00:12:32.396 A:middle
+the array elements are displayed
+
+00:12:32.396 --> 00:12:33.376 A:middle
+in a readable format.
+
+00:12:34.336 --> 00:12:36.136 A:middle
+Usually, the default formatter
+
+00:12:36.136 --> 00:12:37.816 A:middle
+works great for both the user
+
+00:12:37.816 --> 00:12:39.586 A:middle
+defined types and for types
+
+00:12:39.586 --> 00:12:40.516 A:middle
+coming from the standard
+
+00:12:40.516 --> 00:12:40.936 A:middle
+library.
+
+00:12:41.676 --> 00:12:43.256 A:middle
+But sometimes you might want to
+
+00:12:43.256 --> 00:12:45.196 A:middle
+tweak an existing formatter or
+
+00:12:45.196 --> 00:12:46.126 A:middle
+to find one yourself.
+
+00:12:47.836 --> 00:12:49.636 A:middle
+And you can, because data
+
+00:12:49.636 --> 00:12:51.836 A:middle
+formatters in LLDB are fully
+
+00:12:51.836 --> 00:12:52.536 A:middle
+extensible.
+
+00:12:53.216 --> 00:12:54.596 A:middle
+Every type can have its own
+
+00:12:54.596 --> 00:12:55.446 A:middle
+representation.
+
+00:12:56.096 --> 00:12:57.106 A:middle
+To help you customize that
+
+00:12:57.106 --> 00:12:59.376 A:middle
+representation, LLDB offers
+
+00:12:59.376 --> 00:13:01.996 A:middle
+filters, summaries and synthetic
+
+00:12:59.376 --> 00:13:01.996 A:middle
+filters, summaries and synthetic
+
+00:13:01.996 --> 00:13:02.416 A:middle
+children.
+
+00:13:04.266 --> 00:13:05.826 A:middle
+Filters are used to limit the
+
+00:13:05.826 --> 00:13:07.616 A:middle
+output of existing formatters.
+
+00:13:08.166 --> 00:13:09.676 A:middle
+Right now, our Trip only has a
+
+00:13:09.676 --> 00:13:11.476 A:middle
+few destinations but as the
+
+00:13:11.476 --> 00:13:13.216 A:middle
+number increases, the output
+
+00:13:13.256 --> 00:13:14.186 A:middle
+could become cluttered.
+
+00:13:15.626 --> 00:13:17.236 A:middle
+By adding a filter, we can
+
+00:13:17.236 --> 00:13:19.026 A:middle
+specify that we only want to see
+
+00:13:19.026 --> 00:13:19.766 A:middle
+the Trips name.
+
+00:13:20.786 --> 00:13:22.246 A:middle
+This not only affects the output
+
+00:13:22.246 --> 00:13:23.536 A:middle
+of the formatter in the console,
+
+00:13:23.536 --> 00:13:25.196 A:middle
+but also the variables here in
+
+00:13:25.196 --> 00:13:25.626 A:middle
+Xcode.
+
+00:13:26.546 --> 00:13:27.896 A:middle
+Let's remove the filter again
+
+00:13:27.986 --> 00:13:29.026 A:middle
+before moving on.
+
+00:13:30.616 --> 00:13:32.136 A:middle
+Summaries provide a string
+
+00:13:32.136 --> 00:13:33.296 A:middle
+representation of a type.
+
+00:13:33.656 --> 00:13:34.996 A:middle
+To give information about that
+
+00:13:34.996 --> 00:13:36.976 A:middle
+type at a glance, their data
+
+00:13:36.976 --> 00:13:38.476 A:middle
+formatter equivalent of the
+
+00:13:38.476 --> 00:13:39.756 A:middle
+description that you would
+
+00:13:39.756 --> 00:13:41.186 A:middle
+implement for use with po.
+
+00:13:41.716 --> 00:13:43.646 A:middle
+As with filters, they also
+
+00:13:43.646 --> 00:13:44.766 A:middle
+affect the variables view in
+
+00:13:44.766 --> 00:13:45.166 A:middle
+Xcode.
+
+00:13:46.166 --> 00:13:47.406 A:middle
+While the members of our Trip
+
+00:13:47.406 --> 00:13:48.906 A:middle
+all have summaries, the Trip
+
+00:13:48.906 --> 00:13:49.676 A:middle
+itself does not.
+
+00:13:50.006 --> 00:13:50.936 A:middle
+Let's change that.
+
+00:13:52.536 --> 00:13:53.856 A:middle
+A good summary would be the
+
+00:13:53.856 --> 00:13:55.416 A:middle
+first and last destination.
+
+00:13:56.216 --> 00:13:57.616 A:middle
+The summary string can contain
+
+00:13:57.616 --> 00:13:59.346 A:middle
+regular text and special
+
+00:13:59.346 --> 00:14:01.346 A:middle
+variables that access fields of
+
+00:13:59.346 --> 00:14:01.346 A:middle
+variables that access fields of
+
+00:14:01.346 --> 00:14:02.336 A:middle
+the time being printed.
+
+00:14:03.086 --> 00:14:04.236 A:middle
+These variables start with a
+
+00:14:04.236 --> 00:14:05.796 A:middle
+dollar sign and are wrapped in
+
+00:14:05.796 --> 00:14:06.676 A:middle
+curly braces.
+
+00:14:07.276 --> 00:14:08.746 A:middle
+They use the same syntax as the
+
+00:14:08.746 --> 00:14:09.456 A:middle
+v-commands.
+
+00:14:10.186 --> 00:14:11.646 A:middle
+The current type for which the
+
+00:14:11.646 --> 00:14:13.836 A:middle
+summary is defined is access as
+
+00:14:13.836 --> 00:14:14.186 A:middle
+var.
+
+00:14:14.966 --> 00:14:17.176 A:middle
+The summary uses var.name to
+
+00:14:17.176 --> 00:14:18.726 A:middle
+access the Trips name and
+
+00:14:18.726 --> 00:14:20.546 A:middle
+var.destinations to access its
+
+00:14:20.546 --> 00:14:21.326 A:middle
+destinations.
+
+00:14:22.526 --> 00:14:23.626 A:middle
+But there's a problem with the
+
+00:14:23.626 --> 00:14:24.136 A:middle
+summary.
+
+00:14:24.556 --> 00:14:26.126 A:middle
+It only works for Trips that
+
+00:14:26.126 --> 00:14:27.156 A:middle
+contain exactly three
+
+00:14:27.156 --> 00:14:27.946 A:middle
+destinations.
+
+00:14:28.636 --> 00:14:29.936 A:middle
+Because formatters can't access
+
+00:14:29.936 --> 00:14:31.306 A:middle
+computed variables like the
+
+00:14:31.306 --> 00:14:32.896 A:middle
+count of an array, we have to
+
+00:14:32.896 --> 00:14:34.346 A:middle
+hard-code the index of the last
+
+00:14:34.346 --> 00:14:34.696 A:middle
+element.
+
+00:14:36.416 --> 00:14:37.836 A:middle
+Fortunately, there's another
+
+00:14:37.836 --> 00:14:39.556 A:middle
+powerful tool available to us.
+
+00:14:40.046 --> 00:14:41.686 A:middle
+We can also define summaries in
+
+00:14:41.686 --> 00:14:42.176 A:middle
+Python.
+
+00:14:43.046 --> 00:14:44.286 A:middle
+Python formatters can do
+
+00:14:44.286 --> 00:14:46.336 A:middle
+arbitrary computations and they
+
+00:14:46.336 --> 00:14:48.056 A:middle
+have full access to LLDB's
+
+00:14:48.146 --> 00:14:50.376 A:middle
+scripting bridge API which
+
+00:14:50.376 --> 00:14:52.006 A:middle
+provides several objects for
+
+00:14:52.006 --> 00:14:53.296 A:middle
+accessing the state of the
+
+00:14:53.296 --> 00:14:54.316 A:middle
+current debug session.
+
+00:14:54.596 --> 00:14:58.026 A:middle
+The target is the program that's
+
+00:14:58.026 --> 00:14:59.136 A:middle
+currently being debugged.
+
+00:14:59.696 --> 00:15:02.326 A:middle
+The process, thread, and frame
+
+00:14:59.696 --> 00:15:02.326 A:middle
+The process, thread, and frame
+
+00:15:02.326 --> 00:15:03.496 A:middle
+provides access to the
+
+00:15:03.496 --> 00:15:04.566 A:middle
+corresponding runtime
+
+00:15:04.566 --> 00:15:05.296 A:middle
+information.
+
+00:15:06.266 --> 00:15:08.946 A:middle
+Values of variables, registers,
+
+00:15:09.036 --> 00:15:11.176 A:middle
+or expressions are represented
+
+00:15:11.176 --> 00:15:12.856 A:middle
+by the SB value class.
+
+00:15:13.346 --> 00:15:14.316 A:middle
+These are particularly
+
+00:15:14.316 --> 00:15:15.606 A:middle
+interesting to the data
+
+00:15:15.606 --> 00:15:17.426 A:middle
+formatters because they are used
+
+00:15:17.426 --> 00:15:18.906 A:middle
+to navigate types and their
+
+00:15:18.906 --> 00:15:19.656 A:middle
+values.
+
+00:15:20.306 --> 00:15:21.086 A:middle
+Check out the online
+
+00:15:21.086 --> 00:15:22.986 A:middle
+documentation for more details.
+
+00:15:25.016 --> 00:15:26.636 A:middle
+Starting with Xcode 11,
+
+00:15:26.786 --> 00:15:28.196 A:middle
+scripting uses Python 3.
+
+00:15:28.926 --> 00:15:30.216 A:middle
+If you have existing Python 2
+
+00:15:30.216 --> 00:15:31.836 A:middle
+scripts, check out the Xcode
+
+00:15:31.836 --> 00:15:33.046 A:middle
+release notes for more
+
+00:15:33.046 --> 00:15:34.426 A:middle
+information on transitioning to
+
+00:15:34.426 --> 00:15:35.006 A:middle
+Python 3.
+
+00:15:35.546 --> 00:15:39.586 A:middle
+Let's explore the LLDB API.
+
+00:15:40.746 --> 00:15:42.306 A:middle
+Executing the script commands
+
+00:15:42.436 --> 00:15:43.876 A:middle
+drops this into an interactive
+
+00:15:43.906 --> 00:15:45.106 A:middle
+Python interpreter.
+
+00:15:45.976 --> 00:15:47.696 A:middle
+The current frame is accessible
+
+00:15:47.696 --> 00:15:49.526 A:middle
+to the lldb.frame variable.
+
+00:15:50.096 --> 00:15:51.466 A:middle
+This returns an SBFrame
+
+00:15:51.466 --> 00:15:52.056 A:middle
+instance.
+
+00:15:52.746 --> 00:15:53.876 A:middle
+We know that the current frame
+
+00:15:53.876 --> 00:15:54.996 A:middle
+contains a variable named
+
+00:15:54.996 --> 00:15:55.506 A:middle
+cruise.
+
+00:15:56.046 --> 00:15:58.096 A:middle
+So, we can go ahead and use find
+
+00:15:58.096 --> 00:16:00.056 A:middle
+variable to obtain its SB value.
+
+00:15:58.096 --> 00:16:00.056 A:middle
+variable to obtain its SB value.
+
+00:16:01.006 --> 00:16:02.396 A:middle
+Since these objects power the
+
+00:16:02.396 --> 00:16:03.806 A:middle
+data formatters under the hood,
+
+00:16:04.326 --> 00:16:05.766 A:middle
+it is no surprise that printing
+
+00:16:05.766 --> 00:16:07.256 A:middle
+them looks identical to the
+
+00:16:07.256 --> 00:16:08.726 A:middle
+corresponding data formatter
+
+00:16:08.766 --> 00:16:09.276 A:middle
+outputs.
+
+00:16:11.366 --> 00:16:13.126 A:middle
+We also know that cruise has
+
+00:16:13.126 --> 00:16:14.636 A:middle
+member named destinations.
+
+00:16:14.926 --> 00:16:16.486 A:middle
+We can access it by calling
+
+00:16:16.486 --> 00:16:17.686 A:middle
+GetChildMemberWithName.
+
+00:16:18.736 --> 00:16:20.646 A:middle
+The result is another SB value
+
+00:16:20.906 --> 00:16:22.416 A:middle
+that represents the destinations
+
+00:16:22.416 --> 00:16:22.696 A:middle
+array.
+
+00:16:23.136 --> 00:16:25.936 A:middle
+Let's try to mimic our earlier
+
+00:16:25.936 --> 00:16:28.146 A:middle
+formatter using Python, this
+
+00:16:28.146 --> 00:16:29.316 A:middle
+time without hard coding the
+
+00:16:29.316 --> 00:16:30.566 A:middle
+index of the last element.
+
+00:16:31.396 --> 00:16:33.166 A:middle
+We can use GetNumChildren on the
+
+00:16:33.166 --> 00:16:35.166 A:middle
+destinations SB value to get the
+
+00:16:35.166 --> 00:16:36.106 A:middle
+number of elements.
+
+00:16:36.836 --> 00:16:38.606 A:middle
+With GetChildAtIndex, we can
+
+00:16:38.606 --> 00:16:40.616 A:middle
+access the first element and the
+
+00:16:40.616 --> 00:16:41.376 A:middle
+last element.
+
+00:16:42.336 --> 00:16:43.756 A:middle
+Notice that the printed values
+
+00:16:43.756 --> 00:16:44.766 A:middle
+are context sensitive.
+
+00:16:45.356 --> 00:16:46.646 A:middle
+They contain the index in the
+
+00:16:46.646 --> 00:16:46.976 A:middle
+array.
+
+00:16:47.726 --> 00:16:49.406 A:middle
+SB value instances maintain the
+
+00:16:49.406 --> 00:16:50.726 A:middle
+context of their parent
+
+00:16:50.726 --> 00:16:51.186 A:middle
+relation.
+
+00:16:52.556 --> 00:16:53.876 A:middle
+Now, we can put everything
+
+00:16:53.876 --> 00:16:55.296 A:middle
+together in a single string.
+
+00:16:55.796 --> 00:16:57.486 A:middle
+The results, however, it's not
+
+00:16:57.486 --> 00:16:59.236 A:middle
+exactly what we want, by
+
+00:16:59.236 --> 00:17:01.596 A:middle
+printing, begin and end, we get
+
+00:16:59.236 --> 00:17:01.596 A:middle
+printing, begin and end, we get
+
+00:17:01.596 --> 00:17:03.096 A:middle
+descriptions of the SB value
+
+00:17:03.096 --> 00:17:03.746 A:middle
+objects.
+
+00:17:04.146 --> 00:17:05.695 A:middle
+What we really want here are
+
+00:17:05.695 --> 00:17:06.465 A:middle
+their summaries.
+
+00:17:07.096 --> 00:17:08.915 A:middle
+We can use GetSummary to
+
+00:17:08.915 --> 00:17:10.756 A:middle
+retrieve the formatted value and
+
+00:17:10.756 --> 00:17:11.476 A:middle
+use that instead.
+
+00:17:12.106 --> 00:17:13.886 A:middle
+Now, the result is place only
+
+00:17:13.886 --> 00:17:14.876 A:middle
+the destination strings
+
+00:17:14.876 --> 00:17:15.476 A:middle
+themselves.
+
+00:17:15.886 --> 00:17:18.276 A:middle
+Let's put everything together.
+
+00:17:18.586 --> 00:17:20.026 A:middle
+Formatters can be defined
+
+00:17:20.026 --> 00:17:21.726 A:middle
+directly in the debugger console
+
+00:17:22.116 --> 00:17:23.695 A:middle
+or you can use a file and load
+
+00:17:23.695 --> 00:17:24.546 A:middle
+it into LLDB.
+
+00:17:25.226 --> 00:17:26.516 A:middle
+In this case, we'll create a
+
+00:17:26.516 --> 00:17:27.986 A:middle
+file called Trip.py.
+
+00:17:28.926 --> 00:17:30.066 A:middle
+When defining a provider in a
+
+00:17:30.066 --> 00:17:31.646 A:middle
+file instead of using the
+
+00:17:31.646 --> 00:17:32.706 A:middle
+current frame to access the
+
+00:17:32.706 --> 00:17:34.556 A:middle
+variable we want to display the
+
+00:17:34.556 --> 00:17:36.256 A:middle
+SB value is passed as an input
+
+00:17:36.256 --> 00:17:37.526 A:middle
+parameter to a function.
+
+00:17:38.606 --> 00:17:40.006 A:middle
+The rest of the implementation
+
+00:17:40.096 --> 00:17:41.836 A:middle
+is pretty much identical to what
+
+00:17:41.836 --> 00:17:42.566 A:middle
+we did before.
+
+00:17:43.576 --> 00:17:44.866 A:middle
+Another advantage of using
+
+00:17:44.866 --> 00:17:46.546 A:middle
+Python to define the formatter
+
+00:17:46.826 --> 00:17:47.976 A:middle
+is that we have control flow.
+
+00:17:48.706 --> 00:17:50.356 A:middle
+If the trip has no destinations,
+
+00:17:50.576 --> 00:17:51.876 A:middle
+we can just sprint that it's an
+
+00:17:51.876 --> 00:17:52.356 A:middle
+empty trip.
+
+00:17:53.286 --> 00:17:54.586 A:middle
+We get the summary for the first
+
+00:17:54.586 --> 00:17:56.476 A:middle
+and last destination and return
+
+00:17:56.476 --> 00:17:57.166 A:middle
+to summary string.
+
+00:17:58.846 --> 00:18:00.136 A:middle
+Now, we need to load our new
+
+00:17:58.846 --> 00:18:00.136 A:middle
+Now, we need to load our new
+
+00:18:00.136 --> 00:18:02.086 A:middle
+summary provider into LLDB.
+
+00:18:02.646 --> 00:18:04.166 A:middle
+This is done using the command
+
+00:18:04.166 --> 00:18:05.396 A:middle
+script import command.
+
+00:18:06.266 --> 00:18:08.166 A:middle
+Next, we need to specify that
+
+00:18:08.166 --> 00:18:09.616 A:middle
+our new formatter is the one to
+
+00:18:09.616 --> 00:18:11.106 A:middle
+use for the Trip type.
+
+00:18:11.586 --> 00:18:13.346 A:middle
+Using type summary add and
+
+00:18:13.346 --> 00:18:14.406 A:middle
+providing the type to be
+
+00:18:14.406 --> 00:18:15.976 A:middle
+formatted, and the provider
+
+00:18:15.976 --> 00:18:16.856 A:middle
+function to use.
+
+00:18:17.676 --> 00:18:18.946 A:middle
+It's important to use the fully
+
+00:18:18.946 --> 00:18:20.016 A:middle
+qualified type here.
+
+00:18:20.746 --> 00:18:22.456 A:middle
+With everything hooked up v now
+
+00:18:22.456 --> 00:18:24.136 A:middle
+uses the Python summary provider
+
+00:18:24.286 --> 00:18:25.416 A:middle
+to print a cruise object.
+
+00:18:27.066 --> 00:18:28.396 A:middle
+Not only does the summary show
+
+00:18:28.396 --> 00:18:29.926 A:middle
+up in the console, it is also
+
+00:18:29.926 --> 00:18:31.446 A:middle
+displayed in Xcode's Variable
+
+00:18:31.446 --> 00:18:31.686 A:middle
+View.
+
+00:18:32.126 --> 00:18:34.316 A:middle
+We've talked about filters and
+
+00:18:34.316 --> 00:18:34.946 A:middle
+summaries.
+
+00:18:35.256 --> 00:18:36.536 A:middle
+The final way to customize the
+
+00:18:36.536 --> 00:18:38.086 A:middle
+display of your type is with
+
+00:18:38.086 --> 00:18:39.016 A:middle
+synthetic children.
+
+00:18:39.776 --> 00:18:41.006 A:middle
+These make it possible to
+
+00:18:41.006 --> 00:18:42.706 A:middle
+customize what kind of children
+
+00:18:42.706 --> 00:18:44.826 A:middle
+your type exposes, such as when
+
+00:18:44.826 --> 00:18:45.946 A:middle
+you expend to type in the
+
+00:18:45.946 --> 00:18:47.356 A:middle
+variables view in Xcode.
+
+00:18:48.146 --> 00:18:49.996 A:middle
+In Python, each child has an SB
+
+00:18:49.996 --> 00:18:51.796 A:middle
+value, and each can have its own
+
+00:18:51.796 --> 00:18:52.246 A:middle
+summary.
+
+00:18:54.386 --> 00:18:55.676 A:middle
+Defining your own synthetic
+
+00:18:55.676 --> 00:18:57.326 A:middle
+child provider is similar to
+
+00:18:57.326 --> 00:18:58.726 A:middle
+defining a summary provider.
+
+00:18:59.056 --> 00:19:00.476 A:middle
+But instead of a function you
+
+00:18:59.056 --> 00:19:00.476 A:middle
+But instead of a function you
+
+00:19:00.476 --> 00:19:01.926 A:middle
+define a class that implements
+
+00:19:01.926 --> 00:19:02.756 A:middle
+certain methods.
+
+00:19:03.446 --> 00:19:05.306 A:middle
+In addition to init, you provide
+
+00:19:05.306 --> 00:19:06.576 A:middle
+a method to get the total number
+
+00:19:06.576 --> 00:19:08.266 A:middle
+of children, the synthetic
+
+00:19:08.266 --> 00:19:09.736 A:middle
+children themselves, and an
+
+00:19:09.736 --> 00:19:10.856 A:middle
+index for a given name.
+
+00:19:11.616 --> 00:19:12.686 A:middle
+A full example of this is
+
+00:19:12.686 --> 00:19:14.376 A:middle
+available in the resources link
+
+00:19:14.376 --> 00:19:15.076 A:middle
+from this session.
+
+00:19:17.996 --> 00:19:19.596 A:middle
+Just like before, use command
+
+00:19:19.596 --> 00:19:21.156 A:middle
+script import to load the Python
+
+00:19:21.156 --> 00:19:22.666 A:middle
+source code into LLDB.
+
+00:19:23.336 --> 00:19:24.966 A:middle
+In this case, we already loaded
+
+00:19:24.966 --> 00:19:26.576 A:middle
+this file earlier and running
+
+00:19:26.576 --> 00:19:27.936 A:middle
+the command again will reload
+
+00:19:27.936 --> 00:19:28.366 A:middle
+the file.
+
+00:19:29.956 --> 00:19:31.746 A:middle
+To specify the formatter, to use
+
+00:19:31.746 --> 00:19:33.706 A:middle
+for synthetic children use type
+
+00:19:33.706 --> 00:19:35.396 A:middle
+synthetic add and provide the
+
+00:19:35.396 --> 00:19:36.926 A:middle
+type to be formatted and the
+
+00:19:36.926 --> 00:19:37.796 A:middle
+class to use.
+
+00:19:39.486 --> 00:19:40.786 A:middle
+After going through the effort
+
+00:19:40.856 --> 00:19:42.096 A:middle
+of defining our own custom
+
+00:19:42.096 --> 00:19:43.766 A:middle
+providers, we don't want to lose
+
+00:19:43.766 --> 00:19:45.016 A:middle
+them at the end of our debug
+
+00:19:45.016 --> 00:19:45.376 A:middle
+session.
+
+00:19:46.206 --> 00:19:47.266 A:middle
+Any command you type in the
+
+00:19:47.266 --> 00:19:49.666 A:middle
+console can be persisted in the
+
+00:19:49.666 --> 00:19:51.406 A:middle
+.lldbinit file in your home
+
+00:19:51.406 --> 00:19:51.926 A:middle
+directory.
+
+00:19:52.706 --> 00:19:53.936 A:middle
+This file gets automatically
+
+00:19:53.936 --> 00:19:55.276 A:middle
+loaded at the beginning of your
+
+00:19:55.276 --> 00:19:55.986 A:middle
+debug session.
+
+00:19:58.636 --> 00:20:00.716 A:middle
+LLDB has a variety of features
+
+00:19:58.636 --> 00:20:00.716 A:middle
+LLDB has a variety of features
+
+00:20:00.716 --> 00:20:02.096 A:middle
+to help you see the state of
+
+00:20:02.096 --> 00:20:03.376 A:middle
+your program while debugging.
+
+00:20:03.956 --> 00:20:06.716 A:middle
+Use v, p, or po to print
+
+00:20:06.716 --> 00:20:08.236 A:middle
+variables, depending on whether
+
+00:20:08.236 --> 00:20:09.456 A:middle
+you just need to display its
+
+00:20:09.456 --> 00:20:11.406 A:middle
+value, execute code or get the
+
+00:20:11.406 --> 00:20:12.676 A:middle
+object description.
+
+00:20:13.536 --> 00:20:14.906 A:middle
+Customize or define your own
+
+00:20:14.906 --> 00:20:16.926 A:middle
+data formatters, using filters,
+
+00:20:17.096 --> 00:20:18.806 A:middle
+string summaries, and synthetic
+
+00:20:18.806 --> 00:20:19.246 A:middle
+children.
+
+00:20:19.986 --> 00:20:21.746 A:middle
+Finally, if you have scripts
+
+00:20:21.746 --> 00:20:23.686 A:middle
+written in Python 2, update them
+
+00:20:23.686 --> 00:20:25.306 A:middle
+to be compatible with Python 3.
+
+00:20:25.696 --> 00:20:27.116 A:middle
+The version used by LLDB
+
+00:20:27.336 --> 00:20:28.766 A:middle
+starting in Xcode 11.
+
+00:20:30.826 --> 00:20:32.446 A:middle
+For more information, check out
+
+00:20:32.446 --> 00:20:33.786 A:middle
+the page for this session on
+
+00:20:33.786 --> 00:20:35.186 A:middle
+developer.apple.com.

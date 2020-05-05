@@ -1,0 +1,1562 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:17.500 A:middle
+[ Music ]
+
+00:00:20.496 --> 00:00:22.836 A:middle
+&gt;&gt; Hi and welcome
+to Session 511,
+
+00:00:22.906 --> 00:00:25.786 A:middle
+AVCapturePhotoOutput,
+Beyond the Basics.
+
+00:00:26.506 --> 00:00:29.246 A:middle
+This is a chock talk
+addendum to Session 501,
+
+00:00:29.636 --> 00:00:31.506 A:middle
+Advances in iOS Photography.
+
+00:00:32.156 --> 00:00:33.056 A:middle
+I'm Brad Ford.
+
+00:00:33.186 --> 00:00:35.566 A:middle
+I'm an engineer on the core
+media capture team at Apple.
+
+00:00:36.116 --> 00:00:42.376 A:middle
+In session 501, we focused on AV
+foundations camera capture APIs,
+
+00:00:42.726 --> 00:00:45.596 A:middle
+specifically the
+AVCapturePhotoOutput,
+
+00:00:46.246 --> 00:00:49.566 A:middle
+which is a new interface
+for taking photos in iOS 10.
+
+00:00:50.796 --> 00:00:55.526 A:middle
+This output supports Capturing
+Live Photos, RAW + DNG,
+
+00:00:56.866 --> 00:01:01.356 A:middle
+Wide Color Content, and
+Preview or Thumbnail Images.
+
+00:00:56.866 --> 00:01:01.356 A:middle
+Wide Color Content, and
+Preview or Thumbnail Images.
+
+00:01:01.646 --> 00:01:04.186 A:middle
+If you haven't watched
+Session 501 yet,
+
+00:01:04.396 --> 00:01:07.746 A:middle
+I recommend pausing here and
+watching Session 501 first.
+
+00:01:08.126 --> 00:01:09.906 A:middle
+You'll get a lot more
+out of this addendum.
+
+00:01:10.456 --> 00:01:15.796 A:middle
+In this session, we'll move
+beyond the AVCapturePhotoOutput
+
+00:01:15.796 --> 00:01:19.326 A:middle
+basics and discuss two important
+topics we didn't have time
+
+00:01:19.326 --> 00:01:20.746 A:middle
+for in Session 501.
+
+00:01:21.246 --> 00:01:23.246 A:middle
+Namely, Scene Monitoring,
+
+00:01:23.946 --> 00:01:26.796 A:middle
+and Resource Preparation
+and Reclamation.
+
+00:01:27.646 --> 00:01:30.296 A:middle
+Lastly, we'll spend a few
+minutes on an unrelated
+
+00:01:30.296 --> 00:01:31.886 A:middle
+but still very important topic,
+
+00:01:32.426 --> 00:01:35.906 A:middle
+Camera Privacy Policy
+Changes in iOS 10.
+
+00:01:37.686 --> 00:01:38.966 A:middle
+By way of minimal review,
+
+00:01:39.636 --> 00:01:42.976 A:middle
+the new AVCapturePhotoOutput
+has an improved interface
+
+00:01:42.976 --> 00:01:43.846 A:middle
+that addresses some
+
+00:01:43.846 --> 00:01:47.356 A:middle
+of AVCaptureStillImangeOutput's
+design challenges.
+
+00:01:48.506 --> 00:01:51.846 A:middle
+AVCapturePhotoOutput uses a
+function programming model.
+
+00:01:52.216 --> 00:01:53.546 A:middle
+There are clear delineations
+
+00:01:53.546 --> 00:01:55.666 A:middle
+between mutable and
+immutable data.
+
+00:01:56.106 --> 00:01:58.136 A:middle
+It uses a separate object
+
+00:01:58.136 --> 00:02:00.216 A:middle
+to encapsulate per
+photo settings
+
+00:01:58.136 --> 00:02:00.216 A:middle
+to encapsulate per
+photo settings
+
+00:02:00.446 --> 00:02:02.456 A:middle
+called AVCapturePhotoSettings.
+
+00:02:02.916 --> 00:02:05.666 A:middle
+You pass it when making
+a photo capture request.
+
+00:02:06.446 --> 00:02:08.476 A:middle
+It uses a delegate
+style interface
+
+00:02:08.476 --> 00:02:11.206 A:middle
+for tracking the progress
+of photo capture requests.
+
+00:02:11.526 --> 00:02:14.386 A:middle
+This is called the
+AVCapturephotoCaptureDelegate
+
+00:02:14.386 --> 00:02:15.026 A:middle
+protocol.
+
+00:02:15.516 --> 00:02:19.956 A:middle
+All callbacks in the delegate
+protocol return an instance
+
+00:02:19.996 --> 00:02:22.696 A:middle
+of
+AVCaptureResolvedPhotoSettings.
+
+00:02:23.186 --> 00:02:24.546 A:middle
+This is an immutable object
+
+00:02:24.546 --> 00:02:26.896 A:middle
+in which all photo
+settings have been resolved.
+
+00:02:29.586 --> 00:02:33.356 A:middle
+AVCapturePhotoOutput also
+supports Scene Monitoring using
+
+00:02:33.356 --> 00:02:36.706 A:middle
+a subset of these capture
+objects I just talked about.
+
+00:02:38.656 --> 00:02:41.126 A:middle
+Scene monitoring
+allows you to present UI
+
+00:02:41.126 --> 00:02:44.196 A:middle
+that informs the user what
+scene dependent features are
+
+00:02:44.196 --> 00:02:45.066 A:middle
+currently active.
+
+00:02:45.776 --> 00:02:49.146 A:middle
+In this screenshot of Apple's
+Camera app, the user is clear
+
+00:02:49.146 --> 00:02:50.746 A:middle
+in a low-light situation.
+
+00:02:51.576 --> 00:02:55.546 A:middle
+The flash iconography at the
+bottom of the screen indicates
+
+00:02:55.546 --> 00:02:58.036 A:middle
+that the user is
+in auto flash mode,
+
+00:02:58.326 --> 00:03:00.336 A:middle
+meaning the flash
+should only be used
+
+00:02:58.326 --> 00:03:00.336 A:middle
+meaning the flash
+should only be used
+
+00:03:00.336 --> 00:03:01.856 A:middle
+if the situation requires it.
+
+00:03:02.796 --> 00:03:06.006 A:middle
+Apple's Camera app is a client
+of AVCapturePhotoOutput,
+
+00:03:06.386 --> 00:03:08.016 A:middle
+which performs Scene Monitoring
+
+00:03:08.016 --> 00:03:11.126 A:middle
+to drive the flash
+active yellow flash badge
+
+00:03:11.376 --> 00:03:12.786 A:middle
+that you see in the top middle.
+
+00:03:13.296 --> 00:03:17.306 A:middle
+The presence of the yellow
+flash badge shows the user
+
+00:03:17.306 --> 00:03:20.326 A:middle
+that if they take a picture
+now, the flash is going to fire.
+
+00:03:21.456 --> 00:03:24.706 A:middle
+AVCapturePhotoOutput
+offers Scene Monitoring
+
+00:03:24.706 --> 00:03:26.026 A:middle
+for two kinds of scenes.
+
+00:03:26.246 --> 00:03:27.766 A:middle
+The first is the flash.
+
+00:03:30.096 --> 00:03:32.056 A:middle
+All of Apple's current
+iPhone models,
+
+00:03:32.056 --> 00:03:36.416 A:middle
+as well as the 9.7-inch iPad
+Pro have a true tone flash
+
+00:03:36.516 --> 00:03:39.886 A:middle
+to illuminate dark scenes for
+the rear-facing eyesight camera
+
+00:03:41.206 --> 00:03:44.496 A:middle
+and a retina flash that
+turns your retina display
+
+00:03:44.496 --> 00:03:47.456 A:middle
+into a true tone flash,
+illuminating it at up
+
+00:03:47.456 --> 00:03:49.736 A:middle
+to three times normal
+in order to brighten
+
+00:03:49.736 --> 00:03:51.176 A:middle
+up selfies in low light.
+
+00:03:52.616 --> 00:03:56.306 A:middle
+The second type of supported
+Scene Monitoring is Still
+
+00:03:56.306 --> 00:03:57.396 A:middle
+Image Stabilization.
+
+00:03:58.166 --> 00:04:02.186 A:middle
+Still Image Stabilization is
+a multi-image fusion capture
+
+00:03:58.166 --> 00:04:02.186 A:middle
+Still Image Stabilization is
+a multi-image fusion capture
+
+00:04:02.446 --> 00:04:06.156 A:middle
+that blends differently
+exposed images to reduce blur
+
+00:04:06.156 --> 00:04:07.626 A:middle
+in low-light situations.
+
+00:04:08.146 --> 00:04:11.066 A:middle
+It might not be totally obvious
+why Still Image Stabilization is
+
+00:04:11.066 --> 00:04:12.926 A:middle
+a low-light feature, it's not
+
+00:04:12.926 --> 00:04:14.936 A:middle
+that your hands shake
+more in the dark.
+
+00:04:15.596 --> 00:04:17.896 A:middle
+It's just that the camera
+needs to expose longer
+
+00:04:17.896 --> 00:04:21.125 A:middle
+to gather the same number of
+photons requiring the shooter
+
+00:04:21.125 --> 00:04:22.786 A:middle
+to be very, very steady.
+
+00:04:23.506 --> 00:04:25.726 A:middle
+Still Image Stabilization
+counters this problem
+
+00:04:25.976 --> 00:04:28.876 A:middle
+by capturing multiple images
+at different exposures
+
+00:04:28.916 --> 00:04:30.276 A:middle
+and then fusing them together
+
+00:04:30.506 --> 00:04:32.736 A:middle
+to reduce noise and
+motion artifacts.
+
+00:04:33.436 --> 00:04:36.226 A:middle
+So at first glance,
+flash worthiness
+
+00:04:36.226 --> 00:04:38.906 A:middle
+or Still Image Stabilization
+worthiness would seem
+
+00:04:38.906 --> 00:04:40.286 A:middle
+like orthogonal features,
+
+00:04:40.736 --> 00:04:42.416 A:middle
+but they're actually
+closely related.
+
+00:04:42.636 --> 00:04:44.936 A:middle
+And this causes some
+API ambiguity.
+
+00:04:46.976 --> 00:04:50.406 A:middle
+Looking at this graph, we see
+the applicable light ranges
+
+00:04:50.406 --> 00:04:51.796 A:middle
+for Flash Capture with
+
+00:04:51.796 --> 00:04:54.006 A:middle
+and without Still
+Image Stabilization.
+
+00:04:54.536 --> 00:04:56.336 A:middle
+I've shortened Still
+Image Stabilization
+
+00:04:56.336 --> 00:04:57.996 A:middle
+to SIS for brevity.
+
+00:04:58.806 --> 00:05:01.206 A:middle
+The blue bar represents
+the light levels
+
+00:04:58.806 --> 00:05:01.206 A:middle
+The blue bar represents
+the light levels
+
+00:05:01.206 --> 00:05:03.326 A:middle
+at which the photo
+output will use the flash
+
+00:05:03.486 --> 00:05:05.546 A:middle
+if you've opted in for SIS.
+
+00:05:06.446 --> 00:05:09.196 A:middle
+The green bar represents
+the applicable light levels
+
+00:05:09.196 --> 00:05:12.736 A:middle
+for flash if you've
+opted out of SIS.
+
+00:05:12.736 --> 00:05:15.356 A:middle
+Note that with SIS on,
+the photo output can do
+
+00:05:15.356 --> 00:05:17.286 A:middle
+without the flash
+in darker scenes.
+
+00:05:18.146 --> 00:05:21.846 A:middle
+This is because SIS lowers the
+noise in the image to a point
+
+00:05:22.176 --> 00:05:23.546 A:middle
+so the flash is not needed.
+
+00:05:23.976 --> 00:05:27.216 A:middle
+If your current scene's
+light level is, say, here,
+
+00:05:27.706 --> 00:05:28.936 A:middle
+the answer to the question,
+
+00:05:29.206 --> 00:05:32.016 A:middle
+is this a flash scene
+is a resounding yes.
+
+00:05:32.826 --> 00:05:36.156 A:middle
+But if the light level is
+here, the answer depends
+
+00:05:36.156 --> 00:05:38.986 A:middle
+on whether you're interested in
+using Still Image Stabilization,
+
+00:05:39.326 --> 00:05:40.856 A:middle
+and the inverse is true also.
+
+00:05:41.476 --> 00:05:43.776 A:middle
+So what to do.
+
+00:05:43.776 --> 00:05:45.756 A:middle
+The AVCapturePhotoOutput
+doesn't know what kind
+
+00:05:45.756 --> 00:05:48.416 A:middle
+of capture you want
+until you request it.
+
+00:05:49.166 --> 00:05:50.816 A:middle
+But if you're using
+Scene Monitoring,
+
+00:05:51.096 --> 00:05:52.626 A:middle
+it needs to run continuously.
+
+00:05:53.206 --> 00:05:55.976 A:middle
+Is the current scene a SIS
+scene or a flash scene?
+
+00:05:56.476 --> 00:06:01.446 A:middle
+In AVCapturePhotoOutput we've
+addressed this ambiguity
+
+00:05:56.476 --> 00:06:01.446 A:middle
+In AVCapturePhotoOutput we've
+addressed this ambiguity
+
+00:06:01.446 --> 00:06:04.406 A:middle
+with a specific API for
+Scene Monitoring called
+
+00:06:04.756 --> 00:06:06.826 A:middle
+photoSettingsForSceneMonitoring.
+
+00:06:08.096 --> 00:06:11.046 A:middle
+And we've provided two key
+value observable properties
+
+00:06:11.046 --> 00:06:13.116 A:middle
+that can asynchronously
+inform you
+
+00:06:13.416 --> 00:06:16.046 A:middle
+when scene suitability
+changes with respect
+
+00:06:16.046 --> 00:06:18.426 A:middle
+to Still Image Stabilization
+or flash.
+
+00:06:18.956 --> 00:06:23.906 A:middle
+You create an
+AVCapturePhotoSettings instance
+
+00:06:24.086 --> 00:06:27.306 A:middle
+specifically for Scene
+Monitoring and specify
+
+00:06:27.306 --> 00:06:28.186 A:middle
+which features you'd
+
+00:06:28.186 --> 00:06:30.466 A:middle
+like AVCapturePhotoOutput
+to consider.
+
+00:06:31.306 --> 00:06:35.856 A:middle
+Here I've set the flash
+mode to auto indicating
+
+00:06:36.536 --> 00:06:38.586 A:middle
+that I'm interested in
+using the flash feature
+
+00:06:38.586 --> 00:06:41.026 A:middle
+when it's available,
+and I've also set
+
+00:06:41.026 --> 00:06:43.676 A:middle
+isAutoStillImageStabilization
+Enabled to true.
+
+00:06:44.266 --> 00:06:46.276 A:middle
+So SIS should be considered too.
+
+00:06:46.956 --> 00:06:50.276 A:middle
+SIS tends to give better image
+quality results than flash,
+
+00:06:50.706 --> 00:06:53.506 A:middle
+so if a scene falls into the
+overlapping range between SIS
+
+00:06:53.506 --> 00:06:57.276 A:middle
+and flash, the photoOutput
+reports that it's an SIS scene.
+
+00:06:58.256 --> 00:07:01.146 A:middle
+Next, I assign this object
+as the photo settings
+
+00:06:58.256 --> 00:07:01.146 A:middle
+Next, I assign this object
+as the photo settings
+
+00:07:01.216 --> 00:07:03.026 A:middle
+for SceneMonitoring property.
+
+00:07:03.676 --> 00:07:04.656 A:middle
+This property can be set
+
+00:07:04.656 --> 00:07:07.146 A:middle
+at any time including
+before you start the
+
+00:07:07.146 --> 00:07:08.626 A:middle
+AVCaptureSession running.
+
+00:07:10.156 --> 00:07:12.276 A:middle
+To be informed of
+changes to flash
+
+00:07:12.276 --> 00:07:14.436 A:middle
+and Still Image Stabilization
+Scene worthiness,
+
+00:07:14.966 --> 00:07:18.896 A:middle
+I add key value observers for
+the aforementioned isFlashScene
+
+00:07:19.136 --> 00:07:21.176 A:middle
+and
+isStillImageStabliziationScene
+
+00:07:21.176 --> 00:07:21.836 A:middle
+Properties.
+
+00:07:22.426 --> 00:07:25.286 A:middle
+And I'm called back as
+scene worthiness changes
+
+00:07:25.356 --> 00:07:26.496 A:middle
+for those two properties.
+
+00:07:26.496 --> 00:07:31.746 A:middle
+Now let's talk about
+Scene Monitoring defaults.
+
+00:07:32.956 --> 00:07:36.526 A:middle
+photoSettingsforSceneMonitoring
+is a nullable property,
+
+00:07:36.756 --> 00:07:38.666 A:middle
+and its default value is nil,
+
+00:07:38.956 --> 00:07:41.226 A:middle
+meaning no scenes
+are being monitored.
+
+00:07:42.206 --> 00:07:44.966 A:middle
+If you query
+isStillImageStabilization
+
+00:07:45.326 --> 00:07:48.956 A:middle
+or isFlashScene without first
+configuring photo settings
+
+00:07:48.956 --> 00:07:52.696 A:middle
+for Scene Monitoring, they will
+answer false forever and ever.
+
+00:07:53.716 --> 00:07:56.286 A:middle
+Once you do configure photo
+settings for Scene Monitoring,
+
+00:07:56.466 --> 00:07:59.826 A:middle
+you can query or key value
+observe the two isScene
+
+00:07:59.826 --> 00:08:02.056 A:middle
+properties and get
+appropriate answers.
+
+00:07:59.826 --> 00:08:02.056 A:middle
+properties and get
+appropriate answers.
+
+00:08:03.496 --> 00:08:05.406 A:middle
+Be aware, though that
+if your photo settings
+
+00:08:05.406 --> 00:08:08.816 A:middle
+for Scene Monitoring
+contain a flash mode of off,
+
+00:08:09.286 --> 00:08:11.936 A:middle
+isFlashScene will still
+always report false.
+
+00:08:12.456 --> 00:08:12.806 A:middle
+Ditto
+
+00:08:12.806 --> 00:08:15.016 A:middle
+for AutoStillImageStabilization
+Enabled.
+
+00:08:18.056 --> 00:08:20.636 A:middle
+My recommendations for
+Scene Monitoring are simple.
+
+00:08:21.076 --> 00:08:24.596 A:middle
+If your app doesn't display
+any UI indicating what kind
+
+00:08:24.596 --> 00:08:26.776 A:middle
+of scene the user is
+seeing, you don't need
+
+00:08:26.776 --> 00:08:27.976 A:middle
+to enable Scene Monitoring.
+
+00:08:28.596 --> 00:08:31.676 A:middle
+But if you do, monitor
+what you intend to capture.
+
+00:08:31.996 --> 00:08:35.135 A:middle
+For example, if you intend
+to capture using Auto Flash
+
+00:08:35.135 --> 00:08:38.405 A:middle
+but not SIS, then monitor
+with flash node set
+
+00:08:38.405 --> 00:08:40.956 A:middle
+to auto and auto SIS off.
+
+00:08:41.506 --> 00:08:43.785 A:middle
+Doing otherwise will
+likely confuse your user,
+
+00:08:44.196 --> 00:08:45.526 A:middle
+as your UI might report
+
+00:08:45.526 --> 00:08:48.606 A:middle
+that it's not a flash scene
+while the flash actually does
+
+00:08:48.606 --> 00:08:50.066 A:middle
+fire when taking a picture.
+
+00:08:52.376 --> 00:08:54.086 A:middle
+That wraps up Scene Monitoring.
+
+00:08:54.606 --> 00:08:56.426 A:middle
+On to our next Beyond
+the Basics topic,
+
+00:08:56.716 --> 00:08:59.026 A:middle
+Resource Preparation
+and Reclamation.
+
+00:09:00.936 --> 00:09:04.066 A:middle
+To understand the need for
+on-demand resource preparation,
+
+00:09:04.346 --> 00:09:07.116 A:middle
+let's look at AVCaptureSession's
+normal flow of data.
+
+00:09:08.976 --> 00:09:11.456 A:middle
+When you call AVCaptureSession
+startRunning,
+
+00:09:12.236 --> 00:09:15.506 A:middle
+data begins flowing from all
+your AVCapture inputs the
+
+00:09:15.506 --> 00:09:17.206 A:middle
+various AVCapture outputs.
+
+00:09:17.996 --> 00:09:21.156 A:middle
+Most outputs receive and handle
+this data in a streaming manner,
+
+00:09:21.436 --> 00:09:23.126 A:middle
+such as the VideoPreviewLayer,
+
+00:09:23.256 --> 00:09:26.126 A:middle
+which continuously displays
+input data to the screen.
+
+00:09:26.666 --> 00:09:29.016 A:middle
+Or VideoDataOutput
+which pushes buffers
+
+00:09:29.016 --> 00:09:30.736 A:middle
+to your app via delegate
+callback.
+
+00:09:31.646 --> 00:09:34.866 A:middle
+Streaming outputs such as these
+require a disruptive capture
+
+00:09:34.866 --> 00:09:38.216 A:middle
+render pipeline rebuild if you
+change their configuration.
+
+00:09:38.616 --> 00:09:40.676 A:middle
+You have to configure
+them for one type
+
+00:09:40.676 --> 00:09:42.996 A:middle
+of output before you
+call startRunning.
+
+00:09:43.936 --> 00:09:46.226 A:middle
+AVCapturePhotoOutput
+is different,
+
+00:09:46.626 --> 00:09:50.326 A:middle
+since it only receives data from
+its input on an as-needed basis.
+
+00:09:51.416 --> 00:09:54.506 A:middle
+When you request a photo
+by calling CapturePhoto
+
+00:09:54.776 --> 00:09:56.336 A:middle
+with settings and delegate,
+
+00:09:56.896 --> 00:10:00.456 A:middle
+the photo output delivers just
+one result or set of results.
+
+00:09:56.896 --> 00:10:00.456 A:middle
+the photo output delivers just
+one result or set of results.
+
+00:10:02.086 --> 00:10:03.506 A:middle
+Unlike the streaming outputs,
+
+00:10:03.766 --> 00:10:05.746 A:middle
+the photo output has
+a lot of downtime.
+
+00:10:06.336 --> 00:10:10.516 A:middle
+It's perfectly positioned to
+prepare or reclaim resources
+
+00:10:10.516 --> 00:10:14.036 A:middle
+on demand without causing a
+disruptive reconfiguration
+
+00:10:14.036 --> 00:10:15.066 A:middle
+of the render pipeline.
+
+00:10:15.556 --> 00:10:18.386 A:middle
+It has the luxury of preparing
+while no one's watching.
+
+00:10:20.646 --> 00:10:22.806 A:middle
+Resource preparation
+isn't free, of course.
+
+00:10:23.346 --> 00:10:26.206 A:middle
+And AVCapturePhotoOutput's
+feature set is extensive.
+
+00:10:27.996 --> 00:10:31.586 A:middle
+Taking an uncompressed 420
+photo in the native format
+
+00:10:31.586 --> 00:10:34.846 A:middle
+of the AVCapture device
+requires some minimal resources.
+
+00:10:36.056 --> 00:10:38.816 A:middle
+Processed output such as EGRA
+
+00:10:38.946 --> 00:10:41.546 A:middle
+or JPEG requires
+additional resources,
+
+00:10:41.966 --> 00:10:43.786 A:middle
+since there's a format
+conversion involved.
+
+00:10:45.156 --> 00:10:48.056 A:middle
+Flash captures require their
+own set of hardware resources
+
+00:10:48.316 --> 00:10:50.296 A:middle
+for delivering the
+pre-flash sequence
+
+00:10:50.446 --> 00:10:52.236 A:middle
+and strobe synchronized result.
+
+00:10:53.926 --> 00:10:56.616 A:middle
+Still Image Stabilization
+requires multiple buffers
+
+00:10:56.696 --> 00:10:57.426 A:middle
+for fusion.
+
+00:10:59.086 --> 00:11:01.366 A:middle
+RAW capture requires
+very large buffers.
+
+00:10:59.086 --> 00:11:01.366 A:middle
+RAW capture requires
+very large buffers.
+
+00:11:02.706 --> 00:11:04.956 A:middle
+RAW + JPEG requires
+a combination
+
+00:11:04.956 --> 00:11:06.476 A:middle
+of resources big and small.
+
+00:11:07.626 --> 00:11:10.286 A:middle
+And bracketed capture
+requires multiple buffers
+
+00:11:10.486 --> 00:11:12.506 A:middle
+to return multiple
+images to the client.
+
+00:11:13.916 --> 00:11:16.096 A:middle
+And of course, many of
+these features can be mixed
+
+00:11:16.126 --> 00:11:19.026 A:middle
+and matched, requiring
+a superset of resources.
+
+00:11:21.576 --> 00:11:24.236 A:middle
+With so many capture features
+available, it's difficult
+
+00:11:24.236 --> 00:11:25.746 A:middle
+for the AVCapturePhotoOutput
+
+00:11:25.746 --> 00:11:28.606 A:middle
+to guess how many
+resources to prepare upfront.
+
+00:11:29.346 --> 00:11:32.446 A:middle
+And both over-preparing and
+under-preparing are bad.
+
+00:11:33.586 --> 00:11:36.856 A:middle
+We liken an over-preparing to
+baking a birthday cake every day
+
+00:11:36.856 --> 00:11:39.016 A:middle
+of the year, just in
+case it's your birthday.
+
+00:11:39.766 --> 00:11:41.066 A:middle
+It's a lot of effort for us.
+
+00:11:41.306 --> 00:11:42.836 A:middle
+A lot of material invested.
+
+00:11:43.096 --> 00:11:45.176 A:middle
+A lot of uneaten cake
+gets thrown away.
+
+00:11:46.366 --> 00:11:48.686 A:middle
+Video preview might come
+up slower each time.
+
+00:11:49.496 --> 00:11:51.556 A:middle
+Memory consumption might
+be needlessly high.
+
+00:11:52.136 --> 00:11:55.836 A:middle
+Under-preparing is just
+as bad, if not worse.
+
+00:11:56.536 --> 00:11:58.226 A:middle
+If we're not ready
+to capture a photo
+
+00:11:58.446 --> 00:12:01.316 A:middle
+with your requested feature
+set, we might miss the shot,
+
+00:11:58.446 --> 00:12:01.316 A:middle
+with your requested feature
+set, we might miss the shot,
+
+00:12:01.556 --> 00:12:03.376 A:middle
+while allocating
+resources on-demand.
+
+00:12:04.526 --> 00:12:06.566 A:middle
+Fortunately, we've
+provided a solution.
+
+00:12:07.896 --> 00:12:11.946 A:middle
+AVCapturePhotoOutput allows you
+to tell it in advance what kinds
+
+00:12:11.946 --> 00:12:13.326 A:middle
+of captures you're
+interested in.
+
+00:12:13.786 --> 00:12:17.536 A:middle
+You do this by calling
+setPreparedPhotoSettingsArray,
+
+00:12:18.526 --> 00:12:21.246 A:middle
+passing an array of
+AVCapturePhotoSettings
+
+00:12:21.576 --> 00:12:24.556 A:middle
+with each one representing a
+different type of capture you'd
+
+00:12:24.556 --> 00:12:25.996 A:middle
+like it to prepare for.
+
+00:12:27.286 --> 00:12:30.056 A:middle
+You can optionally pass a
+completion handler to be called
+
+00:12:30.296 --> 00:12:31.646 A:middle
+when preparation is complete.
+
+00:12:32.116 --> 00:12:35.976 A:middle
+The photo output also
+provides a read only
+
+00:12:36.156 --> 00:12:38.496 A:middle
+preparedPhotoSettingsArray
+property
+
+00:12:38.826 --> 00:12:41.346 A:middle
+so you can query the settings
+array that you last set.
+
+00:12:41.816 --> 00:12:46.416 A:middle
+The
+setPreparedPhotoSettingsArray
+
+00:12:46.416 --> 00:12:47.976 A:middle
+function can do several things.
+
+00:12:48.516 --> 00:12:52.206 A:middle
+It prepares resources for
+all the types of capture
+
+00:12:52.206 --> 00:12:53.486 A:middle
+in your array of settings.
+
+00:12:54.336 --> 00:12:57.776 A:middle
+Also, it reclaims unneeded
+resources if there are any.
+
+00:12:58.336 --> 00:13:02.806 A:middle
+And by passing an empty array,
+you can reclaim everything.
+
+00:12:58.336 --> 00:13:02.806 A:middle
+And by passing an empty array,
+you can reclaim everything.
+
+00:13:03.386 --> 00:13:07.976 A:middle
+It calls you back when all
+resources are prepared.
+
+00:13:08.996 --> 00:13:12.526 A:middle
+And it returns an error if
+resources couldn't be prepared.
+
+00:13:13.056 --> 00:13:15.716 A:middle
+This is all delivered via
+the completion callback.
+
+00:13:17.516 --> 00:13:21.646 A:middle
+preparedPhotoSettingsArray's
+default value is the default
+
+00:13:21.646 --> 00:13:24.146 A:middle
+constructor for
+AVCapturePhotoSettings,
+
+00:13:24.386 --> 00:13:27.356 A:middle
+which has JPEG set
+as the output format
+
+00:13:27.576 --> 00:13:30.126 A:middle
+and AutoStillImageStabilization
+enabled.
+
+00:13:33.056 --> 00:13:36.236 A:middle
+preparedPhotoSettingsArray
+is a sticky property.
+
+00:13:36.696 --> 00:13:39.736 A:middle
+It persists across
+AVCaptureSession start
+
+00:13:39.736 --> 00:13:43.836 A:middle
+or stopRunning, begin
+or commitConfiguration,
+
+00:13:44.436 --> 00:13:45.766 A:middle
+and you can set it and forget it
+
+00:13:45.766 --> 00:13:48.266 A:middle
+if you always take the same
+kinds of captures in your app.
+
+00:13:49.606 --> 00:13:53.246 A:middle
+Another nice feature of
+setpreparedPhotoSettingsArray is
+
+00:13:53.246 --> 00:13:54.446 A:middle
+that it participates
+
+00:13:54.486 --> 00:13:57.636 A:middle
+in AVCaptureSession
+begin/commitConfiguration
+
+00:13:57.886 --> 00:13:59.266 A:middle
+deferred work semantics.
+
+00:13:59.826 --> 00:14:02.286 A:middle
+That is, if you call
+beginConfiguration
+
+00:13:59.826 --> 00:14:02.286 A:middle
+That is, if you call
+beginConfiguration
+
+00:14:02.586 --> 00:14:05.416 A:middle
+and then change your
+sessions to topology by adding
+
+00:14:05.416 --> 00:14:07.206 A:middle
+or removing inputs or outputs
+
+00:14:07.666 --> 00:14:10.316 A:middle
+and then set new
+preparedPhotoSettingsArray
+
+00:14:10.556 --> 00:14:13.986 A:middle
+and then commit the
+configuration the preparation
+
+00:14:14.106 --> 00:14:17.316 A:middle
+won't occur until the
+commitConfiguration is called.
+
+00:14:17.946 --> 00:14:20.446 A:middle
+You can atomically change
+your session configuration
+
+00:14:20.446 --> 00:14:22.026 A:middle
+and prepare your photo output
+
+00:14:22.096 --> 00:14:24.616 A:middle
+for the new configuration
+simultaneously.
+
+00:14:25.116 --> 00:14:31.916 A:middle
+You can prepare before running
+your AVCaptureSession to ensure
+
+00:14:31.916 --> 00:14:34.316 A:middle
+that your app is ready
+to capture photos as soon
+
+00:14:34.316 --> 00:14:35.826 A:middle
+as video preview starts running.
+
+00:14:36.756 --> 00:14:39.586 A:middle
+If you call
+setPreparedPhotoSettingsArray
+
+00:14:39.636 --> 00:14:40.756 A:middle
+when the session is stopped,
+
+00:14:41.186 --> 00:14:43.676 A:middle
+it doesn't call your completion
+handler back right away.
+
+00:14:44.086 --> 00:14:47.556 A:middle
+Instead, the handler is called
+when preparation completes,
+
+00:14:47.896 --> 00:14:50.766 A:middle
+which is after you call
+session startRunning.
+
+00:14:51.526 --> 00:14:54.416 A:middle
+If your session is stopped
+and you prepare with one set
+
+00:14:54.416 --> 00:14:57.276 A:middle
+of settings and then you change
+your mind and call it again
+
+00:14:57.276 --> 00:14:58.536 A:middle
+with another set of settings,
+
+00:14:58.966 --> 00:15:01.316 A:middle
+your first completion
+handler fires immediately
+
+00:14:58.966 --> 00:15:01.316 A:middle
+your first completion
+handler fires immediately
+
+00:15:01.556 --> 00:15:03.306 A:middle
+with prepared set to false.
+
+00:15:03.726 --> 00:15:05.676 A:middle
+This is effectively
+a cancellation
+
+00:15:06.016 --> 00:15:07.706 A:middle
+of the first preparation.
+
+00:15:08.236 --> 00:15:11.696 A:middle
+We have three simple
+recommendations
+
+00:15:11.696 --> 00:15:13.936 A:middle
+on how you should
+use our prepare APIs.
+
+00:15:14.506 --> 00:15:16.446 A:middle
+Firstly, prepare.
+
+00:15:17.486 --> 00:15:20.606 A:middle
+You can always issue a capture
+request without preparing first,
+
+00:15:21.066 --> 00:15:24.786 A:middle
+but if the photo output isn't
+prepared for precisely the type
+
+00:15:24.786 --> 00:15:26.796 A:middle
+of capture you want,
+you might get
+
+00:15:26.796 --> 00:15:28.496 A:middle
+that first image back slowly.
+
+00:15:30.456 --> 00:15:34.496 A:middle
+Second, prepare before calling
+startRunning on your session.
+
+00:15:35.076 --> 00:15:36.926 A:middle
+Knowing the kinds of
+captures you're interested
+
+00:15:36.926 --> 00:15:39.736 A:middle
+in lets the session allocate
+just the right amount
+
+00:15:39.736 --> 00:15:41.096 A:middle
+for you during startup.
+
+00:15:42.636 --> 00:15:46.436 A:middle
+Third, re-prepare only
+when your UI changes.
+
+00:15:46.866 --> 00:15:49.516 A:middle
+You don't need to re-prepare
+every time you capture a photo,
+
+00:15:49.946 --> 00:15:52.856 A:middle
+just when you change the types
+of capture you'll be performing,
+
+00:15:53.206 --> 00:15:56.836 A:middle
+like when your user toggles RAW
+Capture or Bracketed Capture
+
+00:15:56.836 --> 00:15:58.746 A:middle
+on or off in your app.
+
+00:16:01.186 --> 00:16:04.276 A:middle
+Not all AVCapturePhotoOutput
+features qualify
+
+00:16:04.276 --> 00:16:06.246 A:middle
+for on-demand resource
+preparation.
+
+00:16:07.186 --> 00:16:11.006 A:middle
+The first of these is
+isHighResolutionCaptureEnabled.
+
+00:16:11.956 --> 00:16:13.396 A:middle
+Some camera formats allow you
+
+00:16:13.396 --> 00:16:16.496 A:middle
+to capture a high resolution
+still image that is bigger
+
+00:16:16.746 --> 00:16:19.406 A:middle
+than the format's sustainable
+streaming resolution.
+
+00:16:19.756 --> 00:16:24.136 A:middle
+For instance, the front camera's
+photo format on iPhone 6s
+
+00:16:24.226 --> 00:16:27.506 A:middle
+and 6s Plus supports
+5 megapixel stills
+
+00:16:27.926 --> 00:16:30.346 A:middle
+but can only stream
+at 1280 by 960.
+
+00:16:30.956 --> 00:16:33.106 A:middle
+When the camera is
+configured with this format,
+
+00:16:33.476 --> 00:16:36.386 A:middle
+it can either deliver
+1280 by 960 stills
+
+00:16:36.556 --> 00:16:39.106 A:middle
+or 5 megapixel stills depending
+
+00:16:39.106 --> 00:16:42.656 A:middle
+on whether your photo settings
+specify high resolution capture.
+
+00:16:43.276 --> 00:16:45.216 A:middle
+But if the camera
+must be configured
+
+00:16:45.216 --> 00:16:47.246 A:middle
+for 5 megapixel stills upfront,
+
+00:16:47.686 --> 00:16:50.816 A:middle
+so AVCapturePhotoOutput
+requires you to opt-in
+
+00:16:50.816 --> 00:16:52.996 A:middle
+for the feature before
+you start running
+
+00:16:53.286 --> 00:16:55.736 A:middle
+by setting
+isHighResolutionCaptureEnabled
+
+00:16:55.856 --> 00:16:56.426 A:middle
+to true.
+
+00:16:57.226 --> 00:16:59.646 A:middle
+Once you've opted in,
+you can take stills with
+
+00:16:59.646 --> 00:17:01.506 A:middle
+or without high res
+capture enabled
+
+00:16:59.646 --> 00:17:01.506 A:middle
+or without high res
+capture enabled
+
+00:17:01.876 --> 00:17:04.386 A:middle
+without causing an
+expensive graph rebuild.
+
+00:17:06.226 --> 00:17:09.415 A:middle
+Similarly, LivePhotoCapture
+involves delivering a movie
+
+00:17:09.415 --> 00:17:11.406 A:middle
+asset as well as a still image.
+
+00:17:11.935 --> 00:17:14.116 A:middle
+The movie contains
+samples from the past,
+
+00:17:14.685 --> 00:17:17.356 A:middle
+1.5 seconds before
+your capture request.
+
+00:17:17.806 --> 00:17:20.796 A:middle
+So the capture render pipeline
+must be configured upfront
+
+00:17:21.046 --> 00:17:22.586 A:middle
+to do this special
+kind of capture.
+
+00:17:23.726 --> 00:17:26.606 A:middle
+Lastly, live photos
+can be intelligently
+
+00:17:26.606 --> 00:17:28.886 A:middle
+and automatically
+trimmed at capture time
+
+00:17:29.206 --> 00:17:31.516 A:middle
+if large purposeful
+motion is detected,
+
+00:17:31.516 --> 00:17:33.656 A:middle
+such as dropping one's arm
+
+00:17:33.656 --> 00:17:35.336 A:middle
+down to put the device
+in their pocket.
+
+00:17:35.726 --> 00:17:39.576 A:middle
+If you wish to capture full
+duration untrimmed live photos,
+
+00:17:39.866 --> 00:17:43.496 A:middle
+you must opt-out of autoTrimming
+before calling startRunning
+
+00:17:43.576 --> 00:17:44.936 A:middle
+on your AVCaptureSession.
+
+00:17:45.456 --> 00:17:51.176 A:middle
+Our last topic of the day is
+Camera Privacy Policy Changes
+
+00:17:51.396 --> 00:17:52.966 A:middle
+in iOS 10.
+
+00:17:54.586 --> 00:17:57.406 A:middle
+Let's review Apple's Privacy
+Policy with respect to media.
+
+00:17:57.946 --> 00:18:01.816 A:middle
+Photos and videos on a user's
+iOS device are personal,
+
+00:17:57.946 --> 00:18:01.816 A:middle
+Photos and videos on a user's
+iOS device are personal,
+
+00:18:02.116 --> 00:18:03.906 A:middle
+private and sensitive data.
+
+00:18:04.666 --> 00:18:07.816 A:middle
+Use of the camera or microphone
+is a privileged allowance
+
+00:18:07.816 --> 00:18:10.336 A:middle
+that must be granted
+explicitly by the user.
+
+00:18:11.426 --> 00:18:13.096 A:middle
+So beginning in iOS 7,
+
+00:18:13.466 --> 00:18:16.896 A:middle
+users were notified the first
+time an app used the camera
+
+00:18:16.896 --> 00:18:20.526 A:middle
+or microphone and given an
+opportunity to disallow it.
+
+00:18:21.146 --> 00:18:22.426 A:middle
+This is a very good thing.
+
+00:18:22.996 --> 00:18:26.406 A:middle
+Transparency and trust are well
+worth the one-time annoyance
+
+00:18:26.406 --> 00:18:27.416 A:middle
+of tapping okay.
+
+00:18:27.936 --> 00:18:33.056 A:middle
+In iOS 10, we're requiring
+apps to go one step further
+
+00:18:33.056 --> 00:18:36.806 A:middle
+in transparency by informing
+the user why they want
+
+00:18:36.806 --> 00:18:38.266 A:middle
+to access sensitive data.
+
+00:18:39.076 --> 00:18:42.196 A:middle
+Sometimes your UI makes it
+obvious, but sometimes not.
+
+00:18:43.016 --> 00:18:45.456 A:middle
+Your reason string should
+remove all ambiguity.
+
+00:18:45.926 --> 00:18:49.386 A:middle
+For instance, here AVCam is
+telling the user it wants
+
+00:18:49.386 --> 00:18:51.946 A:middle
+to use the camera to
+take photos and video.
+
+00:18:52.376 --> 00:18:53.886 A:middle
+That's a pretty explicit
+statement
+
+00:18:53.886 --> 00:18:55.706 A:middle
+about what it will
+use the camera for.
+
+00:18:57.586 --> 00:19:01.906 A:middle
+Likewise, apps linked against
+iOS 10 must provide a reason
+
+00:18:57.586 --> 00:19:01.906 A:middle
+Likewise, apps linked against
+iOS 10 must provide a reason
+
+00:19:01.906 --> 00:19:03.666 A:middle
+string for using the microphone.
+
+00:19:04.206 --> 00:19:08.586 A:middle
+And lastly, the Photos Library.
+
+00:19:09.056 --> 00:19:11.476 A:middle
+You should be clear in your
+reason string with respect
+
+00:19:11.476 --> 00:19:12.676 A:middle
+to the Photos Library.
+
+00:19:13.156 --> 00:19:16.196 A:middle
+Are you using it for
+reading or writing or both?
+
+00:19:16.656 --> 00:19:21.506 A:middle
+In the latest version of
+Xcode you'll find a list
+
+00:19:21.506 --> 00:19:25.206 A:middle
+of possible privacy description
+keys, not just for camera,
+
+00:19:25.206 --> 00:19:28.876 A:middle
+mic and photos, but for
+access to all sensitive data.
+
+00:19:29.616 --> 00:19:31.606 A:middle
+In order to use any
+of these services,
+
+00:19:31.876 --> 00:19:33.696 A:middle
+you must provide
+a reason string.
+
+00:19:34.056 --> 00:19:36.776 A:middle
+If you don't, your app
+will not be granted access
+
+00:19:36.776 --> 00:19:38.056 A:middle
+to the desired service.
+
+00:19:38.596 --> 00:19:42.546 A:middle
+The three specific keys
+you should be concerned
+
+00:19:42.546 --> 00:19:46.426 A:middle
+about for Capture are
+NSCameraUsageDescription,
+
+00:19:46.746 --> 00:19:48.886 A:middle
+NSMicrophone3UsageDescription,
+
+00:19:49.116 --> 00:19:51.716 A:middle
+and
+NSPhotoLibraryUsageDescription.
+
+00:19:52.226 --> 00:19:56.276 A:middle
+Let's summarize what
+we've learned about.
+
+00:19:57.266 --> 00:19:59.826 A:middle
+AVCapturePhotoOutput
+allows fine control
+
+00:19:59.826 --> 00:20:01.196 A:middle
+of scene monitoring behavior.
+
+00:19:59.826 --> 00:20:01.196 A:middle
+of scene monitoring behavior.
+
+00:20:02.266 --> 00:20:04.786 A:middle
+It also allows on-demand
+resource allocation
+
+00:20:04.786 --> 00:20:05.766 A:middle
+and reclamation.
+
+00:20:06.756 --> 00:20:10.576 A:middle
+And Capture clients must provide
+a reason for camera, mic,
+
+00:20:10.576 --> 00:20:13.436 A:middle
+and photos use as of iOS 10.
+
+00:20:14.296 --> 00:20:18.206 A:middle
+For more information, visit
+the URL for the Advances
+
+00:20:18.206 --> 00:20:20.956 A:middle
+in iOS Photography
+Session which is 501.
+
+00:20:21.496 --> 00:20:26.656 A:middle
+And if you're still at the show,
+we invite you to visit all three
+
+00:20:26.656 --> 00:20:28.556 A:middle
+of these related
+sessions that have to do
+
+00:20:28.556 --> 00:20:31.956 A:middle
+with photography,
+RAW, and Wide Color.
+
+00:20:32.136 --> 00:20:34.476 A:middle
+Thanks for watching and
+happy photo capture.
+
+00:20:34.836 --> 00:20:35.906 A:middle
+Enjoy the rest of the show.

@@ -1,0 +1,2167 @@
+WEBVTT
+
+00:00:07.074 --> 00:00:16.550 align:start position:43% line:-1
+(音楽)
+
+00:00:24.825 --> 00:00:30.030 align:start position:43% line:-1
+(拍手)
+
+00:00:30.130 --> 00:00:31.899 align:start position:41% line:-1
+こんにちは
+
+00:00:31.999 --> 00:00:33.867 align:start position:36% line:-1
+ご来場ありがとう
+
+00:00:33.967 --> 00:00:37.638 align:start position:23% line:-1
+Xcodeチームのデビッドです
+
+00:00:38.238 --> 00:00:42.109 align:start position:27% line:-2
+今日は Swiftチームの
+ジョーダンとともに
+
+00:00:42.209 --> 00:00:46.446 align:start position:27% line:-2
+Xcodeのビルド高速化の
+話をします
+
+00:00:46.947 --> 00:00:50.884 align:start position:23% line:-1
+プロジェクトやその構成によって
+
+00:00:50.984 --> 00:00:54.388 align:start position:30% line:-1
+様々な改善策が使えます
+
+00:00:54.488 --> 00:01:00.093 align:start position:29% line:-2
+場合によっては ビルドを
+著しく高速化できます
+
+00:00:54.488 --> 00:01:00.093 align:start position:29% line:-2
+場合によっては ビルドを
+著しく高速化できます
+
+00:01:01.261 --> 00:01:04.230 align:start position:32% line:-2
+今日は
+ビルド高速化について
+
+00:01:04.565 --> 00:01:07.100 align:start position:32% line:-1
+２つの視点で話します
+
+00:01:08.836 --> 00:01:12.973 align:start position:32% line:-2
+１つは全体的な
+ビルド効率の向上です
+
+00:01:13.540 --> 00:01:18.078 align:start position:29% line:-2
+もう１つは リビルド時の
+作業量の軽減
+
+00:01:18.178 --> 00:01:20.247 align:start position:23% line:-2
+特に インクリメンタルビルドの
+話です
+
+00:01:22.015 --> 00:01:24.885 align:start position:29% line:-1
+これから私が説明するのは
+
+00:01:24.985 --> 00:01:30.858 align:start position:16% line:-2
+プロセスの並列化や
+Run Scriptフェーズの扱いです
+
+00:01:31.258 --> 00:01:36.697 align:start position:20% line:-2
+Xcode 10のビルド時間測定の
+新機能も紹介します
+
+00:01:38.465 --> 00:01:43.070 align:start position:29% line:-2
+また ジョーダンが
+ソースレベルの話をします
+
+00:01:43.604 --> 00:01:46.006 align:start position:20% line:-1
+例えばSwiftでの依存関係の理解
+
+00:01:46.507 --> 00:01:48.709 align:start position:36% line:-1
+複雑な式の扱い方
+
+00:01:49.343 --> 00:01:52.613 align:start position:25% line:-2
+Objective-Cの
+インターフェース制限などです
+
+00:01:54.281 --> 00:01:56.416 align:start position:27% line:-1
+まずは ビルドの並列化です
+
+00:01:57.551 --> 00:02:00.754 align:start position:25% line:-1
+Xcodeのプロジェクトでは
+
+00:01:57.551 --> 00:02:00.754 align:start position:25% line:-1
+Xcodeのプロジェクトでは
+
+00:02:01.522 --> 00:02:05.626 align:start position:30% line:-2
+ビルドしたい対象を
+ターゲットで指定します
+
+00:02:06.193 --> 00:02:10.764 align:start position:23% line:-2
+例えば アプリケーション
+フレームワーク ユニットテスト
+
+00:02:11.832 --> 00:02:15.702 align:start position:30% line:-2
+また ターゲット間には
+依存関係があります
+
+00:02:16.136 --> 00:02:19.673 align:start position:25% line:-1
+依存関係を定義する方法は２つ
+
+00:02:19.773 --> 00:02:23.644 align:start position:11% line:-2
+Target Dependenciesによる
+明示的な方法と
+
+00:02:23.944 --> 00:02:28.649 align:start position:4% line:-2
+Link Binary With Libraries
+などの暗示的な方法です
+
+00:02:28.882 --> 00:02:33.020 align:start position:30% line:-2
+後ほど もう少し詳しく
+説明します
+
+00:02:33.353 --> 00:02:37.291 align:start position:34% line:-2
+サンプルを見ながら
+話をします
+
+00:02:37.858 --> 00:02:40.894 align:start position:23% line:-1
+プロジェクトの依存関係の図です
+
+00:02:41.595 --> 00:02:45.966 align:start position:30% line:-2
+単純に 全ターゲットが
+並んでいます
+
+00:02:46.066 --> 00:02:49.236 align:start position:25% line:-1
+ここでは ５つをビルドします
+
+00:02:50.137 --> 00:02:53.574 align:start position:30% line:-1
+依存関係も示しています
+
+00:02:54.641 --> 00:02:56.977 align:start position:32% line:-1
+この２つの情報により
+
+00:02:57.077 --> 00:02:59.546 align:start position:25% line:-1
+Xcodeはビルドを行います
+
+00:03:00.647 --> 00:03:03.584 align:start position:27% line:-1
+タイムラインを見てください
+
+00:03:06.920 --> 00:03:11.225 align:start position:34% line:-2
+各ターゲットが
+順番に処理されます
+
+00:03:11.325 --> 00:03:14.795 align:start position:34% line:-2
+１つが終わってから
+次へ進みます
+
+00:03:15.295 --> 00:03:18.031 align:start position:30% line:-1
+何の問題もないのですが
+
+00:03:18.332 --> 00:03:22.236 align:start position:32% line:-2
+ハードウェア利用率に
+無駄が生じます
+
+00:03:22.469 --> 00:03:26.206 align:start position:29% line:-2
+マルチコアのマシンなどは
+特にそうです
+
+00:03:26.707 --> 00:03:30.010 align:start position:25% line:-1
+貴重な開発時間が奪われますね
+
+00:03:30.944 --> 00:03:34.181 align:start position:29% line:-1
+そこで 次を見てください
+
+00:03:37.718 --> 00:03:40.721 align:start position:30% line:-1
+これを見て気付くことは
+
+00:03:40.888 --> 00:03:45.792 align:start position:30% line:-2
+まず ビルドの処理量は
+変わっていません
+
+00:03:46.627 --> 00:03:49.730 align:start position:25% line:-1
+しかし 時間は短縮されました
+
+00:03:50.130 --> 00:03:53.767 align:start position:34% line:-2
+この例では
+大幅に減っています
+
+00:03:54.868 --> 00:03:58.539 align:start position:36% line:-2
+ハードウェアを
+最大限に活用して
+
+00:03:58.639 --> 00:04:00.941 align:start position:32% line:-1
+時間を削減できました
+
+00:03:58.639 --> 00:04:00.941 align:start position:32% line:-1
+時間を削減できました
+
+00:04:02.910 --> 00:04:08.015 align:start position:29% line:-2
+では 並列化というものが
+これほど有効なら
+
+00:04:08.248 --> 00:04:13.353 align:start position:32% line:-2
+この図のように 全部
+同時にしてみては？
+
+00:04:14.054 --> 00:04:19.059 align:start position:30% line:-2
+まず エラーが出るのが
+関の山でしょう
+
+00:04:19.159 --> 00:04:24.364 align:start position:29% line:-2
+依存関係の情報が
+重要な要素となるからです
+
+00:04:24.765 --> 00:04:26.300 align:start position:36% line:-1
+このようにすると
+
+00:04:26.600 --> 00:04:31.271 align:start position:29% line:-2
+依存関係を無視して
+ビルドすることになります
+
+00:04:31.371 --> 00:04:33.173 align:start position:36% line:-1
+うまくいきません
+
+00:04:34.141 --> 00:04:35.576 align:start position:32% line:-1
+では どうしましょう
+
+00:04:35.809 --> 00:04:39.580 align:start position:34% line:-2
+ビルドの並列化で
+時間を短縮するには
+
+00:04:39.680 --> 00:04:43.817 align:start position:27% line:-1
+どうすればよいのでしょうか
+
+00:04:44.351 --> 00:04:46.453 align:start position:34% line:-1
+Xcodeは本来―
+
+00:04:46.553 --> 00:04:51.358 align:start position:27% line:-2
+ビルド並列化ができるように
+設定されています
+
+00:04:51.458 --> 00:04:53.460 align:start position:27% line:-1
+スキームエディタを使います
+
+00:04:53.794 --> 00:04:56.597 align:start position:14% line:-1
+まず Scheme Chooserを開き
+
+00:04:57.197 --> 00:04:58.699 align:start position:25% line:-1
+Edit Schemeを選択
+
+00:04:59.633 --> 00:05:02.202 align:start position:23% line:-1
+Build Actionの中に
+
+00:04:59.633 --> 00:05:02.202 align:start position:23% line:-1
+Build Actionの中に
+
+00:05:02.936 --> 00:05:05.205 align:start position:18% line:-1
+Build Optionsがあります
+
+00:05:05.339 --> 00:05:07.007 align:start position:38% line:-1
+項目は２つです
+
+00:05:07.107 --> 00:05:09.276 align:start position:14% line:-1
+“Parallelize Build”と
+
+00:05:09.443 --> 00:05:11.879 align:start position:0% line:-2
+“Find Implicit Dependencies”
+です
+
+00:05:12.379 --> 00:05:14.515 align:start position:36% line:-1
+前者を選択します
+
+00:05:14.615 --> 00:05:18.619 align:start position:25% line:-2
+Xcodeが依存関係の情報を
+利用して
+
+00:05:18.752 --> 00:05:21.755 align:start position:32% line:-2
+ターゲットの並列化を
+試みます
+
+00:05:23.223 --> 00:05:27.427 align:start position:30% line:-2
+では 依存関係の構成を
+見てみましょう
+
+00:05:28.228 --> 00:05:30.364 align:start position:27% line:-2
+ビルドフェーズのエディタで
+見られます
+
+00:05:30.631 --> 00:05:34.868 align:start position:29% line:-2
+プロジェクトナビゲータを
+開いて
+
+00:05:34.968 --> 00:05:36.470 align:start position:34% line:-1
+プロジェクトを選択
+
+00:05:36.570 --> 00:05:40.240 align:start position:30% line:-2
+ここでは
+ゲームプロジェクトです
+
+00:05:41.341 --> 00:05:44.111 align:start position:16% line:-1
+次にBuild Phasesをクリック
+
+00:05:45.179 --> 00:05:49.049 align:start position:27% line:-2
+ゲームターゲットのところを
+見てください
+
+00:05:49.149 --> 00:05:51.885 align:start position:30% line:-1
+依存関係を確認できます
+
+00:05:52.019 --> 00:05:57.357 align:start position:2% line:-2
+Link Binary With Librariesに
+注目してください
+
+00:05:57.758 --> 00:05:59.193 align:start position:36% line:-1
+このフェーズでは
+
+00:05:59.293 --> 00:06:03.897 align:start position:29% line:-2
+ターゲットとリンクさせる
+アイテムを定義します
+
+00:05:59.293 --> 00:06:03.897 align:start position:29% line:-2
+ターゲットとリンクさせる
+アイテムを定義します
+
+00:06:04.631 --> 00:06:08.535 align:start position:25% line:-2
+ここでは Physicsと
+Utilitiesがあります
+
+00:06:09.937 --> 00:06:12.940 align:start position:30% line:-2
+これがプロジェクト内の
+ターゲットで
+
+00:06:13.040 --> 00:06:17.010 align:start position:30% line:-2
+Xcodeが依存関係を
+作成しています
+
+00:06:17.678 --> 00:06:21.381 align:start position:20% line:-1
+Autolinkなどのリンク機能や
+
+00:06:21.615 --> 00:06:24.284 align:start position:20% line:-2
+LD Build Flagsなどを
+用いている場合
+
+00:06:24.384 --> 00:06:28.021 align:start position:34% line:-2
+暗示的な依存関係の
+作成はできません
+
+00:06:28.121 --> 00:06:31.658 align:start position:34% line:-2
+明示的な依存関係を
+このフェーズか―
+
+00:06:32.125 --> 00:06:35.262 align:start position:7% line:-2
+Target Dependenciesフェーズで
+作成します
+
+00:06:35.896 --> 00:06:39.500 align:start position:29% line:-2
+さて このシェーダという
+アイテムは
+
+00:06:40.634 --> 00:06:43.637 align:start position:29% line:-1
+リンク時には使用しません
+
+00:06:43.737 --> 00:06:47.841 align:start position:32% line:-2
+別のビルドフェーズで
+使用されます
+
+00:06:48.041 --> 00:06:51.411 align:start position:30% line:-2
+それをXcodeに
+知らせることが重要です
+
+00:06:51.512 --> 00:06:54.882 align:start position:27% line:-1
+ターゲットをビルドする前に
+
+00:06:54.982 --> 00:06:59.219 align:start position:23% line:-2
+シェーダのビルドとコンパイルも
+完了させます
+
+00:07:00.921 --> 00:07:06.660 align:start position:27% line:-2
+このターゲットが含まれる
+プロジェクトを参照するには
+
+00:07:06.760 --> 00:07:11.798 align:start position:25% line:-2
+これを 現在のプロジェクトの
+下位にドラッグします
+
+00:07:13.000 --> 00:07:15.502 align:start position:29% line:-1
+その他の依存関係を見ると
+
+00:07:16.803 --> 00:07:19.873 align:start position:20% line:-1
+シェーダはUtilitiesに依存
+
+00:07:20.841 --> 00:07:24.444 align:start position:18% line:-2
+UtilitiesはPhysicsに
+依存しています
+
+00:07:25.345 --> 00:07:28.148 align:start position:32% line:-1
+最後に Testsは
+
+00:07:28.248 --> 00:07:31.718 align:start position:16% line:-2
+ゲーム シェーダ Utilitiesに
+依存しています
+
+00:07:32.553 --> 00:07:36.123 align:start position:34% line:-2
+プロジェクトの
+構成を理解しました
+
+00:07:36.223 --> 00:07:40.527 align:start position:34% line:-2
+次に この連続的な
+ビルドプロセスを
+
+00:07:40.627 --> 00:07:43.897 align:start position:27% line:-1
+並列化する手順を説明します
+
+00:07:44.431 --> 00:07:47.067 align:start position:29% line:-1
+まず テストに注目します
+
+00:07:49.136 --> 00:07:54.208 align:start position:30% line:-2
+これから話す依存関係を
+３つに分類しました
+
+00:07:54.408 --> 00:07:58.979 align:start position:27% line:-2
+１つ目は“全部やる”依存と
+名付けました
+
+00:07:59.279 --> 00:08:03.817 align:start position:27% line:-2
+このテストは 対象の
+コンポーネントが多すぎます
+
+00:07:59.279 --> 00:08:03.817 align:start position:27% line:-2
+このテストは 対象の
+コンポーネントが多すぎます
+
+00:08:04.117 --> 00:08:08.755 align:start position:16% line:-2
+ゲーム シェーダ Utilitiesの
+３つです
+
+00:08:09.957 --> 00:08:15.562 align:start position:29% line:-2
+こういう場合は 個別に
+分割する方がいいでしょう
+
+00:08:16.663 --> 00:08:21.835 align:start position:30% line:-2
+これによって 並列化の
+最初の段階に入ります
+
+00:08:23.270 --> 00:08:26.907 align:start position:34% line:-2
+テストターゲットが
+３つに分かれ
+
+00:08:27.007 --> 00:08:29.610 align:start position:32% line:-2
+ゲームのテストだけを
+ビルドできます
+
+00:08:30.744 --> 00:08:35.883 align:start position:27% line:-2
+他の２つは別のターゲットと
+並列化できます
+
+00:08:35.982 --> 00:08:40.721 align:start position:25% line:-2
+各コンポーネントが終わり次第
+ビルド可能です
+
+00:08:42.188 --> 00:08:45.659 align:start position:30% line:-1
+次に説明する依存関係は
+
+00:08:45.759 --> 00:08:49.363 align:start position:23% line:-1
+“うるさい隣人”というものです
+
+00:08:49.696 --> 00:08:53.433 align:start position:29% line:-2
+この依存は
+なくてはならないものです
+
+00:08:53.534 --> 00:08:57.604 align:start position:30% line:-2
+しかし 必要なのは
+ターゲットの一部なのに
+
+00:08:58.405 --> 00:09:00.674 align:start position:32% line:-1
+全体を取得しています
+
+00:08:58.405 --> 00:09:00.674 align:start position:32% line:-1
+全体を取得しています
+
+00:09:01.141 --> 00:09:05.879 align:start position:27% line:-2
+ゲームは３つのターゲットに
+依存しています
+
+00:09:05.979 --> 00:09:07.247 align:start position:34% line:-1
+これはいいでしょう
+
+00:09:08.415 --> 00:09:13.253 align:start position:25% line:-2
+怪しいのはシェーダと
+Utilitiesの関係です
+
+00:09:13.687 --> 00:09:16.490 align:start position:27% line:-2
+シェーダはメタライブラリを
+生成します
+
+00:09:16.590 --> 00:09:20.527 align:start position:32% line:-2
+これはGPUコードを
+まとめたものです
+
+00:09:21.328 --> 00:09:25.799 align:start position:16% line:-2
+Utilitiesが生成するフレームは
+CPUコードです
+
+00:09:25.899 --> 00:09:29.303 align:start position:29% line:-2
+ですから この依存関係は
+疑問です
+
+00:09:29.469 --> 00:09:34.074 align:start position:29% line:-2
+Utilitiesの中に
+ビルドフェーズがあります
+
+00:09:34.174 --> 00:09:37.878 align:start position:29% line:-2
+これは両ターゲットが使う
+情報を生成します
+
+00:09:37.978 --> 00:09:43.050 align:start position:25% line:-2
+しかし Utilitiesの
+その他の部分は不要です
+
+00:09:43.250 --> 00:09:47.688 align:start position:29% line:-2
+ですから 別ターゲットに
+分割しましょう
+
+00:09:48.555 --> 00:09:50.724 align:start position:36% line:-1
+この少しの変更が
+
+00:09:50.824 --> 00:09:54.995 align:start position:30% line:-2
+全体のタイムラインに
+大きな影響を及ぼします
+
+00:09:57.097 --> 00:10:00.067 align:start position:27% line:-1
+緑色が新たなターゲットです
+
+00:09:57.097 --> 00:10:00.067 align:start position:27% line:-1
+緑色が新たなターゲットです
+
+00:10:00.167 --> 00:10:05.606 align:start position:11% line:-2
+UtilitiesはCode Genに移動し
+縮小できました
+
+00:10:06.006 --> 00:10:08.408 align:start position:34% line:-2
+Code Genは
+他に依存しないため
+
+00:10:08.542 --> 00:10:11.378 align:start position:30% line:-1
+最初の方に移動できます
+
+00:10:11.578 --> 00:10:16.049 align:start position:25% line:-2
+赤で示したPhysicsとも
+並列化できます
+
+00:10:17.417 --> 00:10:22.189 align:start position:18% line:-2
+シェーダはもう Utilitiesに
+依存していないため
+
+00:10:22.289 --> 00:10:25.592 align:start position:30% line:-2
+他のビルドを待つ必要は
+ありません
+
+00:10:25.692 --> 00:10:28.729 align:start position:16% line:-1
+Code Genの後に ビルド可能です
+
+00:10:30.664 --> 00:10:35.536 align:start position:25% line:-1
+最後は“忘れられた”依存です
+
+00:10:36.637 --> 00:10:41.475 align:start position:32% line:-2
+コードを移動したり
+削除したりする過程で
+
+00:10:41.975 --> 00:10:45.646 align:start position:30% line:-2
+いわゆるデッドコードが
+生じます
+
+00:10:45.746 --> 00:10:48.549 align:start position:32% line:-1
+依存関係でも同じです
+
+00:10:48.649 --> 00:10:50.684 align:start position:32% line:-1
+時々 削除を忘れます
+
+00:10:51.385 --> 00:10:55.088 align:start position:34% line:-2
+その場合は 単純に
+削除するだけです
+
+00:10:56.690 --> 00:10:59.793 align:start position:25% line:-1
+ビルドは さらに短縮されます
+
+00:11:00.160 --> 00:11:03.797 align:start position:16% line:-1
+Utilitiesターゲットのビルドを
+
+00:11:03.897 --> 00:11:08.202 align:start position:32% line:-2
+Code Genの
+直後にできるからです
+
+00:11:11.271 --> 00:11:12.973 align:start position:29% line:-1
+これまで Xcodeでは
+
+00:11:13.507 --> 00:11:16.710 align:start position:29% line:-2
+他に依存するターゲットを
+ビルドする時―
+
+00:11:17.411 --> 00:11:21.482 align:start position:32% line:-2
+依存先のビルドを
+待つ必要がありました
+
+00:11:22.082 --> 00:11:23.984 align:start position:27% line:-1
+Xcode 10の新機能で
+
+00:11:24.084 --> 00:11:28.422 align:start position:29% line:-2
+ビルドの一部を
+並列化することが可能です
+
+00:11:30.057 --> 00:11:33.794 align:start position:34% line:-2
+コンパイルの開始が
+早まります
+
+00:11:34.428 --> 00:11:38.131 align:start position:34% line:-2
+依存関係を含む
+ビルドが完了すれば
+
+00:11:38.232 --> 00:11:40.934 align:start position:30% line:-1
+すぐ始められるからです
+
+00:11:41.635 --> 00:11:44.071 align:start position:27% line:-1
+リンクなども並列化できます
+
+00:11:46.173 --> 00:11:49.910 align:start position:29% line:-2
+Run Scriptは
+ビルドフェーズの１つです
+
+00:11:50.010 --> 00:11:54.148 align:start position:32% line:-2
+このフェーズで
+並列化を利用するには
+
+00:11:54.248 --> 00:11:59.419 align:start position:29% line:-2
+ターゲットが順に
+完了するまで待たされます
+
+00:12:00.387 --> 00:12:02.089 align:start position:30% line:-1
+実は このフェーズでは
+
+00:12:02.689 --> 00:12:06.527 align:start position:32% line:-2
+プロセスを 自由に
+カスタマイズできます
+
+00:12:06.994 --> 00:12:12.266 align:start position:25% line:-2
+柔軟な分 デベロッパの責任も
+大きくなります
+
+00:12:12.399 --> 00:12:15.002 align:start position:16% line:-1
+それでは Run Scriptを設定し
+
+00:12:15.102 --> 00:12:20.107 align:start position:32% line:-2
+ビルドを効率よく行う
+プロセスを説明します
+
+00:12:22.342 --> 00:12:25.179 align:start position:16% line:-2
+これが Run Scriptフェーズの
+エディタです
+
+00:12:25.279 --> 00:12:27.748 align:start position:25% line:-2
+ビルドフェーズのエディタにも
+あります
+
+00:12:28.148 --> 00:12:32.452 align:start position:30% line:-2
+まず スクリプト本体を
+見てください
+
+00:12:32.719 --> 00:12:35.823 align:start position:21% line:-1
+ここに スクリプト全体を入れるか
+
+00:12:35.923 --> 00:12:38.559 align:start position:32% line:-1
+別の場所を参照します
+
+00:12:39.560 --> 00:12:42.029 align:start position:32% line:-1
+フェーズ全体を通して
+
+00:12:42.362 --> 00:12:44.798 align:start position:29% line:-1
+利用できる設定があります
+
+00:12:44.898 --> 00:12:48.035 align:start position:18% line:-2
+その１つ Source Groupを
+使っています
+
+00:12:49.236 --> 00:12:53.173 align:start position:32% line:-2
+これを使うと
+絶対パスや相対パスを
+
+00:12:53.273 --> 00:12:56.443 align:start position:25% line:-1
+提供する必要がなく 便利です
+
+00:12:57.678 --> 00:13:00.414 align:start position:32% line:-1
+次は入力ファイルです
+
+00:12:57.678 --> 00:13:00.414 align:start position:32% line:-1
+次は入力ファイルです
+
+00:13:00.814 --> 00:13:03.717 align:start position:29% line:-1
+このフェーズでは重要です
+
+00:13:03.851 --> 00:13:06.286 align:start position:34% line:-1
+この情報を利用して
+
+00:13:06.386 --> 00:13:11.325 align:start position:16% line:-2
+ビルドシステムはRun Scriptの
+実行を決定します
+
+00:13:12.125 --> 00:13:15.696 align:start position:27% line:-2
+そのため
+処理中に読まれるファイルを
+
+00:13:15.796 --> 00:13:19.766 align:start position:25% line:-1
+漏れなく含める必要があります
+
+00:13:21.301 --> 00:13:25.973 align:start position:34% line:-2
+入力するファイルが
+多いこともあります
+
+00:13:26.073 --> 00:13:28.108 align:start position:32% line:-1
+大変そうに思えますね
+
+00:13:28.609 --> 00:13:30.010 align:start position:30% line:-1
+Xcode 10では―
+
+00:13:30.744 --> 00:13:36.116 align:start position:27% line:-2
+このリストを外部ファイルで
+管理できます
+
+00:13:36.216 --> 00:13:38.519 align:start position:25% line:-1
+File Listといいます
+
+00:13:39.553 --> 00:13:42.156 align:start position:36% line:-1
+単純なテキストで
+
+00:13:42.256 --> 00:13:45.159 align:start position:32% line:-2
+ファイルを
+リスト化したものです
+
+00:13:46.193 --> 00:13:48.395 align:start position:18% line:-1
+Run Scriptフェーズを通して
+
+00:13:48.562 --> 00:13:51.732 align:start position:36% line:-2
+同じビルド設定に
+アクセスできます
+
+00:13:52.900 --> 00:13:58.372 align:start position:23% line:-2
+ただし ビルドの過程での
+ファイルの修正や生成は不可です
+
+00:13:58.739 --> 00:14:03.844 align:start position:21% line:-2
+ビルドが始まると リストが読まれ
+情報が使われます
+
+00:13:58.739 --> 00:14:03.844 align:start position:21% line:-2
+ビルドが始まると リストが読まれ
+情報が使われます
+
+00:14:06.380 --> 00:14:08.415 align:start position:29% line:-1
+次は出力ファイルの話です
+
+00:14:08.515 --> 00:14:12.586 align:start position:30% line:-2
+これも ビルドに必要な
+重要情報の１つです
+
+00:14:12.953 --> 00:14:15.022 align:start position:29% line:-1
+Xcodeはこの情報から
+
+00:14:15.155 --> 00:14:18.058 align:start position:18% line:-1
+Run Scriptの実行を決めます
+
+00:14:19.226 --> 00:14:24.731 align:start position:27% line:-2
+もちろん 出力ファイルにも
+新機能は対応しています
+
+00:14:25.532 --> 00:14:29.036 align:start position:25% line:-2
+Run Scriptの実行は
+どんな時でしょうか
+
+00:14:29.770 --> 00:14:32.005 align:start position:27% line:-1
+入力ファイルの宣言がないと
+
+00:14:32.773 --> 00:14:37.177 align:start position:30% line:-2
+ビルドのたびに
+実行する必要があります
+
+00:14:37.511 --> 00:14:40.781 align:start position:32% line:-2
+ですから
+入力の宣言は重要です
+
+00:14:41.915 --> 00:14:47.187 align:start position:27% line:-2
+次に 入力ファイルや
+File Listの内容に
+
+00:14:47.287 --> 00:14:50.057 align:start position:32% line:-1
+変更があった場合です
+
+00:14:50.424 --> 00:14:53.560 align:start position:21% line:-1
+Run Scriptは戻されます
+
+00:14:54.828 --> 00:14:58.065 align:start position:34% line:-2
+出力ファイルが
+見つからない場合―
+
+00:14:58.198 --> 00:15:01.902 align:start position:20% line:-2
+XcodeはRun Scriptを
+実行します
+
+00:14:58.198 --> 00:15:01.902 align:start position:20% line:-2
+XcodeはRun Scriptを
+実行します
+
+00:15:02.002 --> 00:15:04.838 align:start position:34% line:-2
+足りないファイルを
+生成するためです
+
+00:15:06.106 --> 00:15:07.908 align:start position:32% line:-1
+Xcode 10では
+
+00:15:08.208 --> 00:15:11.411 align:start position:23% line:-2
+Run Scriptフェーズの
+ヘルプがあります
+
+00:15:12.279 --> 00:15:16.783 align:start position:43% line:-1
+(拍手)
+
+00:15:17.351 --> 00:15:19.753 align:start position:30% line:-1
+今 話した内容を含めて
+
+00:15:19.853 --> 00:15:23.223 align:start position:34% line:-2
+さらに詳しい情報が
+書かれています
+
+00:15:23.323 --> 00:15:26.894 align:start position:20% line:-1
+File Listを使う方法もです
+
+00:15:28.161 --> 00:15:31.932 align:start position:18% line:-1
+さて Run Scriptを設定して
+
+00:15:32.032 --> 00:15:35.702 align:start position:36% line:-2
+新たな依存関係を
+宣言したとします
+
+00:15:35.802 --> 00:15:38.338 align:start position:34% line:-2
+依存サイクルに
+陥ることがあります
+
+00:15:38.639 --> 00:15:43.911 align:start position:30% line:-2
+依存関係の どこかが
+ループしている状態です
+
+00:15:45.012 --> 00:15:50.617 align:start position:18% line:-2
+Xcode 10では このサイクルの
+検出力が向上しました
+
+00:15:50.717 --> 00:15:55.789 align:start position:30% line:-2
+サイクルを形成している
+入力ファイルを
+
+00:15:55.889 --> 00:15:57.891 align:start position:32% line:-1
+漏れなく把握できます
+
+00:15:58.892 --> 00:16:01.562 align:start position:30% line:-1
+サイクルが良くないのは
+
+00:15:58.892 --> 00:16:01.562 align:start position:30% line:-1
+サイクルが良くないのは
+
+00:16:01.662 --> 00:16:06.667 align:start position:29% line:-2
+まず プロジェクト内の
+構成に問題が出るからです
+
+00:16:07.267 --> 00:16:10.938 align:start position:29% line:-1
+次に 間違ったリビルドや
+
+00:16:11.038 --> 00:16:14.107 align:start position:29% line:-1
+古い情報の原因になります
+
+00:16:15.409 --> 00:16:19.479 align:start position:32% line:-2
+そのため
+ヘルプを更新しました
+
+00:16:19.947 --> 00:16:24.451 align:start position:25% line:-1
+特に陥りやすい依存サイクルや
+
+00:16:25.619 --> 00:16:30.591 align:start position:32% line:-2
+その修復方法について
+取り上げています
+
+00:16:33.794 --> 00:16:37.464 align:start position:34% line:-2
+最後の話題は
+ビルド時間測定です
+
+00:16:37.564 --> 00:16:41.268 align:start position:32% line:-2
+これについては
+新機能が２つあります
+
+00:16:42.336 --> 00:16:43.470 align:start position:39% line:-1
+まず １つ目
+
+00:16:44.238 --> 00:16:49.910 align:start position:27% line:-2
+各タスクの実行時間が分かる
+行内の時間表示です
+
+00:16:52.045 --> 00:16:54.248 align:start position:29% line:-1
+ビルドログを見てください
+
+00:16:54.515 --> 00:16:56.617 align:start position:29% line:-1
+上にフィルターがあります
+
+00:16:57.084 --> 00:17:01.188 align:start position:20% line:-1
+“All”と“Recent”に注目
+
+00:16:57.084 --> 00:17:01.188 align:start position:20% line:-1
+“All”と“Recent”に注目
+
+00:17:02.189 --> 00:17:05.291 align:start position:34% line:-2
+“All”では
+最終物を生成する―
+
+00:17:05.392 --> 00:17:08.829 align:start position:25% line:-1
+すべてのタスクが表示されます
+
+00:17:09.329 --> 00:17:11.365 align:start position:30% line:-1
+通常は 必要ありません
+
+00:17:11.665 --> 00:17:14.434 align:start position:34% line:-2
+何か問題がないかを
+見たい時は
+
+00:17:14.535 --> 00:17:17.938 align:start position:23% line:-1
+“Recent”タブを使います
+
+00:17:18.472 --> 00:17:21.208 align:start position:29% line:-1
+前回のビルドで使用した―
+
+00:17:21.308 --> 00:17:24.243 align:start position:30% line:-1
+パスをすべて表示します
+
+00:17:26.747 --> 00:17:31.585 align:start position:21% line:-2
+もう１つの新機能は
+Timing Summaryです
+
+00:17:31.919 --> 00:17:34.988 align:start position:20% line:-1
+Productメニューから行けます
+
+00:17:35.122 --> 00:17:36.857 align:start position:20% line:-1
+Perform Actionを選び
+
+00:17:37.191 --> 00:17:38.892 align:start position:4% line:-1
+Build with Timing Summaryへ
+
+00:17:39.726 --> 00:17:43.330 align:start position:27% line:-2
+すると ビルドログの最後に
+ログが追加されます
+
+00:17:46.066 --> 00:17:49.536 align:start position:25% line:-1
+詳しく見ると 前回のビルドの
+
+00:17:49.636 --> 00:17:53.373 align:start position:32% line:-2
+全タスクの合計時間が
+分かります
+
+00:17:53.874 --> 00:17:57.644 align:start position:20% line:-1
+やはり Recentタブは重要です
+
+00:17:58.979 --> 00:18:03.350 align:start position:11% line:-2
+特に注目すべきは
+PhaseScriptExecutionです
+
+00:17:58.979 --> 00:18:03.350 align:start position:11% line:-2
+特に注目すべきは
+PhaseScriptExecutionです
+
+00:18:03.784 --> 00:18:06.353 align:start position:32% line:-1
+前回のビルドを見ると
+
+00:18:06.687 --> 00:18:09.990 align:start position:34% line:-2
+シェルスクリプトを
+実行しています
+
+00:18:10.190 --> 00:18:11.925 align:start position:34% line:-1
+この１つで５秒です
+
+00:18:12.426 --> 00:18:16.130 align:start position:29% line:-2
+インクリメンタルビルドの
+１つ１つが―
+
+00:18:16.296 --> 00:18:20.834 align:start position:32% line:-2
+こうなっていたら
+設定に不備があります
+
+00:18:20.934 --> 00:18:25.172 align:start position:30% line:-2
+対処すれば
+ビルド時間を減らせます
+
+00:18:28.375 --> 00:18:31.979 align:start position:20% line:-1
+このTiming Summaryは
+
+00:18:32.146 --> 00:18:37.151 align:start position:30% line:-2
+コマンドラインからも
+利用することができます
+
+00:18:39.920 --> 00:18:45.425 align:start position:25% line:-2
+では ここからはジョーダンが
+ソースレベルの話をします
+
+00:18:46.093 --> 00:18:51.431 align:start position:43% line:-1
+(拍手)
+
+00:18:52.533 --> 00:18:53.700 align:start position:41% line:-1
+ありがとう
+
+00:18:54.001 --> 00:18:56.737 align:start position:29% line:-1
+やり方を１つ変えるだけで
+
+00:18:56.837 --> 00:19:00.941 align:start position:25% line:-2
+プロジェクトを改善する方法を
+紹介しました
+
+00:18:56.837 --> 00:19:00.941 align:start position:25% line:-2
+プロジェクトを改善する方法を
+紹介しました
+
+00:19:01.241 --> 00:19:03.977 align:start position:27% line:-1
+ソースやファイルの話の前に
+
+00:19:04.077 --> 00:19:07.681 align:start position:27% line:-2
+Xcode 10の新機能を
+もう１つ紹介します
+
+00:19:08.315 --> 00:19:13.220 align:start position:30% line:-2
+この技を使っている人も
+いると思います
+
+00:19:13.320 --> 00:19:16.423 align:start position:27% line:-1
+ファイルが多い時の対策です
+
+00:19:17.591 --> 00:19:19.193 align:start position:38% line:-1
+ご存じでしょう
+
+00:19:19.593 --> 00:19:23.464 align:start position:21% line:-2
+Whole Moduleモードを
+使用することです
+
+00:19:23.964 --> 00:19:27.201 align:start position:25% line:-1
+前バージョンのXcodeでは
+
+00:19:27.301 --> 00:19:31.238 align:start position:23% line:-2
+デバッグビルドでも
+Whole Moduleの方が
+
+00:19:31.338 --> 00:19:36.677 align:start position:16% line:-2
+デフォルトのIncrementalより
+高速でした
+
+00:19:37.244 --> 00:19:41.615 align:start position:29% line:-2
+この方法で ビルド時間を
+短縮できました
+
+00:19:41.715 --> 00:19:47.254 align:start position:29% line:-2
+コンパイラがファイル間で
+処理を共有できるためです
+
+00:19:47.354 --> 00:19:50.357 align:start position:29% line:-2
+しかし インクリメンタル
+ビルドを使えず
+
+00:19:50.457 --> 00:19:54.795 align:start position:27% line:-2
+毎回 全体を
+リビルドすることになります
+
+00:19:55.329 --> 00:19:58.398 align:start position:25% line:-2
+Xcode 10では
+インクリメンタルビルドを改良
+
+00:19:58.499 --> 00:20:01.602 align:start position:34% line:-2
+ファイル間で処理を
+共有できます
+
+00:19:58.499 --> 00:20:01.602 align:start position:34% line:-2
+ファイル間で処理を
+共有できます
+
+00:20:01.702 --> 00:20:05.706 align:start position:21% line:-2
+もう Whole Moduleを
+使わなくてよいのです
+
+00:20:07.608 --> 00:20:11.211 align:start position:43% line:-1
+(拍手)
+
+00:20:11.812 --> 00:20:16.016 align:start position:16% line:-2
+使っていた方は
+Build Settingsエディタで
+
+00:20:16.116 --> 00:20:20.154 align:start position:16% line:-2
+Compilation Modeの下の
+Debugを選び
+
+00:20:20.254 --> 00:20:21.889 align:start position:30% line:-1
+Deleteキーを押す
+
+00:20:22.089 --> 00:20:26.126 align:start position:16% line:-2
+これで Incrementalモードに
+戻せます
+
+00:20:26.827 --> 00:20:29.963 align:start position:27% line:-1
+ここでは詳しくは触れません
+
+00:20:30.063 --> 00:20:32.900 align:start position:9% line:-2
+“What's New in Swift”でも
+触れましたし
+
+00:20:33.000 --> 00:20:38.739 align:start position:0% line:-2
+明日の“Behind the Scenes
+of the Xcode Build Process”で
+
+00:20:38.839 --> 00:20:42.576 align:start position:25% line:-1
+さらに詳しい話をする予定です
+
+00:20:45.345 --> 00:20:50.050 align:start position:32% line:-2
+今日 話すべきことが
+まだ３つ残っています
+
+00:20:50.350 --> 00:20:56.089 align:start position:30% line:-2
+１つ目は 複雑な式への
+対処法についてです
+
+00:20:56.657 --> 00:21:00.094 align:start position:32% line:-2
+今回の両セクションの
+重要ポイントを
+
+00:20:56.657 --> 00:21:00.094 align:start position:32% line:-2
+今回の両セクションの
+重要ポイントを
+
+00:21:00.194 --> 00:21:03.464 align:start position:27% line:-1
+例証するのに最適だからです
+
+00:21:03.797 --> 00:21:07.868 align:start position:30% line:-2
+ビルドに時間がかかる時
+ちょっとした情報を
+
+00:21:07.968 --> 00:21:12.239 align:start position:32% line:-2
+Xcodeに与えると
+状況を改善できます
+
+00:21:13.040 --> 00:21:17.844 align:start position:27% line:-2
+複雑なSwiftの式を例に
+見てみましょう
+
+00:21:20.514 --> 00:21:23.383 align:start position:27% line:-1
+私の最近のプロジェクトです
+
+00:21:23.884 --> 00:21:29.590 align:start position:30% line:-2
+この構造体を 私は
+あちこちで使っています
+
+00:21:30.023 --> 00:21:33.961 align:start position:36% line:-2
+構造体自体には
+問題はありません
+
+00:21:34.061 --> 00:21:38.232 align:start position:32% line:-2
+プロパティの型推定も
+問題ありません
+
+00:21:38.432 --> 00:21:43.203 align:start position:29% line:-2
+しかし 型を推定する式が
+やや複雑です
+
+00:21:43.303 --> 00:21:48.509 align:start position:29% line:-2
+少なくとも一目で分かる
+単純なものではありません
+
+00:21:48.976 --> 00:21:50.444 align:start position:38% line:-1
+これが答えです
+
+00:21:50.544 --> 00:21:53.647 align:start position:25% line:-1
+0.0のように単純なものなら
+
+00:21:53.747 --> 00:21:57.751 align:start position:25% line:-2
+このDoubleという推定は
+不要です
+
+00:21:58.051 --> 00:22:01.955 align:start position:32% line:-2
+しかし この式は
+数字が大きく複雑です
+
+00:21:58.051 --> 00:22:01.955 align:start position:32% line:-2
+しかし この式は
+数字が大きく複雑です
+
+00:22:02.055 --> 00:22:06.160 align:start position:27% line:-2
+reduceやpow関数も
+使っています
+
+00:22:06.393 --> 00:22:10.464 align:start position:30% line:-2
+“double型”とは
+分からなかったでしょう
+
+00:22:11.031 --> 00:22:14.401 align:start position:30% line:-1
+この情報を与えることで
+
+00:22:14.501 --> 00:22:19.339 align:start position:25% line:-2
+この構造体を用いたファイルの
+処理を軽減できます
+
+00:22:19.873 --> 00:22:23.177 align:start position:30% line:-1
+さらに 皆さんの同僚が
+
+00:22:23.277 --> 00:22:26.914 align:start position:32% line:-2
+プロパティの型を
+把握しやすくなります
+
+00:22:27.915 --> 00:22:30.117 align:start position:34% line:-1
+このわずかな情報が
+
+00:22:30.217 --> 00:22:33.520 align:start position:25% line:-1
+ビルド時間を大幅に短縮します
+
+00:22:33.654 --> 00:22:36.957 align:start position:29% line:-2
+優れたエンジニアリングの
+お手本です
+
+00:22:37.791 --> 00:22:40.761 align:start position:30% line:-1
+次はクロージャの例です
+
+00:22:41.528 --> 00:22:45.499 align:start position:29% line:-2
+非オプショナル型の引数の
+合計値を返す―
+
+00:22:45.599 --> 00:22:48.435 align:start position:32% line:-1
+関数を定義しています
+
+00:22:48.936 --> 00:22:52.206 align:start position:30% line:-2
+３つの引数がnilなら
+nilを返します
+
+00:22:53.207 --> 00:22:56.276 align:start position:34% line:-2
+今 ある機能を
+使おうとしています
+
+00:22:56.376 --> 00:23:00.214 align:start position:25% line:-1
+単式を含むクロージャがある時
+
+00:22:56.376 --> 00:23:00.214 align:start position:25% line:-1
+単式を含むクロージャがある時
+
+00:23:00.347 --> 00:23:05.285 align:start position:27% line:-2
+コンパイラがその式から
+型を判定してくれる機能です
+
+00:23:05.786 --> 00:23:07.588 align:start position:36% line:-1
+非常に便利ですが
+
+00:23:08.055 --> 00:23:11.291 align:start position:25% line:-1
+時々 こんなコードになります
+
+00:23:12.726 --> 00:23:16.363 align:start position:30% line:-2
+これはひどい
+レビューで却下でしょう
+
+00:23:17.197 --> 00:23:22.336 align:start position:32% line:-2
+入れ子の三項演算子や
+nilとの明示的比較
+
+00:23:22.436 --> 00:23:27.107 align:start position:32% line:-2
+これでうまく動くとは
+思えません
+
+00:23:27.407 --> 00:23:29.443 align:start position:34% line:-1
+別の問題もあります
+
+00:23:29.643 --> 00:23:34.348 align:start position:30% line:-2
+式が大きくなり
+独立した断片が多いため
+
+00:23:34.815 --> 00:23:40.254 align:start position:29% line:-2
+Swiftのコンパイラは
+時間内に処理できません
+
+00:23:40.888 --> 00:23:44.958 align:start position:27% line:-2
+コンパイラもお手上げという
+究極の例です
+
+00:23:45.726 --> 00:23:48.462 align:start position:30% line:-1
+コードを再考しましょう
+
+00:23:48.829 --> 00:23:53.033 align:start position:32% line:-2
+まず 先ほどの例と
+同じことをしてみます
+
+00:23:53.133 --> 00:23:55.002 align:start position:38% line:-1
+型を追加します
+
+00:23:55.102 --> 00:23:58.205 align:start position:34% line:-2
+クロージャでは
+inの前に入れます
+
+00:23:59.506 --> 00:24:03.544 align:start position:30% line:-2
+しかし この場合
+最善の策とは言えません
+
+00:23:59.506 --> 00:24:03.544 align:start position:30% line:-2
+しかし この場合
+最善の策とは言えません
+
+00:24:03.744 --> 00:24:05.512 align:start position:39% line:-1
+前に戻します
+
+00:24:06.613 --> 00:24:10.951 align:start position:29% line:-2
+先ほど クロージャの型を
+判定できるように
+
+00:24:11.051 --> 00:24:14.388 align:start position:30% line:-1
+単式を書こうとしました
+
+00:24:15.122 --> 00:24:18.192 align:start position:29% line:-1
+しかし ここでは不要です
+
+00:24:18.659 --> 00:24:22.696 align:start position:30% line:-2
+reduceを
+呼び出しているのだから
+
+00:24:23.197 --> 00:24:26.400 align:start position:36% line:-2
+オプショナル型の
+整数の配列です
+
+00:24:26.733 --> 00:24:30.470 align:start position:34% line:-2
+結果の型は戻り値と
+一致するはずです
+
+00:24:31.071 --> 00:24:34.975 align:start position:30% line:-2
+だから reduceの
+コールバックは
+
+00:24:35.075 --> 00:24:37.978 align:start position:30% line:-2
+オプショナル型の整数の
+演算です
+
+00:24:38.345 --> 00:24:42.382 align:start position:29% line:-2
+クロージャに単式を入れる
+必要はないのです
+
+00:24:42.583 --> 00:24:47.387 align:start position:30% line:-2
+ステートメントを分けて
+読みやすくできます
+
+00:24:48.489 --> 00:24:51.658 align:start position:34% line:-2
+私の以前のコードを
+変換したものです
+
+00:24:52.559 --> 00:24:56.063 align:start position:30% line:-2
+しかし
+もっと高速にもできます
+
+00:24:56.430 --> 00:24:59.500 align:start position:29% line:-1
+読みやすく 管理しやすく
+
+00:24:59.600 --> 00:25:02.903 align:start position:36% line:-2
+コンパイル時間を
+短くもできます
+
+00:24:59.600 --> 00:25:02.903 align:start position:36% line:-2
+コンパイル時間を
+短くもできます
+
+00:25:04.938 --> 00:25:07.474 align:start position:32% line:-1
+最後にお見せする例は
+
+00:25:07.574 --> 00:25:11.111 align:start position:34% line:-2
+前の２つほどは
+広く応用できません
+
+00:25:11.378 --> 00:25:13.781 align:start position:27% line:-1
+AnyObjectの話です
+
+00:25:14.715 --> 00:25:20.621 align:start position:18% line:-2
+AnyObjectはあらゆるクラス型
+インスタンスを記述できます
+
+00:25:20.721 --> 00:25:25.025 align:start position:30% line:-2
+構造体や列挙型ではなく
+１つのクラスです
+
+00:25:25.659 --> 00:25:30.697 align:start position:20% line:-2
+Objective-Cのid型から
+持ち越した特長もあります
+
+00:25:31.131 --> 00:25:33.934 align:start position:29% line:-2
+それが この
+メソッド呼び出し構文です
+
+00:25:34.034 --> 00:25:39.573 align:start position:27% line:-2
+AnyObject型の値の
+メソッドを呼び出すと
+
+00:25:40.307 --> 00:25:44.278 align:start position:18% line:-2
+Objective-Cランタイムから
+見える限り―
+
+00:25:44.378 --> 00:25:48.549 align:start position:27% line:-1
+Swiftはそれを許します
+
+00:25:49.383 --> 00:25:51.852 align:start position:30% line:-1
+しかし 代償があります
+
+00:25:52.286 --> 00:25:56.156 align:start position:25% line:-2
+コンパイラは 何が呼ばれるか
+分からないため
+
+00:25:56.256 --> 00:25:59.626 align:start position:32% line:-2
+あらゆる可能性を探す
+必要があります
+
+00:25:59.726 --> 00:26:02.529 align:start position:38% line:-2
+プロジェクトや
+フレームワーク
+
+00:25:59.726 --> 00:26:02.529 align:start position:38% line:-2
+プロジェクトや
+フレームワーク
+
+00:26:02.696 --> 00:26:05.966 align:start position:29% line:-1
+すべてを使うと想定します
+
+00:26:06.700 --> 00:26:11.104 align:start position:32% line:-2
+どれも合致しなければ
+エラーを示すためです
+
+00:26:12.840 --> 00:26:15.742 align:start position:25% line:-1
+こちらの意思を もっと適切に
+
+00:26:15.843 --> 00:26:19.479 align:start position:34% line:-2
+もっと十分に
+宣言できるはずです
+
+00:26:19.580 --> 00:26:21.448 align:start position:30% line:-1
+プロトコルを定義します
+
+00:26:21.782 --> 00:26:25.252 align:start position:30% line:-2
+同じファイルでも
+別ファイルでも可能です
+
+00:26:25.352 --> 00:26:29.256 align:start position:29% line:-2
+デリゲートのプロパティを
+変更して
+
+00:26:29.356 --> 00:26:32.392 align:start position:36% line:-2
+このプロトコルを
+使うようにします
+
+00:26:32.593 --> 00:26:36.163 align:start position:29% line:-2
+これで呼び出すメソッドが
+分かります
+
+00:26:37.197 --> 00:26:40.968 align:start position:29% line:-2
+メソッドが
+正しく実行されているかを
+
+00:26:41.068 --> 00:26:44.204 align:start position:29% line:-1
+確認する機会も得られます
+
+00:26:46.740 --> 00:26:52.346 align:start position:32% line:-2
+再コンパイルの際に
+コンパイラの作業量を
+
+00:26:52.446 --> 00:26:55.449 align:start position:29% line:-1
+軽減する技を説明しました
+
+00:26:56.083 --> 00:26:59.653 align:start position:32% line:-2
+では 再コンパイルを
+しなければ？
+
+00:26:59.920 --> 00:27:04.324 align:start position:32% line:-2
+なぜ 再コンパイルが
+必要なのでしょうか？
+
+00:26:59.920 --> 00:27:04.324 align:start position:32% line:-2
+なぜ 再コンパイルが
+必要なのでしょうか？
+
+00:27:04.625 --> 00:27:08.161 align:start position:36% line:-2
+依存関係モデルを
+理解しましょう
+
+00:27:09.763 --> 00:27:14.001 align:start position:25% line:-2
+Swiftの依存関係モデルは
+ファイルに基づきます
+
+00:27:14.101 --> 00:27:18.272 align:start position:29% line:-2
+ヘッダファイルがないため
+少し厄介です
+
+00:27:18.605 --> 00:27:23.577 align:start position:25% line:-2
+デフォルトで定義されたものが
+すべて見えます
+
+00:27:24.211 --> 00:27:27.548 align:start position:14% line:-2
+左のファイルで
+struct Pointを宣言しています
+
+00:27:27.881 --> 00:27:29.716 align:start position:36% line:-1
+右のファイルでは
+
+00:27:29.817 --> 00:27:33.954 align:start position:27% line:-2
+最初の宣言を参照し
+コンパイラも分かっています
+
+00:27:34.321 --> 00:27:38.625 align:start position:30% line:-2
+右のファイルのxとyの
+プロパティも同様です
+
+00:27:41.361 --> 00:27:45.799 align:start position:29% line:-2
+このため 左のファイルを
+変更した場合―
+
+00:27:46.467 --> 00:27:49.469 align:start position:27% line:-2
+両ファイルの再コンパイルが
+必要です
+
+00:27:50.304 --> 00:27:52.473 align:start position:36% line:-1
+これが重要なのは
+
+00:27:52.573 --> 00:27:56.810 align:start position:27% line:-2
+このイニシャライザを
+正しく呼び出したいからです
+
+00:27:58.645 --> 00:28:03.650 align:start position:23% line:-2
+コンパイラは 関数本体の変更を
+分かっています
+
+00:27:58.645 --> 00:28:03.650 align:start position:23% line:-2
+コンパイラは 関数本体の変更を
+分かっています
+
+00:28:03.750 --> 00:28:06.553 align:start position:30% line:-2
+この場合
+アサーションの変更です
+
+00:28:07.855 --> 00:28:10.591 align:start position:32% line:-2
+このファイルだけ
+再コンパイルが必要で
+
+00:28:11.024 --> 00:28:16.530 align:start position:29% line:-2
+他のファイルは
+変更する必要がありません
+
+00:28:18.232 --> 00:28:21.135 align:start position:30% line:-2
+しかし
+コンパイラは保守的です
+
+00:28:21.235 --> 00:28:24.104 align:start position:25% line:-1
+このファイルに型を追加すると
+
+00:28:24.271 --> 00:28:29.042 align:start position:29% line:-2
+人間には 右のファイルに
+影響がないと分かります
+
+00:28:29.209 --> 00:28:32.479 align:start position:32% line:-2
+しかし コンパイラは
+両方リビルドします
+
+00:28:34.248 --> 00:28:38.585 align:start position:30% line:-2
+先ほど使用したゲームを
+例にします
+
+00:28:39.219 --> 00:28:41.788 align:start position:21% line:-1
+ゲームとUtilitiesがあり
+
+00:28:41.889 --> 00:28:44.758 align:start position:32% line:-2
+それぞれのファイルを
+示しています
+
+00:28:45.559 --> 00:28:47.895 align:start position:34% line:-2
+ゲームのファイルを
+変更すると
+
+00:28:49.696 --> 00:28:52.399 align:start position:30% line:-2
+そのファイルの
+再コンパイルが必要です
+
+00:28:52.499 --> 00:28:56.503 align:start position:29% line:-2
+それに依存するファイルも
+同様です
+
+00:28:56.970 --> 00:29:00.240 align:start position:16% line:-1
+しかし Utilitiesのファイルは
+
+00:28:56.970 --> 00:29:00.240 align:start position:16% line:-1
+しかし Utilitiesのファイルは
+
+00:29:00.340 --> 00:29:01.742 align:start position:30% line:-1
+再コンパイルされません
+
+00:29:02.176 --> 00:29:05.512 align:start position:34% line:-2
+ターゲットは分かれ
+依存関係にあります
+
+00:29:05.612 --> 00:29:10.617 align:start position:27% line:-2
+２組のファイル間には
+目に見える関係はありません
+
+00:29:12.553 --> 00:29:17.057 align:start position:25% line:-2
+同様に Utilitiesの
+ファイルを変更すると
+
+00:29:17.157 --> 00:29:19.459 align:start position:30% line:-1
+再コンパイルが必要です
+
+00:29:19.560 --> 00:29:22.596 align:start position:34% line:-2
+それに依存する
+他のファイルもです
+
+00:29:23.096 --> 00:29:26.033 align:start position:30% line:-2
+しかし この依存関係は
+粗いものです
+
+00:29:26.166 --> 00:29:31.438 align:start position:21% line:-2
+そのため Xcodeはゲーム内の
+すべてを再コンパイルします
+
+00:29:31.538 --> 00:29:35.242 align:start position:34% line:-2
+関数本体だけの
+変更でない限りです
+
+00:29:36.877 --> 00:29:38.479 align:start position:41% line:-1
+繰り返すと
+
+00:29:38.879 --> 00:29:41.048 align:start position:30% line:-1
+コンパイラは保守的です
+
+00:29:41.148 --> 00:29:44.251 align:start position:34% line:-2
+影響がないと
+人間には分かっても
+
+00:29:44.351 --> 00:29:47.221 align:start position:29% line:-1
+コンパイラは分かりません
+
+00:29:47.688 --> 00:29:52.760 align:start position:30% line:-2
+コンパイラに分かるのは
+関数本体の変更です
+
+00:29:52.860 --> 00:29:55.729 align:start position:29% line:-1
+他のファイルに影響がなく
+
+00:29:55.829 --> 00:29:59.833 align:start position:30% line:-2
+再コンパイルは不要だと
+知っています
+
+00:30:02.336 --> 00:30:05.606 align:start position:32% line:-2
+ファイルの依存関係は
+モジュール内で発生し
+
+00:30:05.706 --> 00:30:10.377 align:start position:27% line:-2
+Swiftの宣言は 互いに
+暗黙的に見えています
+
+00:30:10.811 --> 00:30:15.682 align:start position:32% line:-2
+モジュールを超える
+依存関係を扱う場合は
+
+00:30:15.782 --> 00:30:18.185 align:start position:36% line:-2
+ターゲット全体の
+依存になります
+
+00:30:20.187 --> 00:30:25.759 align:start position:25% line:-2
+いずれもSwiftに関しては
+良い情報ですが
+
+00:30:25.859 --> 00:30:29.863 align:start position:18% line:-2
+Objective-Cのターゲットが
+混在する場合は？
+
+00:30:29.963 --> 00:30:32.800 align:start position:34% line:-2
+最後のセクションは
+そこが焦点です
+
+00:30:32.900 --> 00:30:38.138 align:start position:23% line:-2
+混合言語の
+インターフェース軽減の方法です
+
+00:30:38.906 --> 00:30:43.443 align:start position:34% line:-2
+アプリケーションの
+パーツを見ましょう
+
+00:30:44.077 --> 00:30:47.047 align:start position:30% line:-1
+少し複雑な図になります
+
+00:30:47.147 --> 00:30:51.318 align:start position:30% line:-2
+動画なら 遠慮なく
+止めながら見てください
+
+00:30:52.319 --> 00:30:57.291 align:start position:25% line:-2
+まず Objective-C
+インターフェースのヘッダです
+
+00:30:57.558 --> 00:31:02.129 align:start position:21% line:-2
+Objective-Cで書かれ
+Swiftに参照させたい部分です
+
+00:30:57.558 --> 00:31:02.129 align:start position:21% line:-2
+Objective-Cで書かれ
+Swiftに参照させたい部分です
+
+00:31:02.296 --> 00:31:06.733 align:start position:27% line:-2
+あるいは ヘッダで宣言して
+他の部分を参照させます
+
+00:31:08.435 --> 00:31:13.006 align:start position:27% line:-2
+Bridgingヘッダは
+Swiftに参照させたい―
+
+00:31:13.106 --> 00:31:16.577 align:start position:27% line:-1
+情報をすべて集めたものです
+
+00:31:18.011 --> 00:31:21.748 align:start position:29% line:-2
+Xcodeのビルド設定で
+管理します
+
+00:31:21.849 --> 00:31:27.621 align:start position:14% line:-2
+すると コンパイラは
+Objective-Cインターフェースを
+
+00:31:27.721 --> 00:31:29.156 align:start position:29% line:-1
+Swiftに参照させます
+
+00:31:30.457 --> 00:31:34.928 align:start position:34% line:-2
+コンパイラは 次に
+逆の役割を担う―
+
+00:31:35.028 --> 00:31:37.030 align:start position:23% line:-1
+Generatedヘッダを作成
+
+00:31:37.164 --> 00:31:42.669 align:start position:9% line:-2
+Swiftのどの部分をObjective-Cに
+見せるかを記述します
+
+00:31:43.704 --> 00:31:47.841 align:start position:29% line:-2
+Objective-Cの
+実装ファイルで使用され
+
+00:31:48.475 --> 00:31:51.778 align:start position:36% line:-2
+一部のヘッダは
+最初から使えます
+
+00:31:52.880 --> 00:31:58.619 align:start position:25% line:-2
+もちろん Swiftコードに
+依存しないものもありますが
+
+00:31:58.852 --> 00:32:01.288 align:start position:32% line:-1
+ここでは重視しません
+
+00:31:58.852 --> 00:32:01.288 align:start position:32% line:-1
+ここでは重視しません
+
+00:32:02.556 --> 00:32:05.292 align:start position:27% line:-1
+もう一度 左から見てみます
+
+00:32:05.792 --> 00:32:08.228 align:start position:23% line:-1
+Objective-Cのヘッダ
+
+00:32:08.996 --> 00:32:12.399 align:start position:29% line:-2
+Swiftに情報を与える
+Bridgingヘッダ
+
+00:32:13.267 --> 00:32:15.302 align:start position:29% line:-1
+Swiftの実装ファイル
+
+00:32:15.969 --> 00:32:20.274 align:start position:20% line:-2
+Objective-Cに情報を返す
+Generatedヘッダ
+
+00:32:20.607 --> 00:32:24.178 align:start position:14% line:-1
+Objective-Cの実装ファイルです
+
+00:32:26.013 --> 00:32:28.015 align:start position:36% line:-1
+このような図では
+
+00:32:28.215 --> 00:32:31.418 align:start position:29% line:-1
+矢印はすべて依存関係です
+
+00:32:31.518 --> 00:32:34.121 align:start position:30% line:-1
+ターゲット単位ではなく
+
+00:32:34.221 --> 00:32:37.858 align:start position:23% line:-1
+その中のファイル単位の依存です
+
+00:32:38.358 --> 00:32:42.729 align:start position:21% line:-2
+Generatedヘッダと
+Bridgingヘッダが焦点です
+
+00:32:42.830 --> 00:32:45.599 align:start position:27% line:-1
+このヘッダの内容を減らせば
+
+00:32:45.699 --> 00:32:49.203 align:start position:23% line:-1
+変更の余地も少なくなるからです
+
+00:32:49.303 --> 00:32:51.872 align:start position:27% line:-1
+リビルドの必要性も減ります
+
+00:32:53.373 --> 00:32:54.508 align:start position:32% line:-1
+では 見てみましょう
+
+00:32:54.908 --> 00:32:59.179 align:start position:20% line:-2
+Generatedヘッダでは
+privateキーワードが有効です
+
+00:32:59.513 --> 00:33:03.183 align:start position:16% line:-2
+この例では
+ViewControllerがあります
+
+00:32:59.513 --> 00:33:03.183 align:start position:16% line:-2
+この例では
+ViewControllerがあります
+
+00:33:03.283 --> 00:33:07.020 align:start position:16% line:-2
+その中に IBOutletプロパティと
+IBActionメソッド
+
+00:33:07.621 --> 00:33:12.226 align:start position:20% line:-2
+デフォルトでは
+Generatedヘッダで見えます
+
+00:33:12.326 --> 00:33:16.697 align:start position:14% line:-1
+Objective-Cが参照するためです
+
+00:33:17.197 --> 00:33:19.333 align:start position:32% line:-2
+プライベートの宣言は
+ありません
+
+00:33:20.500 --> 00:33:25.205 align:start position:27% line:-2
+しかし 他のファイルから
+見える必要は ほとんどなく
+
+00:33:25.305 --> 00:33:27.541 align:start position:18% line:-2
+Interface Builderで
+使うだけです
+
+00:33:28.208 --> 00:33:31.478 align:start position:30% line:-2
+ですから
+privateにすると
+
+00:33:31.678 --> 00:33:35.749 align:start position:18% line:-2
+この２つが
+Generatedヘッダから消えます
+
+00:33:37.451 --> 00:33:42.756 align:start position:20% line:-2
+次の例は #selectorなどの
+ランタイム機能に用いる―
+
+00:33:42.856 --> 00:33:46.460 align:start position:30% line:-1
+メソッドを扱う場合です
+
+00:33:46.693 --> 00:33:50.297 align:start position:9% line:-2
+NotificationCenter APIを
+使っています
+
+00:33:50.397 --> 00:33:54.735 align:start position:25% line:-2
+通知が送られると
+selectorを取得します
+
+00:33:55.869 --> 00:34:00.741 align:start position:20% line:-2
+ここでは Objective-Cに
+このメソッドが見えればよく
+
+00:33:55.869 --> 00:34:00.741 align:start position:20% line:-2
+ここでは Objective-Cに
+このメソッドが見えればよく
+
+00:34:00.841 --> 00:34:06.280 align:start position:29% line:-2
+その他のファイルは
+このメソッドを使いません
+
+00:34:08.148 --> 00:34:09.683 align:start position:30% line:-1
+privateにします
+
+00:34:10.016 --> 00:34:14.521 align:start position:27% line:-2
+Generatedヘッダを
+さらに削減できます
+
+00:34:15.688 --> 00:34:19.493 align:start position:32% line:-2
+この場合
+別の選択肢もあります
+
+00:34:19.592 --> 00:34:22.329 align:start position:23% line:-1
+ブロックベースのAPIにすれば
+
+00:34:22.696 --> 00:34:25.232 align:start position:32% line:-1
+コードを整理できます
+
+00:34:25.331 --> 00:34:30.237 align:start position:23% line:-2
+関数から暗黙的に
+状態をキャプチャできるからです
+
+00:34:30.337 --> 00:34:33.739 align:start position:23% line:-2
+コンテキストオブジェクトとする
+必要はありません
+
+00:34:35.708 --> 00:34:39.179 align:start position:20% line:-2
+Generatedヘッダを削減する
+最後の技は
+
+00:34:39.980 --> 00:34:43.684 align:start position:21% line:-1
+Swift 4に移行することです
+
+00:34:44.351 --> 00:34:47.487 align:start position:27% line:-1
+すでに聞いているでしょうが
+
+00:34:47.588 --> 00:34:53.226 align:start position:21% line:-2
+Swift 3モードのサポートは
+Xcode 10が最後です
+
+00:34:53.893 --> 00:34:57.831 align:start position:23% line:-1
+ですから いずれにせよ必要です
+
+00:34:57.931 --> 00:35:01.435 align:start position:7% line:-2
+EditからConvertを選び
+To Current Swift Syntaxへ
+
+00:34:57.931 --> 00:35:01.435 align:start position:7% line:-2
+EditからConvertを選び
+To Current Swift Syntaxへ
+
+00:35:02.436 --> 00:35:07.975 align:start position:27% line:-2
+ただし この移行を行う時
+Swift 3互換モードを
+
+00:35:08.175 --> 00:35:12.613 align:start position:34% line:-2
+維持する選択を
+するかもしれません
+
+00:35:12.713 --> 00:35:15.682 align:start position:5% line:-1
+Swift 3 @objc Inferenceです
+
+00:35:16.116 --> 00:35:20.821 align:start position:20% line:-2
+Swift 3の規則を維持したまま
+移行する選択肢です
+
+00:35:21.088 --> 00:35:24.992 align:start position:25% line:-2
+内部のメソッドとプロパティを
+自動的に
+
+00:35:25.092 --> 00:35:28.862 align:start position:27% line:-2
+Objective-Cから
+参照可能にします
+
+00:35:30.197 --> 00:35:34.001 align:start position:20% line:-1
+Swift 3で書いている場合でも
+
+00:35:34.101 --> 00:35:39.139 align:start position:27% line:-2
+この機能に頼らないケースが
+多かったでしょう
+
+00:35:39.373 --> 00:35:42.976 align:start position:29% line:-2
+ランタイムにも
+コンパイル時にも不要です
+
+00:35:43.644 --> 00:35:48.916 align:start position:20% line:-2
+そのため Objective-Cの
+依存関係を明示的に指定したら
+
+00:35:49.016 --> 00:35:55.022 align:start position:5% line:-2
+@objc IBOutlet IBActionなど
+いずれの場合でも
+
+00:35:55.389 --> 00:36:00.094 align:start position:27% line:-2
+この設定を選択して
+Deleteキーを押します
+
+00:35:55.389 --> 00:36:00.094 align:start position:27% line:-2
+この設定を選択して
+Deleteキーを押します
+
+00:36:00.527 --> 00:36:03.997 align:start position:27% line:-2
+要求を満たす
+メソッドやプロパティのみ―
+
+00:36:04.097 --> 00:36:07.267 align:start position:30% line:-2
+属性を推定するモードに
+戻ります
+
+00:36:07.935 --> 00:36:11.271 align:start position:21% line:-2
+または Objective-Cの
+メソッドを無効にします
+
+00:36:13.073 --> 00:36:17.277 align:start position:21% line:-2
+Generatedヘッダについて
+話をしました
+
+00:36:17.377 --> 00:36:19.947 align:start position:14% line:-1
+しかし Objective-Cのコードも
+
+00:36:20.047 --> 00:36:23.350 align:start position:23% line:-1
+同様に リビルドをもたらします
+
+00:36:24.618 --> 00:36:27.087 align:start position:29% line:-1
+Bridgingヘッダは
+
+00:36:27.187 --> 00:36:31.825 align:start position:30% line:-2
+Swiftに参照させる
+ヘッダを集めたものです
+
+00:36:32.559 --> 00:36:36.563 align:start position:16% line:-2
+MyViewController.hに
+着目します
+
+00:36:36.763 --> 00:36:40.434 align:start position:12% line:-2
+ごく普通のView Controllerの
+宣言です
+
+00:36:40.534 --> 00:36:43.537 align:start position:32% line:-2
+しかし 別のヘッダも
+含まれています
+
+00:36:44.338 --> 00:36:47.708 align:start position:25% line:-1
+いずれかのヘッダを変更したら
+
+00:36:47.975 --> 00:36:53.747 align:start position:21% line:-2
+ターゲット内のSwiftコードの
+再コンパイルが必要です
+
+00:36:54.915 --> 00:36:56.483 align:start position:30% line:-1
+これは よくありません
+
+00:36:58.252 --> 00:37:00.554 align:start position:32% line:-1
+この例を見てください
+
+00:36:58.252 --> 00:37:00.554 align:start position:32% line:-1
+この例を見てください
+
+00:37:00.654 --> 00:37:04.024 align:start position:16% line:-2
+MyNetworkManager.hを
+インポートするのは
+
+00:37:04.124 --> 00:37:08.495 align:start position:29% line:-2
+このプロパティを宣言する
+ためだけです
+
+00:37:09.563 --> 00:37:15.235 align:start position:27% line:-2
+このプロパティは まったく
+使われない可能性もあります
+
+00:37:15.335 --> 00:37:19.807 align:start position:30% line:-2
+その場合
+ここでの宣言は不要です
+
+00:37:20.340 --> 00:37:25.212 align:start position:21% line:-2
+そこで Objective-Cの
+Categoryを用いて
+
+00:37:25.312 --> 00:37:27.181 align:start position:34% line:-2
+インターフェースを
+切ります
+
+00:37:27.548 --> 00:37:31.051 align:start position:4% line:-2
+MyViewController+Internalを
+新たに定義して
+
+00:37:31.485 --> 00:37:36.990 align:start position:27% line:-2
+追加プロパティを宣言できる
+Categoryを使います
+
+00:37:37.091 --> 00:37:42.696 align:start position:32% line:-2
+プロパティ合成機能は
+そのまま利用できます
+
+00:37:44.198 --> 00:37:49.036 align:start position:29% line:-2
+インポートとプロパティを
+下へ移動します
+
+00:37:49.336 --> 00:37:50.437 align:start position:39% line:-1
+見てください
+
+00:37:50.704 --> 00:37:55.542 align:start position:29% line:-2
+インポートされたヘッダは
+ずっと小さくなり
+
+00:37:55.642 --> 00:37:59.747 align:start position:29% line:-2
+不必要なリビルドの原因が
+低減しました
+
+00:38:00.447 --> 00:38:01.915 align:start position:36% line:-1
+もう１つあります
+
+00:38:02.649 --> 00:38:04.585 align:start position:34% line:-1
+定義したファイルは
+
+00:38:04.718 --> 00:38:10.324 align:start position:11% line:-2
+他に Objective-Cからのアクセスが
+不要な場合もあります
+
+00:38:11.091 --> 00:38:14.094 align:start position:27% line:-2
+この場合
+別ファイルは必要ありません
+
+00:38:14.194 --> 00:38:17.464 align:start position:27% line:-2
+Categoryを直接
+実装ファイルに入れられます
+
+00:38:18.298 --> 00:38:21.468 align:start position:25% line:-1
+それでまったく問題ありません
+
+00:38:21.568 --> 00:38:26.273 align:start position:23% line:-2
+NetworkManagerの
+プロパティ合成は有効です
+
+00:38:28.175 --> 00:38:29.409 align:start position:38% line:-1
+おさらいすると
+
+00:38:30.043 --> 00:38:35.249 align:start position:23% line:-2
+プライベートのブロックAPIで
+ビルド設定をオフにして
+
+00:38:35.349 --> 00:38:37.985 align:start position:21% line:-2
+Generatedヘッダの内容を
+縮小しました
+
+00:38:38.719 --> 00:38:41.622 align:start position:14% line:-1
+次に Objective-Cのヘッダから
+
+00:38:41.722 --> 00:38:46.593 align:start position:25% line:-2
+コンテンツを取り出して
+Bridgingヘッダを縮小
+
+00:38:47.027 --> 00:38:50.164 align:start position:25% line:-1
+内容が減れば 処理も減ります
+
+00:38:50.264 --> 00:38:56.136 align:start position:29% line:-2
+変更の余地も少なくなり
+リビルドも少なく済みます
+
+00:38:56.637 --> 00:38:58.238 align:start position:36% line:-1
+どちらも有効です
+
+00:38:59.373 --> 00:39:00.607 align:start position:36% line:-1
+では まとめます
+
+00:38:59.373 --> 00:39:00.607 align:start position:36% line:-1
+では まとめます
+
+00:39:02.509 --> 00:39:04.711 align:start position:34% line:-1
+今日 話した内容は
+
+00:39:05.078 --> 00:39:08.882 align:start position:29% line:-2
+Xcodeから
+多くの情報を得るとともに
+
+00:39:08.982 --> 00:39:14.555 align:start position:27% line:-2
+多くの情報を提供して
+ビルドを高速化する方法です
+
+00:39:14.688 --> 00:39:18.392 align:start position:32% line:-2
+ビルド効率を
+向上させることができ
+
+00:39:18.625 --> 00:39:22.329 align:start position:30% line:-2
+リビルドの際の作業量を
+減らせます
+
+00:39:23.664 --> 00:39:28.135 align:start position:27% line:-2
+駆け足になったので
+動画もチェックしてください
+
+00:39:28.235 --> 00:39:33.640 align:start position:27% line:-2
+今日の正午と明日の午後にも
+ぜひ お越しください
+
+00:39:33.740 --> 00:39:36.243 align:start position:30% line:-1
+ありがとうございました
+
+00:39:36.343 --> 00:39:39.913 align:start position:43% line:-1
+(拍手)

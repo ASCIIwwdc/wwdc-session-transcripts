@@ -1,0 +1,1612 @@
+WEBVTT
+
+00:00:00.506 --> 00:00:05.516 A:middle
+[ Music ]
+
+00:00:06.231 --> 00:00:08.231 A:middle
+[ Applause ]
+
+00:00:08.446 --> 00:00:10.006 A:middle
+&gt;&gt; My name is Janum Trivedi, and
+
+00:00:10.006 --> 00:00:11.466 A:middle
+I'm an engineer on the UIKit
+
+00:00:11.496 --> 00:00:12.466 A:middle
+frameworks team.
+
+00:00:13.696 --> 00:00:15.666 A:middle
+First, let's talk about
+
+00:00:15.666 --> 00:00:17.276 A:middle
+architecting your app for
+
+00:00:17.276 --> 00:00:18.236 A:middle
+multiple windows.
+
+00:00:18.916 --> 00:00:20.786 A:middle
+On iOS 13, supporting multiple
+
+00:00:20.786 --> 00:00:22.776 A:middle
+windows is a fantastic way to
+
+00:00:22.776 --> 00:00:24.016 A:middle
+make your existing apps more
+
+00:00:24.016 --> 00:00:26.006 A:middle
+useful and allow your users to
+
+00:00:26.006 --> 00:00:26.976 A:middle
+be substantially more
+
+00:00:26.976 --> 00:00:27.556 A:middle
+productive.
+
+00:00:30.056 --> 00:00:31.576 A:middle
+We'll be going over three
+
+00:00:31.576 --> 00:00:32.746 A:middle
+primary topics today.
+
+00:00:33.496 --> 00:00:34.666 A:middle
+We'll get started by doing a
+
+00:00:34.666 --> 00:00:36.436 A:middle
+quick overview of the changes to
+
+00:00:36.436 --> 00:00:38.176 A:middle
+the application life cycle that
+
+00:00:38.226 --> 00:00:39.856 A:middle
+will allow multiple windows on
+
+00:00:39.856 --> 00:00:41.236 A:middle
+iOS 13 to be possible.
+
+00:00:42.456 --> 00:00:44.856 A:middle
+Then, we'll dive deeper into the
+
+00:00:44.856 --> 00:00:47.206 A:middle
+new UIScene delegate and we'll
+
+00:00:47.206 --> 00:00:48.436 A:middle
+talk about what kind of work you
+
+00:00:48.436 --> 00:00:49.896 A:middle
+should be doing there.
+
+00:00:50.486 --> 00:00:52.816 A:middle
+Finally, we'll go over some best
+
+00:00:52.816 --> 00:00:54.386 A:middle
+practices in ArchitectureKit so
+
+00:00:54.386 --> 00:00:55.346 A:middle
+you and your team can take
+
+00:00:55.346 --> 00:00:56.926 A:middle
+advantage of to make sure you
+
+00:00:56.926 --> 00:00:57.906 A:middle
+provide your users with a
+
+00:00:57.906 --> 00:00:59.506 A:middle
+consistent, seamless
+
+00:00:59.506 --> 00:01:01.236 A:middle
+multitasking experience.
+
+00:00:59.506 --> 00:01:01.236 A:middle
+multitasking experience.
+
+00:01:01.796 --> 00:01:06.356 A:middle
+Now, to get started, let's talk
+
+00:01:06.356 --> 00:01:07.866 A:middle
+about some of the roles and
+
+00:01:07.866 --> 00:01:09.046 A:middle
+responsibilities of the App
+
+00:01:09.106 --> 00:01:10.976 A:middle
+Delegate in iOS 12 and before.
+
+00:01:10.976 --> 00:01:13.876 A:middle
+The App Delegate had two primary
+
+00:01:13.876 --> 00:01:14.166 A:middle
+roles.
+
+00:01:14.166 --> 00:01:15.436 A:middle
+The first was to notify your
+
+00:01:15.436 --> 00:01:17.266 A:middle
+application of process level
+
+00:01:17.266 --> 00:01:17.716 A:middle
+events.
+
+00:01:18.046 --> 00:01:19.286 A:middle
+So, the system would notify your
+
+00:01:19.286 --> 00:01:20.476 A:middle
+App Delegate when your process
+
+00:01:20.476 --> 00:01:22.056 A:middle
+was launching or was about to
+
+00:01:22.056 --> 00:01:22.656 A:middle
+terminate.
+
+00:01:23.256 --> 00:01:24.976 A:middle
+But it also had the second role,
+
+00:01:25.326 --> 00:01:26.846 A:middle
+which was letting your
+
+00:01:26.846 --> 00:01:29.066 A:middle
+application know the state of
+
+00:01:29.066 --> 00:01:29.566 A:middle
+its UI.
+
+00:01:31.266 --> 00:01:33.446 A:middle
+So, via some methods like did
+
+00:01:33.446 --> 00:01:34.776 A:middle
+enter foreground and will resign
+
+00:01:34.776 --> 00:01:36.616 A:middle
+active, the system will let you
+
+00:01:36.616 --> 00:01:37.846 A:middle
+know your UI state.
+
+00:01:38.446 --> 00:01:41.586 A:middle
+And this is totally fine in iOS
+
+00:01:41.586 --> 00:01:42.666 A:middle
+12 and before, because
+
+00:01:42.906 --> 00:01:44.686 A:middle
+applications had one process and
+
+00:01:44.686 --> 00:01:46.666 A:middle
+also just one user interface
+
+00:01:46.666 --> 00:01:48.366 A:middle
+instance to match it.
+
+00:01:48.936 --> 00:01:51.096 A:middle
+So, today your App Delegate
+
+00:01:51.096 --> 00:01:52.086 A:middle
+probably looks a little bit
+
+00:01:52.086 --> 00:01:53.976 A:middle
+something like this, except
+
+00:01:53.976 --> 00:01:55.406 A:middle
+maybe not quite this short.
+
+00:01:55.406 --> 00:01:59.156 A:middle
+So, in your did finish launching
+
+00:01:59.156 --> 00:02:00.376 A:middle
+with options, you do a couple
+
+00:01:59.156 --> 00:02:00.376 A:middle
+with options, you do a couple
+
+00:02:00.376 --> 00:02:00.716 A:middle
+things.
+
+00:02:00.716 --> 00:02:02.706 A:middle
+First you do some one-time
+
+00:02:02.706 --> 00:02:04.536 A:middle
+non-UI global setup, like
+
+00:02:04.596 --> 00:02:05.856 A:middle
+connecting to a database or
+
+00:02:05.856 --> 00:02:06.716 A:middle
+initializing your data
+
+00:02:06.716 --> 00:02:07.376 A:middle
+structures.
+
+00:02:07.996 --> 00:02:09.886 A:middle
+And immediately after that, you
+
+00:02:09.886 --> 00:02:11.136 A:middle
+set up your user interface.
+
+00:02:11.676 --> 00:02:14.756 A:middle
+And again, this is totally valid
+
+00:02:14.756 --> 00:02:17.006 A:middle
+in 12 and before, but iOS 13's
+
+00:02:17.006 --> 00:02:18.156 A:middle
+pattern is invalid.
+
+00:02:18.956 --> 00:02:21.186 A:middle
+Why? Because applications now
+
+00:02:21.466 --> 00:02:23.176 A:middle
+still just share one process but
+
+00:02:23.176 --> 00:02:25.026 A:middle
+may have multiple user interface
+
+00:02:25.026 --> 00:02:27.576 A:middle
+instances or scene sessions.
+
+00:02:28.116 --> 00:02:32.406 A:middle
+That means the responsibility of
+
+00:02:32.406 --> 00:02:33.596 A:middle
+the App Delegate needs to change
+
+00:02:33.596 --> 00:02:33.846 A:middle
+a bit.
+
+00:02:34.386 --> 00:02:35.496 A:middle
+It's still responsible for
+
+00:02:35.496 --> 00:02:37.106 A:middle
+process events and life cycle,
+
+00:02:37.486 --> 00:02:38.796 A:middle
+but it's no longer responsible
+
+00:02:38.796 --> 00:02:40.166 A:middle
+for anything related to your UI
+
+00:02:40.166 --> 00:02:40.756 A:middle
+lifecycle.
+
+00:02:41.386 --> 00:02:43.186 A:middle
+Instead, that'll all be handled
+
+00:02:43.456 --> 00:02:45.156 A:middle
+by your UIScene Delegate.
+
+00:02:46.146 --> 00:02:47.436 A:middle
+Well, what does that mean for
+
+00:02:47.436 --> 00:02:47.716 A:middle
+you?
+
+00:02:48.346 --> 00:02:50.436 A:middle
+Any UI setup or teardown work
+
+00:02:50.436 --> 00:02:51.536 A:middle
+that you used to do in your App
+
+00:02:51.536 --> 00:02:53.716 A:middle
+Delegate now needs to migrate to
+
+00:02:53.716 --> 00:02:55.166 A:middle
+the corresponding methods in
+
+00:02:55.166 --> 00:02:56.076 A:middle
+your Scene Delegate.
+
+00:02:56.596 --> 00:02:59.986 A:middle
+In fact, on iOS 13, if your
+
+00:02:59.986 --> 00:03:02.006 A:middle
+application adopts the new scene
+
+00:02:59.986 --> 00:03:02.006 A:middle
+application adopts the new scene
+
+00:03:02.006 --> 00:03:03.876 A:middle
+lifecycle, UIKit will stop
+
+00:03:03.876 --> 00:03:05.276 A:middle
+calling the old App Delegate
+
+00:03:05.276 --> 00:03:06.976 A:middle
+methods that relate to UI state.
+
+00:03:07.686 --> 00:03:09.266 A:middle
+Instead, we'll call the new
+
+00:03:09.696 --> 00:03:11.806 A:middle
+Scene Delegate methods, and it's
+
+00:03:11.806 --> 00:03:12.936 A:middle
+pretty simple since there's a
+
+00:03:13.406 --> 00:03:14.976 A:middle
+1-to-1 mapping for most of
+
+00:03:14.976 --> 00:03:15.316 A:middle
+these.
+
+00:03:16.246 --> 00:03:18.346 A:middle
+But don't worry - if you want to
+
+00:03:18.346 --> 00:03:19.696 A:middle
+adopt multiple windows support
+
+00:03:19.696 --> 00:03:21.146 A:middle
+on iOS 13, that doesn't mean you
+
+00:03:21.146 --> 00:03:22.626 A:middle
+need to drop support for 12 and
+
+00:03:22.626 --> 00:03:23.066 A:middle
+before.
+
+00:03:23.776 --> 00:03:25.366 A:middle
+If you're back deploying, you
+
+00:03:25.366 --> 00:03:26.676 A:middle
+can simply keep both sets of
+
+00:03:26.676 --> 00:03:28.356 A:middle
+these methods and UIKit will
+
+00:03:28.356 --> 00:03:30.586 A:middle
+call the correct set at runtime.
+
+00:03:31.106 --> 00:03:35.086 A:middle
+Now, before we dive into the
+
+00:03:35.086 --> 00:03:36.886 A:middle
+exact delegate methods, there's
+
+00:03:36.886 --> 00:03:37.876 A:middle
+one more additional
+
+00:03:37.876 --> 00:03:39.276 A:middle
+responsibility that the App
+
+00:03:39.366 --> 00:03:40.206 A:middle
+Delegate gets.
+
+00:03:40.466 --> 00:03:41.756 A:middle
+And that is the system will now
+
+00:03:41.756 --> 00:03:43.436 A:middle
+notify your App Delegate when a
+
+00:03:43.436 --> 00:03:44.886 A:middle
+new Scene Session is being
+
+00:03:44.886 --> 00:03:46.736 A:middle
+created, or an existing Scene
+
+00:03:46.736 --> 00:03:48.176 A:middle
+Session is being discarded.
+
+00:03:48.176 --> 00:03:51.276 A:middle
+Let's make this lifecycle a
+
+00:03:51.326 --> 00:03:52.786 A:middle
+little bit more concrete.
+
+00:03:53.196 --> 00:03:54.316 A:middle
+Say I've been working on this
+
+00:03:54.316 --> 00:03:55.806 A:middle
+little blue app right here and I
+
+00:03:55.806 --> 00:03:56.876 A:middle
+want to launch it for the first
+
+00:03:56.876 --> 00:03:57.246 A:middle
+time.
+
+00:03:57.456 --> 00:03:58.556 A:middle
+Let's go through the call stack.
+
+00:03:59.606 --> 00:04:01.826 A:middle
+First, your App Delegate's going
+
+00:03:59.606 --> 00:04:01.826 A:middle
+First, your App Delegate's going
+
+00:04:01.826 --> 00:04:02.996 A:middle
+to get the same did finish
+
+00:04:02.996 --> 00:04:04.016 A:middle
+launching with options call.
+
+00:04:04.246 --> 00:04:05.536 A:middle
+Again, it's still fine to do
+
+00:04:05.536 --> 00:04:07.716 A:middle
+your one-time non-UI setup here.
+
+00:04:08.276 --> 00:04:10.906 A:middle
+Then immediately after that, the
+
+00:04:10.906 --> 00:04:12.346 A:middle
+system's going to create a scene
+
+00:04:12.346 --> 00:04:12.936 A:middle
+session.
+
+00:04:13.906 --> 00:04:15.306 A:middle
+But before it creates the actual
+
+00:04:15.306 --> 00:04:16.875 A:middle
+UI Scene, it's going to ask our
+
+00:04:16.875 --> 00:04:18.836 A:middle
+application for UIScene
+
+00:04:18.836 --> 00:04:19.685 A:middle
+configuration.
+
+00:04:20.226 --> 00:04:21.946 A:middle
+This configuration specifies
+
+00:04:22.156 --> 00:04:24.086 A:middle
+what scene delegate, what story
+
+00:04:24.086 --> 00:04:25.606 A:middle
+board, and if you specified,
+
+00:04:25.606 --> 00:04:27.106 A:middle
+what scene subclass you want to
+
+00:04:27.106 --> 00:04:28.116 A:middle
+create the scene with.
+
+00:04:29.366 --> 00:04:31.376 A:middle
+It's worth noting that you can
+
+00:04:31.376 --> 00:04:33.026 A:middle
+define these scene
+
+00:04:33.026 --> 00:04:34.046 A:middle
+configurations either
+
+00:04:34.046 --> 00:04:36.136 A:middle
+dynamically in code or
+
+00:04:36.136 --> 00:04:37.956 A:middle
+preferably statically in your
+
+00:04:37.956 --> 00:04:38.986 A:middle
+info.plist.
+
+00:04:40.326 --> 00:04:41.536 A:middle
+This also gives you an
+
+00:04:41.536 --> 00:04:42.886 A:middle
+opportunity to select the right
+
+00:04:42.886 --> 00:04:43.726 A:middle
+configuration.
+
+00:04:44.116 --> 00:04:45.266 A:middle
+You may have a main scene
+
+00:04:45.266 --> 00:04:47.086 A:middle
+configuration, and you may have
+
+00:04:47.086 --> 00:04:48.046 A:middle
+an accessory scene.
+
+00:04:48.466 --> 00:04:49.306 A:middle
+So, you should look at the
+
+00:04:49.306 --> 00:04:50.466 A:middle
+options parameter that's
+
+00:04:50.466 --> 00:04:52.536 A:middle
+provided here, to use that as
+
+00:04:52.536 --> 00:04:53.896 A:middle
+the context to pick the right
+
+00:04:54.196 --> 00:04:55.386 A:middle
+scene configuration.
+
+00:04:55.886 --> 00:05:00.536 A:middle
+Once you've defined these, for
+
+00:04:55.886 --> 00:05:00.536 A:middle
+Once you've defined these, for
+
+00:05:00.536 --> 00:05:02.476 A:middle
+example in your info.plist, it's
+
+00:05:02.476 --> 00:05:02.946 A:middle
+really simple.
+
+00:05:02.946 --> 00:05:04.136 A:middle
+You just refer to it by name,
+
+00:05:04.486 --> 00:05:06.436 A:middle
+making sure you pass in the role
+
+00:05:06.436 --> 00:05:08.196 A:middle
+of the incoming sessions role.
+
+00:05:10.536 --> 00:05:11.096 A:middle
+Great.
+
+00:05:11.956 --> 00:05:12.886 A:middle
+Now our app is launched.
+
+00:05:13.146 --> 00:05:14.626 A:middle
+We have a scene session.
+
+00:05:14.856 --> 00:05:16.026 A:middle
+But we don't see any UI, and
+
+00:05:16.026 --> 00:05:17.606 A:middle
+that's where our scene delegates
+
+00:05:18.406 --> 00:05:20.116 A:middle
+did connect to scene session
+
+00:05:20.116 --> 00:05:21.066 A:middle
+comes in.
+
+00:05:22.036 --> 00:05:23.406 A:middle
+Let's look at what kind of work
+
+00:05:23.406 --> 00:05:23.966 A:middle
+we should do here.
+
+00:05:23.966 --> 00:05:25.046 A:middle
+This is where you set up your UI
+
+00:05:25.046 --> 00:05:27.676 A:middle
+window with the new designated
+
+00:05:27.756 --> 00:05:29.516 A:middle
+UI window initializer.
+
+00:05:29.806 --> 00:05:31.126 A:middle
+We'll notice that we pass in the
+
+00:05:31.126 --> 00:05:32.286 A:middle
+window scene provided.
+
+00:05:32.976 --> 00:05:35.426 A:middle
+But importantly, we need to also
+
+00:05:35.426 --> 00:05:37.636 A:middle
+check for any relevant user
+
+00:05:37.636 --> 00:05:40.626 A:middle
+activities or state restoration
+
+00:05:40.626 --> 00:05:42.216 A:middle
+activities to configure our
+
+00:05:42.216 --> 00:05:42.806 A:middle
+window with.
+
+00:05:43.376 --> 00:05:44.856 A:middle
+We'll talk about that more in a
+
+00:05:44.856 --> 00:05:45.500 A:middle
+second.
+
+00:05:47.046 --> 00:05:48.746 A:middle
+Yay, now we see our app.
+
+00:05:49.376 --> 00:05:50.856 A:middle
+So, what happens when one of our
+
+00:05:50.856 --> 00:05:52.316 A:middle
+users actually swipes up to go
+
+00:05:52.316 --> 00:05:52.996 A:middle
+back home?
+
+00:05:54.426 --> 00:05:57.226 A:middle
+Well, the old familiar will
+
+00:05:57.226 --> 00:05:58.746 A:middle
+resign active and did enter
+
+00:05:58.746 --> 00:06:00.576 A:middle
+background methods get called on
+
+00:05:58.746 --> 00:06:00.576 A:middle
+background methods get called on
+
+00:06:00.576 --> 00:06:01.306 A:middle
+your scene delegate.
+
+00:06:01.956 --> 00:06:02.736 A:middle
+But, now there's something
+
+00:06:02.736 --> 00:06:03.266 A:middle
+interesting.
+
+00:06:03.826 --> 00:06:05.586 A:middle
+At some point in time after,
+
+00:06:05.816 --> 00:06:07.456 A:middle
+your scene may be disconnected.
+
+00:06:07.736 --> 00:06:08.896 A:middle
+Well, what does that mean?
+
+00:06:09.116 --> 00:06:10.276 A:middle
+Well, in order to reclaim
+
+00:06:10.276 --> 00:06:13.036 A:middle
+resources, the system may at
+
+00:06:13.036 --> 00:06:14.356 A:middle
+some point after your scene
+
+00:06:14.356 --> 00:06:15.826 A:middle
+enters the background, release
+
+00:06:15.826 --> 00:06:16.786 A:middle
+that scene from memory.
+
+00:06:17.096 --> 00:06:18.616 A:middle
+That also means your scene
+
+00:06:18.616 --> 00:06:20.096 A:middle
+delegate will be released from
+
+00:06:20.386 --> 00:06:21.716 A:middle
+memory and any window
+
+00:06:21.716 --> 00:06:23.206 A:middle
+hierarchies or view hierarchies
+
+00:06:23.436 --> 00:06:24.686 A:middle
+held by your scene delegate will
+
+00:06:24.686 --> 00:06:25.986 A:middle
+be released as well.
+
+00:06:27.236 --> 00:06:29.126 A:middle
+This gives you an opportunity to
+
+00:06:29.126 --> 00:06:31.016 A:middle
+deallocate and release any large
+
+00:06:31.016 --> 00:06:32.256 A:middle
+resources in memory that were
+
+00:06:32.256 --> 00:06:33.676 A:middle
+retained by somewhere else in
+
+00:06:33.676 --> 00:06:35.696 A:middle
+your application that related to
+
+00:06:35.696 --> 00:06:36.406 A:middle
+this scene.
+
+00:06:37.276 --> 00:06:38.916 A:middle
+But it's important to not use
+
+00:06:38.916 --> 00:06:40.336 A:middle
+this to actually delete any
+
+00:06:40.336 --> 00:06:41.976 A:middle
+user data or state permanently,
+
+00:06:42.226 --> 00:06:43.926 A:middle
+as the scene may reconnect and
+
+00:06:43.926 --> 00:06:44.726 A:middle
+return later.
+
+00:06:48.236 --> 00:06:49.966 A:middle
+But then let's talk about what
+
+00:06:49.966 --> 00:06:51.996 A:middle
+actually happens when our user
+
+00:06:51.996 --> 00:06:53.966 A:middle
+actually swipes up on a scene
+
+00:06:53.966 --> 00:06:55.436 A:middle
+session on switch and explicitly
+
+00:06:55.436 --> 00:06:57.526 A:middle
+wants to destroy it?
+
+00:06:57.746 --> 00:06:59.326 A:middle
+Well, the system will call our
+
+00:06:59.326 --> 00:07:01.716 A:middle
+App Delegates didDiscardSceneSessions.
+
+00:06:59.326 --> 00:07:01.716 A:middle
+App Delegates didDiscardSceneSessions.
+
+00:07:04.016 --> 00:07:05.236 A:middle
+This finally gives us an
+
+00:07:05.236 --> 00:07:06.556 A:middle
+opportunity to actually
+
+00:07:06.556 --> 00:07:08.106 A:middle
+permanently delegate any user
+
+00:07:08.106 --> 00:07:09.296 A:middle
+state or data associated with
+
+00:07:09.296 --> 00:07:11.326 A:middle
+the scene such as an unsaved
+
+00:07:11.326 --> 00:07:13.306 A:middle
+draft in a text editing app.
+
+00:07:14.086 --> 00:07:16.176 A:middle
+Now, it's also possible that one
+
+00:07:16.176 --> 00:07:17.856 A:middle
+of your users removed one or
+
+00:07:17.856 --> 00:07:19.356 A:middle
+more UIScenes from the switcher
+
+00:07:19.356 --> 00:07:21.176 A:middle
+by swiping up while your actual
+
+00:07:21.176 --> 00:07:22.446 A:middle
+app process was not running.
+
+00:07:23.316 --> 00:07:24.586 A:middle
+If your process was not running,
+
+00:07:24.586 --> 00:07:25.746 A:middle
+the system will keep track of
+
+00:07:25.746 --> 00:07:27.536 A:middle
+the discarded sessions and call
+
+00:07:27.536 --> 00:07:28.516 A:middle
+this shortly after your
+
+00:07:28.516 --> 00:07:29.796 A:middle
+application's next launch.
+
+00:07:34.726 --> 00:07:36.136 A:middle
+Now, let's talk about some
+
+00:07:36.136 --> 00:07:37.616 A:middle
+architecture patters that you
+
+00:07:37.616 --> 00:07:38.816 A:middle
+can consider integrating into
+
+00:07:38.816 --> 00:07:39.346 A:middle
+your apps.
+
+00:07:39.886 --> 00:07:43.556 A:middle
+We'll start by talking about
+
+00:07:43.556 --> 00:07:44.476 A:middle
+state restoration.
+
+00:07:45.786 --> 00:07:48.086 A:middle
+In iOS 13, state restoration is
+
+00:07:48.086 --> 00:07:49.536 A:middle
+no longer a nicety.
+
+00:07:50.136 --> 00:07:52.216 A:middle
+It is crucial for your
+
+00:07:52.216 --> 00:07:53.416 A:middle
+application to implement
+
+00:07:53.416 --> 00:07:55.206 A:middle
+scene-based state restoration.
+
+00:07:55.926 --> 00:07:57.126 A:middle
+Let's go over why that is.
+
+00:07:58.426 --> 00:07:59.286 A:middle
+Here's our app switcher.
+
+00:07:59.406 --> 00:08:01.286 A:middle
+I have a document app and I'm
+
+00:07:59.406 --> 00:08:01.286 A:middle
+I have a document app and I'm
+
+00:08:01.286 --> 00:08:02.356 A:middle
+planning a road trip and I have
+
+00:08:02.436 --> 00:08:03.416 A:middle
+four different sessions of
+
+00:08:03.416 --> 00:08:04.526 A:middle
+different documents open right
+
+00:08:04.526 --> 00:08:04.756 A:middle
+now.
+
+00:08:05.716 --> 00:08:07.006 A:middle
+But I'm really focusing on
+
+00:08:07.236 --> 00:08:08.506 A:middle
+packing list and agenda.
+
+00:08:09.556 --> 00:08:12.176 A:middle
+At some point, these other two
+
+00:08:12.176 --> 00:08:13.226 A:middle
+backgrounded road trip and
+
+00:08:13.226 --> 00:08:14.486 A:middle
+attendee scenes, have been
+
+00:08:14.486 --> 00:08:16.116 A:middle
+disconnected and released by the
+
+00:08:16.116 --> 00:08:16.616 A:middle
+system.
+
+00:08:17.466 --> 00:08:18.896 A:middle
+If I don't implement state
+
+00:08:18.896 --> 00:08:20.886 A:middle
+restoration here, when I go back
+
+00:08:20.886 --> 00:08:21.896 A:middle
+to the road trip, I'm not going
+
+00:08:21.896 --> 00:08:23.546 A:middle
+to return to the state that I
+
+00:08:23.546 --> 00:08:24.256 A:middle
+was previously in.
+
+00:08:24.256 --> 00:08:25.056 A:middle
+I'm not going to scene the
+
+00:08:25.056 --> 00:08:26.336 A:middle
+document that I was editing.
+
+00:08:27.136 --> 00:08:28.176 A:middle
+Instead, I'll just start over,
+
+00:08:28.176 --> 00:08:29.296 A:middle
+like it's a brand-new window,
+
+00:08:29.296 --> 00:08:31.166 A:middle
+and that's not a great user
+
+00:08:31.166 --> 00:08:31.776 A:middle
+experience.
+
+00:08:33.196 --> 00:08:34.275 A:middle
+Well, how can we resolve this?
+
+00:08:34.946 --> 00:08:36.645 A:middle
+iOS 13 has a brand-new
+
+00:08:37.346 --> 00:08:39.515 A:middle
+scene-based state restoration
+
+00:08:39.515 --> 00:08:39.806 A:middle
+API.
+
+00:08:40.155 --> 00:08:41.576 A:middle
+And it's super simple.
+
+00:08:42.816 --> 00:08:45.396 A:middle
+It works by not any more
+
+00:08:45.396 --> 00:08:47.486 A:middle
+encoding view hierarchies, but
+
+00:08:47.606 --> 00:08:49.496 A:middle
+instead just encoding the state
+
+00:08:49.496 --> 00:08:51.276 A:middle
+which will allow you to recreate
+
+00:08:51.506 --> 00:08:51.996 A:middle
+your window.
+
+00:08:54.356 --> 00:08:56.236 A:middle
+This is all based on NSUser
+
+00:08:56.236 --> 00:08:56.946 A:middle
+activity as well.
+
+00:08:56.946 --> 00:08:57.856 A:middle
+So, if your application
+
+00:08:57.856 --> 00:08:59.376 A:middle
+leverages powerful technologies
+
+00:08:59.376 --> 00:09:00.696 A:middle
+like spotlight search or
+
+00:08:59.376 --> 00:09:00.696 A:middle
+like spotlight search or
+
+00:09:00.696 --> 00:09:02.336 A:middle
+handoff, you can use these same
+
+00:09:02.336 --> 00:09:03.686 A:middle
+activities to encode the state
+
+00:09:03.686 --> 00:09:04.136 A:middle
+of your app.
+
+00:09:04.796 --> 00:09:06.076 A:middle
+It's also worth noting that in
+
+00:09:06.076 --> 00:09:08.196 A:middle
+iOS 13, the state restoration
+
+00:09:08.196 --> 00:09:09.646 A:middle
+archive that you give back to
+
+00:09:09.646 --> 00:09:11.656 A:middle
+the system will match the same
+
+00:09:11.656 --> 00:09:13.236 A:middle
+data protection class of the
+
+00:09:13.236 --> 00:09:14.336 A:middle
+rest of your application.
+
+00:09:17.756 --> 00:09:19.966 A:middle
+What does this look like in
+
+00:09:20.796 --> 00:09:20.906 A:middle
+code?
+
+00:09:20.906 --> 00:09:22.156 A:middle
+Well, in our scene delegate, we
+
+00:09:22.156 --> 00:09:23.356 A:middle
+implement state restoration
+
+00:09:23.356 --> 00:09:25.796 A:middle
+activity for scene and then I
+
+00:09:25.796 --> 00:09:29.346 A:middle
+call a method that finds the
+
+00:09:29.346 --> 00:09:31.506 A:middle
+most active relevant user
+
+00:09:31.506 --> 00:09:33.086 A:middle
+activity form in the current
+
+00:09:33.086 --> 00:09:33.496 A:middle
+window.
+
+00:09:34.046 --> 00:09:35.526 A:middle
+Then we return that.
+
+00:09:36.276 --> 00:09:38.366 A:middle
+After some time, when that scene
+
+00:09:38.366 --> 00:09:39.496 A:middle
+re-enters the foreground and
+
+00:09:39.496 --> 00:09:41.746 A:middle
+becomes connected, we check if
+
+00:09:41.746 --> 00:09:43.176 A:middle
+the session contains a state
+
+00:09:43.176 --> 00:09:44.286 A:middle
+restoration activity.
+
+00:09:44.896 --> 00:09:46.596 A:middle
+If it does, we use that
+
+00:09:46.596 --> 00:09:47.076 A:middle
+activity.
+
+00:09:47.586 --> 00:09:48.656 A:middle
+If not, we can create a
+
+00:09:48.656 --> 00:09:50.446 A:middle
+brand-new window without any
+
+00:09:50.446 --> 00:09:50.776 A:middle
+state.
+
+00:09:51.886 --> 00:09:53.546 A:middle
+This means that no matter what,
+
+00:09:54.026 --> 00:09:55.396 A:middle
+our users will never notice when
+
+00:09:55.396 --> 00:09:57.026 A:middle
+scenes get disconnected in the
+
+00:09:57.026 --> 00:09:58.236 A:middle
+background because they
+
+00:09:58.236 --> 00:09:58.626 A:middle
+shouldn't.
+
+00:10:00.856 --> 00:10:03.156 A:middle
+Finally, let's talk about one
+
+00:10:03.156 --> 00:10:05.346 A:middle
+more important issue that you
+
+00:10:05.346 --> 00:10:06.816 A:middle
+may run into when adopting
+
+00:10:06.816 --> 00:10:08.026 A:middle
+support for multiple windows.
+
+00:10:08.196 --> 00:10:09.756 A:middle
+And that is how to best keep
+
+00:10:09.756 --> 00:10:11.496 A:middle
+application scenes in sync.
+
+00:10:11.496 --> 00:10:13.656 A:middle
+Let me make this more concrete.
+
+00:10:13.796 --> 00:10:15.256 A:middle
+I've been working on a new chat
+
+00:10:15.256 --> 00:10:17.396 A:middle
+application right here, and as
+
+00:10:17.396 --> 00:10:18.866 A:middle
+we see, I just recently added
+
+00:10:18.866 --> 00:10:20.456 A:middle
+support for multiple windows on
+
+00:10:20.456 --> 00:10:21.236 A:middle
+iOS 13.
+
+00:10:22.636 --> 00:10:23.666 A:middle
+And I have a chat with my
+
+00:10:23.666 --> 00:10:25.786 A:middle
+friend, Giovanni, who will join
+
+00:10:25.786 --> 00:10:27.086 A:middle
+me on stage in a couple minutes,
+
+00:10:27.736 --> 00:10:28.896 A:middle
+and notice that we're viewing
+
+00:10:28.896 --> 00:10:30.046 A:middle
+the same conversation in two
+
+00:10:30.046 --> 00:10:31.076 A:middle
+different view controllers and
+
+00:10:31.076 --> 00:10:32.536 A:middle
+two different scenes at the same
+
+00:10:32.536 --> 00:10:32.886 A:middle
+time.
+
+00:10:34.036 --> 00:10:35.276 A:middle
+So, let's say I want to send
+
+00:10:35.276 --> 00:10:36.826 A:middle
+Giovanni a message and let him
+
+00:10:36.826 --> 00:10:37.846 A:middle
+know I'm ready for lunch.
+
+00:10:39.056 --> 00:10:40.866 A:middle
+Oh, only one of our scenes
+
+00:10:40.866 --> 00:10:41.376 A:middle
+updated.
+
+00:10:42.176 --> 00:10:43.706 A:middle
+So, why is that?
+
+00:10:44.876 --> 00:10:46.816 A:middle
+Well, it turns out that on iOS,
+
+00:10:46.816 --> 00:10:47.976 A:middle
+a lot of apps are structured in
+
+00:10:47.976 --> 00:10:49.486 A:middle
+this kind of way in which view
+
+00:10:49.486 --> 00:10:51.026 A:middle
+controllers receive an event,
+
+00:10:51.446 --> 00:10:52.766 A:middle
+maybe via button tap, me
+
+00:10:52.766 --> 00:10:53.846 A:middle
+pressing the send button.
+
+00:10:54.426 --> 00:10:56.086 A:middle
+And then the view controller
+
+00:10:56.086 --> 00:10:57.786 A:middle
+itself updates its own UI.
+
+00:10:58.716 --> 00:11:00.166 A:middle
+After that, our view controller
+
+00:10:58.716 --> 00:11:00.166 A:middle
+After that, our view controller
+
+00:11:00.166 --> 00:11:01.826 A:middle
+notifies our model or model
+
+00:11:01.826 --> 00:11:02.436 A:middle
+controller.
+
+00:11:02.436 --> 00:11:05.266 A:middle
+And this is mostly okay when we
+
+00:11:05.266 --> 00:11:07.046 A:middle
+just are talking about one user
+
+00:11:07.046 --> 00:11:07.856 A:middle
+interface instance.
+
+00:11:08.466 --> 00:11:10.146 A:middle
+But now if we introduce a second
+
+00:11:10.796 --> 00:11:11.816 A:middle
+view controller in a different
+
+00:11:11.816 --> 00:11:13.166 A:middle
+scene that's showing the same
+
+00:11:13.166 --> 00:11:15.296 A:middle
+data, at no point is this new
+
+00:11:15.296 --> 00:11:16.666 A:middle
+view controller being notified
+
+00:11:16.906 --> 00:11:18.596 A:middle
+to update itself with this new
+
+00:11:18.596 --> 00:11:18.916 A:middle
+data.
+
+00:11:19.816 --> 00:11:20.446 A:middle
+That's an issue.
+
+00:11:20.966 --> 00:11:24.556 A:middle
+Well, we can resolve this.
+
+00:11:24.606 --> 00:11:25.976 A:middle
+Architecturally, now if our view
+
+00:11:25.976 --> 00:11:27.186 A:middle
+controllers, upon receiving an
+
+00:11:27.186 --> 00:11:29.536 A:middle
+event, immediately and only
+
+00:11:29.536 --> 00:11:31.356 A:middle
+notify our model controller,
+
+00:11:31.736 --> 00:11:32.986 A:middle
+then we can have our model
+
+00:11:32.986 --> 00:11:35.416 A:middle
+controller actually notify any
+
+00:11:35.416 --> 00:11:36.686 A:middle
+relevant subscribers or view
+
+00:11:36.686 --> 00:11:37.946 A:middle
+controllers, telling them that
+
+00:11:37.946 --> 00:11:39.196 A:middle
+they should update with this new
+
+00:11:39.836 --> 00:11:39.996 A:middle
+data.
+
+00:11:41.416 --> 00:11:42.536 A:middle
+There are a number of ways that
+
+00:11:42.536 --> 00:11:43.196 A:middle
+we can do this.
+
+00:11:43.196 --> 00:11:44.146 A:middle
+We can use delegates,
+
+00:11:44.146 --> 00:11:45.046 A:middle
+notifications.
+
+00:11:45.376 --> 00:11:46.696 A:middle
+We can even use the fantastic
+
+00:11:46.696 --> 00:11:48.086 A:middle
+new Swift Combine framework
+
+00:11:48.086 --> 00:11:48.836 A:middle
+released this year.
+
+00:11:49.716 --> 00:11:51.116 A:middle
+But let's go over a lightweight
+
+00:11:51.116 --> 00:11:52.526 A:middle
+Swift example that you can
+
+00:11:52.526 --> 00:11:53.646 A:middle
+consider integrating into your
+
+00:11:53.646 --> 00:11:54.096 A:middle
+apps.
+
+00:11:54.666 --> 00:11:55.976 A:middle
+Here's the current method that
+
+00:11:55.976 --> 00:11:57.356 A:middle
+gets called when I press the
+
+00:11:57.566 --> 00:11:58.786 A:middle
+return button on sending a
+
+00:11:58.786 --> 00:11:59.336 A:middle
+message.
+
+00:11:59.936 --> 00:12:01.076 A:middle
+We create a message model
+
+00:11:59.936 --> 00:12:01.076 A:middle
+We create a message model
+
+00:12:01.076 --> 00:12:01.426 A:middle
+object.
+
+00:12:02.056 --> 00:12:03.306 A:middle
+My view controller updates its
+
+00:12:03.306 --> 00:12:03.866 A:middle
+own views.
+
+00:12:04.446 --> 00:12:07.096 A:middle
+And then we notify our model
+
+00:12:07.096 --> 00:12:08.746 A:middle
+controller to persist this.
+
+00:12:09.286 --> 00:12:11.056 A:middle
+And the first thing we need to
+
+00:12:11.056 --> 00:12:11.916 A:middle
+do is this view controller
+
+00:12:12.236 --> 00:12:13.756 A:middle
+should not be mutating its own
+
+00:12:13.816 --> 00:12:14.406 A:middle
+view state.
+
+00:12:14.886 --> 00:12:16.086 A:middle
+Instead, we're just going to get
+
+00:12:16.086 --> 00:12:16.646 A:middle
+rid of that code.
+
+00:12:16.746 --> 00:12:18.196 A:middle
+We'll add that back later in a
+
+00:12:18.656 --> 00:12:18.836 A:middle
+second.
+
+00:12:20.846 --> 00:12:22.706 A:middle
+Now, let's look at what that
+
+00:12:22.706 --> 00:12:24.836 A:middle
+model controller add method is
+
+00:12:24.836 --> 00:12:25.446 A:middle
+actually doing.
+
+00:12:25.446 --> 00:12:26.576 A:middle
+It's pretty simple.
+
+00:12:27.206 --> 00:12:28.406 A:middle
+All we're doing is persisting
+
+00:12:28.406 --> 00:12:29.176 A:middle
+that new message.
+
+00:12:30.096 --> 00:12:31.286 A:middle
+But we actually want the model
+
+00:12:31.286 --> 00:12:33.556 A:middle
+controller to now notify if any
+
+00:12:33.556 --> 00:12:34.526 A:middle
+other view controllers or
+
+00:12:34.526 --> 00:12:35.826 A:middle
+connected scenes that there has
+
+00:12:35.826 --> 00:12:36.476 A:middle
+been an update.
+
+00:12:39.496 --> 00:12:40.456 A:middle
+How are we going to send this
+
+00:12:40.456 --> 00:12:41.186 A:middle
+update down?
+
+00:12:41.636 --> 00:12:43.936 A:middle
+We want a structured way to
+
+00:12:43.936 --> 00:12:46.276 A:middle
+package this event such that
+
+00:12:46.276 --> 00:12:49.366 A:middle
+it's strongly typed and it's
+
+00:12:49.616 --> 00:12:51.166 A:middle
+easily debuggable and testable.
+
+00:12:51.446 --> 00:12:52.576 A:middle
+So, let's go ahead and actually
+
+00:12:52.576 --> 00:12:54.116 A:middle
+create a new type and we'll call
+
+00:12:54.116 --> 00:12:55.206 A:middle
+it update event.
+
+00:12:55.206 --> 00:12:56.516 A:middle
+It's a Swift enum with
+
+00:12:56.516 --> 00:12:57.536 A:middle
+associated values.
+
+00:12:58.066 --> 00:12:59.736 A:middle
+So, we'll add a new message
+
+00:12:59.736 --> 00:13:00.026 A:middle
+type.
+
+00:12:59.736 --> 00:13:00.026 A:middle
+type.
+
+00:13:00.676 --> 00:13:02.276 A:middle
+This is the object that our
+
+00:13:02.276 --> 00:13:03.506 A:middle
+model controller is going to
+
+00:13:03.506 --> 00:13:04.836 A:middle
+create on receiving a new
+
+00:13:04.836 --> 00:13:06.626 A:middle
+message and will then send down
+
+00:13:06.626 --> 00:13:07.876 A:middle
+to any relevant view controllers
+
+00:13:07.876 --> 00:13:08.456 A:middle
+or scenes.
+
+00:13:09.656 --> 00:13:10.896 A:middle
+Because we want to post this,
+
+00:13:10.896 --> 00:13:12.496 A:middle
+we'll use NSNotification center
+
+00:13:12.716 --> 00:13:14.076 A:middle
+as the backing store for this.
+
+00:13:14.076 --> 00:13:15.826 A:middle
+So, we'll add this handy post
+
+00:13:15.826 --> 00:13:17.636 A:middle
+method that lets us in one line
+
+00:13:17.846 --> 00:13:19.286 A:middle
+create a new update event and
+
+00:13:19.286 --> 00:13:20.896 A:middle
+then post it to any subscribers.
+
+00:13:21.456 --> 00:13:24.186 A:middle
+The implementation is fairly
+
+00:13:24.186 --> 00:13:25.166 A:middle
+straightforward.
+
+00:13:25.236 --> 00:13:27.006 A:middle
+We just post a notification to
+
+00:13:27.006 --> 00:13:28.486 A:middle
+the new message notification
+
+00:13:28.486 --> 00:13:29.646 A:middle
+name channel.
+
+00:13:30.126 --> 00:13:31.376 A:middle
+But the trick here is that we're
+
+00:13:31.376 --> 00:13:32.696 A:middle
+including the update event
+
+00:13:32.926 --> 00:13:34.826 A:middle
+object itself in the
+
+00:13:34.826 --> 00:13:35.766 A:middle
+notifications object.
+
+00:13:35.766 --> 00:13:37.096 A:middle
+This will come in handy, as
+
+00:13:37.096 --> 00:13:41.446 A:middle
+we'll see in a second.
+
+00:13:41.576 --> 00:13:42.956 A:middle
+Now, when our model controller
+
+00:13:42.956 --> 00:13:44.166 A:middle
+is notified that a new message
+
+00:13:44.166 --> 00:13:45.926 A:middle
+was added, after we persist it,
+
+00:13:46.196 --> 00:13:47.166 A:middle
+we can just create this new
+
+00:13:47.166 --> 00:13:49.066 A:middle
+event and call post.
+
+00:13:51.546 --> 00:13:53.466 A:middle
+Then, if we look at how we have
+
+00:13:53.496 --> 00:13:54.696 A:middle
+to change our view controllers,
+
+00:13:55.436 --> 00:13:57.396 A:middle
+we observe this new event.
+
+00:13:57.676 --> 00:13:58.976 A:middle
+In this case, the new message
+
+00:13:58.976 --> 00:13:59.836 A:middle
+notification name.
+
+00:14:00.286 --> 00:14:01.716 A:middle
+And then we create a handler
+
+00:14:01.716 --> 00:14:03.366 A:middle
+method that we get the
+
+00:14:03.366 --> 00:14:06.066 A:middle
+notification from in the arguments.
+
+00:14:06.816 --> 00:14:08.126 A:middle
+And remember, when we pass the
+
+00:14:08.126 --> 00:14:09.646 A:middle
+update event as the
+
+00:14:09.646 --> 00:14:12.426 A:middle
+notifications object, we can now
+
+00:14:12.546 --> 00:14:14.076 A:middle
+pull that event right back out
+
+00:14:14.076 --> 00:14:15.426 A:middle
+from the notification.
+
+00:14:15.946 --> 00:14:18.736 A:middle
+Then, we can easily switch on
+
+00:14:18.736 --> 00:14:20.506 A:middle
+the kind of case of the event
+
+00:14:21.796 --> 00:14:22.886 A:middle
+and because we created an
+
+00:14:22.886 --> 00:14:25.166 A:middle
+associated enum, we can pull the
+
+00:14:25.666 --> 00:14:26.726 A:middle
+message out.
+
+00:14:26.986 --> 00:14:28.616 A:middle
+Now, we can update our user
+
+00:14:28.616 --> 00:14:29.326 A:middle
+interface here.
+
+00:14:32.536 --> 00:14:33.736 A:middle
+So, let's see what happens when
+
+00:14:33.736 --> 00:14:34.896 A:middle
+I send Giovanni that same
+
+00:14:34.896 --> 00:14:36.786 A:middle
+message after implementing this
+
+00:14:36.786 --> 00:14:37.496 A:middle
+new architecture.
+
+00:14:38.196 --> 00:14:39.696 A:middle
+Hey! All of our scenes update.
+
+00:14:41.516 --> 00:14:45.876 A:middle
+[ Applause ]
+
+00:14:46.376 --> 00:14:47.866 A:middle
+So, we've gone over a lot today.
+
+00:14:48.076 --> 00:14:48.976 A:middle
+We've gone over some of the
+
+00:14:48.976 --> 00:14:50.886 A:middle
+differences in the app versus
+
+00:14:50.886 --> 00:14:51.736 A:middle
+scene delegate and the
+
+00:14:51.736 --> 00:14:53.296 A:middle
+differences in responsibilities.
+
+00:14:53.696 --> 00:14:54.806 A:middle
+We've also gone over some of the
+
+00:14:54.806 --> 00:14:57.586 A:middle
+major scene delegate methods and
+
+00:14:57.586 --> 00:14:58.836 A:middle
+what kind of work you should do
+
+00:14:58.836 --> 00:14:59.066 A:middle
+there.
+
+00:15:00.156 --> 00:15:01.306 A:middle
+We also talked about why state
+
+00:15:01.306 --> 00:15:02.736 A:middle
+restoration is so crucial for
+
+00:15:02.736 --> 00:15:04.616 A:middle
+you to use on iOS 13 and how you
+
+00:15:04.616 --> 00:15:06.726 A:middle
+can leverage the new scene-based
+
+00:15:06.896 --> 00:15:07.926 A:middle
+API to do so.
+
+00:15:08.606 --> 00:15:11.166 A:middle
+Finally, we talked about some
+
+00:15:11.166 --> 00:15:12.596 A:middle
+high-level patterns for creating
+
+00:15:12.596 --> 00:15:14.066 A:middle
+a one-way data flow such that we
+
+00:15:14.066 --> 00:15:15.296 A:middle
+can keep all of our scenes in
+
+00:15:15.296 --> 00:15:16.456 A:middle
+sync while they share the same
+
+00:15:16.456 --> 00:15:16.776 A:middle
+data.
+
+00:15:17.376 --> 00:15:17.716 A:middle
+Thank you.
+
+00:15:19.508 --> 00:15:21.508 A:middle
+[ Applause ]

@@ -1,0 +1,2964 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:16.500 A:middle
+[ Music ]
+
+00:00:27.006 --> 00:00:28.026 A:middle
+&gt;&gt; All right.
+
+00:00:28.136 --> 00:00:29.726 A:middle
+Welcome. My name is Eric Tamura.
+
+00:00:29.726 --> 00:00:33.256 A:middle
+I'm accompanied by Dominic
+Giampaolo and we're going
+
+00:00:33.256 --> 00:00:34.976 A:middle
+to tell you a little bit
+about Apple file systems.
+
+00:00:35.516 --> 00:00:42.316 A:middle
+[ Applause ]
+
+00:00:42.816 --> 00:00:45.856 A:middle
+All right so this is going to
+be a little bit of our roadmap
+
+00:00:45.856 --> 00:00:47.056 A:middle
+for our presentation today.
+
+00:00:47.456 --> 00:00:50.416 A:middle
+I'll tell you a little bit about
+introduction and motivation.
+
+00:00:50.686 --> 00:00:51.946 A:middle
+Why we decided to build this.
+
+00:00:51.946 --> 00:00:54.116 A:middle
+Some of the new features
+that we've added
+
+00:00:54.116 --> 00:00:55.386 A:middle
+as part of Apple File System.
+
+00:00:55.806 --> 00:00:57.756 A:middle
+We'll do a short demo,
+some of the new features.
+
+00:00:57.906 --> 00:01:00.166 A:middle
+And then we'll wrap it
+up with some new APIs
+
+00:00:57.906 --> 00:01:00.166 A:middle
+And then we'll wrap it
+up with some new APIs
+
+00:01:00.166 --> 00:01:02.146 A:middle
+that you can use in your apps.
+
+00:01:03.246 --> 00:01:05.996 A:middle
+Okay, let's start it.
+
+00:01:06.616 --> 00:01:09.806 A:middle
+So as Sebastian mentioned,
+Apple File System is available
+
+00:01:09.806 --> 00:01:12.296 A:middle
+in the WWDC build
+of macOS Sierra
+
+00:01:12.296 --> 00:01:13.806 A:middle
+that you all got yesterday.
+
+00:01:14.116 --> 00:01:17.076 A:middle
+And it will be available as a
+developer preview technology
+
+00:01:17.376 --> 00:01:21.496 A:middle
+in macOS Sierra once it
+finally ships this fall.
+
+00:01:22.656 --> 00:01:24.486 A:middle
+So what is Apple File System?
+
+00:01:25.166 --> 00:01:26.616 A:middle
+It's our next generation
+file system
+
+00:01:26.616 --> 00:01:28.936 A:middle
+that we've been building
+for Apple products.
+
+00:01:29.456 --> 00:01:32.796 A:middle
+And you might care about
+this because it will run
+
+00:01:32.966 --> 00:01:35.766 A:middle
+on watchOS, iOS, tvOS and macOS.
+
+00:01:36.666 --> 00:01:38.336 A:middle
+So as far as the
+intended audience here,
+
+00:01:38.336 --> 00:01:41.746 A:middle
+we expect that some of you may
+be either new to the platforms,
+
+00:01:41.746 --> 00:01:45.476 A:middle
+or you're a long time developer,
+but we intend to cover all
+
+00:01:45.546 --> 00:01:48.746 A:middle
+of the high level of the new
+file system in enough detail
+
+00:01:48.746 --> 00:01:49.756 A:middle
+so you can follow along.
+
+00:01:51.086 --> 00:01:53.876 A:middle
+So, one of the hallmarks of
+this product is that we wanted
+
+00:01:53.916 --> 00:01:57.006 A:middle
+to scale from an Apple Watch
+all the way up to a Mac Pro.
+
+00:01:58.446 --> 00:02:01.606 A:middle
+We also wanted to take advantage
+of Flash and SSD storage,
+
+00:01:58.446 --> 00:02:01.606 A:middle
+We also wanted to take advantage
+of Flash and SSD storage,
+
+00:02:01.686 --> 00:02:04.916 A:middle
+because nearly all of
+our products use SSDs.
+
+00:02:06.236 --> 00:02:09.086 A:middle
+And finally it's been built with
+encryption as a primary feature
+
+00:02:09.256 --> 00:02:12.946 A:middle
+from the very beginning as we
+brought this idea to fruition.
+
+00:02:14.026 --> 00:02:17.136 A:middle
+So you might be wondering
+what about HFS+.
+
+00:02:17.136 --> 00:02:21.486 A:middle
+Well, we are currently shipping
+HFS+ as our primary file system.
+
+00:02:21.736 --> 00:02:25.186 A:middle
+But its original design
+is almost 30 years old
+
+00:02:25.186 --> 00:02:25.686 A:middle
+at this point.
+
+00:02:25.686 --> 00:02:26.686 A:middle
+So how many of you would like us
+
+00:02:26.686 --> 00:02:29.176 A:middle
+to ship HFS+ for
+another 30 years?
+
+00:02:30.406 --> 00:02:34.746 A:middle
+Great. So HFS+ which
+was designed in an era
+
+00:02:34.746 --> 00:02:37.486 A:middle
+where floppies and hard
+drives were state of the art,
+
+00:02:38.406 --> 00:02:39.686 A:middle
+and the world has
+changed since then.
+
+00:02:39.686 --> 00:02:42.916 A:middle
+We now use SSDs and other next
+generation storage technologies
+
+00:02:43.266 --> 00:02:44.466 A:middle
+evolving as well.
+
+00:02:45.276 --> 00:02:49.006 A:middle
+The data structures in HFS+ were
+also relatively single treaded,
+
+00:02:49.006 --> 00:02:52.116 A:middle
+so our B-trees are relying
+on a big block in order
+
+00:02:52.116 --> 00:02:53.626 A:middle
+to access or mutate them.
+
+00:02:54.806 --> 00:02:58.766 A:middle
+And the data structures
+are also relatively rigid.
+
+00:02:59.146 --> 00:03:01.826 A:middle
+And by this we mean things
+like the file record,
+
+00:02:59.146 --> 00:03:01.826 A:middle
+And by this we mean things
+like the file record,
+
+00:03:01.826 --> 00:03:04.466 A:middle
+or catalog record in HFS+,
+which is more or less equivalent
+
+00:03:04.466 --> 00:03:07.716 A:middle
+to an inode in other filed
+systems, is fixed in order
+
+00:03:07.716 --> 00:03:10.096 A:middle
+to add new fields, to
+expand the file system,
+
+00:03:10.096 --> 00:03:12.426 A:middle
+give it new features, we
+would have to incur the cost
+
+00:03:12.426 --> 00:03:15.296 A:middle
+of a backwards, incompatible
+volume format change.
+
+00:03:15.296 --> 00:03:18.346 A:middle
+And by this we mean what happens
+if we add a new feature to HFS+
+
+00:03:18.346 --> 00:03:21.566 A:middle
+and take it all the way back
+to 10.5 and try to attach
+
+00:03:21.566 --> 00:03:22.746 A:middle
+that same file system?
+
+00:03:23.096 --> 00:03:24.056 A:middle
+What will happen?
+
+00:03:24.726 --> 00:03:27.546 A:middle
+So if we're concerned about
+backwards compatibility as well
+
+00:03:27.546 --> 00:03:30.546 A:middle
+as forwards compatibility
+we're starting to think
+
+00:03:30.546 --> 00:03:32.046 A:middle
+about well maybe it makes sense
+
+00:03:32.076 --> 00:03:34.326 A:middle
+to build something
+completely new altogether.
+
+00:03:34.386 --> 00:03:37.406 A:middle
+And so we thought
+about something new.
+
+00:03:38.196 --> 00:03:40.406 A:middle
+So we wanted something
+that was designed
+
+00:03:40.406 --> 00:03:42.946 A:middle
+and tuned specifically
+for Apple products.
+
+00:03:43.536 --> 00:03:45.956 A:middle
+And other file systems
+serve other purposes
+
+00:03:45.956 --> 00:03:47.236 A:middle
+and they do it well.
+
+00:03:47.406 --> 00:03:48.936 A:middle
+In particular filers
+
+00:03:48.936 --> 00:03:53.556 A:middle
+or enterprise level storage
+servers have a lot of features
+
+00:03:53.556 --> 00:03:55.706 A:middle
+that might not make
+sense on Apple products.
+
+00:03:55.736 --> 00:03:58.246 A:middle
+We typically use a
+single storage device all
+
+00:03:58.246 --> 00:03:58.716 A:middle
+of our products.
+
+00:03:59.156 --> 00:04:01.996 A:middle
+And we have a wide
+range of scale.
+
+00:03:59.156 --> 00:04:01.996 A:middle
+And we have a wide
+range of scale.
+
+00:04:02.086 --> 00:04:07.216 A:middle
+So on an Apple Watch, you have
+significantly DRAM and storage
+
+00:04:07.436 --> 00:04:10.126 A:middle
+than does a Mac Pro, which
+has tens of gigabytes
+
+00:04:10.126 --> 00:04:12.766 A:middle
+of DRAM potentially, and
+terabytes of storage.
+
+00:04:12.766 --> 00:04:15.086 A:middle
+So we wanted something
+that's flexible and dynamic
+
+00:04:15.506 --> 00:04:18.305 A:middle
+and that's the platform
+on which it's running.
+
+00:04:20.906 --> 00:04:23.256 A:middle
+So other things we wanted to
+build, we wanted to add new
+
+00:04:23.256 --> 00:04:24.976 A:middle
+and enhanced security
+capabilities.
+
+00:04:24.976 --> 00:04:29.146 A:middle
+So on iOS today we already
+shipped a version of HFS+
+
+00:04:29.516 --> 00:04:31.556 A:middle
+that uses per file encryption.
+
+00:04:31.676 --> 00:04:33.336 A:middle
+So every file is
+encrypted differently
+
+00:04:33.516 --> 00:04:36.826 A:middle
+on storage form every other
+file on the file system.
+
+00:04:37.546 --> 00:04:40.536 A:middle
+We want to take that a step
+further and we'll dive into some
+
+00:04:40.536 --> 00:04:42.796 A:middle
+of those features a little bit
+later on in the presentation.
+
+00:04:43.556 --> 00:04:45.246 A:middle
+And finally, we just wanted
+
+00:04:45.246 --> 00:04:47.836 A:middle
+to add some new general
+file system features
+
+00:04:47.926 --> 00:04:49.446 A:middle
+that have been requested
+
+00:04:49.446 --> 00:04:52.016 A:middle
+and that we learned
+were really important
+
+00:04:52.016 --> 00:04:53.926 A:middle
+for the future of our platforms.
+
+00:04:54.926 --> 00:04:57.436 A:middle
+So before we get into these
+new features, I just wanted
+
+00:04:57.436 --> 00:05:00.096 A:middle
+to give you a brief
+view of the landscape
+
+00:04:57.436 --> 00:05:00.096 A:middle
+to give you a brief
+view of the landscape
+
+00:05:00.096 --> 00:05:02.566 A:middle
+of what storage software
+looks like at Apple.
+
+00:05:03.166 --> 00:05:07.956 A:middle
+And so in terms of file systems
+and storage, we talk about HFS+,
+
+00:05:08.396 --> 00:05:12.206 A:middle
+but it's actually not just HFS+
+in the little small bubble,
+
+00:05:12.206 --> 00:05:14.456 A:middle
+there's actually many
+ancillary technologies
+
+00:05:14.456 --> 00:05:16.576 A:middle
+that comprise our
+storage software.
+
+00:05:17.546 --> 00:05:19.446 A:middle
+So in the beginning, we
+had HFS standard, almost,
+
+00:05:19.556 --> 00:05:21.076 A:middle
+you know over 30 years
+ago at this point.
+
+00:05:21.716 --> 00:05:25.256 A:middle
+We then added HFS+, some
+number of years later.
+
+00:05:25.676 --> 00:05:27.366 A:middle
+But we added crash
+protection to it.
+
+00:05:27.366 --> 00:05:30.486 A:middle
+So we gave it a journal of
+case sensitive variant as well.
+
+00:05:32.106 --> 00:05:35.576 A:middle
+We also added core storage which
+gives us full disk encryption
+
+00:05:35.576 --> 00:05:39.176 A:middle
+as well as our fusion drive,
+which combines the speed
+
+00:05:39.176 --> 00:05:41.236 A:middle
+of an SSD with the
+capacity of a hard drive.
+
+00:05:42.096 --> 00:05:44.836 A:middle
+And let's not forget all of
+the iOS specific variants.
+
+00:05:44.836 --> 00:05:48.916 A:middle
+We have an iOS specific
+variant of HFS+ as well as one
+
+00:05:48.916 --> 00:05:50.636 A:middle
+that supports the
+per file encryption
+
+00:05:50.736 --> 00:05:51.676 A:middle
+that we just discussed.
+
+00:05:52.656 --> 00:05:54.006 A:middle
+So our intention is that all
+
+00:05:54.006 --> 00:05:57.386 A:middle
+of these technologies will
+get replaced by one thing,
+
+00:05:57.876 --> 00:05:59.246 A:middle
+which is Apple File System.
+
+00:05:59.246 --> 00:06:04.016 A:middle
+So, let me tell you a
+little bit about some
+
+00:05:59.246 --> 00:06:04.016 A:middle
+So, let me tell you a
+little bit about some
+
+00:06:04.016 --> 00:06:05.956 A:middle
+of the new features
+in Apple File System.
+
+00:06:09.186 --> 00:06:13.126 A:middle
+So, this is a brief view of
+what we've got on deck here,
+
+00:06:13.266 --> 00:06:15.446 A:middle
+so we've got some improved
+file system fundamentals,
+
+00:06:16.226 --> 00:06:20.256 A:middle
+HFS compatibility, Space
+Sharing, cloning files
+
+00:06:20.256 --> 00:06:24.166 A:middle
+and directories, snapshots,
+and reverting to snapshots.
+
+00:06:24.896 --> 00:06:27.136 A:middle
+A feature we're calling
+fast directory sizing.
+
+00:06:27.736 --> 00:06:30.366 A:middle
+Atomic safe save
+primitives and encryption.
+
+00:06:30.366 --> 00:06:31.886 A:middle
+So you don't have to
+memorize all of these,
+
+00:06:31.936 --> 00:06:34.106 A:middle
+we will go into greater
+detail of all of these
+
+00:06:34.156 --> 00:06:35.196 A:middle
+in the upcoming slides.
+
+00:06:36.886 --> 00:06:40.296 A:middle
+So, first let's talk about some
+of the improved fundamentals.
+
+00:06:43.016 --> 00:06:45.666 A:middle
+So first it's been
+Flash and SSD optimized.
+
+00:06:46.546 --> 00:06:49.826 A:middle
+So on all of our devices, you
+know on all of our iOS devices,
+
+00:06:49.946 --> 00:06:53.486 A:middle
+but a lot of our Macs we ship
+with SSDs so we want to be
+
+00:06:53.486 --> 00:06:55.786 A:middle
+as friendly to the solid
+state drives as we know how.
+
+00:06:56.996 --> 00:06:59.196 A:middle
+It's also crash protected, APFS,
+
+00:06:59.196 --> 00:07:01.906 A:middle
+or Apple File System
+employs a new and novel copy
+
+00:06:59.196 --> 00:07:01.906 A:middle
+or Apple File System
+employs a new and novel copy
+
+00:07:01.906 --> 00:07:05.166 A:middle
+and write metadata scheme so
+every metadata write is written
+
+00:07:05.166 --> 00:07:07.516 A:middle
+into a new location
+on stable storage.
+
+00:07:07.866 --> 00:07:11.016 A:middle
+We combine this with a
+transaction subsystem
+
+00:07:11.016 --> 00:07:14.046 A:middle
+which ensures that if you lose
+power, if the machine panics,
+
+00:07:14.046 --> 00:07:16.796 A:middle
+or anything bad happens, you'll
+either see a consistent view
+
+00:07:16.796 --> 00:07:20.576 A:middle
+of what was on disk or you
+won't see it at all, the change.
+
+00:07:22.266 --> 00:07:25.736 A:middle
+We have modern 64-bit
+native fields,
+
+00:07:25.926 --> 00:07:28.786 A:middle
+so the inode number has
+been expanded to 64-bits.
+
+00:07:29.346 --> 00:07:32.556 A:middle
+We have timestamps
+that are now 64-bits.
+
+00:07:32.556 --> 00:07:35.036 A:middle
+We support nanosecond
+time stamp granularity.
+
+00:07:35.356 --> 00:07:37.366 A:middle
+We also support Sparks
+Files for the first time
+
+00:07:37.366 --> 00:07:38.356 A:middle
+on an Apple File System.
+
+00:07:39.906 --> 00:07:43.486 A:middle
+And all of our file and
+directory records that point
+
+00:07:43.486 --> 00:07:44.906 A:middle
+at where the blocks
+actually live
+
+00:07:44.906 --> 00:07:46.706 A:middle
+on disks have been
+expanded to 64-bits.
+
+00:07:47.706 --> 00:07:50.056 A:middle
+Our data structures
+were also expansible
+
+00:07:50.056 --> 00:07:51.066 A:middle
+and allowed for future growth.
+
+00:07:51.756 --> 00:07:54.596 A:middle
+So one thing that we
+talked about HFS+ is
+
+00:07:54.596 --> 00:07:56.976 A:middle
+that its data structures
+are relatively rigid.
+
+00:07:57.726 --> 00:08:01.836 A:middle
+And at APFS, or Apple File
+System, the data structures
+
+00:07:57.726 --> 00:08:01.836 A:middle
+And at APFS, or Apple File
+System, the data structures
+
+00:08:01.836 --> 00:08:04.586 A:middle
+that represent the core
+inode are now flexible.
+
+00:08:05.046 --> 00:08:06.496 A:middle
+So fields are either optional,
+
+00:08:06.496 --> 00:08:07.886 A:middle
+or we may not have
+invented them yet.
+
+00:08:07.996 --> 00:08:10.756 A:middle
+So new fields that we may
+choose to add down the line,
+
+00:08:11.126 --> 00:08:13.516 A:middle
+will be correctly
+recognized as not supported,
+
+00:08:13.516 --> 00:08:16.826 A:middle
+or I don't understand if
+you attach that storage
+
+00:08:16.826 --> 00:08:19.986 A:middle
+to today's version
+of macOS Sierra.
+
+00:08:20.706 --> 00:08:24.116 A:middle
+In this way we can add
+new features without fear
+
+00:08:24.116 --> 00:08:25.846 A:middle
+of harming backwards
+compatibility.
+
+00:08:26.606 --> 00:08:28.826 A:middle
+This also allow us to
+have optional fields.
+
+00:08:28.826 --> 00:08:32.635 A:middle
+So on some systems,
+having the mere presence
+
+00:08:32.635 --> 00:08:34.696 A:middle
+of a file is enough to
+convey some information.
+
+00:08:35.356 --> 00:08:38.976 A:middle
+And so if you have a 0-byte file
+you don't necessarily need all
+
+00:08:38.976 --> 00:08:41.126 A:middle
+the machinery that points at
+which blocks live on disks,
+
+00:08:41.216 --> 00:08:42.015 A:middle
+because they're needed.
+
+00:08:42.015 --> 00:08:43.476 A:middle
+So those fields are optional.
+
+00:08:45.626 --> 00:08:48.336 A:middle
+It's also been optimized for
+our Apple Software ecosystems.
+
+00:08:48.336 --> 00:08:51.636 A:middle
+So we wanted to add features
+and optimize the APIs
+
+00:08:51.636 --> 00:08:53.416 A:middle
+that are extremely compelling
+
+00:08:53.626 --> 00:08:55.506 A:middle
+for our platforms
+moving forward.
+
+00:08:55.506 --> 00:09:00.606 A:middle
+And we also have a
+low latency design.
+
+00:08:55.506 --> 00:09:00.606 A:middle
+And we also have a
+low latency design.
+
+00:09:00.736 --> 00:09:03.326 A:middle
+And typically in file systems
+latency is often a tradeoff
+
+00:09:03.326 --> 00:09:05.026 A:middle
+between latency and throughput.
+
+00:09:05.026 --> 00:09:07.906 A:middle
+And we've chosen to lean
+on the side of latency.
+
+00:09:08.136 --> 00:09:12.016 A:middle
+And we do this because we want
+your apps when a user clicks
+
+00:09:12.016 --> 00:09:14.626 A:middle
+on them on the desktop,
+or they tap on them
+
+00:09:14.626 --> 00:09:17.556 A:middle
+on your phone you want it to
+come up quickly and responsively
+
+00:09:17.556 --> 00:09:19.306 A:middle
+and have very crisp animation.
+
+00:09:19.566 --> 00:09:22.006 A:middle
+And the reason for that is when
+you go down to the file system,
+
+00:09:22.006 --> 00:09:24.346 A:middle
+we want to ensure that we
+get you the answers you need
+
+00:09:24.446 --> 00:09:25.766 A:middle
+as quickly as possible.
+
+00:09:27.596 --> 00:09:29.886 A:middle
+And finally we have native
+encryption support built
+
+00:09:29.886 --> 00:09:30.696 A:middle
+into the file system.
+
+00:09:31.216 --> 00:09:34.656 A:middle
+On HFS+ as we mentioned, it
+uses per file encryption,
+
+00:09:34.706 --> 00:09:37.226 A:middle
+but those are stored on disk
+through extended attributes.
+
+00:09:37.656 --> 00:09:40.036 A:middle
+On Apple File System that's not
+the case these are now first
+
+00:09:40.036 --> 00:09:43.986 A:middle
+class citizens, first class
+objects inside the file system.
+
+00:09:45.316 --> 00:09:47.256 A:middle
+So that's a bit about
+the fundamentals.
+
+00:09:47.846 --> 00:09:50.436 A:middle
+So HFS compatibility, if all
+of you have apps that run
+
+00:09:50.436 --> 00:09:54.756 A:middle
+on HFS+ just fine, we intend
+for those to continue to run
+
+00:09:55.006 --> 00:09:57.706 A:middle
+without any changes
+whatsoever on your side.
+
+00:09:58.366 --> 00:09:59.806 A:middle
+So Apple File System
+will support
+
+00:09:59.806 --> 00:10:02.126 A:middle
+and replace HFS+ functionality.
+
+00:09:59.806 --> 00:10:02.126 A:middle
+and replace HFS+ functionality.
+
+00:10:02.376 --> 00:10:04.936 A:middle
+And there's an asterisks there
+because there's three things
+
+00:10:04.936 --> 00:10:06.916 A:middle
+that we will not
+support moving forward.
+
+00:10:07.286 --> 00:10:10.416 A:middle
+One of them is exchange
+data, the other search FS,
+
+00:10:10.416 --> 00:10:14.596 A:middle
+and the third is directory
+hard links for time machine.
+
+00:10:15.646 --> 00:10:19.606 A:middle
+But every other API and
+behavior will be supported just
+
+00:10:19.606 --> 00:10:21.136 A:middle
+as it is on HFS+.
+
+00:10:22.156 --> 00:10:25.036 A:middle
+So now I want to tell you a
+little bit about Space Sharing
+
+00:10:25.036 --> 00:10:26.566 A:middle
+which is one of the
+features that we've added
+
+00:10:26.566 --> 00:10:28.096 A:middle
+into Apple File System.
+
+00:10:29.286 --> 00:10:31.086 A:middle
+So let's take a quick
+poll how many of you
+
+00:10:31.086 --> 00:10:33.636 A:middle
+in the audience have a
+Mac or have used a Mac
+
+00:10:34.036 --> 00:10:35.506 A:middle
+with more than one partition?
+
+00:10:36.846 --> 00:10:37.396 A:middle
+Okay, great.
+
+00:10:37.706 --> 00:10:41.916 A:middle
+We do as well, one of the
+things that we do internally,
+
+00:10:41.916 --> 00:10:44.836 A:middle
+is we want a development
+version of OS on one partition,
+
+00:10:44.836 --> 00:10:48.456 A:middle
+and we want you know the stable
+released version on another.
+
+00:10:48.826 --> 00:10:50.726 A:middle
+Or you might choose to have
+your home directory on one
+
+00:10:50.936 --> 00:10:53.956 A:middle
+and other different data that
+you don't care about in another.
+
+00:10:54.656 --> 00:10:57.986 A:middle
+But one of the things that we've
+learned through our analytics
+
+00:10:57.986 --> 00:10:59.876 A:middle
+that come back when users
+opt in to data collection
+
+00:10:59.876 --> 00:11:02.836 A:middle
+and reporting their
+statistics to Apple machines is
+
+00:10:59.876 --> 00:11:02.836 A:middle
+and reporting their
+statistics to Apple machines is
+
+00:11:02.836 --> 00:11:05.076 A:middle
+that most end users
+don't do this.
+
+00:11:05.296 --> 00:11:06.896 A:middle
+They just have the
+one partition.
+
+00:11:07.296 --> 00:11:09.846 A:middle
+And the reason they don't
+is because it's hard.
+
+00:11:10.396 --> 00:11:12.296 A:middle
+You have to know exactly
+how you're going to lay
+
+00:11:12.296 --> 00:11:14.096 A:middle
+out your disk at the
+time you set it up,
+
+00:11:14.306 --> 00:11:16.566 A:middle
+and changing it is
+relatively expensive.
+
+00:11:17.216 --> 00:11:19.236 A:middle
+Moreover, free space
+on one partition,
+
+00:11:19.236 --> 00:11:20.876 A:middle
+as you know does not translate
+
+00:11:20.876 --> 00:11:23.396 A:middle
+into available free space
+on another partition.
+
+00:11:23.906 --> 00:11:25.016 A:middle
+So we're solving this
+
+00:11:25.016 --> 00:11:26.826 A:middle
+with a feature we're
+calling Space Sharing.
+
+00:11:27.676 --> 00:11:30.166 A:middle
+So let's take an example
+here, we'll work through this
+
+00:11:30.166 --> 00:11:31.746 A:middle
+as we kind of explain
+the feature.
+
+00:11:32.236 --> 00:11:34.036 A:middle
+Let's say you're
+downloading the latest
+
+00:11:34.036 --> 00:11:36.356 A:middle
+and greatest cat video you
+just got of the internet
+
+00:11:36.356 --> 00:11:38.316 A:middle
+from your friend
+over at AirDrop.
+
+00:11:39.286 --> 00:11:42.466 A:middle
+And let's say that file
+grows, and it gets bigger,
+
+00:11:42.466 --> 00:11:45.856 A:middle
+in fact so big that you've
+completely run out of space
+
+00:11:46.056 --> 00:11:47.606 A:middle
+on the partition on
+which you're running.
+
+00:11:48.526 --> 00:11:50.286 A:middle
+Well there's not a whole
+lot you can do in this case.
+
+00:11:50.286 --> 00:11:51.526 A:middle
+If you're out of space,
+you're out of space.
+
+00:11:52.006 --> 00:11:55.976 A:middle
+One thing you could do though is
+completely destroy the partition
+
+00:11:55.976 --> 00:11:58.706 A:middle
+immediately afterwards
+and then grow partition 1.
+
+00:11:58.706 --> 00:12:00.256 A:middle
+So let's look at that.
+
+00:11:58.706 --> 00:12:00.256 A:middle
+So let's look at that.
+
+00:12:00.256 --> 00:12:04.796 A:middle
+We can destroy partition
+2, partition 1 grows,
+
+00:12:04.796 --> 00:12:08.396 A:middle
+and now you have enough space to
+continue growing your cat video.
+
+00:12:09.786 --> 00:12:12.126 A:middle
+But this is also inflexible
+and presents a little bit
+
+00:12:12.126 --> 00:12:15.446 A:middle
+of a problem if the file that
+you're downloading wasn't
+
+00:12:15.446 --> 00:12:18.916 A:middle
+on partition 1, but it was
+in fact on partition 0.
+
+00:12:19.726 --> 00:12:21.366 A:middle
+So in this case, you're going
+
+00:12:21.366 --> 00:12:23.816 A:middle
+to grow the file,
+it will get bigger.
+
+00:12:23.816 --> 00:12:26.106 A:middle
+And then even if
+you have free space,
+
+00:12:26.106 --> 00:12:29.166 A:middle
+or content that you're willing
+to destroy on partition 2,
+
+00:12:29.566 --> 00:12:33.576 A:middle
+we could destroy it, but then
+partition 0 couldn't grow,
+
+00:12:33.576 --> 00:12:36.056 A:middle
+because it's not adjacent
+to any of the free space
+
+00:12:36.056 --> 00:12:37.006 A:middle
+that we just made available.
+
+00:12:37.626 --> 00:12:38.556 A:middle
+So we think this is something
+
+00:12:38.556 --> 00:12:40.316 A:middle
+that we can solve
+with Space Sharing.
+
+00:12:40.696 --> 00:12:42.446 A:middle
+So in Apple File
+System we've come
+
+00:12:42.446 --> 00:12:45.356 A:middle
+up with this base concept
+we're calling the container,
+
+00:12:45.426 --> 00:12:48.186 A:middle
+applicably named because
+it contains volumes
+
+00:12:48.186 --> 00:12:49.506 A:middle
+or individual file systems.
+
+00:12:50.616 --> 00:12:54.156 A:middle
+So, in this instance, Apple File
+System containers represent the
+
+00:12:54.156 --> 00:12:55.576 A:middle
+lowest level of functionality.
+
+00:12:55.576 --> 00:12:58.676 A:middle
+And this is what encapsulates
+our block allocator,
+
+00:12:58.676 --> 00:13:00.736 A:middle
+as well as our crash
+protection subsystem.
+
+00:12:58.676 --> 00:13:00.736 A:middle
+as well as our crash
+protection subsystem.
+
+00:13:01.786 --> 00:13:04.786 A:middle
+So let's say we have volume
+0, which occupies some amount
+
+00:13:04.786 --> 00:13:07.916 A:middle
+of free space in the partition,
+
+00:13:08.776 --> 00:13:11.966 A:middle
+volume can grow,
+or it can shrink.
+
+00:13:12.896 --> 00:13:15.466 A:middle
+But in all these cases the free
+space will dynamically resize
+
+00:13:15.496 --> 00:13:18.236 A:middle
+to what's currently available
+at the time that you request it.
+
+00:13:18.956 --> 00:13:21.366 A:middle
+You can also create more than
+one volume in the container
+
+00:13:21.366 --> 00:13:23.226 A:middle
+which will occupy
+incrementally more space.
+
+00:13:24.126 --> 00:13:26.826 A:middle
+And then if you wanted to
+grow partition or volume 0,
+
+00:13:26.826 --> 00:13:27.986 A:middle
+at this point you could do so.
+
+00:13:28.466 --> 00:13:30.966 A:middle
+And now if you ask for how
+much free space is available
+
+00:13:30.966 --> 00:13:32.846 A:middle
+on the system you will
+get the area that's
+
+00:13:32.846 --> 00:13:34.466 A:middle
+in the green rectangle
+at the bottom.
+
+00:13:35.266 --> 00:13:37.516 A:middle
+So developers take note, this
+is something that's a little bit
+
+00:13:37.516 --> 00:13:40.506 A:middle
+subtly different from how you
+may have computed free space
+
+00:13:40.506 --> 00:13:41.076 A:middle
+in the past.
+
+00:13:41.076 --> 00:13:42.356 A:middle
+If you're using some paradigm
+
+00:13:42.356 --> 00:13:45.896 A:middle
+like taking a total storage
+size, subtracting the used space
+
+00:13:45.896 --> 00:13:48.086 A:middle
+to get the free space,
+that will no longer work,
+
+00:13:48.306 --> 00:13:49.986 A:middle
+because other volumes
+
+00:13:50.116 --> 00:13:52.766 A:middle
+on the container are also
+participating in Space Sharing.
+
+00:13:53.446 --> 00:13:56.616 A:middle
+Additionally, you can't
+necessarily add up all
+
+00:13:56.616 --> 00:13:58.286 A:middle
+of the used space either.
+
+00:13:59.316 --> 00:14:02.836 A:middle
+So, next, I'm going to invite
+Dominic up and he will tell you
+
+00:13:59.316 --> 00:14:02.836 A:middle
+So, next, I'm going to invite
+Dominic up and he will tell you
+
+00:14:02.836 --> 00:14:04.886 A:middle
+about cloning files
+and directories.
+
+00:14:05.516 --> 00:14:11.546 A:middle
+[ Applause ]
+
+00:14:12.046 --> 00:14:13.426 A:middle
+&gt;&gt; Hi. Again my name is
+Dominic and I'm going to walk
+
+00:14:13.426 --> 00:14:14.776 A:middle
+through a couple of the
+other higher level features
+
+00:14:14.776 --> 00:14:16.186 A:middle
+that we have in APFS.
+
+00:14:16.666 --> 00:14:18.176 A:middle
+First, we're going
+to talk about cloning
+
+00:14:18.176 --> 00:14:19.496 A:middle
+of files and directories.
+
+00:14:19.896 --> 00:14:24.026 A:middle
+So here we have a file, TOP
+SECRET APFS.key, that Eric has
+
+00:14:24.026 --> 00:14:24.876 A:middle
+in his home directory.
+
+00:14:24.876 --> 00:14:27.046 A:middle
+And it has references
+to two blocks of data.
+
+00:14:27.486 --> 00:14:30.326 A:middle
+Now if Eric wanted to make an
+archive of this presentation
+
+00:14:30.866 --> 00:14:33.446 A:middle
+as it existed at this point in
+time, he could copy the data
+
+00:14:33.446 --> 00:14:35.996 A:middle
+by reading it all in,
+and writing it back out.
+
+00:14:36.436 --> 00:14:38.906 A:middle
+That has obvious
+costs in terms of CPU,
+
+00:14:39.156 --> 00:14:41.406 A:middle
+power, and disk space usage.
+
+00:14:41.696 --> 00:14:44.416 A:middle
+Instead with APFS you
+can clone the file.
+
+00:14:44.786 --> 00:14:47.036 A:middle
+By cloning the file,
+you copy the references
+
+00:14:47.036 --> 00:14:49.326 A:middle
+to the data instead
+of the actual data.
+
+00:14:49.466 --> 00:14:53.546 A:middle
+So it's obviously much faster
+and if it's a large file,
+
+00:14:53.616 --> 00:14:55.686 A:middle
+you're not using twice
+the amount of space,
+
+00:14:55.686 --> 00:14:57.246 A:middle
+you're using exactly
+the same amount
+
+00:14:57.246 --> 00:14:59.556 A:middle
+of space plus a small
+incremental amount
+
+00:14:59.846 --> 00:15:01.866 A:middle
+for the additional
+references to the data.
+
+00:14:59.846 --> 00:15:01.866 A:middle
+for the additional
+references to the data.
+
+00:15:02.386 --> 00:15:05.076 A:middle
+What a clone guarantees
+in the file system is
+
+00:15:05.076 --> 00:15:07.716 A:middle
+that if a modification is
+made to either the original
+
+00:15:07.716 --> 00:15:09.846 A:middle
+or the clone, the
+file system will write
+
+00:15:09.906 --> 00:15:11.566 A:middle
+that data to a new location.
+
+00:15:11.616 --> 00:15:13.436 A:middle
+So the clone remains untouched.
+
+00:15:14.476 --> 00:15:16.816 A:middle
+So this is an important
+point to be aware of.
+
+00:15:16.916 --> 00:15:20.946 A:middle
+When you have clones, you
+will, at the time of the clone,
+
+00:15:20.946 --> 00:15:22.366 A:middle
+you're not using any
+additional space.
+
+00:15:22.366 --> 00:15:24.966 A:middle
+As you continue to make
+modifications, you will start
+
+00:15:24.966 --> 00:15:26.496 A:middle
+to use more and more space.
+
+00:15:27.316 --> 00:15:33.336 A:middle
+In addition, because APFS, or
+iOS and macOS support document
+
+00:15:33.336 --> 00:15:36.356 A:middle
+in application bundles,
+APFS will also allow you
+
+00:15:36.426 --> 00:15:38.736 A:middle
+to clone an entire
+directory hierarchy.
+
+00:15:38.736 --> 00:15:41.746 A:middle
+So a document bundle is a
+directory which contains a set
+
+00:15:41.746 --> 00:15:43.586 A:middle
+of files inside of it.
+
+00:15:43.586 --> 00:15:45.876 A:middle
+APFS can clone that
+atomically as well.
+
+00:15:47.156 --> 00:15:48.966 A:middle
+Next let's talk about snapshots.
+
+00:15:49.726 --> 00:15:51.346 A:middle
+Here, we have another
+representation
+
+00:15:51.346 --> 00:15:53.356 A:middle
+of a file system
+with two files in it.
+
+00:15:53.686 --> 00:15:55.436 A:middle
+BikeRacing and CoffeeOrigins.
+
+00:15:55.966 --> 00:15:57.506 A:middle
+BikeRacing has two
+blocks of data.
+
+00:15:58.036 --> 00:15:59.526 A:middle
+And CoffeeOrigins has one.
+
+00:15:59.886 --> 00:16:03.536 A:middle
+If we take snapshot of the file
+system, we now have a separate,
+
+00:15:59.886 --> 00:16:03.536 A:middle
+If we take snapshot of the file
+system, we now have a separate,
+
+00:16:03.666 --> 00:16:07.346 A:middle
+independently mountable, read
+only copy of the file system
+
+00:16:07.986 --> 00:16:11.196 A:middle
+that represents this data the
+file system at the point in time
+
+00:16:11.196 --> 00:16:12.496 A:middle
+that the snapshot was taken.
+
+00:16:12.956 --> 00:16:15.376 A:middle
+Much like with clones,
+if a write comes
+
+00:16:15.376 --> 00:16:18.376 A:middle
+into the live file system, the
+file system will put that data
+
+00:16:18.376 --> 00:16:21.836 A:middle
+in a new location preserving
+the integrity of the snapshot.
+
+00:16:22.916 --> 00:16:27.636 A:middle
+Likewise, if we were to delete
+CoffeeOrigins.key to try to free
+
+00:16:27.636 --> 00:16:31.016 A:middle
+up some space, the file system
+can't reclaim those blocks
+
+00:16:31.086 --> 00:16:34.476 A:middle
+because as you can see
+the snapshot continues
+
+00:16:34.476 --> 00:16:35.676 A:middle
+to refer to those blocks.
+
+00:16:36.046 --> 00:16:37.606 A:middle
+This is an important
+consideration
+
+00:16:37.606 --> 00:16:40.486 A:middle
+that developers need to be aware
+of when working with snapshots
+
+00:16:40.646 --> 00:16:44.536 A:middle
+because when a file is deleted,
+if it was present at the time
+
+00:16:44.536 --> 00:16:46.626 A:middle
+of a snapshot, the
+blocks aren't reclaimed.
+
+00:16:46.916 --> 00:16:49.786 A:middle
+So snapshots can cause you
+to use all of your disk space
+
+00:16:49.786 --> 00:16:52.716 A:middle
+if you don't harvest
+them periodically.
+
+00:16:53.416 --> 00:16:56.366 A:middle
+We expect that developers
+will probably use snapshots
+
+00:16:56.366 --> 00:16:59.926 A:middle
+for the purposes of having a
+stable read only copy from which
+
+00:16:59.926 --> 00:17:02.906 A:middle
+to perform a backup, but we're
+looking for other feedback
+
+00:16:59.926 --> 00:17:02.906 A:middle
+to perform a backup, but we're
+looking for other feedback
+
+00:17:02.906 --> 00:17:04.396 A:middle
+from developers on other uses
+
+00:17:04.396 --> 00:17:05.816 A:middle
+that they might have
+for snapshots.
+
+00:17:05.816 --> 00:17:08.066 A:middle
+So please come see us
+in the lab at 12:30.
+
+00:17:08.396 --> 00:17:10.596 A:middle
+Let us know what you would
+like to do with snapshots.
+
+00:17:12.876 --> 00:17:14.976 A:middle
+Now let's talk about
+reverting to a snapshot.
+
+00:17:14.976 --> 00:17:17.256 A:middle
+And this is another
+feature that APFS supports.
+
+00:17:17.256 --> 00:17:20.175 A:middle
+So we have the same state of the
+file system here but we decide
+
+00:17:20.175 --> 00:17:23.906 A:middle
+that well, we don't like
+this, we'd like to revert,
+
+00:17:23.906 --> 00:17:25.445 A:middle
+essentially a global undo.
+
+00:17:25.445 --> 00:17:28.376 A:middle
+We want to go back to the point
+in time of the file system
+
+00:17:28.376 --> 00:17:30.646 A:middle
+at the time the snapshot
+was taken.
+
+00:17:31.036 --> 00:17:33.956 A:middle
+So you can flag a
+file system to revert
+
+00:17:33.956 --> 00:17:35.136 A:middle
+to the state of a snapshot.
+
+00:17:35.136 --> 00:17:38.606 A:middle
+And the next time it's mounted,
+the file system will rewind,
+
+00:17:38.796 --> 00:17:42.376 A:middle
+essentially to the point it was
+at the time of the snapshot.
+
+00:17:42.656 --> 00:17:44.636 A:middle
+And then allow you to
+continue making changes
+
+00:17:44.636 --> 00:17:45.766 A:middle
+from that point forward.
+
+00:17:45.886 --> 00:17:48.596 A:middle
+So, again, you can see that
+CoffeeOrigins.key came back
+
+00:17:48.956 --> 00:17:49.906 A:middle
+and the change that was made
+
+00:17:49.906 --> 00:17:51.686 A:middle
+to the other file
+has been discarded.
+
+00:17:52.116 --> 00:17:55.026 A:middle
+The snapshot continues to
+exist and you can revert
+
+00:17:55.026 --> 00:17:56.586 A:middle
+as many times as you would like.
+
+00:17:59.286 --> 00:17:59.496 A:middle
+All right.
+
+00:17:59.596 --> 00:18:01.596 A:middle
+Now let's talk about
+fast directory sizing.
+
+00:17:59.596 --> 00:18:01.596 A:middle
+Now let's talk about
+fast directory sizing.
+
+00:18:02.346 --> 00:18:03.176 A:middle
+This is an answer
+
+00:18:03.176 --> 00:18:06.386 A:middle
+to the question how much space
+does a directory hierarchy use.
+
+00:18:06.706 --> 00:18:09.876 A:middle
+Now applications frequently
+need to compute this size
+
+00:18:09.876 --> 00:18:13.126 A:middle
+for sizing an operation to
+provide progress to the user.
+
+00:18:13.456 --> 00:18:14.976 A:middle
+And the obvious way
+to do this is
+
+00:18:14.976 --> 00:18:17.766 A:middle
+to open the directory hierarchy
+iterate all the contents
+
+00:18:17.766 --> 00:18:19.946 A:middle
+recursively and look at the size
+
+00:18:19.946 --> 00:18:22.126 A:middle
+of all the items
+to add the size up.
+
+00:18:22.126 --> 00:18:24.596 A:middle
+Of course users would
+really like to know
+
+00:18:24.596 --> 00:18:26.246 A:middle
+that answer a little
+bit more quickly.
+
+00:18:26.636 --> 00:18:29.596 A:middle
+On this next slide, if you focus
+your attention on the left side
+
+00:18:29.596 --> 00:18:32.096 A:middle
+of the screen, when the
+get info panel comes up,
+
+00:18:32.166 --> 00:18:34.586 A:middle
+you'll see it says,
+calculating size.
+
+00:18:36.806 --> 00:18:39.436 A:middle
+And after a couple of seconds
+it populates with the size.
+
+00:18:39.716 --> 00:18:41.226 A:middle
+That's what we're
+looking to improve.
+
+00:18:42.086 --> 00:18:44.466 A:middle
+So, the file system
+could keep track of this.
+
+00:18:44.466 --> 00:18:47.286 A:middle
+Obviously you could store the
+size of the directory hierarchy
+
+00:18:47.316 --> 00:18:50.866 A:middle
+with the directory itself,
+but that has one main issue,
+
+00:18:51.226 --> 00:18:53.456 A:middle
+how do you safely
+update copy your parent
+
+00:18:53.456 --> 00:18:55.286 A:middle
+and its parents on up the chain.
+
+00:18:55.816 --> 00:18:58.476 A:middle
+So we're just delving a little
+bit into file system internals,
+
+00:18:58.536 --> 00:19:02.076 A:middle
+but when you have a lock on a
+child when you're modifying it,
+
+00:18:58.536 --> 00:19:02.076 A:middle
+but when you have a lock on a
+child when you're modifying it,
+
+00:19:02.366 --> 00:19:03.906 A:middle
+you can't also lock your parent,
+
+00:19:04.056 --> 00:19:05.766 A:middle
+because that's a
+lock order violation.
+
+00:19:05.766 --> 00:19:09.136 A:middle
+File system always lock
+from the parent to child,
+
+00:19:09.186 --> 00:19:11.006 A:middle
+never from the child
+to the parent.
+
+00:19:11.006 --> 00:19:13.746 A:middle
+And so if you start doing it
+the other way you have deadlock.
+
+00:19:14.866 --> 00:19:17.606 A:middle
+So APFS instead sidesteps
+the problem.
+
+00:19:18.006 --> 00:19:20.266 A:middle
+If the problem is storing
+the size with the directory,
+
+00:19:20.416 --> 00:19:22.146 A:middle
+well let's store the
+size somewhere else.
+
+00:19:22.546 --> 00:19:24.426 A:middle
+So by storing the
+size separately,
+
+00:19:24.776 --> 00:19:27.576 A:middle
+we can use atomic
+operations to update the size
+
+00:19:27.696 --> 00:19:30.516 A:middle
+in a separate record that's
+maintained by the file system.
+
+00:19:30.926 --> 00:19:33.296 A:middle
+And we don't have any
+lock order violations.
+
+00:19:34.126 --> 00:19:36.076 A:middle
+This comes at a small
+incremental cost
+
+00:19:36.076 --> 00:19:39.026 A:middle
+for the additional size records,
+but that's basically lost
+
+00:19:39.026 --> 00:19:40.666 A:middle
+in the noise with the IO.
+
+00:19:41.426 --> 00:19:43.266 A:middle
+All right.
+
+00:19:43.386 --> 00:19:46.036 A:middle
+Next, we're going to talk about
+atomic safe-save primitives.
+
+00:19:46.716 --> 00:19:48.906 A:middle
+The first example is
+just a basic file.
+
+00:19:48.906 --> 00:19:52.496 A:middle
+This is how safe-save works
+for a regular file today.
+
+00:19:52.936 --> 00:19:55.136 A:middle
+So here I have
+MakeMonneyFast.key.
+
+00:19:55.546 --> 00:19:57.276 A:middle
+And I come up with some
+brilliant new scheme
+
+00:19:57.276 --> 00:19:58.556 A:middle
+for making money fast.
+
+00:19:58.876 --> 00:20:01.356 A:middle
+And when the application
+saves that data, it's written
+
+00:19:58.876 --> 00:20:01.356 A:middle
+And when the application
+saves that data, it's written
+
+00:20:01.356 --> 00:20:03.906 A:middle
+to a temporary location
+off on the side.
+
+00:20:04.346 --> 00:20:06.936 A:middle
+When the application is happy
+that everything has been written
+
+00:20:07.176 --> 00:20:10.016 A:middle
+and is safe out on disk,
+it will ask the file system
+
+00:20:10.016 --> 00:20:11.106 A:middle
+to perform a rename.
+
+00:20:11.296 --> 00:20:13.826 A:middle
+Now renames of files
+have always been atomic.
+
+00:20:14.216 --> 00:20:16.676 A:middle
+The file system guarantees that
+it either happens completely,
+
+00:20:16.836 --> 00:20:19.196 A:middle
+and it's safe, or it
+doesn't happen at all.
+
+00:20:19.736 --> 00:20:22.246 A:middle
+In addition, the file system
+will handle deleting the
+
+00:20:22.246 --> 00:20:23.976 A:middle
+previous version
+of the document.
+
+00:20:24.306 --> 00:20:26.886 A:middle
+So that's great for regular
+files, but what happens
+
+00:20:26.886 --> 00:20:28.236 A:middle
+if you have a document bundle?
+
+00:20:28.696 --> 00:20:32.516 A:middle
+So here we have a document
+bundle ClutchConcertReview.rtfd,
+
+00:20:32.626 --> 00:20:35.756 A:middle
+which is a directory
+that contains the assets
+
+00:20:35.756 --> 00:20:37.056 A:middle
+of the document inside of it.
+
+00:20:37.566 --> 00:20:40.386 A:middle
+And what happens today is
+let's say I go see Clutch play
+
+00:20:40.386 --> 00:20:43.416 A:middle
+and they play a really great
+show and I update my review,
+
+00:20:43.946 --> 00:20:45.346 A:middle
+that change is written out,
+
+00:20:45.716 --> 00:20:47.996 A:middle
+but now what commences
+is there's no way
+
+00:20:47.996 --> 00:20:51.136 A:middle
+to do an atomic rename
+of a directory over top
+
+00:20:51.136 --> 00:20:54.206 A:middle
+of another directory, because
+POSIX semantics don't allow
+
+00:20:54.836 --> 00:20:57.046 A:middle
+that if the destination
+has something inside of it.
+
+00:20:57.436 --> 00:20:59.186 A:middle
+So, we begin playing
+a shell game.
+
+00:20:59.826 --> 00:21:02.886 A:middle
+First, the document is moved out
+of the way, the live document.
+
+00:20:59.826 --> 00:21:02.886 A:middle
+First, the document is moved out
+of the way, the live document.
+
+00:21:02.886 --> 00:21:05.396 A:middle
+So at this point, if
+something were to go wrong
+
+00:21:05.396 --> 00:21:06.616 A:middle
+and the application crashed,
+
+00:21:06.616 --> 00:21:09.326 A:middle
+or the system lost
+power, users data is gone.
+
+00:21:10.106 --> 00:21:13.996 A:middle
+Then, the application moves the
+data into place, and last it has
+
+00:21:13.996 --> 00:21:15.906 A:middle
+to handle deleting
+the previous version
+
+00:21:15.906 --> 00:21:18.386 A:middle
+of the directory,
+the document bundle.
+
+00:21:18.706 --> 00:21:20.876 A:middle
+So this is not atomic
+and it's not safe.
+
+00:21:20.876 --> 00:21:22.796 A:middle
+And this is something
+that has kind of bugged us
+
+00:21:22.796 --> 00:21:24.986 A:middle
+for a very long time and
+we wanted to improve it.
+
+00:21:25.546 --> 00:21:29.116 A:middle
+With APFS we introduced a
+new system called renamex np
+
+00:21:29.496 --> 00:21:32.846 A:middle
+for non POSIX, which
+allows an atomic safe-save
+
+00:21:32.846 --> 00:21:33.776 A:middle
+of the directory.
+
+00:21:34.086 --> 00:21:36.686 A:middle
+So now, when the
+application writes the data
+
+00:21:36.686 --> 00:21:38.126 A:middle
+to its temporary location,
+
+00:21:38.536 --> 00:21:41.206 A:middle
+and asks to perform the
+rename operation APFS
+
+00:21:41.486 --> 00:21:43.836 A:middle
+with atomically handle the swap
+
+00:21:44.326 --> 00:21:46.676 A:middle
+and deleting the previous
+version of the document.
+
+00:21:46.676 --> 00:21:49.126 A:middle
+So this is now atomic and safe.
+
+00:21:49.126 --> 00:21:51.426 A:middle
+Of course as a developer, you
+probably won't have to resort
+
+00:21:51.426 --> 00:21:53.846 A:middle
+to this low-level of system call
+
+00:21:54.086 --> 00:21:56.746 A:middle
+because it's already been
+adopted by Foundation for you.
+
+00:21:56.746 --> 00:22:00.766 A:middle
+So you just get the benefit of
+this improved behavior on APFS.
+
+00:21:56.746 --> 00:22:00.766 A:middle
+So you just get the benefit of
+this improved behavior on APFS.
+
+00:22:01.516 --> 00:22:07.816 A:middle
+[ Applause ]
+
+00:22:08.316 --> 00:22:09.996 A:middle
+Next, I'm going to
+talk about encryption.
+
+00:22:11.126 --> 00:22:13.196 A:middle
+So as Eric mentioned, with HFS+,
+
+00:22:13.666 --> 00:22:16.236 A:middle
+on the Mac we use a
+layer called Core storage
+
+00:22:16.276 --> 00:22:19.446 A:middle
+that sits beneath HFS,
+
+00:22:20.016 --> 00:22:22.466 A:middle
+and provides full disk
+encryption among other things.
+
+00:22:22.556 --> 00:22:24.016 A:middle
+It's a rather sophisticated
+layer,
+
+00:22:24.016 --> 00:22:25.156 A:middle
+and it does a lot of things.
+
+00:22:25.936 --> 00:22:28.076 A:middle
+On iOS, we have a
+different variant
+
+00:22:28.076 --> 00:22:31.806 A:middle
+that stores encryption keys and
+extended attributes that work.
+
+00:22:31.806 --> 00:22:33.696 A:middle
+And those encryption
+keys work in conjunction
+
+00:22:33.696 --> 00:22:37.186 A:middle
+with the accelerated AES
+hardware found on iOS devices
+
+00:22:37.186 --> 00:22:39.046 A:middle
+to provide per file encryption.
+
+00:22:39.436 --> 00:22:41.016 A:middle
+It's a kind of complicated story
+
+00:22:41.016 --> 00:22:42.946 A:middle
+with two rather different
+code bases.
+
+00:22:43.286 --> 00:22:45.176 A:middle
+And with APFS, we
+were looking to try
+
+00:22:45.176 --> 00:22:47.566 A:middle
+and provide a more
+complete story
+
+00:22:47.566 --> 00:22:49.026 A:middle
+across all of our products.
+
+00:22:49.916 --> 00:22:53.386 A:middle
+So APFS supports multiple levels
+of file system encryption.
+
+00:22:54.026 --> 00:22:56.466 A:middle
+But first, the easiest level
+we got this working day one,
+
+00:22:56.466 --> 00:22:57.246 A:middle
+is no encryption.
+
+00:22:57.736 --> 00:23:00.016 A:middle
+All data is written in
+plain text, all data
+
+00:22:57.736 --> 00:23:00.016 A:middle
+All data is written in
+plain text, all data
+
+00:23:00.016 --> 00:23:02.456 A:middle
+and metadata is written
+in plain text to disk.
+
+00:23:03.056 --> 00:23:05.896 A:middle
+The next level is to
+have one key per volume.
+
+00:23:06.386 --> 00:23:08.296 A:middle
+So all sensitive metadata
+
+00:23:08.566 --> 00:23:10.886 A:middle
+and data are encrypted
+with the same key.
+
+00:23:11.126 --> 00:23:12.646 A:middle
+This is essentially
+the equivalent
+
+00:23:12.646 --> 00:23:13.846 A:middle
+of full disk encryption.
+
+00:23:14.536 --> 00:23:15.846 A:middle
+The most sophisticated level
+
+00:23:15.846 --> 00:23:18.036 A:middle
+that we support is
+multi-key encryption.
+
+00:23:18.436 --> 00:23:21.376 A:middle
+Here, sensitive Metadata
+is encrypted
+
+00:23:22.146 --> 00:23:26.286 A:middle
+with a single key that's
+distinct from the per file keys
+
+00:23:26.326 --> 00:23:30.256 A:middle
+that are used in
+encrypting individual files.
+
+00:23:30.606 --> 00:23:33.376 A:middle
+In addition, because of how
+snapshots and clones work,
+
+00:23:33.736 --> 00:23:36.426 A:middle
+APFS supports per
+extent encryption.
+
+00:23:36.456 --> 00:23:40.076 A:middle
+So each region of a file can
+be encrypted with its own key.
+
+00:23:40.526 --> 00:23:42.426 A:middle
+This is unique and
+no other file system
+
+00:23:42.426 --> 00:23:44.446 A:middle
+out there supports
+anything like this.
+
+00:23:44.896 --> 00:23:47.706 A:middle
+In addition, this allows us
+to unify our encryption story
+
+00:23:47.706 --> 00:23:49.276 A:middle
+across all of our platforms.
+
+00:23:49.916 --> 00:23:52.036 A:middle
+All right and with that I'll
+turn it back over to Eric.
+
+00:23:53.516 --> 00:23:59.276 A:middle
+[ Applause ]
+
+00:23:59.776 --> 00:24:02.166 A:middle
+&gt;&gt; Okay so now I'm going
+to show you a quick demo
+
+00:23:59.776 --> 00:24:02.166 A:middle
+&gt;&gt; Okay so now I'm going
+to show you a quick demo
+
+00:24:02.316 --> 00:24:06.766 A:middle
+of Apple File System on MacOS
+Sierra using the WWDC build.
+
+00:24:09.956 --> 00:24:12.066 A:middle
+So probably the easiest
+and fastest way
+
+00:24:12.066 --> 00:24:13.296 A:middle
+to start experimenting
+
+00:24:13.296 --> 00:24:15.606 A:middle
+with Apple File System
+is to use a disk image.
+
+00:24:15.606 --> 00:24:16.806 A:middle
+So we're going to do that first.
+
+00:24:17.886 --> 00:24:20.676 A:middle
+So, you can see on the command
+line here I've typed hdiutil
+
+00:24:20.676 --> 00:24:24.506 A:middle
+create-fs APFS which specifies
+create me a disk image
+
+00:24:24.506 --> 00:24:27.216 A:middle
+of type APFS, we give it
+a size and we're going
+
+00:24:27.216 --> 00:24:28.196 A:middle
+to do a sparse bundle.
+
+00:24:28.836 --> 00:24:29.856 A:middle
+So it's going to warn you here,
+
+00:24:29.856 --> 00:24:32.016 A:middle
+because this is an
+in-development project
+
+00:24:32.266 --> 00:24:34.566 A:middle
+and we want you to be aware
+
+00:24:34.566 --> 00:24:39.076 A:middle
+that you are using something
+that's not completed 100% yet.
+
+00:24:39.426 --> 00:24:42.626 A:middle
+So, at this point it will
+prompt me, I'll say yes.
+
+00:24:44.556 --> 00:24:47.446 A:middle
+And you've created the disk
+image, which if I attach.
+
+00:24:53.056 --> 00:24:55.216 A:middle
+You can examine that on
+the desktop, do a get info.
+
+00:24:56.206 --> 00:24:59.446 A:middle
+You can see that in fact the
+file system type is the APFS.
+
+00:24:59.446 --> 00:25:01.196 A:middle
+So that's probably the
+easiest way if you want
+
+00:24:59.446 --> 00:25:01.196 A:middle
+So that's probably the
+easiest way if you want
+
+00:25:01.196 --> 00:25:03.866 A:middle
+to just get something
+and try it out.
+
+00:25:05.186 --> 00:25:09.226 A:middle
+So next I want to show
+you some of the other,
+
+00:25:09.226 --> 00:25:12.186 A:middle
+more advanced features
+that we've added.
+
+00:25:13.356 --> 00:25:13.876 A:middle
+I'll close that.
+
+00:25:14.436 --> 00:25:17.486 A:middle
+So here I have two thumb sticks.
+
+00:25:17.486 --> 00:25:19.106 A:middle
+These are just ordinary
+thumb sticks.
+
+00:25:19.106 --> 00:25:23.036 A:middle
+You can get them at any
+standard office supply store.
+
+00:25:23.676 --> 00:25:24.666 A:middle
+So I will plug in one.
+
+00:25:24.666 --> 00:25:27.626 A:middle
+One is formatted as HFS+
+and the other is formatted
+
+00:25:27.626 --> 00:25:29.036 A:middle
+as Apple File System.
+
+00:25:39.056 --> 00:25:41.756 A:middle
+So we'll also do
+a get info on both
+
+00:25:41.756 --> 00:25:44.746 A:middle
+so you can watch the free
+space as it manipulates.
+
+00:25:45.336 --> 00:25:51.836 A:middle
+So at this point I have some
+demo photos of a trip to Italy.
+
+00:25:51.836 --> 00:25:55.746 A:middle
+And there's a good
+amount of storage in both
+
+00:25:55.746 --> 00:25:56.886 A:middle
+of those directory hierarchies.
+
+00:25:57.366 --> 00:26:00.586 A:middle
+But first we're going to start
+by copying this latest copy
+
+00:25:57.366 --> 00:26:00.586 A:middle
+But first we're going to start
+by copying this latest copy
+
+00:26:00.586 --> 00:26:02.566 A:middle
+of iTunes in the HFS volume
+
+00:26:02.566 --> 00:26:04.846 A:middle
+and then we'll do the
+same thing in APFS.
+
+00:26:04.846 --> 00:26:07.896 A:middle
+So start the copy, as that goes.
+
+00:26:07.896 --> 00:26:09.966 A:middle
+You can see the progress
+bar there,
+
+00:26:10.506 --> 00:26:11.716 A:middle
+but APFS already finished.
+
+00:26:11.906 --> 00:26:13.626 A:middle
+Because it uses the
+clone under the cover.
+
+00:26:13.626 --> 00:26:17.076 A:middle
+So finder has already adopted
+all of the new cloning behavior.
+
+00:26:17.076 --> 00:26:19.716 A:middle
+So if you do a copy and finder
+it will automatically clone
+
+00:26:19.716 --> 00:26:21.046 A:middle
+for you behind the scenes.
+
+00:26:21.046 --> 00:26:22.926 A:middle
+And HFS still hasn't
+finished yet.
+
+00:26:23.516 --> 00:26:26.956 A:middle
+[ Applause ]
+
+00:26:27.456 --> 00:26:31.506 A:middle
+Okay, so I could do the same
+thing with the demo photos,
+
+00:26:31.506 --> 00:26:33.866 A:middle
+which you can look in here,
+there's several photos,
+
+00:26:33.866 --> 00:26:36.166 A:middle
+they're all several
+megabytes in size.
+
+00:26:36.696 --> 00:26:43.056 A:middle
+Pay attention to the free space
+up here, 3.35-gigabytes free.
+
+00:26:43.146 --> 00:26:46.986 A:middle
+So if I do a copy, it's actually
+going to do a clone for me
+
+00:26:47.196 --> 00:26:50.216 A:middle
+and you notice the free space
+actually did not decrease
+
+00:26:50.216 --> 00:26:50.486 A:middle
+at all.
+
+00:26:52.476 --> 00:26:56.996 A:middle
+So next, I'm going to
+show taking a snapshot.
+
+00:26:58.396 --> 00:27:01.126 A:middle
+So this uses the tool
+called SnapshotUtil
+
+00:26:58.396 --> 00:27:01.126 A:middle
+So this uses the tool
+called SnapshotUtil
+
+00:27:01.126 --> 00:27:03.626 A:middle
+which will be available
+in the public data once
+
+00:27:03.626 --> 00:27:05.656 A:middle
+that releases to everybody.
+
+00:27:06.656 --> 00:27:09.596 A:middle
+Oh, sorry this needs
+to be run as root.
+
+00:27:12.046 --> 00:27:13.966 A:middle
+Okay so now I've
+created a snapshot,
+
+00:27:13.966 --> 00:27:17.586 A:middle
+I can examine it
+with Snapshotutil-s.
+
+00:27:24.046 --> 00:27:26.606 A:middle
+And you can see that it
+now knows about APFS Snap.
+
+00:27:27.136 --> 00:27:32.386 A:middle
+So I've created a map point,
+already before this session.
+
+00:27:33.016 --> 00:27:36.666 A:middle
+So I will mount this
+snapshot at this time.
+
+00:27:37.256 --> 00:27:39.146 A:middle
+And you can see that
+the snapshot showed
+
+00:27:39.146 --> 00:27:42.336 A:middle
+up on the desktop and this
+contains a read only view
+
+00:27:42.336 --> 00:27:44.966 A:middle
+of the file system as
+it exists at the time
+
+00:27:45.076 --> 00:27:45.776 A:middle
+that I just took it, so.
+
+00:27:46.516 --> 00:27:53.426 A:middle
+[ Applause ]
+
+00:27:53.926 --> 00:27:54.986 A:middle
+So now in the APFS volume,
+
+00:27:54.986 --> 00:27:57.706 A:middle
+I'm going to create
+a temporary file,
+
+00:27:59.466 --> 00:28:01.906 A:middle
+hello I am a temporary file.
+
+00:27:59.466 --> 00:28:01.906 A:middle
+hello I am a temporary file.
+
+00:28:03.096 --> 00:28:04.596 A:middle
+Save that, close it.
+
+00:28:04.596 --> 00:28:06.346 A:middle
+You can see that
+it showed up here
+
+00:28:06.686 --> 00:28:09.306 A:middle
+in that APFS volume this
+is mounted read write.
+
+00:28:09.366 --> 00:28:11.726 A:middle
+But it's not there
+in the snapshot.
+
+00:28:14.136 --> 00:28:18.006 A:middle
+Correspondingly, I
+can also delete some
+
+00:28:18.006 --> 00:28:19.446 A:middle
+of these demo photos.
+
+00:28:19.676 --> 00:28:22.466 A:middle
+I'll move them to the
+trash and then delete them.
+
+00:28:24.146 --> 00:28:26.526 A:middle
+The free space actually
+still does not decrease,
+
+00:28:26.556 --> 00:28:31.006 A:middle
+because now they're pinned by
+the presence of the snapshot.
+
+00:28:31.116 --> 00:28:33.306 A:middle
+So if I wanted to delete
+them I would also have
+
+00:28:33.366 --> 00:28:35.936 A:middle
+to delete the snapshot.
+
+00:28:38.476 --> 00:28:40.456 A:middle
+Okay, so that's just
+a quick peak
+
+00:28:40.646 --> 00:28:43.076 A:middle
+of Apple File System in action.
+
+00:28:44.516 --> 00:28:50.546 A:middle
+[ Applause ]
+
+00:28:51.046 --> 00:28:53.836 A:middle
+Okay, so let's talk about some
+of the new APIs that we've added
+
+00:28:53.916 --> 00:28:55.356 A:middle
+to support Apple File System.
+
+00:28:56.476 --> 00:28:59.196 A:middle
+So first, is one that
+we probably expect
+
+00:28:59.196 --> 00:28:59.976 A:middle
+that you're familiar with.
+
+00:28:59.976 --> 00:29:01.446 A:middle
+If you're using the Foundation
+
+00:28:59.976 --> 00:29:01.446 A:middle
+If you're using the Foundation
+
+00:29:01.446 --> 00:29:04.576 A:middle
+or the FileManager these have
+both been Swift enhanced.
+
+00:29:05.076 --> 00:29:09.116 A:middle
+So is use copy item or replace
+item they will adopt either the
+
+00:29:09.176 --> 00:29:12.186 A:middle
+clone or the safe-save
+semantics that we just described
+
+00:29:12.186 --> 00:29:14.146 A:middle
+for you automatically, you
+don't have to do anything
+
+00:29:14.296 --> 00:29:15.246 A:middle
+so it just comes for free.
+
+00:29:15.786 --> 00:29:16.736 A:middle
+It automatically figures
+
+00:29:16.736 --> 00:29:19.466 A:middle
+out if the file system
+you're suing is HFS+
+
+00:29:19.466 --> 00:29:21.836 A:middle
+or Apple File System and
+will use the behavior only
+
+00:29:21.836 --> 00:29:22.996 A:middle
+when it is appropriate.
+
+00:29:24.476 --> 00:29:27.236 A:middle
+If, however you decide
+that the Foundation
+
+00:29:27.236 --> 00:29:29.476 A:middle
+or the FileManager doesn't
+provide exactly what you need,
+
+00:29:29.476 --> 00:29:31.056 A:middle
+you can go a little bit lower
+
+00:29:31.056 --> 00:29:33.396 A:middle
+and we have a library
+called libcopyfile.
+
+00:29:33.396 --> 00:29:36.426 A:middle
+And this supports the
+copying of deep hierarchies
+
+00:29:36.426 --> 00:29:37.896 A:middle
+and this is what we
+used for a number
+
+00:29:37.896 --> 00:29:39.296 A:middle
+of years before we had cloning.
+
+00:29:40.066 --> 00:29:43.236 A:middle
+So copy files supports a new
+bit, called COPYFILE CLONE.
+
+00:29:43.346 --> 00:29:46.816 A:middle
+It's equivalent to the 5 or
+6-bits that are below it.
+
+00:29:47.236 --> 00:29:48.756 A:middle
+And we decided to
+make this opt-in
+
+00:29:48.756 --> 00:29:50.776 A:middle
+because if you're using
+a specialized library
+
+00:29:50.776 --> 00:29:53.446 A:middle
+like this you may not
+necessarily want your
+
+00:29:53.446 --> 00:29:55.396 A:middle
+[inaudible] and extended
+attributes and everything else
+
+00:29:55.396 --> 00:29:58.326 A:middle
+to be copied exactly
+as they are.
+
+00:29:58.726 --> 00:30:01.286 A:middle
+Whereas cloning will implicitly
+copy all of those things.
+
+00:29:58.726 --> 00:30:01.286 A:middle
+Whereas cloning will implicitly
+copy all of those things.
+
+00:30:01.686 --> 00:30:05.616 A:middle
+Again, this library will also
+automatically call clone for you
+
+00:30:05.616 --> 00:30:07.236 A:middle
+if the backend file
+system supports it.
+
+00:30:07.516 --> 00:30:09.766 A:middle
+And if not it will continue
+to do what it's always done.
+
+00:30:11.416 --> 00:30:14.156 A:middle
+These are the new
+safe-save APIs, so renamex np
+
+00:30:14.156 --> 00:30:17.736 A:middle
+and renameatx np are
+the new system calls
+
+00:30:17.736 --> 00:30:20.116 A:middle
+to support the safe-save
+primitives.
+
+00:30:20.796 --> 00:30:23.136 A:middle
+These are available in the
+Man Pages in your version
+
+00:30:23.136 --> 00:30:25.266 A:middle
+of macOS Sierra that you have
+so if you'd like to take a peek
+
+00:30:25.266 --> 00:30:26.876 A:middle
+at the Man Page,
+they're right there.
+
+00:30:27.026 --> 00:30:29.706 A:middle
+And these are the
+cloning APIs as well.
+
+00:30:29.836 --> 00:30:33.036 A:middle
+So clone files and its
+variance, support the cloning
+
+00:30:33.036 --> 00:30:34.216 A:middle
+of files and directories.
+
+00:30:35.276 --> 00:30:38.996 A:middle
+So a word on compatibility,
+we expect that the easiest way
+
+00:30:38.996 --> 00:30:41.776 A:middle
+to get access to an
+Apple File System images
+
+00:30:41.776 --> 00:30:44.036 A:middle
+to use hdiutil as I showed you.
+
+00:30:44.406 --> 00:30:46.406 A:middle
+It's currently available
+in the command line only
+
+00:30:46.486 --> 00:30:50.026 A:middle
+for macOS Sierra so as a
+developer preview technology has
+
+00:30:50.026 --> 00:30:53.276 A:middle
+not been fully wired up into
+disk utility intentionally.
+
+00:30:53.596 --> 00:30:55.476 A:middle
+So the fastest way
+to use something
+
+00:30:55.476 --> 00:30:57.446 A:middle
+like this hdiutil create-fs APFS
+
+00:30:57.446 --> 00:31:01.046 A:middle
+and you can get a disk
+image and attach it.
+
+00:30:57.446 --> 00:31:01.046 A:middle
+and you can get a disk
+image and attach it.
+
+00:31:01.516 --> 00:31:05.766 A:middle
+You can also use diskutil
+apfs to add a container,
+
+00:31:05.766 --> 00:31:07.996 A:middle
+delete a container, add a
+volume, delete a volume.
+
+00:31:08.286 --> 00:31:11.576 A:middle
+Whatever lower-level
+manipulations you want to do
+
+00:31:11.746 --> 00:31:12.916 A:middle
+to the container itself.
+
+00:31:13.666 --> 00:31:15.196 A:middle
+And finally, we also
+have an FS check
+
+00:31:15.306 --> 00:31:16.936 A:middle
+that we've been working
+on as well.
+
+00:31:17.276 --> 00:31:20.326 A:middle
+So this will be able to
+validate the file system
+
+00:31:20.326 --> 00:31:21.626 A:middle
+as well as perform repairs.
+
+00:31:21.976 --> 00:31:24.246 A:middle
+So that's also continuing
+to be in development.
+
+00:31:25.266 --> 00:31:27.216 A:middle
+So, some current limitations
+
+00:31:27.216 --> 00:31:30.086 A:middle
+of Apple File System file
+system in macOS Sierra.
+
+00:31:31.136 --> 00:31:32.926 A:middle
+This will be supported
+on data volumes only.
+
+00:31:32.926 --> 00:31:35.566 A:middle
+We don't support booting from
+Apple File System right now.
+
+00:31:37.006 --> 00:31:40.556 A:middle
+Time machine backups with Apple
+File System are not supported
+
+00:31:40.556 --> 00:31:40.996 A:middle
+right now.
+
+00:31:42.556 --> 00:31:45.466 A:middle
+File vault and fusion drive
+support is still forthcoming.
+
+00:31:46.646 --> 00:31:49.746 A:middle
+And currently the volume
+format is case sensitive only
+
+00:31:49.746 --> 00:31:50.156 A:middle
+right now.
+
+00:31:50.246 --> 00:31:53.406 A:middle
+So if you're not sure that your
+app requires case insensitivity
+
+00:31:53.796 --> 00:31:56.206 A:middle
+please give it a try, create
+a disk image or set it
+
+00:31:56.206 --> 00:32:00.246 A:middle
+up on a partition on your
+Mac, try substantiating it
+
+00:31:56.206 --> 00:32:00.246 A:middle
+up on a partition on your
+Mac, try substantiating it
+
+00:32:00.246 --> 00:32:03.286 A:middle
+and running your app
+from Apple File System
+
+00:32:03.286 --> 00:32:05.166 A:middle
+and let us know how it's doing.
+
+00:32:07.476 --> 00:32:09.036 A:middle
+Some other compatibility notes.
+
+00:32:09.596 --> 00:32:12.186 A:middle
+Apple File System cannot
+be shared over AFP.
+
+00:32:12.186 --> 00:32:15.876 A:middle
+So if you want to use
+file sharing, we recommend
+
+00:32:15.876 --> 00:32:17.656 A:middle
+that you use SNB instead
+
+00:32:17.746 --> 00:32:21.576 A:middle
+as a preferred file sharing
+mechanism moving forward.
+
+00:32:21.796 --> 00:32:26.026 A:middle
+OS X Yosemite or earlier
+will not recognize Apple File
+
+00:32:26.026 --> 00:32:26.726 A:middle
+System volume.
+
+00:32:26.726 --> 00:32:29.466 A:middle
+So please do not take an Apple
+File System instance all the way
+
+00:32:29.466 --> 00:32:32.046 A:middle
+back to OS X Yosemite
+or earlier.
+
+00:32:32.046 --> 00:32:34.286 A:middle
+You will inevitably
+get a dialogue
+
+00:32:34.286 --> 00:32:36.476 A:middle
+that you don't want
+to respond to.
+
+00:32:37.896 --> 00:32:38.156 A:middle
+So, [laughter].
+
+00:32:38.196 --> 00:32:43.446 A:middle
+macOS Sierra will have
+a developer preview
+
+00:32:43.446 --> 00:32:44.976 A:middle
+of Apple File System.
+
+00:32:45.626 --> 00:32:49.036 A:middle
+And it will be a developer
+preview technology once macOS
+
+00:32:49.526 --> 00:32:52.466 A:middle
+Sierra ships this fall.
+
+00:32:52.686 --> 00:32:55.976 A:middle
+So now you might be wondering
+what's our roll-out plan.
+
+00:32:55.976 --> 00:32:57.416 A:middle
+How do all of you get access
+
+00:32:57.446 --> 00:32:59.686 A:middle
+to Apple File System
+on your machines?
+
+00:33:01.316 --> 00:33:02.086 A:middle
+We'll talk about that.
+
+00:33:03.626 --> 00:33:05.096 A:middle
+So upgrading to Apple
+File System.
+
+00:33:05.096 --> 00:33:06.416 A:middle
+So you want these
+great new features
+
+00:33:06.416 --> 00:33:08.256 A:middle
+that we've shown you,
+how do you get them?
+
+00:33:08.846 --> 00:33:11.816 A:middle
+Well one way we could do
+this is to require everybody,
+
+00:33:11.816 --> 00:33:14.716 A:middle
+all users to back up their
+systems, save it away,
+
+00:33:14.716 --> 00:33:16.256 A:middle
+make sure everything's
+completely safe
+
+00:33:16.436 --> 00:33:18.616 A:middle
+and then erase the
+volume, erase the device,
+
+00:33:18.886 --> 00:33:21.776 A:middle
+restore it put a new OS back on
+and then restore from backup.
+
+00:33:22.086 --> 00:33:23.666 A:middle
+A process which will
+take several hours,
+
+00:33:24.036 --> 00:33:25.866 A:middle
+and hope that everything's
+exactly as it was
+
+00:33:25.866 --> 00:33:26.816 A:middle
+after you've restored it.
+
+00:33:27.526 --> 00:33:28.286 A:middle
+Well, we're not doing that.
+
+00:33:29.316 --> 00:33:32.476 A:middle
+Instead, Apple will provide
+an in-place upgrade path
+
+00:33:32.706 --> 00:33:35.466 A:middle
+from HFS+ to Apple File System.
+
+00:33:36.516 --> 00:33:40.906 A:middle
+[ Applause ]
+
+00:33:41.406 --> 00:33:44.806 A:middle
+In doing this, the user data
+will remain exactly where it is
+
+00:33:45.276 --> 00:33:49.096 A:middle
+and we will write, or Apple
+will write the APFS metadata,
+
+00:33:49.096 --> 00:33:51.946 A:middle
+brand new, into the
+HPF+ free space.
+
+00:33:52.076 --> 00:33:54.516 A:middle
+And we're doing this
+for crash protection.
+
+00:33:55.256 --> 00:33:56.856 A:middle
+This is a multi-second
+
+00:33:56.856 --> 00:33:59.236 A:middle
+to multi-minute operation
+potentially.
+
+00:33:59.836 --> 00:34:02.896 A:middle
+And over that time, if the
+device loses power, panics,
+
+00:33:59.836 --> 00:34:02.896 A:middle
+And over that time, if the
+device loses power, panics,
+
+00:34:02.896 --> 00:34:06.126 A:middle
+anything bad happens we want the
+data on the device to be safe
+
+00:34:06.126 --> 00:34:07.996 A:middle
+and sound as if nothing
+had ever happened.
+
+00:34:08.565 --> 00:34:12.065 A:middle
+So the Apple File System
+Converter will try to be
+
+00:34:12.065 --> 00:34:13.266 A:middle
+as atomic as possible.
+
+00:34:13.266 --> 00:34:14.886 A:middle
+It's not completely
+instantaneous,
+
+00:34:14.996 --> 00:34:17.775 A:middle
+but as the operation is
+ongoing, if the device crashes,
+
+00:34:18.306 --> 00:34:20.466 A:middle
+we intend for it
+to be completely
+
+00:34:20.585 --> 00:34:23.096 A:middle
+as if nothing had ever happened.
+
+00:34:24.335 --> 00:34:26.406 A:middle
+So Apple File System will ship,
+
+00:34:26.406 --> 00:34:29.496 A:middle
+by default on all
+devices in 2017.
+
+00:34:31.516 --> 00:34:36.946 A:middle
+[ Applause ]
+
+00:34:37.446 --> 00:34:41.856 A:middle
+So to summarize, Apple File
+System will be the default file
+
+00:34:41.856 --> 00:34:46.065 A:middle
+system for all Apple products
+2017, it's ultra-modern,
+
+00:34:46.576 --> 00:34:49.045 A:middle
+it's crash protected, it
+supports Space Sharing,
+
+00:34:50.306 --> 00:34:52.156 A:middle
+we support cloning
+and snapshots.
+
+00:34:52.525 --> 00:34:55.686 A:middle
+Enhanced data security features
+like the multikey encryption
+
+00:34:55.996 --> 00:34:56.976 A:middle
+that we just discussed.
+
+00:34:58.016 --> 00:35:01.376 A:middle
+It's also been tuned and
+designed specifically
+
+00:34:58.016 --> 00:35:01.376 A:middle
+It's also been tuned and
+designed specifically
+
+00:35:01.376 --> 00:35:03.746 A:middle
+for the Apple ecosystem
+in all of our devices.
+
+00:35:04.516 --> 00:35:07.786 A:middle
+So you can get more information
+about Apple File System
+
+00:35:08.106 --> 00:35:12.746 A:middle
+at this URL behind me that will
+have a developer guide as well
+
+00:35:12.746 --> 00:35:16.156 A:middle
+as some sample code so that
+you can see cloning of files
+
+00:35:16.156 --> 00:35:17.636 A:middle
+and directories in action.
+
+00:35:18.906 --> 00:35:21.816 A:middle
+So some takeaways for all
+of you in the audience.
+
+00:35:22.356 --> 00:35:23.916 A:middle
+Apple File System
+is coming soon,
+
+00:35:23.916 --> 00:35:26.196 A:middle
+2017 will be here
+before we know it.
+
+00:35:26.466 --> 00:35:29.966 A:middle
+I want you to please test your
+apps against Apple File System
+
+00:35:29.966 --> 00:35:32.406 A:middle
+with the macOS build
+that you got yesterday.
+
+00:35:33.086 --> 00:35:35.166 A:middle
+Try running your apps
+on Apple File System.
+
+00:35:35.286 --> 00:35:37.966 A:middle
+Please let us know
+how that process goes.
+
+00:35:38.386 --> 00:35:41.986 A:middle
+If you report any bugs, please
+report them through Bug Reporter
+
+00:35:41.986 --> 00:35:44.126 A:middle
+through traditional means
+so that we can investigate.
+
+00:35:44.366 --> 00:35:47.086 A:middle
+We all want you to love
+it as much as we do.
+
+00:35:47.596 --> 00:35:51.706 A:middle
+So, some related sessions.
+
+00:35:51.706 --> 00:35:53.776 A:middle
+If you're interested in
+learning more about some
+
+00:35:53.776 --> 00:35:56.746 A:middle
+of the security features on
+our platform, specifically iOS,
+
+00:35:56.826 --> 00:35:59.726 A:middle
+we recommend that
+you can take a look
+
+00:35:59.726 --> 00:36:02.026 A:middle
+at How iOS Security
+Really Works, which will be
+
+00:35:59.726 --> 00:36:02.026 A:middle
+at How iOS Security
+Really Works, which will be
+
+00:36:02.026 --> 00:36:04.116 A:middle
+in this room today at 4 o'clock.
+
+00:36:04.646 --> 00:36:07.506 A:middle
+And with that, that's Apple
+File System, we can't wait
+
+00:36:07.506 --> 00:36:08.526 A:middle
+to see how you're
+going to use it.
+
+00:36:09.508 --> 00:36:11.508 A:middle
+[ Applause ]

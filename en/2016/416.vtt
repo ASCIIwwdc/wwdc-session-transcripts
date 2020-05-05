@@ -1,0 +1,4674 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:18.500 A:middle
+[ Music ]
+
+00:00:25.016 --> 00:00:26.236 A:middle
+[ Applause ]
+
+00:00:26.236 --> 00:00:29.136 A:middle
+&gt;&gt; Hello and welcome to
+Understand Swift Performance.
+
+00:00:29.416 --> 00:00:33.476 A:middle
+I'm Kyle. Arnold and I are so
+excited to be here today to talk
+
+00:00:33.476 --> 00:00:34.536 A:middle
+to you guys about Swift.
+
+00:00:35.536 --> 00:00:38.086 A:middle
+As developers, Swift
+offers us a broad
+
+00:00:38.086 --> 00:00:40.026 A:middle
+and powerful design
+space to explore.
+
+00:00:40.566 --> 00:00:43.076 A:middle
+Swift has a variety
+of first class types
+
+00:00:43.326 --> 00:00:46.086 A:middle
+and various mechanisms for
+code reuse and dynamism.
+
+00:00:46.996 --> 00:00:49.286 A:middle
+All of these language
+features can be combined
+
+00:00:49.376 --> 00:00:51.256 A:middle
+in interesting, emergent ways.
+
+00:00:51.576 --> 00:00:55.086 A:middle
+So, how do we go about
+narrowing this design space
+
+00:00:55.476 --> 00:00:56.946 A:middle
+and picking the right
+tool for the job?
+
+00:00:57.816 --> 00:00:59.776 A:middle
+Well, first and foremost,
+you want to take
+
+00:00:59.776 --> 00:01:01.956 A:middle
+into account the
+modeling implications
+
+00:00:59.776 --> 00:01:01.956 A:middle
+into account the
+modeling implications
+
+00:01:02.156 --> 00:01:04.616 A:middle
+of Swift's different
+abstraction mechanisms.
+
+00:01:04.965 --> 00:01:07.516 A:middle
+Are value or reference
+semantics more appropriate?
+
+00:01:08.326 --> 00:01:11.966 A:middle
+How dynamic do you need
+this abstraction to be?
+
+00:01:12.396 --> 00:01:14.926 A:middle
+Well, Arnold and I also
+want to empower you today
+
+00:01:15.146 --> 00:01:17.266 A:middle
+to use performance to
+narrow the design space.
+
+00:01:17.706 --> 00:01:20.356 A:middle
+In my experience, taking
+performance implications
+
+00:01:20.356 --> 00:01:24.176 A:middle
+into account often helps guide
+me to a more idiomatic solution.
+
+00:01:24.666 --> 00:01:27.736 A:middle
+So, we're going to be focusing
+primarily on performance.
+
+00:01:28.036 --> 00:01:29.316 A:middle
+We'll touch a bit on modeling.
+
+00:01:29.796 --> 00:01:31.416 A:middle
+But we had some great
+talks last year
+
+00:01:31.416 --> 00:01:34.286 A:middle
+and we have another great talk
+this year on powerful techniques
+
+00:01:34.286 --> 00:01:35.706 A:middle
+for modeling your
+program in Swift.
+
+00:01:36.166 --> 00:01:37.736 A:middle
+If you want to get the
+most out of this talk,
+
+00:01:37.976 --> 00:01:40.456 A:middle
+I strongly recommend watching
+at least one of these talks.
+
+00:01:41.396 --> 00:01:41.716 A:middle
+All right.
+
+00:01:42.356 --> 00:01:44.806 A:middle
+So, we want to use performance
+to narrow the design space.
+
+00:01:45.376 --> 00:01:48.306 A:middle
+Well, the best way to understand
+the performance implications
+
+00:01:48.306 --> 00:01:50.516 A:middle
+of Swift's abstraction
+mechanisms is
+
+00:01:50.516 --> 00:01:52.516 A:middle
+to understand their
+underlying implementation.
+
+00:01:52.856 --> 00:01:54.086 A:middle
+So, that's what we're
+going to do today.
+
+00:01:54.386 --> 00:01:55.976 A:middle
+We're going to begin
+
+00:01:55.976 --> 00:01:58.586 A:middle
+by identifying the different
+dimensions you want to take
+
+00:01:58.586 --> 00:02:01.196 A:middle
+into account when evaluating
+your different abstraction
+
+00:01:58.586 --> 00:02:01.196 A:middle
+into account when evaluating
+your different abstraction
+
+00:02:01.196 --> 00:02:02.146 A:middle
+mechanism options.
+
+00:02:02.296 --> 00:02:03.876 A:middle
+For each of these,
+we're going to trace
+
+00:02:03.876 --> 00:02:06.316 A:middle
+through some code using
+structs and classes
+
+00:02:06.576 --> 00:02:09.116 A:middle
+to deepen our mental model
+for the overhead involved.
+
+00:02:09.226 --> 00:02:10.226 A:middle
+And then we're going to look
+
+00:02:10.226 --> 00:02:12.026 A:middle
+at how we can apply what
+we've learned to clean up
+
+00:02:12.136 --> 00:02:13.556 A:middle
+and speed up some Swift code.
+
+00:02:14.516 --> 00:02:15.716 A:middle
+In the second half of this talk,
+
+00:02:15.716 --> 00:02:17.616 A:middle
+we're going to evaluate
+the performance
+
+00:02:17.616 --> 00:02:19.176 A:middle
+of protocol oriented
+programming.
+
+00:02:19.576 --> 00:02:21.166 A:middle
+We're going to look
+at the implementation
+
+00:02:21.166 --> 00:02:24.456 A:middle
+of advanced Swift features
+like protocols and generics
+
+00:02:24.686 --> 00:02:26.936 A:middle
+to get a better understanding
+of their modeling
+
+00:02:26.936 --> 00:02:28.306 A:middle
+and performance implications.
+
+00:02:29.066 --> 00:02:31.116 A:middle
+Quick disclaimer: We're
+going to be looking
+
+00:02:31.116 --> 00:02:34.706 A:middle
+at memory representations and
+generated code representations
+
+00:02:34.776 --> 00:02:36.976 A:middle
+of what Swift compiles and
+executes on your behalf.
+
+00:02:37.686 --> 00:02:40.226 A:middle
+These are inevitably going to
+be simplifications, but Arnold
+
+00:02:40.226 --> 00:02:41.786 A:middle
+and I think we've struck
+a really good balance
+
+00:02:42.026 --> 00:02:44.256 A:middle
+between seeing simplicity
+and accuracy.
+
+00:02:44.446 --> 00:02:45.906 A:middle
+And this is a really
+good mental model
+
+00:02:46.066 --> 00:02:47.166 A:middle
+to reason about your code with.
+
+00:02:48.126 --> 00:02:48.796 A:middle
+All right.
+
+00:02:49.116 --> 00:02:51.936 A:middle
+Let's get started by identifying
+the different dimensions
+
+00:02:51.936 --> 00:02:52.606 A:middle
+of performance.
+
+00:02:53.496 --> 00:02:55.736 A:middle
+So, when you're building
+an abstraction
+
+00:02:55.736 --> 00:02:57.336 A:middle
+and choosing an abstraction
+mechanism,
+
+00:02:57.656 --> 00:03:00.276 A:middle
+you should be asking
+yourself, "Is my instance going
+
+00:02:57.656 --> 00:03:00.276 A:middle
+you should be asking
+yourself, "Is my instance going
+
+00:03:00.276 --> 00:03:02.696 A:middle
+to be allocated on
+the stack or the heap?
+
+00:03:03.436 --> 00:03:05.026 A:middle
+When I pass this
+instance around,
+
+00:03:05.526 --> 00:03:08.056 A:middle
+how much reference counting
+overhead am I going to incur?
+
+00:03:08.786 --> 00:03:10.646 A:middle
+When I call a method
+on this instance,
+
+00:03:10.856 --> 00:03:13.526 A:middle
+is it going to be statically
+or dynamically dispatched?"
+
+00:03:14.196 --> 00:03:17.016 A:middle
+If we want to write fast Swift
+code, we're going to need
+
+00:03:17.016 --> 00:03:19.516 A:middle
+to avoid paying for
+dynamism and runtime
+
+00:03:19.516 --> 00:03:21.176 A:middle
+that we're not taking
+advantage of.
+
+00:03:22.966 --> 00:03:26.406 A:middle
+And we're going to need to
+learn when and how we can trade
+
+00:03:26.406 --> 00:03:27.816 A:middle
+between these different
+dimensions
+
+00:03:28.216 --> 00:03:29.206 A:middle
+for better performance.
+
+00:03:30.066 --> 00:03:30.356 A:middle
+All right.
+
+00:03:30.716 --> 00:03:32.746 A:middle
+We're going to go through
+each of these dimensions one
+
+00:03:32.746 --> 00:03:34.496 A:middle
+at a time beginning
+with allocation.
+
+00:03:36.226 --> 00:03:38.016 A:middle
+Swift automatically allocates
+
+00:03:38.016 --> 00:03:39.546 A:middle
+and deallocates memory
+on your behalf.
+
+00:03:39.896 --> 00:03:41.506 A:middle
+Some of that memory it
+allocates on the stack.
+
+00:03:42.666 --> 00:03:44.436 A:middle
+The stack is a really
+simple data structure.
+
+00:03:44.726 --> 00:03:46.246 A:middle
+You can push onto
+the end of the stack
+
+00:03:46.276 --> 00:03:48.386 A:middle
+and you can pop off
+the end of the stack.
+
+00:03:48.686 --> 00:03:51.236 A:middle
+Because you can only ever add or
+remove to the end of the stack,
+
+00:03:51.506 --> 00:03:54.766 A:middle
+we can implement the stack --
+or implement push and pop just
+
+00:03:54.766 --> 00:03:58.246 A:middle
+by keeping a pointer to
+the end of the stack.
+
+00:03:58.246 --> 00:04:00.896 A:middle
+And this means, when we call
+into a function -- or, rather --
+
+00:03:58.246 --> 00:04:00.896 A:middle
+And this means, when we call
+into a function -- or, rather --
+
+00:04:01.136 --> 00:04:01.876 A:middle
+that pointer at the end
+
+00:04:01.876 --> 00:04:03.606 A:middle
+of the stack is called
+the stack pointer.
+
+00:04:03.946 --> 00:04:06.216 A:middle
+And when we call into a
+function, we can allocate
+
+00:04:06.216 --> 00:04:08.316 A:middle
+that memory that we need just
+
+00:04:08.316 --> 00:04:11.556 A:middle
+by trivially decrementing the
+stack pointer to make space.
+
+00:04:11.876 --> 00:04:14.096 A:middle
+And when we've finished
+executing our function,
+
+00:04:14.296 --> 00:04:16.815 A:middle
+we can trivially
+deallocate that memory just
+
+00:04:16.815 --> 00:04:18.846 A:middle
+by incrementing the
+stack pointer back up to
+
+00:04:18.875 --> 00:04:20.685 A:middle
+where it was before we
+called this function.
+
+00:04:21.255 --> 00:04:23.916 A:middle
+Now, if you're not that familiar
+with the stack or stack pointer,
+
+00:04:24.246 --> 00:04:25.366 A:middle
+what I want you to take away
+
+00:04:25.366 --> 00:04:28.086 A:middle
+from this slide is just how
+fast stack allocation is.
+
+00:04:28.416 --> 00:04:30.606 A:middle
+It's literally the cost
+of assigning an integer.
+
+00:04:32.016 --> 00:04:35.086 A:middle
+So, this is in contrast to the
+heap, which is more dynamic,
+
+00:04:35.426 --> 00:04:36.726 A:middle
+but less efficient
+than the stack.
+
+00:04:37.196 --> 00:04:40.216 A:middle
+The heap lets you do things the
+stack can't like allocate memory
+
+00:04:40.216 --> 00:04:41.376 A:middle
+with a dynamic lifetime.
+
+00:04:42.326 --> 00:04:44.376 A:middle
+But that requires a more
+advanced data structure.
+
+00:04:44.376 --> 00:04:46.196 A:middle
+So, if you're going to
+allocate memory on the heap,
+
+00:04:46.526 --> 00:04:48.896 A:middle
+you actually have to search
+the heap data structure
+
+00:04:48.896 --> 00:04:51.246 A:middle
+to find an unused block
+of the appropriate size.
+
+00:04:51.636 --> 00:04:53.496 A:middle
+And then when you're done
+with it, to deallocate it,
+
+00:04:53.786 --> 00:04:56.236 A:middle
+you have to reinsert
+that memory back
+
+00:04:56.236 --> 00:04:57.436 A:middle
+into the appropriate position.
+
+00:04:58.286 --> 00:04:59.936 A:middle
+So, clearly, there's
+more involved here
+
+00:04:59.936 --> 00:05:02.846 A:middle
+than just assigning an integer
+like we had with the stack.
+
+00:04:59.936 --> 00:05:02.846 A:middle
+than just assigning an integer
+like we had with the stack.
+
+00:05:02.916 --> 00:05:04.706 A:middle
+But these aren't even
+necessarily the main costs
+
+00:05:04.706 --> 00:05:05.936 A:middle
+involved with heap allocation.
+
+00:05:06.566 --> 00:05:09.056 A:middle
+Because multiple threads can be
+allocating memory on the heap
+
+00:05:09.176 --> 00:05:10.816 A:middle
+at the same time, the heap needs
+
+00:05:10.816 --> 00:05:13.116 A:middle
+to protect its integrity
+using locking
+
+00:05:13.116 --> 00:05:14.826 A:middle
+or other synchronization
+mechanisms.
+
+00:05:15.256 --> 00:05:16.486 A:middle
+This is a pretty large cost.
+
+00:05:17.106 --> 00:05:19.706 A:middle
+If you're not paying attention
+today to when and where
+
+00:05:19.706 --> 00:05:21.876 A:middle
+in your program you're
+allocating memory on the heap,
+
+00:05:22.176 --> 00:05:23.646 A:middle
+just by being a little
+more deliberate,
+
+00:05:23.646 --> 00:05:25.846 A:middle
+you can likely dramatically
+improve your performance.
+
+00:05:26.616 --> 00:05:27.456 A:middle
+All right.
+
+00:05:27.666 --> 00:05:28.716 A:middle
+Let's trace through some code
+
+00:05:28.916 --> 00:05:30.636 A:middle
+and see what Swift is
+doing on our behalf.
+
+00:05:31.206 --> 00:05:34.306 A:middle
+Here we have a point struct
+with an x and y stored property.
+
+00:05:34.726 --> 00:05:36.966 A:middle
+It also has the draw
+method on it.
+
+00:05:37.006 --> 00:05:40.476 A:middle
+We're going to construct the
+point at (0, 0), assign point1
+
+00:05:40.476 --> 00:05:43.286 A:middle
+to point2 making a copy,
+and assign a value of five
+
+00:05:43.286 --> 00:05:45.236 A:middle
+to point2.x. Then, we're going
+
+00:05:45.296 --> 00:05:47.546 A:middle
+to use our point1
+and use our point2.
+
+00:05:48.016 --> 00:05:49.006 A:middle
+So, let's trace through this.
+
+00:05:49.636 --> 00:05:51.516 A:middle
+As we enter this function,
+
+00:05:52.066 --> 00:05:55.586 A:middle
+before we even begin executing
+any code, we've allocated space
+
+00:05:55.586 --> 00:05:57.636 A:middle
+on the stack for
+our point1 instance
+
+00:05:57.686 --> 00:05:58.836 A:middle
+and our point2 instance.
+
+00:05:59.116 --> 00:06:00.556 A:middle
+And because point is a struct,
+
+00:05:59.116 --> 00:06:00.556 A:middle
+And because point is a struct,
+
+00:06:00.856 --> 00:06:04.216 A:middle
+the x and y properties are
+stored in line on the stack.
+
+00:06:04.896 --> 00:06:07.676 A:middle
+So, when we go to construct our
+point with an x of 0 and a y
+
+00:06:07.676 --> 00:06:09.646 A:middle
+of 0, all we're doing
+is initializing
+
+00:06:09.646 --> 00:06:12.026 A:middle
+that memory we've already
+allocated on the stack.
+
+00:06:12.616 --> 00:06:15.916 A:middle
+When we assign point1 to
+point2, we're just making a copy
+
+00:06:16.136 --> 00:06:19.836 A:middle
+of that point and initializing
+the point2 memory, again,
+
+00:06:19.836 --> 00:06:21.206 A:middle
+that we'd already
+allocated on the stack.
+
+00:06:21.926 --> 00:06:24.996 A:middle
+Note that point1 and point2
+are independent instances.
+
+00:06:25.366 --> 00:06:27.696 A:middle
+That means, when we go
+and assign a value of five
+
+00:06:27.696 --> 00:06:32.056 A:middle
+to point2.x, point2.x is
+five, but point1.x is still 0.
+
+00:06:32.376 --> 00:06:34.006 A:middle
+This is known as
+value semantics.
+
+00:06:34.576 --> 00:06:37.286 A:middle
+Then we'll go ahead and
+use point1, use point2,
+
+00:06:37.286 --> 00:06:39.336 A:middle
+and we're done executing
+our function.
+
+00:06:39.896 --> 00:06:42.876 A:middle
+So, we can trivially deallocate
+that memory for point1
+
+00:06:42.876 --> 00:06:46.716 A:middle
+and point2 just by incrementing
+that stack pointer back up to
+
+00:06:46.716 --> 00:06:48.426 A:middle
+where we were when we
+entered our function.
+
+00:06:49.456 --> 00:06:52.676 A:middle
+Let's contrast this to the same
+exact code, but using a point
+
+00:06:52.676 --> 00:06:55.106 A:middle
+which is a class
+instead of a struct.
+
+00:06:56.256 --> 00:06:56.936 A:middle
+All right.
+
+00:06:57.496 --> 00:06:59.186 A:middle
+So, when we enter this
+function, just like before,
+
+00:06:59.186 --> 00:07:00.486 A:middle
+we're allocating
+memory on the stack.
+
+00:06:59.186 --> 00:07:00.486 A:middle
+we're allocating
+memory on the stack.
+
+00:07:01.086 --> 00:07:04.166 A:middle
+But instead of for the actual
+storage of the properties
+
+00:07:04.166 --> 00:07:05.776 A:middle
+on point, we're going
+to allocate memory
+
+00:07:05.776 --> 00:07:07.746 A:middle
+for references to
+point1 and point2.
+
+00:07:08.696 --> 00:07:10.836 A:middle
+References to memory we're going
+to be allocated on the heap.
+
+00:07:11.246 --> 00:07:14.366 A:middle
+So, when we construct our
+point at (0, 0), Swift is going
+
+00:07:14.366 --> 00:07:16.426 A:middle
+to lock the heap and
+search that data structure
+
+00:07:16.426 --> 00:07:18.476 A:middle
+for an unused block of memory
+of the appropriate size.
+
+00:07:19.066 --> 00:07:22.016 A:middle
+Then, once we have it, we can
+initialize that memory with an x
+
+00:07:22.016 --> 00:07:25.186 A:middle
+of 0, a y of 0, and we can
+initialize our point1 reference
+
+00:07:25.466 --> 00:07:28.616 A:middle
+with the memory address to
+that memory on the heap.
+
+00:07:29.246 --> 00:07:32.256 A:middle
+Note, when we allocate it on the
+heap, Swift actually allocated
+
+00:07:32.256 --> 00:07:35.206 A:middle
+for our class point
+four words of storage.
+
+00:07:35.536 --> 00:07:38.286 A:middle
+This is in contrast to
+the two words it allocated
+
+00:07:38.286 --> 00:07:39.296 A:middle
+when our point was a struct.
+
+00:07:39.726 --> 00:07:41.276 A:middle
+This is because now
+the point is a class,
+
+00:07:41.376 --> 00:07:43.666 A:middle
+in addition to these
+stored for x and y,
+
+00:07:44.046 --> 00:07:45.916 A:middle
+we're allocating two more
+words that Swift is going
+
+00:07:45.916 --> 00:07:46.896 A:middle
+to manage on our behalf.
+
+00:07:47.196 --> 00:07:50.796 A:middle
+Those are denoted with these
+blue boxes in the heap diagram.
+
+00:07:51.566 --> 00:07:53.726 A:middle
+When we assign point1 to
+point two, we're not going
+
+00:07:53.726 --> 00:07:55.316 A:middle
+to copy the contents of point --
+
+00:07:55.316 --> 00:07:56.616 A:middle
+like we did when
+point1 was a struct.
+
+00:07:56.876 --> 00:07:58.246 A:middle
+Instead, we're going
+to copy the reference.
+
+00:07:58.546 --> 00:08:00.756 A:middle
+So, point1 and point2
+are actually referring
+
+00:07:58.546 --> 00:08:00.756 A:middle
+So, point1 and point2
+are actually referring
+
+00:08:00.756 --> 00:08:02.996 A:middle
+to the same exact instance
+of point on the heap.
+
+00:08:03.596 --> 00:08:06.446 A:middle
+That means when we go and assign
+a value of five to point2.x,
+
+00:08:06.836 --> 00:08:09.436 A:middle
+both point1.x and
+point2.x have a value five.
+
+00:08:09.936 --> 00:08:12.236 A:middle
+This is known as reference
+semantics and can lead
+
+00:08:12.236 --> 00:08:13.596 A:middle
+to unintended sharing of state.
+
+00:08:13.596 --> 00:08:16.346 A:middle
+Then, we're going to
+use point1, use point2,
+
+00:08:16.346 --> 00:08:18.816 A:middle
+and then Swift is going
+to deallocate this memory
+
+00:08:18.816 --> 00:08:21.636 A:middle
+on our behalf locking the heap
+and retraining that unused block
+
+00:08:21.636 --> 00:08:22.616 A:middle
+to the appropriate position.
+
+00:08:22.676 --> 00:08:24.166 A:middle
+And then we can pop the stack.
+
+00:08:25.246 --> 00:08:25.816 A:middle
+All right.
+
+00:08:26.016 --> 00:08:26.926 A:middle
+So, what did we just see?
+
+00:08:27.546 --> 00:08:30.006 A:middle
+We saw that classes are
+more expensive to construct
+
+00:08:30.066 --> 00:08:33.186 A:middle
+than structs because classes
+require a heap allocation.
+
+00:08:34.566 --> 00:08:37.256 A:middle
+Because classes are
+allocated on the heap
+
+00:08:37.256 --> 00:08:38.535 A:middle
+and have reference semantics,
+
+00:08:39.015 --> 00:08:42.086 A:middle
+classes have some
+powerful characteristics
+
+00:08:42.086 --> 00:08:43.905 A:middle
+like identity and
+indirect storage.
+
+00:08:44.356 --> 00:08:46.786 A:middle
+But, if we don't need those
+characteristics for abstraction,
+
+00:08:47.196 --> 00:08:48.916 A:middle
+we're going to better
+-- if we use a struct.
+
+00:08:51.086 --> 00:08:55.326 A:middle
+And structs aren't prone
+to the unintended sharing
+
+00:08:55.326 --> 00:08:56.596 A:middle
+of state like classes are.
+
+00:08:57.176 --> 00:08:58.216 A:middle
+So, let's see how we can apply
+
+00:08:58.216 --> 00:09:00.566 A:middle
+that to improve the
+performance of some Swift code.
+
+00:08:58.216 --> 00:09:00.566 A:middle
+that to improve the
+performance of some Swift code.
+
+00:09:00.996 --> 00:09:01.946 A:middle
+Here's an example
+
+00:09:02.226 --> 00:09:05.006 A:middle
+from a messaging application
+I've been working on.
+
+00:09:05.286 --> 00:09:08.216 A:middle
+So, [laughing] basically
+this is from the view layer.
+
+00:09:08.586 --> 00:09:11.316 A:middle
+And my users send a
+text message and behind
+
+00:09:11.316 --> 00:09:14.216 A:middle
+that text message I want to
+draw a pretty balloon image.
+
+00:09:14.536 --> 00:09:17.206 A:middle
+My makeBalloon function is
+what generates this image
+
+00:09:17.316 --> 00:09:19.006 A:middle
+and it supports a
+configuration of different --
+
+00:09:19.006 --> 00:09:21.776 A:middle
+or the whole configuration
+space of different balloons.
+
+00:09:22.036 --> 00:09:25.276 A:middle
+For example, this balloon
+we see is blue color
+
+00:09:25.276 --> 00:09:26.906 A:middle
+with a right orientation
+and a tail.
+
+00:09:27.516 --> 00:09:29.776 A:middle
+We also support, for
+example, a gray balloon
+
+00:09:30.026 --> 00:09:31.816 A:middle
+with a left orientation
+and a bubble tail.
+
+00:09:33.346 --> 00:09:35.896 A:middle
+Now, the makeBalloon function
+needs to be really fast
+
+00:09:35.896 --> 00:09:38.296 A:middle
+because I call it frequently
+during allocation launch
+
+00:09:38.546 --> 00:09:39.646 A:middle
+and during user scrolling.
+
+00:09:39.806 --> 00:09:41.236 A:middle
+And so I've added
+this caching layer.
+
+00:09:41.376 --> 00:09:43.926 A:middle
+So, for any given
+configuration, I never have
+
+00:09:44.046 --> 00:09:47.006 A:middle
+to generate this balloon
+image more than once.
+
+00:09:47.006 --> 00:09:48.726 A:middle
+If I've done it once, I can
+just get it out of the cache.
+
+00:09:49.476 --> 00:09:52.316 A:middle
+The way I've done this is
+by serializing my color,
+
+00:09:52.316 --> 00:09:55.406 A:middle
+orientation, and tail into
+a key, which is a string.
+
+00:09:55.756 --> 00:09:58.216 A:middle
+Now, there's a couple
+things not to like here.
+
+00:09:59.256 --> 00:10:02.156 A:middle
+String isn't particularly
+a strong type for this key.
+
+00:09:59.256 --> 00:10:02.156 A:middle
+String isn't particularly
+a strong type for this key.
+
+00:10:02.626 --> 00:10:05.376 A:middle
+I'm using it to represent
+this configuration space,
+
+00:10:05.376 --> 00:10:08.426 A:middle
+but I could just as easily put
+the name of my dog in that key.
+
+00:10:08.556 --> 00:10:09.796 A:middle
+So, not a lot of safety there.
+
+00:10:10.246 --> 00:10:12.436 A:middle
+Also, String can
+represent so many things
+
+00:10:12.686 --> 00:10:14.526 A:middle
+because it actually
+stores the contents
+
+00:10:14.526 --> 00:10:16.376 A:middle
+of its characters
+indirectly on the heap.
+
+00:10:16.726 --> 00:10:18.096 A:middle
+So, that means every
+time we're calling
+
+00:10:18.096 --> 00:10:20.856 A:middle
+into this makeBalloon function,
+even if we have a cache hit,
+
+00:10:21.166 --> 00:10:22.526 A:middle
+we're incurring a
+heap allocation.
+
+00:10:23.746 --> 00:10:24.646 A:middle
+Let's see if we can do better.
+
+00:10:25.316 --> 00:10:28.136 A:middle
+Well, in Swift we can represent
+this configuration space
+
+00:10:28.196 --> 00:10:31.396 A:middle
+of color, orientation, and
+tail just using a struct.
+
+00:10:32.156 --> 00:10:33.306 A:middle
+This is a much safer way
+
+00:10:33.306 --> 00:10:35.516 A:middle
+to represent this configuration
+space than a String.
+
+00:10:35.926 --> 00:10:38.086 A:middle
+And because structs are
+first class types in Swift,
+
+00:10:38.486 --> 00:10:40.566 A:middle
+they can be used as the
+key in our dictionary.
+
+00:10:41.676 --> 00:10:43.706 A:middle
+Now, when we call the
+makeBalloon function,
+
+00:10:44.066 --> 00:10:46.646 A:middle
+if we have a cache hit,
+there's no allocation overhead
+
+00:10:46.966 --> 00:10:48.606 A:middle
+because constructing a struct
+
+00:10:48.606 --> 00:10:51.996 A:middle
+like this attributes one doesn't
+require any heap allocation.
+
+00:10:51.996 --> 00:10:54.246 A:middle
+It can be allocated
+on the stack.
+
+00:10:54.246 --> 00:10:56.886 A:middle
+So, this is a lot safer and
+it's going to be a lot faster.
+
+00:10:57.846 --> 00:10:59.766 A:middle
+Let's move on to
+our next dimension
+
+00:10:59.766 --> 00:11:02.316 A:middle
+of performance, reference
+counting.
+
+00:10:59.766 --> 00:11:02.316 A:middle
+of performance, reference
+counting.
+
+00:11:03.576 --> 00:11:05.866 A:middle
+So, I glossed over a
+detail when we were talking
+
+00:11:05.866 --> 00:11:06.836 A:middle
+about heap allocation.
+
+00:11:07.356 --> 00:11:09.086 A:middle
+How does Swift know
+when it's safe
+
+00:11:09.086 --> 00:11:13.016 A:middle
+to deallocate memory it
+allocated on the heap?
+
+00:11:13.426 --> 00:11:16.496 A:middle
+Well, the answer is Swift keeps
+a count of the total number
+
+00:11:16.496 --> 00:11:18.826 A:middle
+of references to any
+instance on the heap.
+
+00:11:18.826 --> 00:11:20.456 A:middle
+And it keeps it on
+the instance itself.
+
+00:11:20.756 --> 00:11:22.686 A:middle
+When you add a reference
+or remove a reference,
+
+00:11:22.936 --> 00:11:25.316 A:middle
+that reference count is
+incremented or decremented.
+
+00:11:25.726 --> 00:11:29.116 A:middle
+When that count hits zero,
+Swift knows no one is pointing
+
+00:11:29.116 --> 00:11:31.546 A:middle
+to this instance on the
+heap anymore and it's safe
+
+00:11:31.546 --> 00:11:32.546 A:middle
+to deallocate that memory.
+
+00:11:33.326 --> 00:11:34.816 A:middle
+The key thing to keep in mind
+
+00:11:34.816 --> 00:11:37.306 A:middle
+with reference counting is this
+is a really frequent operation
+
+00:11:37.526 --> 00:11:39.956 A:middle
+and there's actually more
+to it than just incrementing
+
+00:11:39.956 --> 00:11:41.086 A:middle
+and decrementing an integer.
+
+00:11:41.416 --> 00:11:43.866 A:middle
+First, there's a couple
+levels of indirection involved
+
+00:11:43.866 --> 00:11:47.966 A:middle
+to just go and execute the
+increment and decrement.
+
+00:11:48.366 --> 00:11:50.726 A:middle
+But, more importantly, just
+like with heap allocation,
+
+00:11:51.116 --> 00:11:53.956 A:middle
+there is thread safety to
+take into consideration
+
+00:11:54.316 --> 00:11:57.416 A:middle
+because references can be added
+or removed to any heap instance
+
+00:11:57.416 --> 00:11:59.656 A:middle
+on multiple threads at the
+same time, we actually have
+
+00:11:59.656 --> 00:12:02.086 A:middle
+to atomically increment and
+decrement the reference count.
+
+00:11:59.656 --> 00:12:02.086 A:middle
+to atomically increment and
+decrement the reference count.
+
+00:12:02.566 --> 00:12:03.696 A:middle
+And because of the frequency
+
+00:12:03.696 --> 00:12:04.856 A:middle
+of reference counting
+operations,
+
+00:12:05.136 --> 00:12:06.056 A:middle
+this cost can add up.
+
+00:12:07.606 --> 00:12:11.566 A:middle
+So, let's go back to our point
+class and our program and look
+
+00:12:11.566 --> 00:12:14.806 A:middle
+at what Swift is actually
+doing on our behalf.
+
+00:12:14.966 --> 00:12:17.486 A:middle
+So, here now we have,
+in comparison,
+
+00:12:17.626 --> 00:12:19.206 A:middle
+some generated pseudocode.
+
+00:12:19.636 --> 00:12:22.636 A:middle
+We see our point has gained an
+additional property, refCount.
+
+00:12:23.246 --> 00:12:26.766 A:middle
+And we see that Swift has added
+a couple calls to retain --
+
+00:12:26.866 --> 00:12:28.856 A:middle
+or a call to retain and a
+couple calls to release.
+
+00:12:29.276 --> 00:12:31.636 A:middle
+Retain is going to atomically
+increment our reference count
+
+00:12:31.636 --> 00:12:32.346 A:middle
+and release is going
+
+00:12:32.346 --> 00:12:33.906 A:middle
+to atomically decrement
+our reference count.
+
+00:12:34.336 --> 00:12:36.406 A:middle
+In this way Swift will
+be able to keep track
+
+00:12:36.406 --> 00:12:39.806 A:middle
+of how many references are
+alive to our point on the heap.
+
+00:12:39.806 --> 00:12:41.786 A:middle
+All right.
+
+00:12:41.786 --> 00:12:43.106 A:middle
+And if we trace through
+this quickly,
+
+00:12:43.496 --> 00:12:45.766 A:middle
+we can see that after
+constructing our point
+
+00:12:45.886 --> 00:12:48.256 A:middle
+on the heap, it's initialized
+with a reference count of one
+
+00:12:48.506 --> 00:12:51.216 A:middle
+because we have one live
+reference to that point.
+
+00:12:51.796 --> 00:12:55.756 A:middle
+As we go through our program
+and we assign point1 to point2,
+
+00:12:55.756 --> 00:12:59.136 A:middle
+we now have two references
+and so Swift has added a call
+
+00:12:59.136 --> 00:13:01.316 A:middle
+to atomically increment
+the reference count
+
+00:12:59.136 --> 00:13:01.316 A:middle
+to atomically increment
+the reference count
+
+00:13:01.576 --> 00:13:02.566 A:middle
+of our point instance.
+
+00:13:02.946 --> 00:13:07.846 A:middle
+As we keep executing, once
+we've finished using point1,
+
+00:13:07.986 --> 00:13:09.116 A:middle
+Swift has added a call
+
+00:13:09.116 --> 00:13:10.886 A:middle
+to atomically decrement
+the reference count
+
+00:13:11.076 --> 00:13:13.576 A:middle
+because point1 is no longer
+really a living reference
+
+00:13:13.576 --> 00:13:14.516 A:middle
+as far as it's concerned.
+
+00:13:15.176 --> 00:13:16.936 A:middle
+Similarly, once we're
+done using point2,
+
+00:13:16.936 --> 00:13:19.076 A:middle
+Swift has added another
+atomic decrement
+
+00:13:19.076 --> 00:13:19.746 A:middle
+of the reference count.
+
+00:13:20.046 --> 00:13:22.726 A:middle
+At this point, there's no more
+references that are making use
+
+00:13:22.726 --> 00:13:24.736 A:middle
+of our point instance and
+so Swift knows it's safe
+
+00:13:25.036 --> 00:13:28.000 A:middle
+to lock the heap and return
+that block of memory to it.
+
+00:13:31.256 --> 00:13:32.506 A:middle
+So, what about structs?
+
+00:13:33.256 --> 00:13:35.186 A:middle
+Is there any reference
+counting involved with structs?
+
+00:13:35.716 --> 00:13:38.166 A:middle
+Well, when we constructed
+our point struct,
+
+00:13:38.166 --> 00:13:39.586 A:middle
+there was no heap
+allocation involved.
+
+00:13:40.346 --> 00:13:42.406 A:middle
+When we copied, there was
+no heap allocation involved.
+
+00:13:42.616 --> 00:13:44.206 A:middle
+There were no references
+involved in any of this.
+
+00:13:44.666 --> 00:13:47.336 A:middle
+So, there's no reference
+counting overhead
+
+00:13:47.616 --> 00:13:48.546 A:middle
+for our point struct.
+
+00:13:49.146 --> 00:13:52.536 A:middle
+What about a more
+complicated struct, though?
+
+00:13:53.196 --> 00:13:55.746 A:middle
+Here we have a label struct
+which contains text which is
+
+00:13:55.746 --> 00:13:58.176 A:middle
+of type String and
+font of type UIFont.
+
+00:13:58.626 --> 00:14:01.296 A:middle
+String, as we heard earlier,
+actually stores its --
+
+00:13:58.626 --> 00:14:01.296 A:middle
+String, as we heard earlier,
+actually stores its --
+
+00:14:01.296 --> 00:14:03.076 A:middle
+the contents of its
+characters on the heap.
+
+00:14:03.426 --> 00:14:04.746 A:middle
+So, that needs to be
+reference counted.
+
+00:14:05.156 --> 00:14:06.706 A:middle
+And font is a class.
+
+00:14:06.706 --> 00:14:08.276 A:middle
+And so that also needs
+to be reference counted.
+
+00:14:08.856 --> 00:14:10.346 A:middle
+If we look at our
+memory representation,
+
+00:14:10.666 --> 00:14:12.066 A:middle
+labels got two references.
+
+00:14:12.286 --> 00:14:13.566 A:middle
+And when we make a copy of it,
+
+00:14:13.716 --> 00:14:15.406 A:middle
+we're actually adding
+two more references,
+
+00:14:15.546 --> 00:14:18.296 A:middle
+another one to the text storage
+and another one to the font.
+
+00:14:18.886 --> 00:14:20.346 A:middle
+The way Swift tracks this --
+
+00:14:20.416 --> 00:14:22.566 A:middle
+these heap allocations
+is by adding calls
+
+00:14:22.626 --> 00:14:23.516 A:middle
+to retain and release.
+
+00:14:24.436 --> 00:14:26.406 A:middle
+So, here we see the
+label is actually going
+
+00:14:26.406 --> 00:14:28.306 A:middle
+to be incurring twice the
+reference counting overhead
+
+00:14:28.616 --> 00:14:30.976 A:middle
+that a class would have.
+
+00:14:31.536 --> 00:14:32.166 A:middle
+All right.
+
+00:14:32.166 --> 00:14:36.386 A:middle
+So, in summary, because classes
+are allocated on the heap,
+
+00:14:36.386 --> 00:14:38.756 A:middle
+Swift has to manage the lifetime
+of that heap allocation.
+
+00:14:39.056 --> 00:14:41.806 A:middle
+It does so with reference
+counting.
+
+00:14:42.076 --> 00:14:44.276 A:middle
+This is nontrivial because
+reference counting operations
+
+00:14:44.276 --> 00:14:46.686 A:middle
+are relatively frequently
+and because of the atomicity
+
+00:14:46.686 --> 00:14:47.626 A:middle
+of the reference counting.
+
+00:14:48.406 --> 00:14:50.426 A:middle
+This is just one more
+resent to use structs.
+
+00:14:51.806 --> 00:14:54.556 A:middle
+But if structs contain
+references, they're going
+
+00:14:54.556 --> 00:14:56.486 A:middle
+to be paying reference
+counting overhead as well.
+
+00:14:56.486 --> 00:14:57.446 A:middle
+In fact, structs are going
+
+00:14:57.446 --> 00:14:59.366 A:middle
+to be paying reference
+counting overhead proportional
+
+00:14:59.366 --> 00:15:01.076 A:middle
+to the number of
+references that they contain.
+
+00:14:59.366 --> 00:15:01.076 A:middle
+to the number of
+references that they contain.
+
+00:15:01.596 --> 00:15:03.976 A:middle
+So, if they have more than
+one reference, they're going
+
+00:15:04.196 --> 00:15:07.726 A:middle
+to retain more reference
+counting overhead than a class.
+
+00:15:07.726 --> 00:15:11.666 A:middle
+Let's see how we chain apply
+this to another example coming
+
+00:15:11.736 --> 00:15:13.726 A:middle
+from my theoretical
+messaging application.
+
+00:15:14.466 --> 00:15:17.346 A:middle
+So, my users weren't satisfied
+with just sending text messages.
+
+00:15:17.396 --> 00:15:18.916 A:middle
+They also wanted
+to send attachments
+
+00:15:19.136 --> 00:15:20.286 A:middle
+like images to each other.
+
+00:15:20.436 --> 00:15:22.696 A:middle
+And so I have this
+struct attachment,
+
+00:15:22.696 --> 00:15:24.386 A:middle
+which is a model object
+in my application.
+
+00:15:24.796 --> 00:15:28.566 A:middle
+It's got a fileURL property,
+which stores the path of my data
+
+00:15:28.566 --> 00:15:29.996 A:middle
+on disk for this attachment.
+
+00:15:30.196 --> 00:15:33.646 A:middle
+It has a uuid, which is a unique
+randomly generated identifier
+
+00:15:33.906 --> 00:15:36.946 A:middle
+so that we can recognize this
+attachment on client and server
+
+00:15:36.946 --> 00:15:37.906 A:middle
+and different client devices.
+
+00:15:38.376 --> 00:15:41.756 A:middle
+It's got a mimeType, which
+stores the type of data
+
+00:15:41.756 --> 00:15:44.176 A:middle
+that this attachment represents
+like JPG or PNG or GIF.
+
+00:15:44.176 --> 00:15:47.466 A:middle
+Probably the only
+nontrivial code
+
+00:15:47.466 --> 00:15:50.206 A:middle
+in this example is the failable
+initializer, which checks
+
+00:15:50.436 --> 00:15:52.746 A:middle
+if the mimeType is one
+of my supported mimeTypes
+
+00:15:52.746 --> 00:15:54.906 A:middle
+for this application because
+I don't support all mimeTypes.
+
+00:15:55.006 --> 00:15:57.986 A:middle
+And if it's not supported, we're
+going to abort out of this.
+
+00:15:58.036 --> 00:15:58.796 A:middle
+Otherwise, we're going
+
+00:15:58.796 --> 00:16:03.376 A:middle
+to initialize our fileURL,
+uuid, and mimeType.
+
+00:15:58.796 --> 00:16:03.376 A:middle
+to initialize our fileURL,
+uuid, and mimeType.
+
+00:16:03.486 --> 00:16:05.476 A:middle
+So, we noticed a lot of
+reference counting overhead
+
+00:16:05.926 --> 00:16:08.696 A:middle
+and if we actually look at
+our memory representation
+
+00:16:08.696 --> 00:16:10.586 A:middle
+of this struct, all 3
+
+00:16:10.586 --> 00:16:12.496 A:middle
+of our properties are incurring
+reference counting overhead
+
+00:16:12.496 --> 00:16:14.376 A:middle
+when you pass them around
+because there are references
+
+00:16:14.486 --> 00:16:17.246 A:middle
+to heap allocations underlying
+each of these structs.
+
+00:16:18.246 --> 00:16:18.996 A:middle
+We can do better.
+
+00:16:20.036 --> 00:16:21.926 A:middle
+First, just like we saw before,
+
+00:16:22.726 --> 00:16:24.916 A:middle
+uuid is a really
+well defined concept.
+
+00:16:25.116 --> 00:16:29.586 A:middle
+It's a 128 bit randomly
+generated identifier.
+
+00:16:30.156 --> 00:16:31.496 A:middle
+And we don't want
+to just allow you
+
+00:16:31.496 --> 00:16:33.426 A:middle
+to put anything in
+the uuid field.
+
+00:16:33.556 --> 00:16:35.096 A:middle
+And, as a String,
+you really can.
+
+00:16:35.686 --> 00:16:40.016 A:middle
+Well, Foundation this year
+added a new value type and so --
+
+00:16:40.016 --> 00:16:43.986 A:middle
+for uuid, which is really great
+because it stores those 128 bits
+
+00:16:44.316 --> 00:16:45.866 A:middle
+in line directly in the struct.
+
+00:16:46.296 --> 00:16:47.516 A:middle
+And so let's use that.
+
+00:16:48.256 --> 00:16:50.366 A:middle
+What this is going to do is
+it's going to eliminate any
+
+00:16:50.366 --> 00:16:51.916 A:middle
+of the reference counting
+overhead we're paying
+
+00:16:51.916 --> 00:16:53.596 A:middle
+for that uuid field, the
+one that was a String.
+
+00:16:53.596 --> 00:16:55.776 A:middle
+And we've got much
+more tight safety
+
+00:16:55.946 --> 00:16:57.286 A:middle
+because I can't just
+put anything in here.
+
+00:16:57.286 --> 00:16:58.526 A:middle
+I can only put a uuid.
+
+00:16:59.046 --> 00:16:59.776 A:middle
+That's fantastic.
+
+00:17:00.336 --> 00:17:02.856 A:middle
+Let's take a look at
+mimeType and let's look
+
+00:17:02.856 --> 00:17:04.695 A:middle
+at how I've implemented
+this isMimeType check.
+
+00:17:05.126 --> 00:17:07.526 A:middle
+I'm actually only
+supporting a closed set
+
+00:17:07.526 --> 00:17:10.945 A:middle
+of mimeTypes today,
+JPG, PNG, GIF.
+
+00:17:12.026 --> 00:17:14.256 A:middle
+And, you know, Swift has a
+great abstraction mechanism
+
+00:17:14.256 --> 00:17:16.586 A:middle
+for representing a
+fixed set of things.
+
+00:17:16.756 --> 00:17:17.715 A:middle
+And that's an enumeration.
+
+00:17:18.266 --> 00:17:19.685 A:middle
+So, I'm going to take
+that switch statement,
+
+00:17:19.945 --> 00:17:21.546 A:middle
+put it inside a failable
+initializer
+
+00:17:21.796 --> 00:17:24.445 A:middle
+and map those mimeTypes
+to an appropriate --
+
+00:17:24.445 --> 00:17:26.296 A:middle
+to the appropriate
+case in my enum.
+
+00:17:26.665 --> 00:17:29.336 A:middle
+So, now I've got more type
+safety with this mimeType enum
+
+00:17:29.336 --> 00:17:32.486 A:middle
+and I've also got more
+performance because I don't need
+
+00:17:32.486 --> 00:17:35.026 A:middle
+to be storing these different
+cases indirectly on the heap.
+
+00:17:35.236 --> 00:17:37.936 A:middle
+Swift actually has a really
+compact and convenient way
+
+00:17:37.936 --> 00:17:39.116 A:middle
+for writing this exact code,
+
+00:17:39.486 --> 00:17:42.226 A:middle
+which is using enum that's
+backed by a raw String value.
+
+00:17:42.516 --> 00:17:46.136 A:middle
+And so this is effectively the
+exact same code except it's even
+
+00:17:46.136 --> 00:17:48.686 A:middle
+more powerful, has the same
+performance characteristics,
+
+00:17:48.726 --> 00:17:50.006 A:middle
+but it's way more
+convenient to write.
+
+00:17:50.436 --> 00:17:52.086 A:middle
+So, if we looked at our
+attachment struct now,
+
+00:17:52.606 --> 00:17:53.716 A:middle
+it's way more type safe.
+
+00:17:53.756 --> 00:17:55.856 A:middle
+We've got a strongly typed
+uuid and mimeType field
+
+00:17:56.196 --> 00:17:58.826 A:middle
+and we're not paying nearly as
+much reference counting overhead
+
+00:17:58.856 --> 00:18:00.946 A:middle
+because uuid and
+mimeType don't need
+
+00:17:58.856 --> 00:18:00.946 A:middle
+because uuid and
+mimeType don't need
+
+00:18:00.986 --> 00:18:02.686 A:middle
+to be reference counted
+or heap allocated.
+
+00:18:03.886 --> 00:18:04.656 A:middle
+All right.
+
+00:18:04.656 --> 00:18:06.586 A:middle
+Let's move on to
+our final dimension
+
+00:18:06.586 --> 00:18:08.556 A:middle
+of performance, method dispatch.
+
+00:18:09.746 --> 00:18:11.716 A:middle
+When you call a method
+at runtime,
+
+00:18:12.126 --> 00:18:14.156 A:middle
+Swift needs to execute the
+correct implementation.
+
+00:18:15.246 --> 00:18:17.696 A:middle
+If it can determine the
+implementation to execute
+
+00:18:17.806 --> 00:18:20.176 A:middle
+at compile time, that's
+known as a static dispatch.
+
+00:18:20.276 --> 00:18:22.306 A:middle
+And at runtime, we're just going
+to be able to jump directly
+
+00:18:22.306 --> 00:18:23.396 A:middle
+to the correct implementation.
+
+00:18:23.596 --> 00:18:26.966 A:middle
+And this is really cool because
+the compiler actually going
+
+00:18:27.186 --> 00:18:28.716 A:middle
+to be able to have visibility
+
+00:18:28.916 --> 00:18:31.006 A:middle
+into which implementations
+are going to be executed.
+
+00:18:31.206 --> 00:18:32.486 A:middle
+And so it's going to be able
+
+00:18:32.486 --> 00:18:35.286 A:middle
+to optimize this code pretty
+aggressively including things
+
+00:18:35.286 --> 00:18:35.846 A:middle
+like inlining.
+
+00:18:36.766 --> 00:18:38.826 A:middle
+This is in contrast
+to a dynamic dispatch.
+
+00:18:39.896 --> 00:18:41.546 A:middle
+Dynamic dispatch isn't going --
+
+00:18:41.546 --> 00:18:42.716 A:middle
+we're not going to be able
+
+00:18:42.716 --> 00:18:44.276 A:middle
+to determine a compile
+time directly
+
+00:18:44.276 --> 00:18:45.536 A:middle
+which implementation to go to.
+
+00:18:45.586 --> 00:18:47.636 A:middle
+And so at runtime, we're
+actually going to look
+
+00:18:47.636 --> 00:18:50.526 A:middle
+up the implementation
+and then jump to it.
+
+00:18:50.746 --> 00:18:52.996 A:middle
+So, on its own, a
+dynamic dispatch is not
+
+00:18:52.996 --> 00:18:54.936 A:middle
+that much more expensive
+than a static dispatch.
+
+00:18:54.936 --> 00:18:56.206 A:middle
+There's just one
+level of indirection.
+
+00:18:56.556 --> 00:18:59.056 A:middle
+None of this thread
+synchronization overhead
+
+00:18:59.056 --> 00:19:02.006 A:middle
+like we had with reference
+counting and heap allocation.
+
+00:18:59.056 --> 00:19:02.006 A:middle
+like we had with reference
+counting and heap allocation.
+
+00:19:02.506 --> 00:19:06.056 A:middle
+But this dynamic dispatch blocks
+the visibility of the compiler
+
+00:19:06.186 --> 00:19:09.236 A:middle
+and so while the compiler
+could do all these really cool
+
+00:19:09.236 --> 00:19:12.236 A:middle
+optimizations for our static
+dispatches, a dynamic dispatch,
+
+00:19:12.236 --> 00:19:15.986 A:middle
+the compiler is not going to
+be able to reason through it.
+
+00:19:16.146 --> 00:19:17.136 A:middle
+So, I mentioned inlining.
+
+00:19:17.556 --> 00:19:18.436 A:middle
+What is inlining?
+
+00:19:19.056 --> 00:19:22.416 A:middle
+Well, let's return to our
+familiar struct point.
+
+00:19:23.346 --> 00:19:25.446 A:middle
+It's got an x and y and
+it's got a draw method.
+
+00:19:25.696 --> 00:19:27.616 A:middle
+I've also added this
+drawAPoint method.
+
+00:19:28.236 --> 00:19:31.256 A:middle
+The drawAPoint method takes in a
+point and just calls draw on it.
+
+00:19:31.746 --> 00:19:32.266 A:middle
+Really fancy.
+
+00:19:32.266 --> 00:19:35.046 A:middle
+And then the body of my program
+constructs a point at (0,
+
+00:19:35.046 --> 00:19:37.196 A:middle
+0) and passes that
+point to drawAPoint.
+
+00:19:37.616 --> 00:19:38.876 A:middle
+Well, the drawAPoint function
+
+00:19:39.166 --> 00:19:42.856 A:middle
+and the point.draw method are
+both statically dispatched.
+
+00:19:43.386 --> 00:19:47.626 A:middle
+What this means is that
+the compiler knows exactly
+
+00:19:47.626 --> 00:19:49.356 A:middle
+which implementations
+are going to be executed
+
+00:19:49.356 --> 00:19:52.826 A:middle
+and so it's actually going to
+take our drawAPoint dispatch
+
+00:19:52.946 --> 00:19:54.076 A:middle
+and it's just going to replace
+
+00:19:54.116 --> 00:19:56.666 A:middle
+that with the implementation
+of drawAPoint.
+
+00:19:57.476 --> 00:19:59.686 A:middle
+And then it's going to take
+our point.draw method and,
+
+00:20:00.036 --> 00:20:02.196 A:middle
+because that's a static
+dispatch, it can replace
+
+00:20:02.236 --> 00:20:05.266 A:middle
+that with the actual
+implementation of point.draw.
+
+00:20:05.556 --> 00:20:07.836 A:middle
+So, when we go and execute
+this code at runtime,
+
+00:20:07.836 --> 00:20:09.746 A:middle
+we're going to be able to
+just construct our point,
+
+00:20:10.326 --> 00:20:13.406 A:middle
+run the implementation,
+and we're done.
+
+00:20:13.746 --> 00:20:15.516 A:middle
+We didn't need those two --
+
+00:20:15.636 --> 00:20:17.936 A:middle
+the overhead of those
+two static dispatches
+
+00:20:17.936 --> 00:20:19.186 A:middle
+and the associated setting
+
+00:20:19.186 --> 00:20:20.706 A:middle
+up of the call stack
+and tearing it down.
+
+00:20:21.136 --> 00:20:22.056 A:middle
+So, this is really cool.
+
+00:20:22.216 --> 00:20:24.606 A:middle
+And this gets to why
+static dispatches
+
+00:20:24.606 --> 00:20:27.406 A:middle
+and how static dispatches are
+faster than dynamic dispatches.
+
+00:20:29.046 --> 00:20:30.916 A:middle
+Whereas like a single
+static dispatch compared
+
+00:20:30.916 --> 00:20:33.056 A:middle
+to a single dynamic dispatch,
+there isn't that much
+
+00:20:33.056 --> 00:20:35.716 A:middle
+of a difference, but a whole
+chain of static dispatches,
+
+00:20:35.916 --> 00:20:37.216 A:middle
+the compiler is going
+to have visibility
+
+00:20:37.216 --> 00:20:38.266 A:middle
+through that whole chain.
+
+00:20:38.626 --> 00:20:40.816 A:middle
+Whereas the chain of
+dynamic dispatches is going
+
+00:20:40.816 --> 00:20:43.376 A:middle
+to be blocked at every
+single step from reasoning
+
+00:20:43.416 --> 00:20:44.716 A:middle
+at a higher level without it.
+
+00:20:44.716 --> 00:20:46.656 A:middle
+And so the compiler is going
+to be able to collapse a chain
+
+00:20:46.656 --> 00:20:48.536 A:middle
+of static method dispatches just
+
+00:20:48.536 --> 00:20:49.906 A:middle
+like into a single
+implementation
+
+00:20:50.106 --> 00:20:52.366 A:middle
+with no call stack overhead.
+
+00:20:52.866 --> 00:20:54.206 A:middle
+So, that's really cool.
+
+00:20:54.496 --> 00:20:55.626 A:middle
+So, why do we have
+this dynamic --
+
+00:20:55.626 --> 00:20:57.316 A:middle
+this dynamic dispatch
+thing at all?
+
+00:20:57.946 --> 00:21:00.966 A:middle
+Well, one of the reasons is it
+enables really powerful things
+
+00:20:57.946 --> 00:21:00.966 A:middle
+Well, one of the reasons is it
+enables really powerful things
+
+00:21:01.296 --> 00:21:02.726 A:middle
+like polymorphism.
+
+00:21:03.096 --> 00:21:05.666 A:middle
+If we look at a traditional
+object oriented program here
+
+00:21:05.666 --> 00:21:07.816 A:middle
+with a drawable abstract
+superclass,
+
+00:21:08.446 --> 00:21:11.776 A:middle
+I could define a point
+subclass and a line subclass
+
+00:21:12.066 --> 00:21:14.296 A:middle
+that override draw with their
+own custom implementation.
+
+00:21:14.296 --> 00:21:17.476 A:middle
+And then I have a program
+that can polymorphically --
+
+00:21:17.906 --> 00:21:20.446 A:middle
+can create an array
+of drawables.
+
+00:21:20.676 --> 00:21:21.566 A:middle
+Might contain lines.
+
+00:21:21.566 --> 00:21:22.396 A:middle
+Might contain points.
+
+00:21:22.466 --> 00:21:23.826 A:middle
+And it can call draw
+on each of them.
+
+00:21:25.016 --> 00:21:26.356 A:middle
+So, how does this work?
+
+00:21:26.886 --> 00:21:30.626 A:middle
+Well, because point --
+because drawable, point,
+
+00:21:30.626 --> 00:21:33.766 A:middle
+and line are all classes, we can
+create an array of these things
+
+00:21:33.946 --> 00:21:35.806 A:middle
+and they're all the same size
+because we're storing them
+
+00:21:35.806 --> 00:21:36.926 A:middle
+by reference in the array.
+
+00:21:37.676 --> 00:21:40.246 A:middle
+And then when we go
+through each of them,
+
+00:21:40.486 --> 00:21:44.096 A:middle
+we're going to call
+draw on them.
+
+00:21:44.186 --> 00:21:47.356 A:middle
+So, we can understand -- or
+hopefully we have some intuition
+
+00:21:47.646 --> 00:21:51.256 A:middle
+about why the compiler can't
+determine at compile time
+
+00:21:51.256 --> 00:21:53.046 A:middle
+which is the correct
+implementation to execute.
+
+00:21:53.346 --> 00:21:57.026 A:middle
+Because this d.draw, it could
+be a point, it could be a line.
+
+00:21:57.346 --> 00:21:58.366 A:middle
+They are different code paths.
+
+00:21:58.636 --> 00:22:00.166 A:middle
+So, how does it determine
+which one to call?
+
+00:21:58.636 --> 00:22:00.166 A:middle
+So, how does it determine
+which one to call?
+
+00:22:00.696 --> 00:22:03.716 A:middle
+Well, the compiler adds
+another field to classes
+
+00:22:03.836 --> 00:22:06.986 A:middle
+which is a pointer to the
+type information of that class
+
+00:22:07.046 --> 00:22:08.226 A:middle
+and it's stored in
+static memory.
+
+00:22:08.776 --> 00:22:10.846 A:middle
+And so when we go and call draw,
+
+00:22:11.026 --> 00:22:12.346 A:middle
+what the compiler
+actually generates
+
+00:22:12.346 --> 00:22:14.656 A:middle
+on our behalf is a
+lookup through the type
+
+00:22:15.006 --> 00:22:17.576 A:middle
+to something called the
+virtual method table on the type
+
+00:22:17.576 --> 00:22:19.346 A:middle
+and static memory,
+which contains a pointer
+
+00:22:19.346 --> 00:22:21.286 A:middle
+to the correct implementation
+to execute.
+
+00:22:21.596 --> 00:22:24.696 A:middle
+And so if we change this d.draw
+to what the compiler is doing
+
+00:22:24.696 --> 00:22:27.036 A:middle
+on our behalf, we see
+it's actually looking
+
+00:22:27.036 --> 00:22:28.466 A:middle
+up through the virtual
+method table
+
+00:22:28.466 --> 00:22:30.716 A:middle
+to find the correct draw
+implementation to execute.
+
+00:22:30.856 --> 00:22:32.726 A:middle
+And then it passes
+the actual instance
+
+00:22:32.926 --> 00:22:34.216 A:middle
+as the implicit self-parameter.
+
+00:22:36.896 --> 00:22:37.976 A:middle
+All right.
+
+00:22:38.076 --> 00:22:38.746 A:middle
+So, what have we seen here?
+
+00:22:40.366 --> 00:22:43.156 A:middle
+Well, classes by default
+dynamically dispatch
+
+00:22:43.156 --> 00:22:43.796 A:middle
+their methods.
+
+00:22:44.476 --> 00:22:46.526 A:middle
+This doesn't make a big
+difference on its own,
+
+00:22:46.786 --> 00:22:49.016 A:middle
+but when it comes to method
+chaining and other things,
+
+00:22:49.056 --> 00:22:52.396 A:middle
+it can prevent optimizations
+
+00:22:52.396 --> 00:22:54.216 A:middle
+like inlining and
+that can add up.
+
+00:22:54.426 --> 00:22:57.336 A:middle
+Not all classes, though,
+require dynamic dispatch.
+
+00:22:57.596 --> 00:22:59.986 A:middle
+If you never intend for
+a class to be subclassed,
+
+00:23:00.466 --> 00:23:03.896 A:middle
+you can mark it as final to
+convey to your follow teammates
+
+00:23:03.936 --> 00:23:06.566 A:middle
+and to your future self that
+that was your intention.
+
+00:23:07.096 --> 00:23:08.796 A:middle
+The compiler will pick
+up on this and it's going
+
+00:23:08.796 --> 00:23:10.366 A:middle
+to statically dispatch
+those methods.
+
+00:23:10.966 --> 00:23:13.756 A:middle
+Furthermore, if the
+compiler can reason and prove
+
+00:23:13.986 --> 00:23:15.746 A:middle
+that you're never going
+to be subclassing a class
+
+00:23:15.746 --> 00:23:16.506 A:middle
+in your application,
+
+00:23:16.696 --> 00:23:19.196 A:middle
+it'll opportunistically turn
+those dynamic dispatches
+
+00:23:19.306 --> 00:23:20.946 A:middle
+into static dispatches
+on your behalf.
+
+00:23:21.166 --> 00:23:23.716 A:middle
+If you want to hear about
+more about how this is done,
+
+00:23:24.016 --> 00:23:25.596 A:middle
+check out this great
+talk from last year
+
+00:23:25.596 --> 00:23:27.000 A:middle
+on optimizing Swift performance.
+
+00:23:29.336 --> 00:23:29.976 A:middle
+All right.
+
+00:23:29.976 --> 00:23:32.756 A:middle
+So, where does that leave us?
+
+00:23:33.086 --> 00:23:35.046 A:middle
+What I want you to take
+away from this first half
+
+00:23:35.046 --> 00:23:37.486 A:middle
+of the talk is these
+questions to ask yourself.
+
+00:23:37.956 --> 00:23:39.786 A:middle
+Whenever you're reading
+and writing Swift code,
+
+00:23:40.556 --> 00:23:42.056 A:middle
+you should be looking
+at it and thinking,
+
+00:23:42.336 --> 00:23:43.606 A:middle
+"Is this instance
+going to be allocated
+
+00:23:43.606 --> 00:23:44.406 A:middle
+on the stack or the heap?
+
+00:23:45.586 --> 00:23:46.936 A:middle
+When I pass this
+instance around,
+
+00:23:47.156 --> 00:23:49.206 A:middle
+how much reference containing
+overhead I'm going to incur?
+
+00:23:49.906 --> 00:23:51.386 A:middle
+When I call a method
+on this instance,
+
+00:23:51.386 --> 00:23:53.846 A:middle
+is it going to be statically
+or dynamically dispatched?"
+
+00:23:54.346 --> 00:23:56.246 A:middle
+If we're paying for
+dynamism we don't need,
+
+00:23:56.246 --> 00:23:57.896 A:middle
+it's going to hurt
+our performance.
+
+00:23:58.696 --> 00:24:01.496 A:middle
+And if you're new to
+Swift or you're working
+
+00:23:58.696 --> 00:24:01.496 A:middle
+And if you're new to
+Swift or you're working
+
+00:24:01.496 --> 00:24:03.456 A:middle
+in a code base that's been
+ported from objective C
+
+00:24:03.506 --> 00:24:06.546 A:middle
+over to Swift, you can likely
+take more advantage of structs
+
+00:24:06.616 --> 00:24:07.766 A:middle
+than you currently are today.
+
+00:24:08.356 --> 00:24:12.026 A:middle
+Like we've seen with my examples
+here why I use structs instead
+
+00:24:12.026 --> 00:24:12.596 A:middle
+of strings.
+
+00:24:14.736 --> 00:24:17.356 A:middle
+One question, though,
+is, "How does one go
+
+00:24:17.356 --> 00:24:19.326 A:middle
+about writing polymorphic
+code with structs?"
+
+00:24:19.656 --> 00:24:20.656 A:middle
+We haven't seen that yet.
+
+00:24:21.436 --> 00:24:23.306 A:middle
+Well, the answer is protocol
+oriented programming.
+
+00:24:23.546 --> 00:24:24.596 A:middle
+And to tell you all about it,
+
+00:24:24.596 --> 00:24:26.656 A:middle
+I'd like to invite
+Arnold up to the stage.
+
+00:24:28.516 --> 00:24:32.146 A:middle
+[ Applause ]
+
+00:24:32.646 --> 00:24:32.936 A:middle
+Go get it.
+
+00:24:32.936 --> 00:24:33.526 A:middle
+&gt;&gt; Thank you, Kyle.
+
+00:24:34.656 --> 00:24:36.186 A:middle
+Hello. I'm Arnold.
+
+00:24:36.996 --> 00:24:40.196 A:middle
+Come and join me on a journey
+through the implementation
+
+00:24:40.196 --> 00:24:43.526 A:middle
+of protocol types and
+generic code starting
+
+00:24:43.526 --> 00:24:44.406 A:middle
+with protocol types.
+
+00:24:44.406 --> 00:24:47.476 A:middle
+We will look at how variables
+of protocol type are stored
+
+00:24:47.476 --> 00:24:49.696 A:middle
+and copied and how
+method dispatch works.
+
+00:24:50.526 --> 00:24:52.176 A:middle
+Let's come back
+
+00:24:52.416 --> 00:24:55.526 A:middle
+to our application this
+time implemented using
+
+00:24:55.526 --> 00:24:56.336 A:middle
+protocol types.
+
+00:24:57.336 --> 00:24:59.656 A:middle
+Instead of a drawable
+abstract base class,
+
+00:25:00.146 --> 00:25:04.116 A:middle
+we now have protocol drawable
+that declares the draw method.
+
+00:25:05.176 --> 00:25:07.886 A:middle
+And we have value
+type struct Point
+
+00:25:08.466 --> 00:25:11.046 A:middle
+and struct Line conformed
+to the protocol.
+
+00:25:12.526 --> 00:25:15.956 A:middle
+Note, we could have also had
+a class SharedLine conformed
+
+00:25:15.956 --> 00:25:16.586 A:middle
+to the protocol.
+
+00:25:17.096 --> 00:25:20.496 A:middle
+However, we decided because
+of the unintended sharing
+
+00:25:20.786 --> 00:25:23.916 A:middle
+that reference semantics that
+comes with classes brings
+
+00:25:23.916 --> 00:25:25.446 A:middle
+with it to not to do that.
+
+00:25:25.576 --> 00:25:27.000 A:middle
+So, let's drop it.
+
+00:25:30.186 --> 00:25:31.986 A:middle
+Our program was still
+polymorphic.
+
+00:25:32.516 --> 00:25:38.836 A:middle
+We could store both values of
+types Point and of type Line
+
+00:25:39.356 --> 00:25:41.616 A:middle
+in our array of drawable
+protocol type.
+
+00:25:42.146 --> 00:25:45.146 A:middle
+However, compared to before,
+one thing was different.
+
+00:25:47.076 --> 00:25:49.426 A:middle
+Note that our value
+type struct Line
+
+00:25:49.716 --> 00:25:53.656 A:middle
+and struct Point don't share a
+common inheritance relationship
+
+00:25:55.216 --> 00:25:57.686 A:middle
+necessary to do V-Table
+dispatch, the mechanism
+
+00:25:57.686 --> 00:25:58.876 A:middle
+that Kyle just showed us.
+
+00:25:59.416 --> 00:26:03.036 A:middle
+So, how does Swift dispatch
+to the correct method?
+
+00:25:59.416 --> 00:26:03.036 A:middle
+So, how does Swift dispatch
+to the correct method?
+
+00:26:03.736 --> 00:26:06.006 A:middle
+While it's going over
+the array in this case.
+
+00:26:07.386 --> 00:26:11.476 A:middle
+The answer to this question is a
+table based mechanism called the
+
+00:26:11.476 --> 00:26:12.536 A:middle
+Protocol Witness Table.
+
+00:26:13.506 --> 00:26:15.886 A:middle
+There's one of those
+tables per type
+
+00:26:16.446 --> 00:26:19.116 A:middle
+that implements the
+protocol in your application.
+
+00:26:20.376 --> 00:26:23.326 A:middle
+And the entries in
+that table link
+
+00:26:23.876 --> 00:26:28.076 A:middle
+to an implementation
+in the type.
+
+00:26:28.076 --> 00:26:30.706 A:middle
+OK. So, now we know how
+to find that method.
+
+00:26:31.526 --> 00:26:35.376 A:middle
+But there's still a question,
+"How do we get from the element
+
+00:26:35.376 --> 00:26:37.126 A:middle
+in the array to the table?"
+
+00:26:38.256 --> 00:26:39.376 A:middle
+And there's another question.
+
+00:26:40.516 --> 00:26:43.916 A:middle
+Note that we now have
+value types Line and Point.
+
+00:26:44.706 --> 00:26:47.246 A:middle
+Our Line needs four words.
+
+00:26:48.586 --> 00:26:50.036 A:middle
+Point needs two words.
+
+00:26:50.606 --> 00:26:52.086 A:middle
+They don't have the same size.
+
+00:26:52.756 --> 00:26:56.206 A:middle
+But our array wants to
+store its elements uniformly
+
+00:26:56.516 --> 00:26:58.136 A:middle
+at fixed offsets in the array.
+
+00:26:58.136 --> 00:26:59.000 A:middle
+So, how does that work?
+
+00:27:02.046 --> 00:27:03.156 A:middle
+The answer to this question is
+
+00:27:03.156 --> 00:27:07.016 A:middle
+that Swift uses a special
+storage layout called the
+
+00:27:07.016 --> 00:27:08.146 A:middle
+Existential Container.
+
+00:27:08.766 --> 00:27:10.636 A:middle
+Now, what's in there?
+
+00:27:11.196 --> 00:27:17.086 A:middle
+The first three words in that
+existential container are
+
+00:27:17.086 --> 00:27:18.856 A:middle
+reserved for the valueBuffer.
+
+00:27:20.606 --> 00:27:24.446 A:middle
+Small types like our Point,
+which only needs two words,
+
+00:27:24.636 --> 00:27:25.956 A:middle
+fit into this valueBuffer.
+
+00:27:26.726 --> 00:27:28.316 A:middle
+Now, you might say,
+"Wait a second.
+
+00:27:28.776 --> 00:27:29.876 A:middle
+What about our Line?
+
+00:27:30.396 --> 00:27:31.476 A:middle
+It needs four words.
+
+00:27:31.756 --> 00:27:32.656 A:middle
+Where do we put that?"
+
+00:27:33.756 --> 00:27:37.166 A:middle
+Well, in this case Swift
+allocates memory on the heap
+
+00:27:38.106 --> 00:27:41.566 A:middle
+and stores the value there and
+stores a pointer to that memory
+
+00:27:43.016 --> 00:27:45.546 A:middle
+in the existential container.
+
+00:27:46.516 --> 00:27:48.736 A:middle
+Now, you saw that
+there was a difference
+
+00:27:48.736 --> 00:27:49.866 A:middle
+between Line and Point.
+
+00:27:50.216 --> 00:27:52.226 A:middle
+So, somehow the existential
+container needs
+
+00:27:52.226 --> 00:27:53.466 A:middle
+to manage this difference.
+
+00:27:53.926 --> 00:27:54.806 A:middle
+So, how does it do that?
+
+00:27:56.576 --> 00:28:00.806 A:middle
+Hmmm. The answer to this, again,
+is a table based mechanism.
+
+00:27:56.576 --> 00:28:00.806 A:middle
+Hmmm. The answer to this, again,
+is a table based mechanism.
+
+00:28:01.356 --> 00:28:03.826 A:middle
+In this case, we call it
+the Value Witness Table.
+
+00:28:05.196 --> 00:28:09.526 A:middle
+The Value Witness Table manages
+the lifetime of our value
+
+00:28:10.246 --> 00:28:12.826 A:middle
+and there is one of those
+tables per type in your program.
+
+00:28:13.796 --> 00:28:17.346 A:middle
+Now, let's take a look at the
+lifetime of a local variable
+
+00:28:17.346 --> 00:28:19.426 A:middle
+to see how this table operates.
+
+00:28:20.366 --> 00:28:22.856 A:middle
+So, at the beginning of the
+lifetime of our local variable
+
+00:28:22.856 --> 00:28:26.836 A:middle
+of protocol type, Swift calls
+the allocate function inside
+
+00:28:26.836 --> 00:28:27.466 A:middle
+of that table.
+
+00:28:28.606 --> 00:28:31.236 A:middle
+This function, because we
+now have a -- in this case --
+
+00:28:31.236 --> 00:28:34.046 A:middle
+a Line Value Witness Table,
+we'll allocate the memory
+
+00:28:34.046 --> 00:28:36.526 A:middle
+on the heap and store a
+pointer to that memory inside
+
+00:28:36.526 --> 00:28:38.366 A:middle
+of the valueBuffer of the
+existential container.
+
+00:28:39.886 --> 00:28:43.936 A:middle
+Next, Swift needs to copy
+the value from the source
+
+00:28:43.936 --> 00:28:46.356 A:middle
+of the assignment that
+initializes our local variable
+
+00:28:46.776 --> 00:28:48.816 A:middle
+into the existential container.
+
+00:28:49.286 --> 00:28:53.126 A:middle
+Again, we have a Line
+here and so the copy entry
+
+00:28:53.126 --> 00:28:56.426 A:middle
+of our value witness table will
+do the correct thing and copy it
+
+00:28:56.706 --> 00:28:59.966 A:middle
+into the valueBuffer
+allocated in the heap.
+
+00:29:00.956 --> 00:29:05.636 A:middle
+OK. Program continues and we
+are at the end of the lifetime
+
+00:29:05.636 --> 00:29:06.546 A:middle
+of our local variable.
+
+00:29:06.546 --> 00:29:09.476 A:middle
+And so Swift calls
+the destruct entry
+
+00:29:09.476 --> 00:29:10.436 A:middle
+in the value witness table,
+
+00:29:10.796 --> 00:29:14.446 A:middle
+which will decrement any
+reference counts for values
+
+00:29:14.506 --> 00:29:16.026 A:middle
+that might be contained
+in our type.
+
+00:29:16.946 --> 00:29:19.686 A:middle
+Line doesn't have any so
+nothing is necessary here.
+
+00:29:20.116 --> 00:29:21.216 A:middle
+And then at the very end,
+
+00:29:21.586 --> 00:29:24.346 A:middle
+Swift calls the deallocate
+function in that table.
+
+00:29:24.616 --> 00:29:26.776 A:middle
+Again, we have a value
+witness table for Line
+
+00:29:26.776 --> 00:29:29.086 A:middle
+so this will deallocate
+the memory allocated
+
+00:29:29.086 --> 00:29:31.136 A:middle
+on the heap for our value.
+
+00:29:32.456 --> 00:29:34.696 A:middle
+OK. So, we've seen the mechanics
+
+00:29:35.006 --> 00:29:37.056 A:middle
+of how Swift can
+generically deal
+
+00:29:37.326 --> 00:29:38.686 A:middle
+with different kind of values.
+
+00:29:38.996 --> 00:29:41.346 A:middle
+But somehow it still needs to
+get to those tables, right?
+
+00:29:42.886 --> 00:29:44.886 A:middle
+Well, the answer is obvious.
+
+00:29:45.476 --> 00:29:48.226 A:middle
+The next entry in the value
+witness table is a reference.
+
+00:29:48.776 --> 00:29:50.996 A:middle
+In the existential
+container is a reference
+
+00:29:51.296 --> 00:29:52.326 A:middle
+to the value witness table.
+
+00:29:53.656 --> 00:29:56.896 A:middle
+And, finally, how do we get
+to our protocol witness table?
+
+00:29:56.976 --> 00:30:00.816 A:middle
+Well, it is, again, referenced
+in the existential container.
+
+00:29:56.976 --> 00:30:00.816 A:middle
+Well, it is, again, referenced
+in the existential container.
+
+00:30:02.076 --> 00:30:03.396 A:middle
+So, we've seen the mechanics
+
+00:30:03.796 --> 00:30:10.466 A:middle
+of how Swift manages
+values of protocol type.
+
+00:30:10.966 --> 00:30:13.936 A:middle
+Let's take a look at an example
+
+00:30:13.936 --> 00:30:15.696 A:middle
+to see the existential
+container in action.
+
+00:30:18.226 --> 00:30:22.786 A:middle
+So, in this example
+we have a function
+
+00:30:22.786 --> 00:30:25.646 A:middle
+that takes a protocol
+type parameter local
+
+00:30:26.636 --> 00:30:28.576 A:middle
+and executes the
+draw method on it.
+
+00:30:28.576 --> 00:30:31.526 A:middle
+And then our program
+creates a local variable
+
+00:30:32.116 --> 00:30:36.716 A:middle
+of drawable protocol type and
+initializes it with a point.
+
+00:30:37.596 --> 00:30:40.046 A:middle
+And passes this local
+variable off
+
+00:30:40.396 --> 00:30:43.156 A:middle
+to a drawACopy function
+call as its argument.
+
+00:30:44.716 --> 00:30:46.926 A:middle
+In order to illustrate the code
+
+00:30:46.926 --> 00:30:48.896 A:middle
+that the Swift compiler
+generates for us,
+
+00:30:49.646 --> 00:30:53.666 A:middle
+I will use Swift as a
+pseudocode notation underneath
+
+00:30:53.666 --> 00:30:54.286 A:middle
+this example.
+
+00:30:54.656 --> 00:30:57.816 A:middle
+And so for the existential
+container, I have a struct
+
+00:30:58.386 --> 00:31:03.736 A:middle
+that has three words storage
+for valueBuffer and a reference
+
+00:30:58.386 --> 00:31:03.736 A:middle
+that has three words storage
+for valueBuffer and a reference
+
+00:31:03.736 --> 00:31:05.556 A:middle
+to the value witness and
+protocol witness table.
+
+00:31:06.156 --> 00:31:10.146 A:middle
+When the drawACopy
+function call executes,
+
+00:31:10.876 --> 00:31:16.326 A:middle
+it receives the argument and
+passes it off to the function.
+
+00:31:17.216 --> 00:31:18.876 A:middle
+In the generated code we see
+
+00:31:19.186 --> 00:31:21.356 A:middle
+that Swift passes the
+existential container
+
+00:31:21.356 --> 00:31:24.000 A:middle
+of the argument to
+that function.
+
+00:31:27.116 --> 00:31:28.846 A:middle
+When the function
+starts executing,
+
+00:31:29.076 --> 00:31:32.556 A:middle
+it creates a local
+variable for that parameter
+
+00:31:33.936 --> 00:31:35.176 A:middle
+and assigns the argument to it.
+
+00:31:36.376 --> 00:31:41.106 A:middle
+And so in the generated code,
+
+00:31:41.106 --> 00:31:43.716 A:middle
+Swift will allocate an
+existential container
+
+00:31:43.996 --> 00:31:46.046 A:middle
+on the heap.
+
+00:31:46.166 --> 00:31:48.386 A:middle
+Next it will read the
+value witness table
+
+00:31:48.616 --> 00:31:49.876 A:middle
+and the protocol witness table
+
+00:31:50.346 --> 00:31:52.696 A:middle
+from the argument
+existential container
+
+00:31:53.636 --> 00:31:57.286 A:middle
+and initializes the fields in
+the local existential container.
+
+00:31:57.796 --> 00:32:02.276 A:middle
+Next, it will call a
+value witness function
+
+00:31:57.796 --> 00:32:02.276 A:middle
+Next, it will call a
+value witness function
+
+00:32:02.606 --> 00:32:05.696 A:middle
+to allocate a buffer if
+necessary and copy the value.
+
+00:32:06.566 --> 00:32:08.776 A:middle
+In this example we
+passed a point
+
+00:32:09.296 --> 00:32:12.006 A:middle
+so no dynamic heap
+allocation is necessary.
+
+00:32:12.966 --> 00:32:16.246 A:middle
+This function just copies
+the value from the argument
+
+00:32:17.196 --> 00:32:19.916 A:middle
+into the local existential
+container's valueBuffer.
+
+00:32:20.856 --> 00:32:23.876 A:middle
+However, had we passed
+a line instead,
+
+00:32:24.346 --> 00:32:28.000 A:middle
+this function would allocate the
+buffer and copy the value there.
+
+00:32:31.216 --> 00:32:34.106 A:middle
+Next, the draw method
+executes and Swift looks
+
+00:32:34.106 --> 00:32:37.386 A:middle
+up the protocol witness
+table from the field
+
+00:32:37.386 --> 00:32:40.486 A:middle
+in the existential container,
+looks up the draw method
+
+00:32:40.486 --> 00:32:43.736 A:middle
+in the fixed offset in
+that table and jumps
+
+00:32:43.736 --> 00:32:44.586 A:middle
+to the implementation.
+
+00:32:45.386 --> 00:32:46.126 A:middle
+But wait a second.
+
+00:32:47.896 --> 00:32:49.946 A:middle
+There's another value
+witness call, projectBuffer.
+
+00:32:50.746 --> 00:32:53.186 A:middle
+Why is that there?
+
+00:32:53.396 --> 00:32:55.696 A:middle
+Well, the draw method
+expects the address
+
+00:32:55.696 --> 00:32:57.566 A:middle
+of our value as its input.
+
+00:32:58.096 --> 00:33:01.626 A:middle
+And note that depending
+
+00:32:58.096 --> 00:33:01.626 A:middle
+And note that depending
+
+00:33:01.626 --> 00:33:04.476 A:middle
+on whether our value is
+a small value which fits
+
+00:33:04.476 --> 00:33:06.926 A:middle
+into the inline buffer, this
+address is the beginning
+
+00:33:07.186 --> 00:33:11.876 A:middle
+of our existential container,
+or if we have a large value
+
+00:33:11.876 --> 00:33:14.046 A:middle
+that does not fit into
+the inline valueBuffer,
+
+00:33:14.396 --> 00:33:17.096 A:middle
+the address is the beginning
+
+00:33:17.316 --> 00:33:19.126 A:middle
+of the memory allocated
+on the heap for us.
+
+00:33:20.146 --> 00:33:24.386 A:middle
+So, this value witness function
+abstracts away this difference
+
+00:33:24.386 --> 00:33:26.726 A:middle
+depending on the type.
+
+00:33:26.936 --> 00:33:30.766 A:middle
+A draw method executes,
+finishes, and now we are
+
+00:33:30.766 --> 00:33:33.836 A:middle
+at the end of our function which
+means our local variable created
+
+00:33:33.836 --> 00:33:36.076 A:middle
+for the parameter
+goes out of scope.
+
+00:33:37.146 --> 00:33:40.246 A:middle
+And so Swift calls a
+value witness function
+
+00:33:40.246 --> 00:33:41.286 A:middle
+to destruct the value,
+
+00:33:41.776 --> 00:33:43.526 A:middle
+which will decrement
+any reference counts
+
+00:33:43.786 --> 00:33:47.266 A:middle
+if there are references in the
+value and deallocate a buffer
+
+00:33:47.266 --> 00:33:48.886 A:middle
+if a buffer was allocated.
+
+00:33:50.096 --> 00:33:56.136 A:middle
+Our function finishes executing
+and our stack is removed,
+
+00:33:56.336 --> 00:33:59.456 A:middle
+which removes the local
+existential container created
+
+00:33:59.456 --> 00:34:00.906 A:middle
+on the stack for us.
+
+00:33:59.456 --> 00:34:00.906 A:middle
+on the stack for us.
+
+00:34:01.956 --> 00:34:05.006 A:middle
+OK. That was a lot of work.
+
+00:34:06.136 --> 00:34:09.616 A:middle
+Right? There is one thing
+I want you to take away
+
+00:34:09.616 --> 00:34:15.085 A:middle
+from this is this work is what
+enables combining value types
+
+00:34:15.085 --> 00:34:19.376 A:middle
+such as struct Line and struct
+Point together with protocols
+
+00:34:19.686 --> 00:34:22.466 A:middle
+to get dynamic behavior,
+dynamic polymorphism.
+
+00:34:22.466 --> 00:34:26.186 A:middle
+We can store a Line and
+a Point in our array
+
+00:34:26.216 --> 00:34:29.966 A:middle
+of drawable protocol type.
+
+00:34:31.036 --> 00:34:34.476 A:middle
+If you need this dynamism,
+this is a good price to pay
+
+00:34:35.466 --> 00:34:39.856 A:middle
+and compares to using
+classes like in the example
+
+00:34:39.856 --> 00:34:42.775 A:middle
+that Kyle showed us
+because classes also go
+
+00:34:42.775 --> 00:34:45.456 A:middle
+through a V-Table and they
+have the additional overhead
+
+00:34:46.085 --> 00:34:49.295 A:middle
+of reference counting.
+
+00:34:51.025 --> 00:34:55.616 A:middle
+OK. So, we've seen how
+local variables are copied
+
+00:34:55.996 --> 00:35:00.976 A:middle
+and how method dispatch works
+for values of protocol type.
+
+00:34:55.996 --> 00:35:00.976 A:middle
+and how method dispatch works
+for values of protocol type.
+
+00:35:01.046 --> 00:35:02.146 A:middle
+Let's look at stored properties.
+
+00:35:03.816 --> 00:35:06.766 A:middle
+So, in this example,
+we have a pair
+
+00:35:07.206 --> 00:35:10.516 A:middle
+that contains two stored
+properties, first and second,
+
+00:35:11.596 --> 00:35:14.166 A:middle
+of protocol -- drawable
+protocol type.
+
+00:35:14.976 --> 00:35:18.546 A:middle
+How does Swift store those
+two stored properties?
+
+00:35:19.406 --> 00:35:23.226 A:middle
+Hmm. Well, inline of
+the enclosing struct.
+
+00:35:24.226 --> 00:35:27.866 A:middle
+So, if we look at --
+when we allocate a pair,
+
+00:35:28.166 --> 00:35:31.596 A:middle
+Swift will store the two
+existential containers necessary
+
+00:35:31.996 --> 00:35:35.386 A:middle
+for the storage of that pair
+inline of the enclosing struct.
+
+00:35:35.386 --> 00:35:39.636 A:middle
+Our program then goes
+and initializes this pair
+
+00:35:39.636 --> 00:35:42.276 A:middle
+of the Line and the Point
+and so, as we've seen before,
+
+00:35:42.736 --> 00:35:44.966 A:middle
+for our Line, we will
+allocate a buffer on the heap.
+
+00:35:45.356 --> 00:35:48.436 A:middle
+Point fits into the inline
+valueBuffer and can be stored
+
+00:35:48.936 --> 00:35:50.896 A:middle
+in the -- inline in the
+existential container.
+
+00:35:51.446 --> 00:35:55.906 A:middle
+Now, this representation allows
+storing a differently typed
+
+00:35:55.906 --> 00:35:58.266 A:middle
+value later in the program.
+
+00:35:58.616 --> 00:36:01.486 A:middle
+So, the program goes and stores
+a Line to the second element.
+
+00:35:58.616 --> 00:36:01.486 A:middle
+So, the program goes and stores
+a Line to the second element.
+
+00:36:01.746 --> 00:36:04.546 A:middle
+This works, but we have
+two heap allocations now.
+
+00:36:05.596 --> 00:36:07.326 A:middle
+OK. Two heap allocations.
+
+00:36:07.786 --> 00:36:10.996 A:middle
+Well, let's look at a
+different program to illustrate
+
+00:36:10.996 --> 00:36:12.336 A:middle
+that cost of heap allocation.
+
+00:36:14.046 --> 00:36:18.396 A:middle
+So, again, we create a
+Line and we create a pair
+
+00:36:18.396 --> 00:36:20.546 A:middle
+and initialize this
+pair with the Line.
+
+00:36:21.106 --> 00:36:23.906 A:middle
+So, we have one, two
+heap allocations.
+
+00:36:24.006 --> 00:36:27.086 A:middle
+And then we create a
+copy of that pair again,
+
+00:36:27.696 --> 00:36:29.426 A:middle
+two existential containers
+on the stack
+
+00:36:29.526 --> 00:36:30.896 A:middle
+and then two heap allocations.
+
+00:36:31.506 --> 00:36:35.186 A:middle
+Now, you might say, "Kyle
+just told us heap allocations
+
+00:36:35.186 --> 00:36:35.806 A:middle
+are expensive.
+
+00:36:36.116 --> 00:36:37.836 A:middle
+Four heap allocations?
+
+00:36:38.236 --> 00:36:42.596 A:middle
+Hmm." Can we do anything
+about this?
+
+00:36:42.836 --> 00:36:49.026 A:middle
+Well, remember our
+existential container has place
+
+00:36:49.026 --> 00:36:52.896 A:middle
+for three words and
+references would fit into the --
+
+00:36:52.896 --> 00:36:55.516 A:middle
+into those three words because a
+reference is basically one word.
+
+00:36:56.496 --> 00:37:03.086 A:middle
+So, if we implemented our Line
+instead with a class, the --
+
+00:36:56.496 --> 00:37:03.086 A:middle
+So, if we implemented our Line
+instead with a class, the --
+
+00:37:03.086 --> 00:37:05.606 A:middle
+and class is a reference
+semantics so they're stored
+
+00:37:06.056 --> 00:37:09.226 A:middle
+by reference -- this reference
+would fit into the valueBuffer.
+
+00:37:09.796 --> 00:37:17.346 A:middle
+And when we copy the first
+reference to the second field
+
+00:37:17.346 --> 00:37:20.916 A:middle
+in our pair, only the
+reference is copied and we --
+
+00:37:20.916 --> 00:37:24.276 A:middle
+the only price we pay is then
+extra reference count increment.
+
+00:37:25.716 --> 00:37:26.986 A:middle
+Now, you might say,
+"Wait a second.
+
+00:37:27.396 --> 00:37:30.986 A:middle
+Haven't we just heard about
+unintended sharing of state
+
+00:37:31.906 --> 00:37:33.686 A:middle
+that reference semantics
+brings with it."
+
+00:37:34.316 --> 00:37:41.446 A:middle
+So, if we store to the x1
+field through the second field
+
+00:37:41.446 --> 00:37:44.526 A:middle
+in our pair, the first field
+can observe the change.
+
+00:37:45.296 --> 00:37:47.376 A:middle
+And that's not what
+we want to have.
+
+00:37:47.676 --> 00:37:48.756 A:middle
+We want value semantics.
+
+00:37:48.756 --> 00:37:50.046 A:middle
+Right? Hmmm.
+
+00:37:50.516 --> 00:37:52.946 A:middle
+What can we do about this?
+
+00:37:53.156 --> 00:37:56.496 A:middle
+Well, there's a technique
+called copy and write
+
+00:37:57.406 --> 00:37:59.056 A:middle
+that allows us to
+work around this.
+
+00:38:00.216 --> 00:38:04.466 A:middle
+So, before we write
+to our class,
+
+00:38:04.636 --> 00:38:05.746 A:middle
+we check its reference count.
+
+00:38:07.036 --> 00:38:08.686 A:middle
+We've heard that
+when there's more
+
+00:38:08.686 --> 00:38:11.416 A:middle
+than one reference outstanding
+to the same instants,
+
+00:38:11.826 --> 00:38:14.236 A:middle
+the reference count will
+be greater than one, two,
+
+00:38:14.236 --> 00:38:15.376 A:middle
+or three, or four, or five.
+
+00:38:15.936 --> 00:38:20.086 A:middle
+And so if this is the case,
+before we write to our instance,
+
+00:38:20.316 --> 00:38:23.356 A:middle
+we copy the instance and
+then write to that copy.
+
+00:38:23.546 --> 00:38:26.626 A:middle
+This will decouple the state.
+
+00:38:26.826 --> 00:38:31.000 A:middle
+OK. Let's take a look at how
+we can do this for our Line.
+
+00:38:34.786 --> 00:38:38.076 A:middle
+Instead of directly implementing
+the storage inside of our Line,
+
+00:38:38.656 --> 00:38:40.586 A:middle
+we create a class
+called LineStorage
+
+00:38:40.986 --> 00:38:42.936 A:middle
+that has all the fields
+of our Line struct.
+
+00:38:43.646 --> 00:38:47.066 A:middle
+And then our Line struct
+references this storage.
+
+00:38:48.006 --> 00:38:50.036 A:middle
+And whenever we want
+to read a value,
+
+00:38:50.346 --> 00:38:53.886 A:middle
+we just read the value
+inside of that storage.
+
+00:38:54.846 --> 00:38:57.796 A:middle
+However, when we come to
+modify, mutate our value,
+
+00:38:58.356 --> 00:38:59.806 A:middle
+we first check the
+reference count.
+
+00:39:00.176 --> 00:39:01.216 A:middle
+Is it greater than one?
+
+00:39:01.886 --> 00:39:04.666 A:middle
+This is what the
+isUniquelyReferenced call
+
+00:39:04.666 --> 00:39:05.786 A:middle
+here achieves.
+
+00:39:05.786 --> 00:39:07.996 A:middle
+The only thing it does is
+check the reference count.
+
+00:39:08.336 --> 00:39:10.576 A:middle
+Is it greater or equal to one?
+
+00:39:12.116 --> 00:39:13.716 A:middle
+And if the reference
+count is greater to one --
+
+00:39:14.816 --> 00:39:17.176 A:middle
+greater than one
+-- we create a copy
+
+00:39:17.176 --> 00:39:20.166 A:middle
+of our Line storage
+and mutate that.
+
+00:39:21.156 --> 00:39:27.236 A:middle
+OK. So, we've seen how we can
+combine a struct and a class
+
+00:39:28.476 --> 00:39:30.806 A:middle
+to get indirect storage
+using copy and write.
+
+00:39:30.806 --> 00:39:32.086 A:middle
+Let's come back to our example
+
+00:39:32.326 --> 00:39:37.526 A:middle
+to see what happens here this
+time using indirect storage.
+
+00:39:38.506 --> 00:39:39.926 A:middle
+So, again, we create a Line.
+
+00:39:40.696 --> 00:39:43.466 A:middle
+This will create a line
+storage object on the heap.
+
+00:39:43.876 --> 00:39:46.586 A:middle
+And then we use that line
+to initialize our pair.
+
+00:39:47.006 --> 00:39:52.000 A:middle
+This time only the references
+to the line storage are copied.
+
+00:39:54.456 --> 00:39:57.000 A:middle
+When we come to copy our Line --
+
+00:40:00.116 --> 00:40:01.896 A:middle
+Again, only the references
+are copied
+
+00:40:02.546 --> 00:40:03.846 A:middle
+and the reference
+count is incremented.
+
+00:40:03.916 --> 00:40:06.656 A:middle
+This is a lot cheaper
+than heap allocation.
+
+00:40:07.166 --> 00:40:08.000 A:middle
+It's a good trade off to make.
+
+00:40:15.686 --> 00:40:20.736 A:middle
+OK. So, we've seen how variables
+of protocol type are copied
+
+00:40:20.976 --> 00:40:23.806 A:middle
+and stored and how
+method dispatch works.
+
+00:40:24.226 --> 00:40:27.166 A:middle
+Let's take a look what
+that means for performance.
+
+00:40:28.536 --> 00:40:31.416 A:middle
+If we have protocol types
+that contain small values
+
+00:40:31.686 --> 00:40:33.566 A:middle
+that can fit into the
+inline valueBuffer
+
+00:40:33.766 --> 00:40:36.946 A:middle
+of the existential container,
+there is no heap allocation.
+
+00:40:38.386 --> 00:40:40.626 A:middle
+If our struct does not
+contain any references,
+
+00:40:40.836 --> 00:40:42.046 A:middle
+there's also no reference
+counting.
+
+00:40:42.266 --> 00:40:43.756 A:middle
+So, this is really fast code.
+
+00:40:44.626 --> 00:40:46.956 A:middle
+However, because
+of the indirection
+
+00:40:47.906 --> 00:40:51.326 A:middle
+through value witness and
+protocol witness table,
+
+00:40:51.826 --> 00:40:58.286 A:middle
+we get the full power of
+dynamic dispatch, which allows
+
+00:40:58.286 --> 00:41:01.000 A:middle
+for dynamically polymorph
+behavior.
+
+00:40:58.286 --> 00:41:01.000 A:middle
+for dynamically polymorph
+behavior.
+
+00:41:03.456 --> 00:41:04.786 A:middle
+Compare this with large values.
+
+00:41:04.786 --> 00:41:07.696 A:middle
+Large values incur heap
+allocations whenever we
+
+00:41:07.846 --> 00:41:12.306 A:middle
+initialize or assign
+variables of protocol type.
+
+00:41:12.516 --> 00:41:13.776 A:middle
+Potentially reference counting
+
+00:41:14.126 --> 00:41:17.000 A:middle
+if our large value
+struct contain references.
+
+00:41:19.456 --> 00:41:21.246 A:middle
+However, I showed
+you a technique,
+
+00:41:21.446 --> 00:41:24.666 A:middle
+namely using indirect
+storage with copy and write,
+
+00:41:24.986 --> 00:41:29.000 A:middle
+that you can use to trade the
+expensive heap allocation.
+
+00:41:32.086 --> 00:41:33.546 A:middle
+For cheaper reference counting.
+
+00:41:35.676 --> 00:41:40.846 A:middle
+Note that this compares
+favorably to using classes.
+
+00:41:41.506 --> 00:41:45.716 A:middle
+Classes also incur
+reference counting.
+
+00:41:46.166 --> 00:41:48.246 A:middle
+And allocation on
+initialization.
+
+00:41:48.826 --> 00:41:53.836 A:middle
+It's a good trade off to make.
+
+00:41:53.836 --> 00:41:58.116 A:middle
+OK. So, we went back
+-- so, to summarize,
+
+00:41:58.116 --> 00:42:02.456 A:middle
+protocol types provide a
+dynamic form of polymorphism.
+
+00:41:58.116 --> 00:42:02.456 A:middle
+protocol types provide a
+dynamic form of polymorphism.
+
+00:42:03.126 --> 00:42:06.726 A:middle
+We can use value types
+together with protocols
+
+00:42:07.416 --> 00:42:11.306 A:middle
+and can store our
+Lines and Points inside
+
+00:42:11.306 --> 00:42:12.466 A:middle
+of an array of protocol type.
+
+00:42:13.456 --> 00:42:16.356 A:middle
+This is achieved by
+the use of protocol
+
+00:42:16.356 --> 00:42:18.906 A:middle
+and value witness tables
+and existential container.
+
+00:42:20.016 --> 00:42:24.046 A:middle
+Copying of large values
+incurs heap allocation.
+
+00:42:24.046 --> 00:42:25.986 A:middle
+However, I showed you a
+technique how you can work
+
+00:42:25.986 --> 00:42:28.656 A:middle
+around this by implementing
+your structs
+
+00:42:28.656 --> 00:42:30.266 A:middle
+with indirect storage
+and copy and write.
+
+00:42:32.366 --> 00:42:35.056 A:middle
+OK. Let's come back
+to our application
+
+00:42:35.056 --> 00:42:36.146 A:middle
+and take a look again.
+
+00:42:36.896 --> 00:42:38.906 A:middle
+So, in our application
+we had to draw a copy --
+
+00:42:39.016 --> 00:42:42.776 A:middle
+a function that took a
+parameter of protocol type.
+
+00:42:44.056 --> 00:42:45.266 A:middle
+However, the way that we use
+
+00:42:45.266 --> 00:42:48.606 A:middle
+that is we would always
+use it on a concrete type.
+
+00:42:49.586 --> 00:42:50.816 A:middle
+Here we used it on a Line.
+
+00:42:51.496 --> 00:42:54.596 A:middle
+Later in our program we
+would use it on a Point.
+
+00:42:55.976 --> 00:42:56.886 A:middle
+And we thought, "Hmm.
+
+00:42:57.456 --> 00:43:00.256 A:middle
+Could we use generic code here?"
+
+00:42:57.456 --> 00:43:00.256 A:middle
+Could we use generic code here?"
+
+00:43:01.306 --> 00:43:02.266 A:middle
+Well, yes, we can.
+
+00:43:02.986 --> 00:43:03.816 A:middle
+So, let's take a look.
+
+00:43:04.286 --> 00:43:08.306 A:middle
+During this last part of the
+talk, I'll look at how variables
+
+00:43:08.606 --> 00:43:10.516 A:middle
+of generic type are
+stored and copied
+
+00:43:10.796 --> 00:43:12.256 A:middle
+and how method dispatch
+works with them.
+
+00:43:12.896 --> 00:43:13.456 A:middle
+So, coming back
+
+00:43:13.456 --> 00:43:17.446 A:middle
+to our application this time
+implemented using generic code.
+
+00:43:17.546 --> 00:43:20.456 A:middle
+DrawACopy method now takes a
+generic parameter constraint
+
+00:43:20.456 --> 00:43:24.000 A:middle
+to be Drawable and the rest
+of our program stays the same.
+
+00:43:26.216 --> 00:43:31.626 A:middle
+So, what is different when I
+compare this to protocol types?
+
+00:43:33.976 --> 00:43:36.606 A:middle
+Generic code supports
+a more static form
+
+00:43:36.606 --> 00:43:39.276 A:middle
+of polymorphism also known
+as parametric polymorphism.
+
+00:43:39.776 --> 00:43:41.396 A:middle
+One type per call context.
+
+00:43:42.336 --> 00:43:43.246 A:middle
+What do I mean by that?
+
+00:43:43.246 --> 00:43:45.176 A:middle
+Well, let's take a
+look at this example.
+
+00:43:45.756 --> 00:43:50.526 A:middle
+We have the function foo, which
+takes a generic parameter,
+
+00:43:50.586 --> 00:43:51.806 A:middle
+T constraint to be drawable,
+
+00:43:52.676 --> 00:43:55.166 A:middle
+and it passes this parameter
+off to the function bar.
+
+00:43:56.256 --> 00:43:58.556 A:middle
+This function, again, takes
+a generic parameter T.
+
+00:43:59.066 --> 00:44:00.916 A:middle
+And then our program
+creates a point
+
+00:43:59.066 --> 00:44:00.916 A:middle
+And then our program
+creates a point
+
+00:44:01.316 --> 00:44:03.206 A:middle
+and passes this point
+to the function foo.
+
+00:44:04.316 --> 00:44:06.006 A:middle
+When this function executes,
+
+00:44:07.556 --> 00:44:15.386 A:middle
+Swift will bind the generic
+type T to the type used
+
+00:44:15.386 --> 00:44:17.856 A:middle
+at this call side, which
+is in this case, the Point.
+
+00:44:18.426 --> 00:44:24.096 A:middle
+When the function foo executes
+with this binding and it gets
+
+00:44:24.096 --> 00:44:27.076 A:middle
+to the function call
+of bar, this --
+
+00:44:27.316 --> 00:44:29.506 A:middle
+the local variable has the type
+
+00:44:29.506 --> 00:44:31.056 A:middle
+that was just found,
+namely Point.
+
+00:44:31.536 --> 00:44:34.586 A:middle
+And so, again, the
+generic parameter T
+
+00:44:34.586 --> 00:44:37.746 A:middle
+in this call context is
+bound through the type Point.
+
+00:44:38.316 --> 00:44:40.106 A:middle
+As we can see, the
+type is substituted
+
+00:44:40.106 --> 00:44:41.956 A:middle
+down the call chain
+along the parameters.
+
+00:44:42.126 --> 00:44:47.216 A:middle
+This is what we mean by a more
+static form of polymorphism
+
+00:44:47.216 --> 00:44:48.516 A:middle
+or parametric polymorphism.
+
+00:44:48.746 --> 00:44:49.436 A:middle
+So, let's take a look
+
+00:44:49.436 --> 00:44:53.286 A:middle
+of how Swift implements
+this under the hood.
+
+00:44:53.706 --> 00:44:56.496 A:middle
+Again, coming back to
+our drawACopy function.
+
+00:44:58.646 --> 00:45:05.146 A:middle
+In this example,
+we pass a point.
+
+00:44:58.646 --> 00:45:05.146 A:middle
+In this example,
+we pass a point.
+
+00:45:05.146 --> 00:45:06.876 A:middle
+Like when we used
+protocol types,
+
+00:45:06.876 --> 00:45:08.536 A:middle
+there is one shared
+implementation.
+
+00:45:09.076 --> 00:45:13.316 A:middle
+And this shared implementation,
+if I would show you the code
+
+00:45:13.316 --> 00:45:14.936 A:middle
+like I did before
+for protocol types,
+
+00:45:15.326 --> 00:45:16.846 A:middle
+the code would look
+pretty similar.
+
+00:45:17.456 --> 00:45:20.636 A:middle
+It would use protocol
+and value witness table
+
+00:45:20.636 --> 00:45:23.396 A:middle
+to generically perform
+the operations inside
+
+00:45:23.396 --> 00:45:24.016 A:middle
+of that function.
+
+00:45:26.276 --> 00:45:29.756 A:middle
+However, because we have
+one type per call context,
+
+00:45:30.086 --> 00:45:32.366 A:middle
+Swift does not use an
+existential container here.
+
+00:45:34.616 --> 00:45:38.726 A:middle
+Instead, it can pass both
+the value witness table
+
+00:45:38.816 --> 00:45:40.746 A:middle
+and the protocol witness
+table of the Point --
+
+00:45:40.746 --> 00:45:43.476 A:middle
+of the type used
+at this call-site
+
+00:45:43.766 --> 00:45:45.496 A:middle
+as additional arguments
+to the function.
+
+00:45:45.636 --> 00:45:49.206 A:middle
+So, in this case, we see
+that the value witness table
+
+00:45:49.206 --> 00:45:50.496 A:middle
+for Point and Line is passed.
+
+00:45:51.296 --> 00:45:53.676 A:middle
+And then during execution
+of that function,
+
+00:45:53.676 --> 00:45:57.756 A:middle
+when we create a local
+variable for the parameter,
+
+00:45:58.906 --> 00:46:01.216 A:middle
+Swift will use the
+value witness table
+
+00:45:58.906 --> 00:46:01.216 A:middle
+Swift will use the
+value witness table
+
+00:46:01.496 --> 00:46:04.476 A:middle
+to allocate potentially any
+necessary buffers on the heap
+
+00:46:04.886 --> 00:46:07.746 A:middle
+and execute the copy
+from the source
+
+00:46:07.746 --> 00:46:10.036 A:middle
+of the assignment
+to the destination.
+
+00:46:10.656 --> 00:46:14.276 A:middle
+And similar when it
+executes the draw method
+
+00:46:14.276 --> 00:46:17.556 A:middle
+on the local parameter, it will
+use the protocol witness table
+
+00:46:17.556 --> 00:46:21.456 A:middle
+passed, look up the draw method
+of the fixed offset in the table
+
+00:46:21.456 --> 00:46:23.000 A:middle
+and jump to the implementation.
+
+00:46:26.046 --> 00:46:28.686 A:middle
+Now, I just told you there is
+no existential container here.
+
+00:46:29.656 --> 00:46:33.306 A:middle
+So, how does Swift allocate
+the memory necessary
+
+00:46:33.306 --> 00:46:36.196 A:middle
+for the local parameter --
+
+00:46:36.506 --> 00:46:38.466 A:middle
+for the local variable
+created for this parameter?
+
+00:46:39.926 --> 00:46:43.976 A:middle
+Well, it allocates a
+valueBuffer on the stack.
+
+00:46:44.166 --> 00:46:46.446 A:middle
+Again, this valueBuffer
+is three words.
+
+00:46:47.106 --> 00:46:50.316 A:middle
+Small values like a Point
+fit into the valueBuffer.
+
+00:46:51.766 --> 00:46:56.816 A:middle
+Large values like our Line
+are, again, stored on the heap
+
+00:46:57.216 --> 00:46:59.296 A:middle
+and we store a pointer
+to that memory inside
+
+00:46:59.296 --> 00:47:01.176 A:middle
+of the local existential
+container.
+
+00:46:59.296 --> 00:47:01.176 A:middle
+of the local existential
+container.
+
+00:47:04.426 --> 00:47:06.256 A:middle
+And all of this is
+managed for the use
+
+00:47:06.256 --> 00:47:07.296 A:middle
+of the value witness table.
+
+00:47:07.986 --> 00:47:11.336 A:middle
+Now, you might ask,
+"Is this any faster?
+
+00:47:11.336 --> 00:47:12.076 A:middle
+Is this any better?
+
+00:47:12.656 --> 00:47:17.246 A:middle
+Could I not -- have not just
+used protocol types here?"
+
+00:47:18.176 --> 00:47:20.056 A:middle
+Well, this static form
+
+00:47:20.056 --> 00:47:24.336 A:middle
+of polymorphism enables the
+compiler optimization called
+
+00:47:24.336 --> 00:47:25.716 A:middle
+specialization of generics.
+
+00:47:25.966 --> 00:47:26.646 A:middle
+Let's take a look.
+
+00:47:27.536 --> 00:47:29.566 A:middle
+So, again, here is
+our function drawACopy
+
+00:47:29.566 --> 00:47:33.796 A:middle
+that takes a generic
+parameter and we pass a Point
+
+00:47:33.876 --> 00:47:35.576 A:middle
+to that function
+call the method.
+
+00:47:35.976 --> 00:47:39.056 A:middle
+And we have static polymorphism
+
+00:47:39.056 --> 00:47:41.306 A:middle
+so there is one type
+at the call-site.
+
+00:47:41.666 --> 00:47:46.406 A:middle
+Swift uses that type to
+substitute the generic parameter
+
+00:47:46.646 --> 00:47:49.946 A:middle
+in the function and create
+a version of that function
+
+00:47:50.396 --> 00:47:51.786 A:middle
+that is specific to that type.
+
+00:47:52.786 --> 00:47:55.146 A:middle
+So, here we have a drawACopy
+of a Point function now
+
+00:47:55.746 --> 00:47:58.586 A:middle
+that takes a parameter
+that is of type Point
+
+00:47:59.076 --> 00:48:03.026 A:middle
+and the code inside of
+that function is, again,
+
+00:47:59.076 --> 00:48:03.026 A:middle
+and the code inside of
+that function is, again,
+
+00:48:03.026 --> 00:48:04.786 A:middle
+specific to that type.
+
+00:48:05.656 --> 00:48:09.666 A:middle
+And, as Kyle showed us, this
+can be really fast code.
+
+00:48:10.476 --> 00:48:14.356 A:middle
+Swift will create a
+version per type used
+
+00:48:14.356 --> 00:48:16.096 A:middle
+at a call-site in your program.
+
+00:48:16.096 --> 00:48:19.606 A:middle
+So, if we call the drawACopy
+function on a Line in the Point,
+
+00:48:19.756 --> 00:48:23.626 A:middle
+it will specialize and create
+two versions of that function.
+
+00:48:24.336 --> 00:48:25.586 A:middle
+Now, you might say,
+"Wait a second.
+
+00:48:26.006 --> 00:48:28.656 A:middle
+This has the potential to
+increase code size by a lot.
+
+00:48:28.716 --> 00:48:33.036 A:middle
+Right?" But because the
+static typing information
+
+00:48:33.036 --> 00:48:36.586 A:middle
+that is not available
+enables aggressive compiler
+
+00:48:36.586 --> 00:48:40.436 A:middle
+optimization, Swift can actually
+potentially reduce the code
+
+00:48:40.436 --> 00:48:40.896 A:middle
+size here.
+
+00:48:41.306 --> 00:48:43.346 A:middle
+So, for example, it will
+inline the drawACopy
+
+00:48:43.346 --> 00:48:44.766 A:middle
+of a Point method -- function.
+
+00:48:45.506 --> 00:48:46.976 A:middle
+And then further
+optimize the code
+
+00:48:46.976 --> 00:48:49.036 A:middle
+because it now has
+a lot more context.
+
+00:48:49.796 --> 00:48:53.436 A:middle
+And so that function
+call can basically reduce
+
+00:48:53.436 --> 00:48:55.746 A:middle
+to this one line and,
+as Kyle showed us,
+
+00:48:55.746 --> 00:49:00.156 A:middle
+this can be even further reduced
+to the implementation of draw.
+
+00:48:55.746 --> 00:49:00.156 A:middle
+this can be even further reduced
+to the implementation of draw.
+
+00:49:01.216 --> 00:49:02.316 A:middle
+Now that the drawACopy
+
+00:49:02.316 --> 00:49:04.586 A:middle
+of a Point method is
+no longer referenced,
+
+00:49:04.856 --> 00:49:06.856 A:middle
+the compiler will also remove it
+
+00:49:06.856 --> 00:49:09.396 A:middle
+and perform similar optimization
+for the Line example.
+
+00:49:09.796 --> 00:49:11.336 A:middle
+So, it's not necessarily
+the case
+
+00:49:11.336 --> 00:49:15.176 A:middle
+that this compiler optimization
+will increase code size.
+
+00:49:15.776 --> 00:49:16.356 A:middle
+Can happen.
+
+00:49:16.546 --> 00:49:19.000 A:middle
+Not necessarily the case.
+
+00:49:21.076 --> 00:49:23.346 A:middle
+OK. So, we've seen how
+specialization works,
+
+00:49:23.726 --> 00:49:28.606 A:middle
+but one question to ask
+is, "When does it happen?"
+
+00:49:28.766 --> 00:49:31.496 A:middle
+Well, let's take a look
+at a very small example.
+
+00:49:31.496 --> 00:49:35.556 A:middle
+So, we define a Point and
+then create a local variable
+
+00:49:35.556 --> 00:49:36.066 A:middle
+of that type.
+
+00:49:36.146 --> 00:49:39.376 A:middle
+Point -- initialize it to a
+Point and then pass that Point
+
+00:49:39.726 --> 00:49:43.476 A:middle
+as a -- for argument to
+the drawACopy function.
+
+00:49:44.256 --> 00:49:47.366 A:middle
+Now, in order to specialize this
+code, Swift needs to be able
+
+00:49:47.366 --> 00:49:49.996 A:middle
+to infer the type
+at this call-site.
+
+00:49:50.336 --> 00:49:53.746 A:middle
+It can do that because it can
+look at that local variable,
+
+00:49:54.386 --> 00:49:56.036 A:middle
+walk back to its initialization,
+
+00:49:56.036 --> 00:49:59.000 A:middle
+and see that it has been
+initialized to a Point.
+
+00:50:01.816 --> 00:50:03.826 A:middle
+Swift also needs to
+have the definition
+
+00:50:04.196 --> 00:50:06.966 A:middle
+of both the type used
+during the specialization
+
+00:50:07.346 --> 00:50:10.796 A:middle
+and the function -- the generic
+function itself available.
+
+00:50:10.796 --> 00:50:11.966 A:middle
+Again, this is the case here.
+
+00:50:12.356 --> 00:50:13.596 A:middle
+It's all defined in one file.
+
+00:50:15.896 --> 00:50:19.186 A:middle
+This is a place where whole
+module optimization can greatly
+
+00:50:19.186 --> 00:50:21.516 A:middle
+improve the optimization
+opportunity.
+
+00:50:22.406 --> 00:50:25.000 A:middle
+Let's take a look why that is.
+
+00:50:26.266 --> 00:50:29.236 A:middle
+So, let's say I've
+moved the definition
+
+00:50:29.236 --> 00:50:31.326 A:middle
+of my Point into
+a separate file.
+
+00:50:32.516 --> 00:50:34.766 A:middle
+Now, if we compile those
+two files separately,
+
+00:50:35.366 --> 00:50:40.796 A:middle
+when I come to compile the
+file UsePoint, the definition
+
+00:50:41.036 --> 00:50:42.606 A:middle
+of my Point is no
+longer available
+
+00:50:42.606 --> 00:50:44.186 A:middle
+because the compiler
+has compiled those two
+
+00:50:44.186 --> 00:50:44.846 A:middle
+files separately.
+
+00:50:45.686 --> 00:50:47.636 A:middle
+However, with whole
+module optimization,
+
+00:50:48.966 --> 00:50:52.386 A:middle
+the compiler will compile both
+files together as one unit
+
+00:50:52.996 --> 00:50:57.346 A:middle
+and will have insight into the
+definition of the Point file
+
+00:50:58.136 --> 00:50:59.966 A:middle
+and optimization can take place.
+
+00:51:00.806 --> 00:51:04.936 A:middle
+Because this so greatly improves
+the optimization opportunity,
+
+00:51:04.936 --> 00:51:07.326 A:middle
+we have now enabled a
+whole module optimization
+
+00:51:07.326 --> 00:51:08.000 A:middle
+for default in Xcode 8.
+
+00:51:15.096 --> 00:51:17.646 A:middle
+OK. Let's come back
+to our program.
+
+00:51:18.606 --> 00:51:24.266 A:middle
+So, in our program we had this
+pair of Drawable protocol type.
+
+00:51:24.756 --> 00:51:29.386 A:middle
+And, again, we noticed
+something about how we used it.
+
+00:51:31.166 --> 00:51:34.236 A:middle
+Whenever we wanted to create
+a pair, we actually wanted
+
+00:51:34.236 --> 00:51:35.896 A:middle
+to create a pair
+of the same type,
+
+00:51:36.246 --> 00:51:41.000 A:middle
+say a pair of Lines
+or a pair of Point.
+
+00:51:43.606 --> 00:51:48.036 A:middle
+Now, remember that the storage
+representation of a pair
+
+00:51:48.036 --> 00:51:50.000 A:middle
+of Lines would cost
+two heap allocations.
+
+00:51:53.046 --> 00:51:54.746 A:middle
+When we looked at this program,
+
+00:51:54.746 --> 00:51:59.366 A:middle
+we realized that we could
+use a generic type here.
+
+00:52:00.736 --> 00:52:05.236 A:middle
+So, if we define our pair to
+be generic and then the first
+
+00:52:05.236 --> 00:52:08.116 A:middle
+and second property of that
+generic type have this generic
+
+00:52:08.116 --> 00:52:10.776 A:middle
+type, then the compiler
+could actually enforce
+
+00:52:11.556 --> 00:52:15.076 A:middle
+that we only ever create
+a pair of the same type.
+
+00:52:15.966 --> 00:52:20.996 A:middle
+Furthermore, we can't store a
+Point to a pair of Lines later
+
+00:52:20.996 --> 00:52:21.726 A:middle
+in the program either.
+
+00:52:22.266 --> 00:52:26.496 A:middle
+So, this is what we
+wanted, but is this --
+
+00:52:26.496 --> 00:52:29.966 A:middle
+the representation of that any
+better or worse for performance?
+
+00:52:29.966 --> 00:52:31.000 A:middle
+Let's take a look.
+
+00:52:34.186 --> 00:52:35.456 A:middle
+So, here we have our pair.
+
+00:52:35.456 --> 00:52:38.706 A:middle
+This time the store
+properties are of generic type.
+
+00:52:39.766 --> 00:52:43.000 A:middle
+Remember that I said that the
+type cannot change at runtime.
+
+00:52:46.046 --> 00:52:49.476 A:middle
+What that means for
+the generated code is
+
+00:52:49.476 --> 00:52:52.466 A:middle
+that Swift can allocate
+the storage inline
+
+00:52:52.466 --> 00:52:53.416 A:middle
+of the enclosing type.
+
+00:52:53.966 --> 00:52:56.546 A:middle
+So, when we create
+a pair of Lines,
+
+00:52:57.946 --> 00:53:01.026 A:middle
+the memory for the Line will
+actually be allocated inline
+
+00:52:57.946 --> 00:53:01.026 A:middle
+the memory for the Line will
+actually be allocated inline
+
+00:53:01.026 --> 00:53:02.006 A:middle
+of the enclosing pair.
+
+00:53:03.016 --> 00:53:04.916 A:middle
+No extra heap allocation
+is necessary.
+
+00:53:05.406 --> 00:53:07.000 A:middle
+That's pretty cool.
+
+00:53:10.046 --> 00:53:15.236 A:middle
+However, as I said, you cannot
+store a differently typed value
+
+00:53:15.236 --> 00:53:16.756 A:middle
+later to that stored property.
+
+00:53:17.136 --> 00:53:18.000 A:middle
+But this is what we wanted.
+
+00:53:23.216 --> 00:53:27.046 A:middle
+OK. So, we've seen how
+unspecialized code works using
+
+00:53:27.046 --> 00:53:28.866 A:middle
+the value witness and the
+protocol witness table
+
+00:53:29.416 --> 00:53:34.396 A:middle
+and how the compiler can
+specialize code creating
+
+00:53:34.466 --> 00:53:37.626 A:middle
+type-specific versions
+of the generic function.
+
+00:53:38.596 --> 00:53:40.236 A:middle
+Let's take a look
+at the performance
+
+00:53:40.726 --> 00:53:42.236 A:middle
+of this first looking
+
+00:53:42.236 --> 00:53:46.846 A:middle
+at specialized generic
+code containing structs.
+
+00:53:47.366 --> 00:53:49.696 A:middle
+In this case, we have
+performance characteristics
+
+00:53:49.956 --> 00:53:52.936 A:middle
+identical to using struct
+types because, as we just saw,
+
+00:53:53.416 --> 00:53:55.106 A:middle
+the generated code
+is essentially
+
+00:53:55.106 --> 00:53:58.566 A:middle
+as if you had written this
+function in terms of a struct.
+
+00:53:58.936 --> 00:54:02.076 A:middle
+No heap allocation is
+necessary when we copy values
+
+00:53:58.936 --> 00:54:02.076 A:middle
+No heap allocation is
+necessary when we copy values
+
+00:54:02.366 --> 00:54:04.016 A:middle
+of struct type around.
+
+00:54:05.126 --> 00:54:06.106 A:middle
+No reference counting
+
+00:54:06.796 --> 00:54:08.876 A:middle
+if our struct didn't
+contain any references.
+
+00:54:10.386 --> 00:54:12.216 A:middle
+And we have static
+method dispatch
+
+00:54:12.576 --> 00:54:15.026 A:middle
+which enables further
+compiler optimization
+
+00:54:15.026 --> 00:54:21.626 A:middle
+and reduces your runtime
+-- execution time.
+
+00:54:21.916 --> 00:54:26.136 A:middle
+Comparing this with class
+types, if we use class types,
+
+00:54:26.806 --> 00:54:31.366 A:middle
+we get similar characteristics
+to classes so heap allocation
+
+00:54:31.366 --> 00:54:33.586 A:middle
+and creating the
+instance, reference counting
+
+00:54:33.586 --> 00:54:35.646 A:middle
+for passing the value around,
+
+00:54:35.956 --> 00:54:39.106 A:middle
+and dynamic dispatch
+through the V-Table.
+
+00:54:39.156 --> 00:54:42.506 A:middle
+Now, let's look at unspecialized
+generic code containing
+
+00:54:42.506 --> 00:54:43.326 A:middle
+small values.
+
+00:54:43.976 --> 00:54:46.506 A:middle
+There's no heap allocation
+necessary for local variables,
+
+00:54:46.506 --> 00:54:49.126 A:middle
+as we've seen, because
+small values fit
+
+00:54:49.126 --> 00:54:52.546 A:middle
+into the valueBuffer
+allocated in the stack.
+
+00:54:53.256 --> 00:54:54.676 A:middle
+There's no reference counting
+
+00:54:54.956 --> 00:54:56.726 A:middle
+if the value didn't
+contain any references.
+
+00:54:57.866 --> 00:55:01.066 A:middle
+However, we get to
+share one implementation
+
+00:54:57.866 --> 00:55:01.066 A:middle
+However, we get to
+share one implementation
+
+00:55:01.986 --> 00:55:05.356 A:middle
+across all potential
+call-sites through the use
+
+00:55:05.416 --> 00:55:08.000 A:middle
+of the witness table
+-- witness tables.
+
+00:55:13.806 --> 00:55:18.836 A:middle
+OK. So, we've seen during this
+talk today how the performance
+
+00:55:18.836 --> 00:55:20.926 A:middle
+characteristics of struct
+and classes looks like
+
+00:55:21.626 --> 00:55:25.916 A:middle
+and how generic code works
+and how protocol types work.
+
+00:55:26.896 --> 00:55:28.746 A:middle
+What -- what can we
+take away from this?
+
+00:55:30.516 --> 00:55:32.406 A:middle
+Oh. Hmm. There you go.
+
+00:55:32.406 --> 00:55:34.436 A:middle
+I forgot the punchline.
+
+00:55:34.646 --> 00:55:39.626 A:middle
+So, if we are using large
+values and generic code,
+
+00:55:40.066 --> 00:55:41.546 A:middle
+we are incurring
+heap allocation.
+
+00:55:41.546 --> 00:55:43.296 A:middle
+But I showed you that
+technique before, namely,
+
+00:55:43.296 --> 00:55:47.066 A:middle
+using indirect storage
+as a workaround.
+
+00:55:47.656 --> 00:55:50.226 A:middle
+If the large value
+contained references,
+
+00:55:50.596 --> 00:55:54.726 A:middle
+then there's reference counting
+and, again, we get the power
+
+00:55:54.726 --> 00:55:57.926 A:middle
+of dynamic dispatch, which
+means we can share one generic
+
+00:55:57.926 --> 00:56:01.000 A:middle
+implementation across our code.
+
+00:55:57.926 --> 00:56:01.000 A:middle
+implementation across our code.
+
+00:56:04.046 --> 00:56:04.236 A:middle
+All right.
+
+00:56:04.666 --> 00:56:08.386 A:middle
+So, let's come to
+the takeaway finally.
+
+00:56:09.816 --> 00:56:12.006 A:middle
+Choose a fitting
+abstraction for your --
+
+00:56:12.006 --> 00:56:14.046 A:middle
+for the entities
+in your application
+
+00:56:14.456 --> 00:56:17.706 A:middle
+with the least dynamic
+runtime type requirements.
+
+00:56:18.936 --> 00:56:23.036 A:middle
+This will enable static type
+checking, compiler can make sure
+
+00:56:23.036 --> 00:56:28.016 A:middle
+that your program is correct at
+compile time, and, in addition,
+
+00:56:28.396 --> 00:56:29.956 A:middle
+the compiler has
+more information
+
+00:56:29.956 --> 00:56:33.256 A:middle
+to optimize your code so
+you'll get faster code.
+
+00:56:33.606 --> 00:56:35.256 A:middle
+So, if you can express
+the entities
+
+00:56:35.256 --> 00:56:39.476 A:middle
+in your program using value
+types such as structs and enums,
+
+00:56:40.016 --> 00:56:42.456 A:middle
+you'll get value
+semantics, which is great,
+
+00:56:42.636 --> 00:56:44.116 A:middle
+no unintended sharing of state,
+
+00:56:45.076 --> 00:56:47.466 A:middle
+and you'll get highly
+optimizable code.
+
+00:56:49.636 --> 00:56:52.286 A:middle
+If you need to use classes
+because you need, for example,
+
+00:56:52.286 --> 00:56:55.496 A:middle
+an entity or you're working with
+an object oriented framework,
+
+00:56:56.366 --> 00:56:58.876 A:middle
+Kyle showed us some techniques
+how to reduce the cost
+
+00:56:58.876 --> 00:57:00.000 A:middle
+of reference counting.
+
+00:57:03.046 --> 00:57:06.806 A:middle
+If parts of your program can be
+expressed using a more static
+
+00:57:07.026 --> 00:57:09.886 A:middle
+form of polymorphism, you
+can combine generic code
+
+00:57:11.246 --> 00:57:15.036 A:middle
+with value types and,
+again, get really fast code,
+
+00:57:15.496 --> 00:57:18.056 A:middle
+but share the implementation
+for that code.
+
+00:57:18.696 --> 00:57:23.126 A:middle
+And if you need dynamic
+polymorphism such as
+
+00:57:23.176 --> 00:57:26.026 A:middle
+in our array of drawable
+protocol type example,
+
+00:57:27.046 --> 00:57:31.656 A:middle
+you can combine protocol types
+with value types and get --
+
+00:57:31.656 --> 00:57:36.486 A:middle
+get a code that is comparably
+fast to using classes,
+
+00:57:37.026 --> 00:57:40.416 A:middle
+but you still can stay
+within value semantics.
+
+00:57:40.906 --> 00:57:45.606 A:middle
+And if you run into
+issues with heap allocation
+
+00:57:46.116 --> 00:57:49.626 A:middle
+because you're copying large
+values inside of protocol types
+
+00:57:49.916 --> 00:57:53.276 A:middle
+or generic types, I showed
+you that technique, namely,
+
+00:57:53.276 --> 00:57:55.206 A:middle
+using indirect storage with copy
+
+00:57:55.206 --> 00:57:58.626 A:middle
+and write how to
+work around this.
+
+00:57:58.836 --> 00:58:03.226 A:middle
+OK. So, here's some related
+sessions about modeling
+
+00:57:58.836 --> 00:58:03.226 A:middle
+OK. So, here's some related
+sessions about modeling
+
+00:58:03.846 --> 00:58:04.966 A:middle
+and about performance.
+
+00:58:05.146 --> 00:58:07.856 A:middle
+And I especially want to call
+out the talk this afternoon
+
+00:58:08.166 --> 00:58:10.096 A:middle
+about Protocol and Value
+Oriented Programming
+
+00:58:10.096 --> 00:58:11.426 A:middle
+in your UIKit Apps.
+
+00:58:11.626 --> 00:58:11.966 A:middle
+Thank you.
+
+00:58:12.508 --> 00:58:14.508 A:middle
+[ Applause ]

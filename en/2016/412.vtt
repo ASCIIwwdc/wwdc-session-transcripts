@@ -1,0 +1,2630 @@
+WEBVTT
+
+00:00:07.516 --> 00:00:18.500 A:middle
+[ Music ]
+
+00:00:25.516 --> 00:00:31.546 A:middle
+[ Applause ]
+
+00:00:32.046 --> 00:00:32.986 A:middle
+&gt;&gt; Hello, I'm Anna.
+
+00:00:32.986 --> 00:00:35.526 A:middle
+Welcome to the Thread Sanitizer
+and Static Analysis talk.
+
+00:00:37.046 --> 00:00:40.056 A:middle
+Since our team works on
+bug-finding tools, we are going
+
+00:00:40.056 --> 00:00:42.956 A:middle
+to tell you about new
+ways of catching bugs.
+
+00:00:44.126 --> 00:00:46.326 A:middle
+I'm going to start with
+giving a brief overview
+
+00:00:46.326 --> 00:00:49.206 A:middle
+of Address Sanitizer and
+then dive much deeper
+
+00:00:49.206 --> 00:00:52.206 A:middle
+into Thread Sanitizer which is
+a new feature we introducing
+
+00:00:52.206 --> 00:00:52.656 A:middle
+this year.
+
+00:00:53.606 --> 00:00:55.716 A:middle
+Later, Devin is going
+to come up and tell you
+
+00:00:55.716 --> 00:00:58.366 A:middle
+about the new checks we've added
+to the Clang Static Analyzer.
+
+00:00:59.416 --> 00:01:00.586 A:middle
+But let's start.
+
+00:00:59.416 --> 00:01:00.586 A:middle
+But let's start.
+
+00:01:01.986 --> 00:01:04.736 A:middle
+Sanitizers, [inaudible]
+LEM tools
+
+00:01:04.736 --> 00:01:07.596 A:middle
+that combine compile
+time instrumentation
+
+00:01:07.916 --> 00:01:11.406 A:middle
+and runtime monitoring
+to find bugs at runtime.
+
+00:01:11.896 --> 00:01:13.306 A:middle
+They're similar to Valgrind.
+
+00:01:13.636 --> 00:01:15.616 A:middle
+However, their main advantage is
+
+00:01:15.616 --> 00:01:17.376 A:middle
+that they have low
+runtime overhead.
+
+00:01:18.176 --> 00:01:20.326 A:middle
+They work with Swift
+and Objective-C,
+
+00:01:20.586 --> 00:01:24.786 A:middle
+and they have tight
+integration into the Xcode UI.
+
+00:01:24.786 --> 00:01:27.106 A:middle
+So last year we've
+introduced Address Sanitizer
+
+00:01:27.106 --> 00:01:28.456 A:middle
+to macOS and iOS.
+
+00:01:29.116 --> 00:01:32.086 A:middle
+This tool finds memory
+corruptions such as stack
+
+00:01:32.086 --> 00:01:35.686 A:middle
+and heap buffer overflows use
+up the freeze, double freeze.
+
+00:01:36.536 --> 00:01:39.626 A:middle
+It's extremely effective
+at finding memory issues.
+
+00:01:39.626 --> 00:01:41.956 A:middle
+So if you're not using
+it already, I highly,
+
+00:01:41.956 --> 00:01:43.326 A:middle
+highly, highly recommend it.
+
+00:01:44.386 --> 00:01:46.216 A:middle
+This year we've extended
+the tool
+
+00:01:46.216 --> 00:01:47.976 A:middle
+to provide full support
+for Swift.
+
+00:01:48.676 --> 00:01:50.936 A:middle
+Which will be especially
+exciting to those of you
+
+00:01:51.236 --> 00:01:53.756 A:middle
+who love to live
+dangerously in Swift.
+
+00:01:55.136 --> 00:01:58.346 A:middle
+So what does it mean if you
+are using unsafe pointer types?
+
+00:01:58.826 --> 00:02:01.066 A:middle
+Run your test with Address
+Sanitizer turned on,
+
+00:01:58.826 --> 00:02:01.066 A:middle
+Run your test with Address
+Sanitizer turned on,
+
+00:02:01.066 --> 00:02:03.056 A:middle
+it will find some bugs for you.
+
+00:02:04.476 --> 00:02:06.636 A:middle
+Now, while Address
+Sanitizer mainly focuses
+
+00:02:06.636 --> 00:02:10.265 A:middle
+on memory corruption issues,
+there is another large source
+
+00:02:10.265 --> 00:02:11.836 A:middle
+of bugs that are
+threading issues.
+
+00:02:12.946 --> 00:02:15.126 A:middle
+These are even harder
+to reproduce and debug.
+
+00:02:15.566 --> 00:02:16.956 A:middle
+They're sensitive to timing.
+
+00:02:17.246 --> 00:02:20.136 A:middle
+They might occur only in
+some certain circumstances
+
+00:02:20.536 --> 00:02:21.956 A:middle
+which means that
+the appellations
+
+00:02:21.956 --> 00:02:25.416 A:middle
+that contain them will have
+unpredictable behaviors.
+
+00:02:26.296 --> 00:02:29.216 A:middle
+So this year we introduce
+support to another tool,
+
+00:02:29.316 --> 00:02:32.836 A:middle
+Thread Sanitizer which
+will help you to both find
+
+00:02:33.286 --> 00:02:36.196 A:middle
+and better understand
+your threading bugs.
+
+00:02:36.896 --> 00:02:39.296 A:middle
+TSan reports mainly
+different kinds of bugs,
+
+00:02:39.296 --> 00:02:40.556 A:middle
+so let's take a look
+at some of them.
+
+00:02:41.286 --> 00:02:43.936 A:middle
+It will tell you about use
+of uninitialized mutexes.
+
+00:02:44.546 --> 00:02:46.176 A:middle
+This might not seem
+like a big deal.
+
+00:02:46.456 --> 00:02:48.166 A:middle
+However, if you are
+using a mutex
+
+00:02:48.166 --> 00:02:50.696 A:middle
+that is not appropriately
+initialized that will lead
+
+00:02:50.696 --> 00:02:52.446 A:middle
+to very subtle bugs
+in your applications
+
+00:02:52.446 --> 00:02:55.576 A:middle
+because you're not actually
+getting any mutual exclusion
+
+00:02:55.576 --> 00:02:56.696 A:middle
+when you use such a mutex.
+
+00:02:57.546 --> 00:02:59.436 A:middle
+Another example are
+thread leaks.
+
+00:02:59.826 --> 00:03:01.436 A:middle
+If your application
+has a lot of threads
+
+00:02:59.826 --> 00:03:01.436 A:middle
+If your application
+has a lot of threads
+
+00:03:01.436 --> 00:03:04.596 A:middle
+and if those threads
+are leaked, you will,
+
+00:03:04.596 --> 00:03:07.046 A:middle
+and if there's memory leaks.
+
+00:03:07.046 --> 00:03:09.146 A:middle
+Another one unsafe
+call in signal handlers
+
+00:03:09.146 --> 00:03:10.696 A:middle
+and unlocks from a wrong thread.
+
+00:03:11.416 --> 00:03:15.026 A:middle
+However, data races are by
+far the most common problem
+
+00:03:15.416 --> 00:03:17.096 A:middle
+because they're so
+easy to introduce.
+
+00:03:17.626 --> 00:03:20.706 A:middle
+They happen when multiple
+threads access the same memory
+
+00:03:20.706 --> 00:03:23.636 A:middle
+location without using
+proper synchronization.
+
+00:03:24.776 --> 00:03:28.976 A:middle
+So let's see how this tool works
+by going into an Xcode demo.
+
+00:03:39.516 --> 00:03:42.766 A:middle
+So here I'm going to demo
+this Thread Sanitizer
+
+00:03:42.766 --> 00:03:45.076 A:middle
+on an alpha version of
+last year's WWDC app.
+
+00:03:45.076 --> 00:03:47.596 A:middle
+So here as you would expect,
+
+00:03:47.596 --> 00:03:48.996 A:middle
+it brings up a schedule
+for the week.
+
+00:03:49.946 --> 00:03:51.846 A:middle
+However, notice this
+interesting visual bug.
+
+00:03:52.126 --> 00:03:54.736 A:middle
+Even though all the session's
+data has been downloaded,
+
+00:03:55.046 --> 00:03:57.176 A:middle
+the network activity
+indicator keeps spinning.
+
+00:03:58.336 --> 00:04:00.986 A:middle
+Now, I know I use a global
+variable to decide when to show
+
+00:03:58.336 --> 00:04:00.986 A:middle
+Now, I know I use a global
+variable to decide when to show
+
+00:04:00.986 --> 00:04:03.866 A:middle
+and hide this indicator so there
+might be a threading problem.
+
+00:04:03.866 --> 00:04:06.606 A:middle
+Let's see if Thread
+Sanitizer can help us find it.
+
+00:04:07.156 --> 00:04:10.166 A:middle
+In order to turn on Thread
+Sanitizer, we go to edit scheme.
+
+00:04:11.646 --> 00:04:13.016 A:middle
+Choose diagnostics tab.
+
+00:04:13.936 --> 00:04:16.065 A:middle
+And click here on
+enable Thread Sanitizer.
+
+00:04:17.116 --> 00:04:20.076 A:middle
+Now, here you can choose
+to pause in the debugger
+
+00:04:20.076 --> 00:04:23.056 A:middle
+on every single issue and
+debug that issue right there.
+
+00:04:23.656 --> 00:04:25.346 A:middle
+Or you could choose
+to keep running,
+
+00:04:25.386 --> 00:04:28.316 A:middle
+collect all the threading issues
+that Thread Sanitizer report,
+
+00:04:28.316 --> 00:04:29.476 A:middle
+and explore them later on.
+
+00:04:30.076 --> 00:04:33.086 A:middle
+The second workflow is new in
+Xcode 8, and it's only supported
+
+00:04:33.086 --> 00:04:35.446 A:middle
+by Thread Sanitizer, so let's
+take a look how that works.
+
+00:04:36.046 --> 00:04:40.136 A:middle
+When your launch application
+under Thread Sanitizer,
+
+00:04:40.466 --> 00:04:42.406 A:middle
+Xcode is going to
+rebuild your project
+
+00:04:42.406 --> 00:04:45.036 A:middle
+with extra compiler
+instrumentation, and it's going
+
+00:04:45.036 --> 00:04:47.466 A:middle
+to launch it in a
+special mode that tries
+
+00:04:47.466 --> 00:04:48.516 A:middle
+to find threading issues.
+
+00:04:49.396 --> 00:04:51.106 A:middle
+So here is our application
+is up.
+
+00:04:51.746 --> 00:04:54.566 A:middle
+And Xcode tells us that Thread
+Sanitizer detected two issues
+
+00:04:54.566 --> 00:04:56.496 A:middle
+by displaying this
+purple indicator
+
+00:04:56.496 --> 00:04:57.706 A:middle
+in the activity viewer.
+
+00:04:59.046 --> 00:05:02.226 A:middle
+Clicking on this purple
+indicator will take us
+
+00:04:59.046 --> 00:05:02.226 A:middle
+Clicking on this purple
+indicator will take us
+
+00:05:02.226 --> 00:05:03.136 A:middle
+to the issue navigator.
+
+00:05:03.556 --> 00:05:05.236 A:middle
+And while previously
+we only used it
+
+00:05:05.236 --> 00:05:07.636 A:middle
+to display build time issues
+such as compiler warnings,
+
+00:05:07.676 --> 00:05:09.406 A:middle
+compiler errors,
+Static Analyzer issues.
+
+00:05:09.836 --> 00:05:11.106 A:middle
+This year has been extended
+
+00:05:11.106 --> 00:05:12.656 A:middle
+to provide support
+to runtime issues.
+
+00:05:12.846 --> 00:05:15.426 A:middle
+And this is where Thread
+Sanitizer's issue found
+
+00:05:15.426 --> 00:05:15.846 A:middle
+its home.
+
+00:05:16.846 --> 00:05:18.796 A:middle
+So Thread Sanitizer
+reported two problems.
+
+00:05:18.796 --> 00:05:19.926 A:middle
+Let's take a look at each one.
+
+00:05:20.186 --> 00:05:23.136 A:middle
+The first one is use
+of uninitialized mutex.
+
+00:05:24.176 --> 00:05:25.846 A:middle
+Now, this problem occurred
+as you were running
+
+00:05:25.846 --> 00:05:27.526 A:middle
+that application
+sometime in the past.
+
+00:05:28.346 --> 00:05:31.496 A:middle
+Thread Sanitizer is going to
+tell us about that exact moment
+
+00:05:31.496 --> 00:05:33.526 A:middle
+by providing a historical
+stack trace.
+
+00:05:34.416 --> 00:05:36.296 A:middle
+Even though this is
+not a live stack trace,
+
+00:05:36.326 --> 00:05:39.416 A:middle
+you can walk its frames as
+if it was a live stack trace.
+
+00:05:39.806 --> 00:05:40.526 A:middle
+So let's take a look.
+
+00:05:40.526 --> 00:05:42.996 A:middle
+At some point we
+called acquire lock.
+
+00:05:42.996 --> 00:05:44.356 A:middle
+That called pthread mutex lock,
+
+00:05:44.356 --> 00:05:46.606 A:middle
+and passed an invalid
+mutex reference.
+
+00:05:47.196 --> 00:05:48.836 A:middle
+That was called from
+reset feed status
+
+00:05:48.836 --> 00:05:50.126 A:middle
+which was called
+from the initializer.
+
+00:05:51.496 --> 00:05:53.496 A:middle
+Now, as you can see here
+we do initialize the mutex,
+
+00:05:53.986 --> 00:05:55.876 A:middle
+but we initialize
+it after we use it.
+
+00:05:56.156 --> 00:05:57.486 A:middle
+It's a simple ordering bug.
+
+00:05:58.066 --> 00:05:59.056 A:middle
+So just reordering those
+
+00:05:59.056 --> 00:06:01.366 A:middle
+to statement should
+take care of that.
+
+00:05:59.056 --> 00:06:01.366 A:middle
+to statement should
+take care of that.
+
+00:06:01.366 --> 00:06:04.946 A:middle
+Okay, let's go on to the second
+problem which is a data race.
+
+00:06:06.546 --> 00:06:09.106 A:middle
+Also, here Thread Sanitizer
+tells that there is a data race
+
+00:06:09.106 --> 00:06:10.756 A:middle
+on the variable called
+activity count.
+
+00:06:11.206 --> 00:06:14.416 A:middle
+Now, that's the same global
+variable that they use to decide
+
+00:06:14.416 --> 00:06:16.466 A:middle
+when to show and
+hide that indicator.
+
+00:06:16.916 --> 00:06:19.016 A:middle
+Since this is a data race,
+
+00:06:19.016 --> 00:06:21.376 A:middle
+Thread Sanitizer will
+tell us about two events.
+
+00:06:21.666 --> 00:06:23.676 A:middle
+The two race accesses.
+
+00:06:23.676 --> 00:06:25.106 A:middle
+A read and a write here.
+
+00:06:25.536 --> 00:06:27.266 A:middle
+So the read happened
+on thread 11,
+
+00:06:27.266 --> 00:06:29.256 A:middle
+and the write happened
+on thread 13.
+
+00:06:29.956 --> 00:06:32.296 A:middle
+Notice that neither of
+those are a main thread,
+
+00:06:32.296 --> 00:06:35.066 A:middle
+and the stack traces
+are the same which means
+
+00:06:35.066 --> 00:06:37.286 A:middle
+that they are probably
+executing the same cord
+
+00:06:37.686 --> 00:06:40.056 A:middle
+from multiple threads
+without using synchronization.
+
+00:06:40.696 --> 00:06:41.636 A:middle
+So let's take a look.
+
+00:06:42.296 --> 00:06:45.376 A:middle
+Okay, here we are updating
+this activity account variable.
+
+00:06:46.226 --> 00:06:49.016 A:middle
+Now, I could have fixed
+this race by adding a lock.
+
+00:06:49.566 --> 00:06:51.586 A:middle
+But notice that this
+is just a symptom.
+
+00:06:52.406 --> 00:06:54.556 A:middle
+The next line here
+updates the UI.
+
+00:06:55.556 --> 00:06:58.046 A:middle
+And we know that the UI
+updates should happen
+
+00:06:58.046 --> 00:06:58.746 A:middle
+on the main thread.
+
+00:06:59.546 --> 00:07:00.826 A:middle
+So the proper fix here is
+
+00:06:59.546 --> 00:07:00.826 A:middle
+So the proper fix here is
+
+00:07:00.886 --> 00:07:07.716 A:middle
+to dispatch both the counter
+increment and the UI update
+
+00:07:08.016 --> 00:07:10.766 A:middle
+onto the main cue with
+Grand Central Dispatch.
+
+00:07:12.036 --> 00:07:14.396 A:middle
+This will both take care
+of the logical problem
+
+00:07:14.396 --> 00:07:16.526 A:middle
+in our application and
+also take care of the race
+
+00:07:16.526 --> 00:07:19.976 A:middle
+because all the threads
+will access
+
+00:07:19.976 --> 00:07:21.946 A:middle
+that count variable
+from the same thread.
+
+00:07:22.656 --> 00:07:25.656 A:middle
+Now, I'm sure I sound
+very convincing
+
+00:07:25.656 --> 00:07:27.436 A:middle
+and you all believe me
+that I fixed the bugs.
+
+00:07:28.146 --> 00:07:30.656 A:middle
+However, the best way
+of checking yourself is
+
+00:07:30.726 --> 00:07:34.306 A:middle
+to run the tool again
+on your project.
+
+00:07:34.306 --> 00:07:37.196 A:middle
+So we should rerun
+the application again
+
+00:07:37.196 --> 00:07:38.666 A:middle
+with Thread Sanitizer turned on.
+
+00:07:38.666 --> 00:07:40.366 A:middle
+And again it's going
+to rebuild your project
+
+00:07:40.756 --> 00:07:43.756 A:middle
+with this extra checking and
+launch it in the special mode.
+
+00:07:44.836 --> 00:07:46.046 A:middle
+Now, the application is up.
+
+00:07:46.896 --> 00:07:50.156 A:middle
+We see that the strange
+visual UI bug is gone,
+
+00:07:50.156 --> 00:07:51.976 A:middle
+and Thread Sanitizer
+doesn't report any issues.
+
+00:07:52.906 --> 00:07:53.696 A:middle
+So all is well.
+
+00:07:54.336 --> 00:07:58.436 A:middle
+Let's go back to slides.
+
+00:07:59.516 --> 00:08:05.546 A:middle
+[ Applause ]
+
+00:07:59.516 --> 00:08:05.546 A:middle
+[ Applause ]
+
+00:08:06.046 --> 00:08:09.826 A:middle
+So just to recap the demo, you
+can enable Thread Sanitizer
+
+00:08:09.826 --> 00:08:12.686 A:middle
+in the Scheme Editor when you
+go to the diagnostics tab just
+
+00:08:12.686 --> 00:08:14.166 A:middle
+like you did with
+Address Sanitizer.
+
+00:08:14.796 --> 00:08:18.086 A:middle
+In addition to ASan's workflow
+of stopping in the debugger
+
+00:08:18.086 --> 00:08:19.176 A:middle
+on the very first issue,
+
+00:08:19.446 --> 00:08:21.786 A:middle
+Thread Sanitizer it
+supports an additional mode.
+
+00:08:22.116 --> 00:08:24.226 A:middle
+Where you could keep routing
+as the issues that detected,
+
+00:08:24.226 --> 00:08:26.836 A:middle
+and then you could explore
+them in the issue navigator.
+
+00:08:27.276 --> 00:08:29.566 A:middle
+They will stay there until you
+launch an application again.
+
+00:08:30.386 --> 00:08:34.035 A:middle
+So let's now talk about what
+Xcode does behind the scenes
+
+00:08:34.096 --> 00:08:35.316 A:middle
+to make this all work.
+
+00:08:36.466 --> 00:08:37.905 A:middle
+In order to use Thread
+Sanitizer,
+
+00:08:37.905 --> 00:08:41.645 A:middle
+Xcode passes a special flag to
+both Clang and Swift compilers
+
+00:08:42.376 --> 00:08:44.916 A:middle
+that instruct them to produce
+an instrumented binary.
+
+00:08:46.036 --> 00:08:50.076 A:middle
+This binary links to a TSan
+runtime library that is used
+
+00:08:50.076 --> 00:08:53.266 A:middle
+by the instrumentation to
+both monitor the execution
+
+00:08:53.266 --> 00:08:55.286 A:middle
+of the program and detect
+those threading issues.
+
+00:08:56.006 --> 00:08:59.496 A:middle
+So if you're building and
+running Cocoa command line,
+
+00:08:59.646 --> 00:09:01.956 A:middle
+you can pass an option to
+either of the compilers.
+
+00:08:59.646 --> 00:09:01.956 A:middle
+you can pass an option to
+either of the compilers.
+
+00:09:02.946 --> 00:09:05.076 A:middle
+And Xcode will also
+support Thread Sanitizer
+
+00:09:05.076 --> 00:09:07.036 A:middle
+by providing
+enableThreadSanitizer option.
+
+00:09:08.336 --> 00:09:10.446 A:middle
+Now by default, TSan
+will keep running
+
+00:09:10.446 --> 00:09:11.726 A:middle
+as the errors are detected.
+
+00:09:12.396 --> 00:09:15.746 A:middle
+But you can instruct it to
+abort on the very first issue
+
+00:09:16.026 --> 00:09:19.066 A:middle
+by setting this TSan options
+environment variables to halt
+
+00:09:19.066 --> 00:09:21.546 A:middle
+on error equals 1 when
+you launch your process.
+
+00:09:21.836 --> 00:09:24.706 A:middle
+That will allow you to have the
+same workflow as what you have
+
+00:09:24.876 --> 00:09:25.816 A:middle
+with Address Sanitizer.
+
+00:09:26.386 --> 00:09:29.396 A:middle
+So where can you use this tool?
+
+00:09:29.556 --> 00:09:31.666 A:middle
+Thread Sanitizer is
+supported on macOS
+
+00:09:31.666 --> 00:09:33.596 A:middle
+and in the 64-bit simulators.
+
+00:09:33.596 --> 00:09:37.336 A:middle
+It is not supported
+on the device.
+
+00:09:37.486 --> 00:09:39.146 A:middle
+So now you know how
+to use this tool,
+
+00:09:39.146 --> 00:09:40.546 A:middle
+how to launch it,
+how to find issues.
+
+00:09:40.546 --> 00:09:43.746 A:middle
+Let's talk about what, how you
+can fix the bugs it reports.
+
+00:09:44.186 --> 00:09:46.046 A:middle
+And we'll focus mainly
+on data races
+
+00:09:46.046 --> 00:09:49.426 A:middle
+because this is the biggest
+category of bugs it reports.
+
+00:09:50.236 --> 00:09:51.496 A:middle
+So what is a data race?
+
+00:09:52.036 --> 00:09:56.166 A:middle
+Data race happens when multiple
+threads access the same memory
+
+00:09:56.166 --> 00:10:00.466 A:middle
+location without using proper
+synchronization and when
+
+00:09:56.166 --> 00:10:00.466 A:middle
+location without using proper
+synchronization and when
+
+00:10:00.466 --> 00:10:02.696 A:middle
+at least one of those
+accesses is a write.
+
+00:10:04.046 --> 00:10:07.536 A:middle
+And the problem here that
+you might not only end
+
+00:10:07.536 --> 00:10:10.976 A:middle
+up with stale data, but the
+behavior here is unpredictable.
+
+00:10:11.096 --> 00:10:12.996 A:middle
+You might even end up
+with a memory corruption.
+
+00:10:13.976 --> 00:10:16.236 A:middle
+So what are the reasons
+for data races?
+
+00:10:16.796 --> 00:10:19.476 A:middle
+Well, it often indicates that
+you have a logical problem
+
+00:10:19.476 --> 00:10:22.396 A:middle
+in the structure
+of your program.
+
+00:10:22.546 --> 00:10:24.176 A:middle
+And only you will
+know how to fix it.
+
+00:10:25.226 --> 00:10:26.496 A:middle
+On the other hand, it also means
+
+00:10:26.496 --> 00:10:28.036 A:middle
+that we are missing
+some synchronization.
+
+00:10:28.276 --> 00:10:30.786 A:middle
+So let's talk about
+that second scenario.
+
+00:10:31.956 --> 00:10:34.376 A:middle
+Here is an example of
+a data race in Swift.
+
+00:10:34.746 --> 00:10:36.286 A:middle
+We have a global variable data.
+
+00:10:36.706 --> 00:10:38.766 A:middle
+We have a producer
+that sets it for 42
+
+00:10:38.976 --> 00:10:40.956 A:middle
+and a consumer that prints it.
+
+00:10:42.076 --> 00:10:44.246 A:middle
+If those two pieces
+of code are executed
+
+00:10:44.496 --> 00:10:46.956 A:middle
+by two different threads,
+there will be a data race.
+
+00:10:48.296 --> 00:10:49.266 A:middle
+So how about this code?
+
+00:10:49.716 --> 00:10:52.876 A:middle
+We introduce another variable
+called is data available.
+
+00:10:53.376 --> 00:10:57.016 A:middle
+And we set that flag after we
+update the data in the producer,
+
+00:10:57.366 --> 00:10:59.906 A:middle
+and in the consumer we are going
+to wait until the flag is set
+
+00:10:59.906 --> 00:11:01.626 A:middle
+and then if once it's
+set, we print the data.
+
+00:10:59.906 --> 00:11:01.626 A:middle
+and then if once it's
+set, we print the data.
+
+00:11:02.446 --> 00:11:04.476 A:middle
+Well, this looks very logical.
+
+00:11:04.686 --> 00:11:05.996 A:middle
+It seems like it should work.
+
+00:11:06.696 --> 00:11:10.056 A:middle
+The problem here is what you see
+is not what will get executed.
+
+00:11:11.246 --> 00:11:14.816 A:middle
+The instructions here can be
+reordered by either the compiler
+
+00:11:14.956 --> 00:11:18.226 A:middle
+or the CPU, so you cannot
+assume that the flag is set
+
+00:11:18.226 --> 00:11:20.176 A:middle
+after the data is updated.
+
+00:11:20.936 --> 00:11:23.676 A:middle
+The order of the instruction
+is not guaranteed neither
+
+00:11:23.676 --> 00:11:25.326 A:middle
+in the producer nor
+the consumer.
+
+00:11:26.176 --> 00:11:28.476 A:middle
+So what is the point
+here of this slide?
+
+00:11:28.476 --> 00:11:31.566 A:middle
+I just want to demonstrate
+that trying
+
+00:11:31.606 --> 00:11:35.646 A:middle
+to roll your own synchronization
+methods is often not a
+
+00:11:35.646 --> 00:11:36.266 A:middle
+good idea.
+
+00:11:37.136 --> 00:11:38.206 A:middle
+What should we do instead?
+
+00:11:38.476 --> 00:11:40.866 A:middle
+We should use something
+that's available already.
+
+00:11:41.286 --> 00:11:45.036 A:middle
+For example, Grand Central
+Dispatch is a very good option.
+
+00:11:45.086 --> 00:11:47.006 A:middle
+You can dispatch
+the recent accesses
+
+00:11:47.486 --> 00:11:50.926 A:middle
+onto the same serial
+queue that will make sure
+
+00:11:50.926 --> 00:11:52.566 A:middle
+that they execute it
+on the same thread,
+
+00:11:52.566 --> 00:11:53.926 A:middle
+and there will be no data race.
+
+00:11:55.496 --> 00:11:57.836 A:middle
+So now as you might recall
+Thread Sanitizer works
+
+00:11:57.836 --> 00:11:59.266 A:middle
+for both Objective-C and Swift.
+
+00:11:59.796 --> 00:12:02.096 A:middle
+So let's use Objective-C
+for our next example.
+
+00:11:59.796 --> 00:12:02.096 A:middle
+So let's use Objective-C
+for our next example.
+
+00:12:02.626 --> 00:12:05.466 A:middle
+Here is lazy initialization
+code.
+
+00:12:05.856 --> 00:12:09.206 A:middle
+And we are implementing
+method called getSingleton.
+
+00:12:09.576 --> 00:12:12.366 A:middle
+That makes sure that we return
+the same shared instance
+
+00:12:12.426 --> 00:12:13.456 A:middle
+to all of its callers.
+
+00:12:14.986 --> 00:12:17.736 A:middle
+Now, if this code is
+executed by multiple threads
+
+00:12:18.146 --> 00:12:20.506 A:middle
+without proper synchronization,
+there will be a data race
+
+00:12:21.146 --> 00:12:24.886 A:middle
+when both threads try to update
+the shared instance variable.
+
+00:12:26.276 --> 00:12:27.896 A:middle
+Okay, so what about this code?
+
+00:12:28.406 --> 00:12:31.536 A:middle
+We tried to fix the
+problem by allocating
+
+00:12:31.536 --> 00:12:33.326 A:middle
+and initializing
+a local variable,
+
+00:12:33.326 --> 00:12:36.826 A:middle
+and then we are using atomic
+compare and set operation
+
+00:12:37.196 --> 00:12:40.946 A:middle
+to make sure that
+threads atomically update
+
+00:12:40.946 --> 00:12:41.796 A:middle
+that global variable.
+
+00:12:42.146 --> 00:12:44.236 A:middle
+So there will be no
+data race on the right.
+
+00:12:45.656 --> 00:12:47.426 A:middle
+This might look like a step
+in the right direction,
+
+00:12:47.426 --> 00:12:48.896 A:middle
+but this code still
+has problems.
+
+00:12:49.436 --> 00:12:50.346 A:middle
+So let's take a look at them.
+
+00:12:50.836 --> 00:12:54.436 A:middle
+First, it's very difficult to
+reason about memory management
+
+00:12:54.626 --> 00:12:55.776 A:middle
+when you are using atomics.
+
+00:12:56.666 --> 00:12:59.026 A:middle
+So, for example, here you
+will have use-after-free
+
+00:12:59.026 --> 00:12:59.826 A:middle
+if you are using ARC.
+
+00:13:00.686 --> 00:13:05.126 A:middle
+And if you are using MRR, this
+object will be leaked only
+
+00:13:05.126 --> 00:13:06.296 A:middle
+in case there is a race.
+
+00:13:07.226 --> 00:13:08.986 A:middle
+So that's not good.
+
+00:13:09.316 --> 00:13:10.366 A:middle
+That's not the only problem.
+
+00:13:10.516 --> 00:13:11.706 A:middle
+Another problem here is
+
+00:13:11.706 --> 00:13:14.636 A:middle
+that since the read
+is unsynchronized,
+
+00:13:15.086 --> 00:13:17.196 A:middle
+there could still be a race
+where one thread is trying
+
+00:13:17.196 --> 00:13:18.416 A:middle
+to read that shared variable
+
+00:13:18.826 --> 00:13:21.446 A:middle
+and another one is trying
+to atomically set it.
+
+00:13:21.586 --> 00:13:25.086 A:middle
+So this is undefined
+behavior, and that's not good.
+
+00:13:26.106 --> 00:13:27.116 A:middle
+What should you do instead?
+
+00:13:27.186 --> 00:13:29.106 A:middle
+I mean, if you know
+the solution already,
+
+00:13:29.106 --> 00:13:30.416 A:middle
+use Grand Central Dispatch.
+
+00:13:30.576 --> 00:13:34.096 A:middle
+Dispatch wants performed
+laziness socialization for you.
+
+00:13:34.856 --> 00:13:36.856 A:middle
+It's even simpler in Swift.
+
+00:13:37.266 --> 00:13:41.096 A:middle
+Both global variables and
+class constants have dispatch
+
+00:13:41.096 --> 00:13:41.866 A:middle
+one semantics.
+
+00:13:42.116 --> 00:13:43.976 A:middle
+So you can choose either
+of those two solutions,
+
+00:13:43.976 --> 00:13:45.466 A:middle
+whatever works best
+for your code.
+
+00:13:46.016 --> 00:13:49.196 A:middle
+Okay, so just to summarize,
+
+00:13:49.276 --> 00:13:51.776 A:middle
+you should use the highest
+level API that's suitable
+
+00:13:51.776 --> 00:13:52.376 A:middle
+to your needs.
+
+00:13:52.986 --> 00:13:55.616 A:middle
+And most people should be
+using Grand Central Dispatch.
+
+00:13:56.136 --> 00:14:00.276 A:middle
+If that's not suitable, you
+can use pthread APIs or NSLock,
+
+00:13:56.136 --> 00:14:00.276 A:middle
+If that's not suitable, you
+can use pthread APIs or NSLock,
+
+00:14:00.786 --> 00:14:06.726 A:middle
+for example, now, we do have a
+new OS unfair lock that's new
+
+00:14:06.726 --> 00:14:09.456 A:middle
+on our platform this year,
+and it replaces OSSpinLock.
+
+00:14:10.046 --> 00:14:12.546 A:middle
+And they also have
+C++ and C11 Atomics.
+
+00:14:12.956 --> 00:14:14.926 A:middle
+They are supported
+by Thread Sanitizer.
+
+00:14:15.476 --> 00:14:17.256 A:middle
+But as you've seen in
+the previous example,
+
+00:14:17.256 --> 00:14:19.216 A:middle
+they're very difficult
+to use correctly.
+
+00:14:20.096 --> 00:14:21.536 A:middle
+And besides the performance,
+
+00:14:21.576 --> 00:14:25.276 A:middle
+being here is either not
+measurable or negligible.
+
+00:14:25.816 --> 00:14:29.936 A:middle
+So don't choose to use those
+APIs if you did not measure
+
+00:14:29.936 --> 00:14:32.876 A:middle
+that they actually have
+something on your application.
+
+00:14:33.446 --> 00:14:37.616 A:middle
+So for more information
+about all of those APIs,
+
+00:14:37.616 --> 00:14:40.556 A:middle
+please attend Concurrent
+Programming talk on Friday.
+
+00:14:41.126 --> 00:14:44.366 A:middle
+So now let's talk
+about benign races.
+
+00:14:44.906 --> 00:14:45.886 A:middle
+What are those?
+
+00:14:46.126 --> 00:14:48.696 A:middle
+Some developers argue that
+on some architectures,
+
+00:14:49.046 --> 00:14:53.296 A:middle
+for example x86, you do not
+need to insert synchronization
+
+00:14:53.296 --> 00:14:54.316 A:middle
+between a read and a write
+
+00:14:54.906 --> 00:14:57.856 A:middle
+because the architecture
+itself guarantees automaticity
+
+00:14:57.856 --> 00:15:00.536 A:middle
+of those operations
+on pointer size data.
+
+00:14:57.856 --> 00:15:00.536 A:middle
+of those operations
+on pointer size data.
+
+00:15:01.906 --> 00:15:04.356 A:middle
+Now, it's important to
+remember that any race,
+
+00:15:04.626 --> 00:15:06.246 A:middle
+even at a benign
+race, is considered
+
+00:15:06.246 --> 00:15:09.676 A:middle
+to be undefined behavior
+from C or C++ standard.
+
+00:15:10.466 --> 00:15:13.246 A:middle
+So not only will you be
+surprised if that code
+
+00:15:13.246 --> 00:15:14.856 A:middle
+with benign races write, runs
+
+00:15:14.856 --> 00:15:17.696 A:middle
+on an architecture you have
+not tested well on before.
+
+00:15:18.216 --> 00:15:21.486 A:middle
+But the compiler is free to
+reorder those instructions
+
+00:15:21.486 --> 00:15:23.716 A:middle
+as if no other thread saw that.
+
+00:15:25.046 --> 00:15:26.846 A:middle
+So the bottom line
+is that you might end
+
+00:15:26.966 --> 00:15:28.316 A:middle
+up with very subtle bugs.
+
+00:15:28.806 --> 00:15:30.676 A:middle
+So as our engineering lead
+
+00:15:30.676 --> 00:15:34.876 A:middle
+for Thread Sanitizer
+[inaudible] "Fix all the bugs."
+
+00:15:37.516 --> 00:15:42.876 A:middle
+[ Applause ]
+
+00:15:43.376 --> 00:15:46.016 A:middle
+Now, to the most
+exciting part of our talk.
+
+00:15:46.566 --> 00:15:49.786 A:middle
+As we all know, data races are
+hard to reproduce since they're
+
+00:15:49.836 --> 00:15:51.056 A:middle
+so sensitive to timing.
+
+00:15:51.766 --> 00:15:53.876 A:middle
+So the most interesting thing
+about Thread Sanitizer is
+
+00:15:53.876 --> 00:15:56.996 A:middle
+that it can detect races that
+did not even manifest during
+
+00:15:56.996 --> 00:15:58.206 A:middle
+that particular program run.
+
+00:15:58.926 --> 00:15:59.916 A:middle
+Let's see how it does that.
+
+00:16:01.436 --> 00:16:04.046 A:middle
+When you compile your
+program with Thread Sanitizer,
+
+00:16:04.316 --> 00:16:07.716 A:middle
+it instruments every memory
+access, and it prefixes it
+
+00:16:07.716 --> 00:16:09.376 A:middle
+with a check, with a code.
+
+00:16:09.696 --> 00:16:13.166 A:middle
+But first, records the
+information about that access.
+
+00:16:14.446 --> 00:16:19.666 A:middle
+And second checks if that
+access participates in a race.
+
+00:16:20.356 --> 00:16:21.706 A:middle
+So let's take a closer look.
+
+00:16:22.716 --> 00:16:25.326 A:middle
+For every aligned 8 bytes
+of application memory,
+
+00:16:25.956 --> 00:16:27.686 A:middle
+Thread Sanitizer
+shared those state,
+
+00:16:28.316 --> 00:16:30.536 A:middle
+keeps track up to four accesses.
+
+00:16:31.566 --> 00:16:33.006 A:middle
+So suppose we have four threads.
+
+00:16:33.436 --> 00:16:35.216 A:middle
+Thread one writes to
+that memory location.
+
+00:16:35.556 --> 00:16:38.326 A:middle
+Thread sanitizer updates
+that, stores that information
+
+00:16:38.326 --> 00:16:40.356 A:middle
+to shadow thread to
+reset memory location.
+
+00:16:40.356 --> 00:16:43.876 A:middle
+Again, we record that, and
+we keep going on and on.
+
+00:16:44.326 --> 00:16:47.726 A:middle
+So now what happens if you
+have more than four accesses?
+
+00:16:48.356 --> 00:16:52.766 A:middle
+Thread Sanitizer uses
+an educated guess
+
+00:16:53.006 --> 00:16:55.576 A:middle
+onto what cell to evict next.
+
+00:16:55.996 --> 00:16:59.066 A:middle
+So here it evicts access
+to that same thread
+
+00:16:59.986 --> 00:17:01.846 A:middle
+which lets it not
+lose precision.
+
+00:16:59.986 --> 00:17:01.846 A:middle
+which lets it not
+lose precision.
+
+00:17:03.166 --> 00:17:05.366 A:middle
+However, if we had access
+from a fifth thread,
+
+00:17:05.496 --> 00:17:07.415 A:middle
+it would evict a random cell.
+
+00:17:08.076 --> 00:17:10.935 A:middle
+So bounding the number of
+accesses like this means
+
+00:17:10.935 --> 00:17:14.866 A:middle
+that we might not catch
+all races and all cases.
+
+00:17:14.996 --> 00:17:18.685 A:middle
+Okay. Now, let's talk about
+how it detects data races.
+
+00:17:19.415 --> 00:17:21.356 A:middle
+Thread sanitizer uses
+a well known technique
+
+00:17:21.356 --> 00:17:23.236 A:middle
+of vector clocks
+for race detection.
+
+00:17:24.326 --> 00:17:25.336 A:middle
+So how does that work?
+
+00:17:25.955 --> 00:17:28.676 A:middle
+Thread local storage for
+each thread keeps track
+
+00:17:28.676 --> 00:17:32.776 A:middle
+of threads own counter
+and the counters
+
+00:17:32.776 --> 00:17:34.956 A:middle
+of all the other threads.
+
+00:17:35.636 --> 00:17:38.006 A:middle
+This counter is initialized
+to zero,
+
+00:17:38.306 --> 00:17:40.626 A:middle
+and every time a
+thread accesses memory,
+
+00:17:41.286 --> 00:17:42.896 A:middle
+its counter is incremented.
+
+00:17:43.486 --> 00:17:47.016 A:middle
+So, for example, here
+suppose thread one access two
+
+00:17:47.016 --> 00:17:48.836 A:middle
+memory locations.
+
+00:17:49.246 --> 00:17:52.026 A:middle
+Thread two accessed
+22 memory locations.
+
+00:17:53.006 --> 00:17:55.326 A:middle
+Thread three accesses
+55 memory locations.
+
+00:17:56.416 --> 00:17:58.696 A:middle
+Now, this timestamps
+are not comparable.
+
+00:17:59.496 --> 00:18:02.256 A:middle
+Each thread uses those
+timestamps or counters
+
+00:17:59.496 --> 00:18:02.256 A:middle
+Each thread uses those
+timestamps or counters
+
+00:18:02.256 --> 00:18:06.256 A:middle
+to order the accesses to
+memory that it performs.
+
+00:18:08.056 --> 00:18:13.806 A:middle
+Okay. So let's go back and
+bring back our memory location
+
+00:18:13.806 --> 00:18:17.656 A:middle
+and its shadow and see
+how its threads interact
+
+00:18:17.656 --> 00:18:19.016 A:middle
+and how they update
+the counters here.
+
+00:18:20.006 --> 00:18:21.876 A:middle
+We'll also add the
+lock that threads used
+
+00:18:21.876 --> 00:18:24.056 A:middle
+to synchronize access
+to that memory location.
+
+00:18:24.836 --> 00:18:26.466 A:middle
+Okay, thread one writes.
+
+00:18:27.276 --> 00:18:28.356 A:middle
+It's a well behaved thread.
+
+00:18:28.356 --> 00:18:29.456 A:middle
+It's going to acquire a lock.
+
+00:18:30.656 --> 00:18:32.286 A:middle
+It's going to update
+its counter.
+
+00:18:33.156 --> 00:18:34.776 A:middle
+It's going to write to
+that memory location.
+
+00:18:35.786 --> 00:18:37.376 A:middle
+Now, Thread Sanitizer sees that.
+
+00:18:38.256 --> 00:18:39.896 A:middle
+It's going to update the shadow.
+
+00:18:40.626 --> 00:18:42.966 A:middle
+Before updating the shadow,
+it sees that there is nothing
+
+00:18:42.966 --> 00:18:46.226 A:middle
+in the shadow, stored in
+the shadow which means
+
+00:18:46.566 --> 00:18:49.766 A:middle
+that that memory location
+has not been accessed before.
+
+00:18:50.276 --> 00:18:52.286 A:middle
+So it just safe to go
+ahead and write that down.
+
+00:18:53.806 --> 00:18:56.786 A:middle
+Now before releasing the lock,
+thread one is going to update it
+
+00:18:56.976 --> 00:19:00.746 A:middle
+with its own timestamp,
+and it releases the lock.
+
+00:18:56.976 --> 00:19:00.746 A:middle
+with its own timestamp,
+and it releases the lock.
+
+00:19:01.666 --> 00:19:04.266 A:middle
+Now, it's time for
+thread two to write.
+
+00:19:05.036 --> 00:19:07.436 A:middle
+Again, thread two is a
+very well behaved thread.
+
+00:19:07.436 --> 00:19:08.456 A:middle
+It's going to acquire the lock.
+
+00:19:09.616 --> 00:19:13.366 A:middle
+Now, acquiring a lock like
+this lets thread two see
+
+00:19:13.366 --> 00:19:16.116 A:middle
+that thread one has
+implemented its counter.
+
+00:19:16.416 --> 00:19:20.266 A:middle
+Now, thread two implements
+its own counter,
+
+00:19:20.266 --> 00:19:22.136 A:middle
+it writes to that
+memory location.
+
+00:19:22.686 --> 00:19:25.036 A:middle
+Thread Sanitizer sees that it's
+trying to update the shadow.
+
+00:19:25.886 --> 00:19:28.756 A:middle
+Now, here it sees that there
+is something there it shadowed
+
+00:19:28.756 --> 00:19:29.646 A:middle
+before, so that means
+
+00:19:29.646 --> 00:19:31.576 A:middle
+that memory location has
+been accessed already,
+
+00:19:31.716 --> 00:19:33.206 A:middle
+so it's going to
+check for races.
+
+00:19:33.876 --> 00:19:39.556 A:middle
+By comparing the timestamps,
+Thread Sanitizer sees
+
+00:19:39.556 --> 00:19:41.216 A:middle
+that thread two has synchronized
+
+00:19:41.216 --> 00:19:43.656 A:middle
+after thread one has
+accessed the memory.
+
+00:19:44.376 --> 00:19:45.406 A:middle
+So there is no data race.
+
+00:19:46.416 --> 00:19:48.266 A:middle
+And we can just proceed
+with the update.
+
+00:19:48.486 --> 00:19:50.526 A:middle
+Before releasing the lock,
+thread two is going to update
+
+00:19:50.526 --> 00:19:51.576 A:middle
+with its own timestamp.
+
+00:19:52.326 --> 00:19:53.516 A:middle
+And it releases the lock.
+
+00:19:54.606 --> 00:19:56.456 A:middle
+Okay, now it's time for
+thread three to write.
+
+00:19:57.366 --> 00:19:58.996 A:middle
+Thread three has been
+waiting for a long time.
+
+00:19:58.996 --> 00:20:01.166 A:middle
+It's so excited to write
+to that memory location.
+
+00:19:58.996 --> 00:20:01.166 A:middle
+It's so excited to write
+to that memory location.
+
+00:20:01.356 --> 00:20:03.306 A:middle
+Guess what, it forgets the lock.
+
+00:20:04.066 --> 00:20:06.746 A:middle
+It implements the counter,
+writes to the memory location,
+
+00:20:07.516 --> 00:20:09.596 A:middle
+Thread Sanitizer is
+there, it's watching.
+
+00:20:09.926 --> 00:20:14.056 A:middle
+It's trying to update the
+shadow and check for races.
+
+00:20:15.106 --> 00:20:18.946 A:middle
+So here the Thread Sanitizer
+sees that the old view
+
+00:20:18.946 --> 00:20:20.406 A:middle
+of thread three is too old.
+
+00:20:21.156 --> 00:20:23.826 A:middle
+The reads and writes stored
+in the shadow happened
+
+00:20:23.826 --> 00:20:25.666 A:middle
+after thread three
+last synchronized.
+
+00:20:27.136 --> 00:20:29.516 A:middle
+This allows Thread
+Sanitizer to catch the bug.
+
+00:20:32.516 --> 00:20:36.716 A:middle
+[ Applause ]
+
+00:20:37.216 --> 00:20:39.786 A:middle
+So what's important to know
+about this algorithm is
+
+00:20:39.786 --> 00:20:42.466 A:middle
+that the sensitivity of
+timing that we associate
+
+00:20:42.466 --> 00:20:44.326 A:middle
+with data races does
+not apply here.
+
+00:20:45.066 --> 00:20:48.136 A:middle
+TSan can detect races even if
+they did not manifest during
+
+00:20:48.136 --> 00:20:50.016 A:middle
+that particular run
+but could occur
+
+00:20:50.016 --> 00:20:51.366 A:middle
+if you run your application
+again
+
+00:20:51.366 --> 00:20:53.206 A:middle
+or your users run
+your application.
+
+00:20:53.856 --> 00:20:56.726 A:middle
+And this makes using Thread
+Sanitizer much more effective
+
+00:20:57.036 --> 00:21:00.376 A:middle
+than debugging and trying to
+reproduce those data races
+
+00:20:57.036 --> 00:21:00.376 A:middle
+than debugging and trying to
+reproduce those data races
+
+00:21:00.376 --> 00:21:03.516 A:middle
+in the [inaudible] without
+the use of the tool.
+
+00:21:04.046 --> 00:21:05.996 A:middle
+Now, another thing
+to remember here is
+
+00:21:05.996 --> 00:21:08.586 A:middle
+that Thread Sanitizer is a
+runtime bug finding tool,
+
+00:21:08.646 --> 00:21:10.526 A:middle
+so it will only catch races
+
+00:21:11.056 --> 00:21:13.946 A:middle
+if you provided sufficient
+coverage.
+
+00:21:14.096 --> 00:21:16.856 A:middle
+So please run all your tests
+with Thread Sanitizer turned on.
+
+00:21:18.416 --> 00:21:20.916 A:middle
+And that was Thread
+Sanitizer new in Xcode 8.
+
+00:21:21.046 --> 00:21:22.666 A:middle
+Use it. It will find bugs,
+
+00:21:22.756 --> 00:21:24.486 A:middle
+it will make your
+applications better.
+
+00:21:25.516 --> 00:21:32.046 A:middle
+[ Applause ]
+
+00:21:32.546 --> 00:21:35.646 A:middle
+Now, off to Devin who will tell
+you about the checks we've added
+
+00:21:35.646 --> 00:21:36.776 A:middle
+to the Clang Static Analyzer.
+
+00:21:38.516 --> 00:21:43.116 A:middle
+[ Applause ]
+
+00:21:43.616 --> 00:21:44.096 A:middle
+&gt;&gt; Thanks, Anna.
+
+00:21:44.096 --> 00:21:49.516 A:middle
+Unlike the sanitizers, the
+Static Analyzer can find bugs
+
+00:21:49.786 --> 00:21:51.646 A:middle
+without even running your code.
+
+00:21:52.586 --> 00:21:55.536 A:middle
+It does this by systematically
+exploring all paths
+
+00:21:55.626 --> 00:21:56.386 A:middle
+through the program.
+
+00:21:57.156 --> 00:21:58.866 A:middle
+This makes it great
+at catching hard
+
+00:21:58.866 --> 00:22:00.886 A:middle
+to reproduce edge-case bugs.
+
+00:21:58.866 --> 00:22:00.886 A:middle
+to reproduce edge-case bugs.
+
+00:22:02.026 --> 00:22:03.536 A:middle
+It's supported for
+all of the languages
+
+00:22:03.536 --> 00:22:07.776 A:middle
+that Clang compiles to, so
+C, Objective-C, and C++.
+
+00:22:09.706 --> 00:22:12.976 A:middle
+This year, we've added three now
+checks to the Static Analyzer.
+
+00:22:13.626 --> 00:22:15.226 A:middle
+A check for missing
+localizability,
+
+00:22:16.226 --> 00:22:17.936 A:middle
+a check for improper
+instance cleanup
+
+00:22:18.126 --> 00:22:19.656 A:middle
+in your manual retained
+release code,
+
+00:22:20.246 --> 00:22:22.126 A:middle
+and a check for nullability
+violations.
+
+00:22:23.096 --> 00:22:24.046 A:middle
+Let me tell you about them.
+
+00:22:25.836 --> 00:22:29.056 A:middle
+A common bug in localized
+apps is to forget
+
+00:22:29.056 --> 00:22:30.636 A:middle
+to localize a UI element.
+
+00:22:31.306 --> 00:22:33.656 A:middle
+This can be very
+startling for your users.
+
+00:22:34.546 --> 00:22:37.886 A:middle
+They'll be using your app
+in their own native language
+
+00:22:37.886 --> 00:22:40.596 A:middle
+when all of a sudden,
+out of the blue a string
+
+00:22:40.596 --> 00:22:43.096 A:middle
+in your language
+shows up in their UI.
+
+00:22:43.886 --> 00:22:45.656 A:middle
+This is not a good
+user experience.
+
+00:22:46.866 --> 00:22:47.846 A:middle
+So let me give you a demo
+
+00:22:47.956 --> 00:22:49.926 A:middle
+of how the Static Analyzer
+can catch this kind of bug.
+
+00:22:56.156 --> 00:22:59.416 A:middle
+Okay. So I'll demo
+the Static Analyzer
+
+00:22:59.416 --> 00:23:00.796 A:middle
+on the same app that Anna used.
+
+00:22:59.416 --> 00:23:00.796 A:middle
+on the same app that Anna used.
+
+00:23:02.616 --> 00:23:03.966 A:middle
+To run the analyzer, you can go
+
+00:23:03.966 --> 00:23:06.756 A:middle
+to Xcode's product menu
+and choose analyze.
+
+00:23:07.736 --> 00:23:10.226 A:middle
+This will explore a large number
+of paths through your program
+
+00:23:10.226 --> 00:23:12.346 A:middle
+and try to find a
+bug along each one.
+
+00:23:13.816 --> 00:23:16.516 A:middle
+Just like Thread
+Sanitizer, if address,
+
+00:23:16.516 --> 00:23:19.116 A:middle
+if the Static Analyzer
+finds an issue,
+
+00:23:19.116 --> 00:23:22.186 A:middle
+it will display this
+blue Static Analyzer icon
+
+00:23:22.386 --> 00:23:24.626 A:middle
+in Xcode's activity bar.
+
+00:23:25.256 --> 00:23:28.676 A:middle
+If you click on it it will
+show you the issue navigator,
+
+00:23:29.106 --> 00:23:31.116 A:middle
+so it looks like we have
+a localizability issue.
+
+00:23:32.536 --> 00:23:36.196 A:middle
+A nonlocalized string is flowing
+to a user-facing property.
+
+00:23:36.706 --> 00:23:37.706 A:middle
+So we should localize it.
+
+00:23:39.266 --> 00:23:41.196 A:middle
+But looking at this method,
+
+00:23:41.796 --> 00:23:43.856 A:middle
+I don't see anything
+immediately wrong.
+
+00:23:44.596 --> 00:23:46.306 A:middle
+So I'm going to click
+on the diagnostic.
+
+00:23:47.516 --> 00:23:49.666 A:middle
+This shows me more information
+
+00:23:49.706 --> 00:23:53.066 A:middle
+about how this nonlocalized
+string ended up flowing
+
+00:23:53.306 --> 00:23:54.666 A:middle
+to the user-facing property.
+
+00:23:55.306 --> 00:23:58.956 A:middle
+I can explore this path
+with the path explorer bar
+
+00:23:59.516 --> 00:24:02.766 A:middle
+at the top of Xcode's editor.
+
+00:23:59.516 --> 00:24:02.766 A:middle
+at the top of Xcode's editor.
+
+00:24:02.956 --> 00:24:05.416 A:middle
+Working my way backwards, I can
+see that this method is called
+
+00:24:05.456 --> 00:24:07.136 A:middle
+from a TableView
+data source method,
+
+00:24:07.136 --> 00:24:09.656 A:middle
+and then an intern it's passing
+
+00:24:09.656 --> 00:24:12.236 A:middle
+in this nonlocalized
+constant string.
+
+00:24:12.866 --> 00:24:14.386 A:middle
+So let's localize it.
+
+00:24:15.936 --> 00:24:18.836 A:middle
+To do so, I'll use the NS
+localized string macro.
+
+00:24:21.116 --> 00:24:23.116 A:middle
+This will load a
+translated version
+
+00:24:23.116 --> 00:24:24.496 A:middle
+of the string at runtime.
+
+00:24:25.946 --> 00:24:28.796 A:middle
+Now, it's really important
+when using this macro
+
+00:24:28.796 --> 00:24:31.496 A:middle
+to also include a comment
+for your translator
+
+00:24:31.526 --> 00:24:33.816 A:middle
+to help them correctly
+translate that string.
+
+00:24:34.816 --> 00:24:37.426 A:middle
+So I will say "This
+is the button
+
+00:24:38.346 --> 00:24:44.246 A:middle
+that resets the session filter."
+
+00:24:44.376 --> 00:24:47.406 A:middle
+Okay. Let's run the
+analyzer again
+
+00:24:47.486 --> 00:24:52.596 A:middle
+to make sure we fixed the issue.
+
+00:24:52.876 --> 00:24:53.436 A:middle
+Looks great.
+
+00:24:53.786 --> 00:24:55.156 A:middle
+So I'll switch back to slides.
+
+00:24:57.516 --> 00:25:03.256 A:middle
+[ Applause ]
+
+00:24:57.516 --> 00:25:03.256 A:middle
+[ Applause ]
+
+00:25:03.756 --> 00:25:07.036 A:middle
+To recap, you can run the
+analyzer from the product menu,
+
+00:25:07.036 --> 00:25:09.666 A:middle
+and it will display any of
+the issues that it finds
+
+00:25:09.666 --> 00:25:10.726 A:middle
+in the issue navigator.
+
+00:25:11.646 --> 00:25:14.606 A:middle
+As we saw, it's super
+useful to click
+
+00:25:14.606 --> 00:25:16.486 A:middle
+on that diagnostic
+to show the path.
+
+00:25:17.256 --> 00:25:19.286 A:middle
+This makes it easy to
+understand the issue
+
+00:25:19.366 --> 00:25:24.846 A:middle
+and ultimately how to fix it.
+
+00:25:26.136 --> 00:25:29.256 A:middle
+So the analyzer can now
+find missing localizability
+
+00:25:29.256 --> 00:25:29.856 A:middle
+as we saw.
+
+00:25:30.086 --> 00:25:33.226 A:middle
+But it will also warn us if
+we've forgotten to provide
+
+00:25:33.646 --> 00:25:35.706 A:middle
+that comment to our translators.
+
+00:25:36.756 --> 00:25:40.456 A:middle
+Here I've provided a comment of
+nil which is not helpful at all.
+
+00:25:40.976 --> 00:25:42.136 A:middle
+And so the analyzer will warn
+
+00:25:42.136 --> 00:25:45.796 A:middle
+about it you can
+turn these checks on
+
+00:25:45.966 --> 00:25:49.416 A:middle
+and other Static Analyzer checks
+in the Static Analyzer section
+
+00:25:49.566 --> 00:25:50.856 A:middle
+of your project's
+build settings.
+
+00:25:52.126 --> 00:25:54.186 A:middle
+The check for missing
+localizability will be turned
+
+00:25:54.186 --> 00:25:57.796 A:middle
+on automatically by Xcode if
+your project has localizations
+
+00:25:58.056 --> 00:25:59.176 A:middle
+in more than one language.
+
+00:26:00.546 --> 00:26:02.566 A:middle
+The check for missing
+comments is off by default,
+
+00:26:03.026 --> 00:26:04.466 A:middle
+but you should make
+sure to turn it
+
+00:26:04.466 --> 00:26:07.096 A:middle
+on if you don't communicate
+these comments
+
+00:26:07.136 --> 00:26:09.246 A:middle
+to your translator
+in some other way.
+
+00:26:10.136 --> 00:26:12.766 A:middle
+For example, you might
+already be doing this directly
+
+00:26:12.836 --> 00:26:13.746 A:middle
+in your strings file.
+
+00:26:16.716 --> 00:26:21.036 A:middle
+This year we've also
+improved checking of dealloc
+
+00:26:21.256 --> 00:26:22.966 A:middle
+in your manual retained
+release code.
+
+00:26:24.296 --> 00:26:26.856 A:middle
+It's really important under
+manual retained release
+
+00:26:27.526 --> 00:26:30.156 A:middle
+to not release instance
+variables that are synthesized
+
+00:26:30.156 --> 00:26:32.136 A:middle
+for assigned properties
+in your dealloc.
+
+00:26:33.096 --> 00:26:36.236 A:middle
+If you do so, this can cause
+an over-release when the owner
+
+00:26:36.236 --> 00:26:39.886 A:middle
+of that value also releases
+it and can crash your program.
+
+00:26:40.696 --> 00:26:44.356 A:middle
+So the analyzer now
+warns about this.
+
+00:26:44.576 --> 00:26:47.136 A:middle
+On the other hand, you must
+release instance variables
+
+00:26:47.406 --> 00:26:49.966 A:middle
+that are synthesized for
+retain or copy properties.
+
+00:26:50.296 --> 00:26:52.066 A:middle
+Because if you don't,
+they will leak.
+
+00:26:52.946 --> 00:26:54.436 A:middle
+The analyzer warns
+about this as well.
+
+00:26:56.516 --> 00:26:56.966 A:middle
+Yeah!
+
+00:26:57.271 --> 00:26:59.271 A:middle
+[ Applause ]
+
+00:26:59.526 --> 00:27:02.336 A:middle
+So this is an awesome check.
+
+00:26:59.526 --> 00:27:02.336 A:middle
+So this is an awesome check.
+
+00:27:02.916 --> 00:27:06.806 A:middle
+It found a bug in every single
+manual retained release project
+
+00:27:07.106 --> 00:27:07.956 A:middle
+that we ran it on.
+
+00:27:08.426 --> 00:27:09.266 A:middle
+So try it out.
+
+00:27:11.696 --> 00:27:14.926 A:middle
+Of course, the best way to get
+rid of retained release issue is
+
+00:27:15.206 --> 00:27:17.976 A:middle
+to update your project to
+automated reference counting.
+
+00:27:18.516 --> 00:27:21.806 A:middle
+[ Applause ]
+
+00:27:22.306 --> 00:27:24.696 A:middle
+Fortunately, Xcode can help
+you do this automatically.
+
+00:27:24.776 --> 00:27:25.936 A:middle
+If you go to the edit menu
+
+00:27:26.476 --> 00:27:29.176 A:middle
+and choose convert
+to Objective-C ARC.
+
+00:27:30.116 --> 00:27:32.396 A:middle
+This will have the compiler
+handle all of the messiness
+
+00:27:32.456 --> 00:27:35.886 A:middle
+of retained release for you.
+
+00:27:37.096 --> 00:27:39.456 A:middle
+Finally this year,
+we've added a check
+
+00:27:39.456 --> 00:27:40.906 A:middle
+for nullability violations.
+
+00:27:42.056 --> 00:27:45.426 A:middle
+This builds on work from last
+year where we annotated our STKs
+
+00:27:45.426 --> 00:27:49.566 A:middle
+to indicate whether methods or
+properties take or return nil.
+
+00:27:50.696 --> 00:27:54.356 A:middle
+For example, Core Location's
+timestamp property is non-null.
+
+00:27:55.156 --> 00:27:56.426 A:middle
+This is because every
+measurement
+
+00:27:56.426 --> 00:27:59.966 A:middle
+of a location also has a
+corresponding date and time.
+
+00:28:00.996 --> 00:28:03.016 A:middle
+In contrast, its floor
+property is nullable.
+
+00:28:03.746 --> 00:28:06.646 A:middle
+That's because this
+property will return nil
+
+00:28:07.216 --> 00:28:09.636 A:middle
+when the location is in
+a venue that's not indoor
+
+00:28:09.636 --> 00:28:10.546 A:middle
+location enabled.
+
+00:28:12.606 --> 00:28:14.776 A:middle
+You should annotate your
+own headers with nullability
+
+00:28:15.126 --> 00:28:17.176 A:middle
+because it enables a
+new program and model
+
+00:28:17.736 --> 00:28:19.456 A:middle
+where you communicate
+your expectations
+
+00:28:19.456 --> 00:28:21.856 A:middle
+about nullability
+directly to your clients.
+
+00:28:22.986 --> 00:28:25.276 A:middle
+This is important
+because violations
+
+00:28:25.276 --> 00:28:28.836 A:middle
+of those expectations can cause
+crashes or unexpected behavior.
+
+00:28:29.796 --> 00:28:32.306 A:middle
+In fact, we thought it was
+so important that we built it
+
+00:28:32.306 --> 00:28:35.636 A:middle
+into Swift where the optional
+type requires you to check
+
+00:28:35.636 --> 00:28:37.506 A:middle
+for nil before using a value.
+
+00:28:38.736 --> 00:28:40.876 A:middle
+Now, it's important in
+Objective-C as well,
+
+00:28:41.356 --> 00:28:43.886 A:middle
+and so we've added a check
+for nullability violations
+
+00:28:44.146 --> 00:28:45.216 A:middle
+to the Static Analyzer.
+
+00:28:46.416 --> 00:28:48.806 A:middle
+And this check is
+particularly useful for projects
+
+00:28:48.806 --> 00:28:51.436 A:middle
+that mix Swift and
+Objective-C code.
+
+00:28:52.276 --> 00:28:53.856 A:middle
+And it finds two
+kinds of issues.
+
+00:28:54.766 --> 00:28:56.696 A:middle
+There might be logical
+problems in your code.
+
+00:28:56.726 --> 00:28:58.286 A:middle
+Maybe you're returning
+nil when you shouldn't.
+
+00:28:59.256 --> 00:29:01.446 A:middle
+Or you might have an
+incorrect annotation.
+
+00:28:59.256 --> 00:29:01.446 A:middle
+Or you might have an
+incorrect annotation.
+
+00:29:02.366 --> 00:29:04.146 A:middle
+So let's take a look
+at how to fix each
+
+00:29:04.146 --> 00:29:06.706 A:middle
+of these two kinds of issues.
+
+00:29:07.696 --> 00:29:11.706 A:middle
+A common mistake is to
+initialize a local variable
+
+00:29:12.076 --> 00:29:15.596 A:middle
+with nil and then later
+fill it in with a series
+
+00:29:15.596 --> 00:29:17.316 A:middle
+of non-exhaustive branches.
+
+00:29:18.536 --> 00:29:19.686 A:middle
+This method, for example,
+
+00:29:20.016 --> 00:29:22.626 A:middle
+returns a short description
+of a location.
+
+00:29:23.286 --> 00:29:25.456 A:middle
+Either the name of a
+city or the country
+
+00:29:25.726 --> 00:29:27.116 A:middle
+that contains that location.
+
+00:29:28.136 --> 00:29:30.676 A:middle
+But we fail to consider
+an important case.
+
+00:29:31.686 --> 00:29:33.846 A:middle
+What if the location is
+in international waters?
+
+00:29:34.256 --> 00:29:36.496 A:middle
+Then there will neither
+be a city nor a country.
+
+00:29:36.666 --> 00:29:39.776 A:middle
+And so this method will
+unexpectedly return nil.
+
+00:29:39.776 --> 00:29:43.376 A:middle
+And the analyzer will
+tell us about it.
+
+00:29:43.696 --> 00:29:44.406 A:middle
+Fortunately.
+
+00:29:45.296 --> 00:29:45.966 A:middle
+This is awesome, too.
+
+00:29:46.516 --> 00:29:50.546 A:middle
+[ Applause ]
+
+00:29:51.046 --> 00:29:52.586 A:middle
+Fortunately, the
+fix here is simple.
+
+00:29:53.096 --> 00:29:55.726 A:middle
+All you need to do is
+initialize your local variable
+
+00:29:57.796 --> 00:30:00.016 A:middle
+with a nonnil default.
+
+00:29:57.796 --> 00:30:00.016 A:middle
+with a nonnil default.
+
+00:30:00.876 --> 00:30:03.306 A:middle
+In this case, we'll use the
+constant string Earth and,
+
+00:30:03.306 --> 00:30:06.066 A:middle
+of course, we'll make
+sure to localize it.
+
+00:30:07.556 --> 00:30:11.136 A:middle
+On the other hand, it
+could be that your code
+
+00:30:11.516 --> 00:30:13.766 A:middle
+in the implementation
+is perfectly fine,
+
+00:30:14.096 --> 00:30:15.986 A:middle
+and it's the annotation
+that's incorrect.
+
+00:30:17.026 --> 00:30:19.956 A:middle
+And we found that one way
+that this commonly arises is
+
+00:30:19.956 --> 00:30:22.866 A:middle
+when you use the convenient
+NS assume nonnull begin
+
+00:30:22.936 --> 00:30:23.956 A:middle
+and end macros.
+
+00:30:25.206 --> 00:30:28.996 A:middle
+These macros wrap a portion of
+your header and say that inside
+
+00:30:28.996 --> 00:30:29.946 A:middle
+of the reins that they wrap,
+
+00:30:30.456 --> 00:30:32.566 A:middle
+that types will be
+implicitly nonnull.
+
+00:30:33.696 --> 00:30:35.726 A:middle
+This can save you
+a lot of typing,
+
+00:30:36.356 --> 00:30:38.416 A:middle
+but it also makes it
+really easy to forget
+
+00:30:38.786 --> 00:30:40.326 A:middle
+to mark a property as nullable.
+
+00:30:41.416 --> 00:30:44.446 A:middle
+In this example, the
+pressure property returns nil
+
+00:30:44.556 --> 00:30:46.556 A:middle
+when the device doesn't
+have a barometer.
+
+00:30:47.486 --> 00:30:50.626 A:middle
+But the property is
+implicitly nonnull.
+
+00:30:52.436 --> 00:30:54.566 A:middle
+Fortunately, the fix
+here is simple as well.
+
+00:30:55.426 --> 00:30:57.666 A:middle
+We can simply explicitly
+mark that property
+
+00:30:57.666 --> 00:30:59.766 A:middle
+as nullable inside
+of that region.
+
+00:31:00.236 --> 00:31:01.206 A:middle
+And this will tell clients
+
+00:31:01.296 --> 00:31:02.806 A:middle
+that they shouldn't
+expect pressure data
+
+00:31:03.186 --> 00:31:04.356 A:middle
+to always be available.
+
+00:31:04.986 --> 00:31:09.986 A:middle
+Now, you do need to
+be careful about this.
+
+00:31:10.506 --> 00:31:13.176 A:middle
+That's because the nullability
+of your API is a contract.
+
+00:31:13.546 --> 00:31:16.336 A:middle
+And so you shouldn't change it
+just to make the analyzer happy.
+
+00:31:17.366 --> 00:31:20.296 A:middle
+Instead, you should carefully
+consider the API that you want
+
+00:31:20.296 --> 00:31:22.016 A:middle
+to expose and use that.
+
+00:31:23.956 --> 00:31:26.946 A:middle
+If you do decide to change
+your API, you'll also need
+
+00:31:26.946 --> 00:31:29.076 A:middle
+to carefully think about
+backwards compatibility.
+
+00:31:29.406 --> 00:31:32.276 A:middle
+This is particularly
+important in Swift
+
+00:31:32.946 --> 00:31:35.586 A:middle
+where nullability changes
+how a type is imported.
+
+00:31:36.706 --> 00:31:40.756 A:middle
+You might also find
+yourself in a situation
+
+00:31:41.236 --> 00:31:43.006 A:middle
+where you can change
+neither the implementation
+
+00:31:43.006 --> 00:31:45.056 A:middle
+of your method nor
+its annotation.
+
+00:31:45.776 --> 00:31:48.506 A:middle
+And in these cases, you can
+suppress the analyzer diagnostic
+
+00:31:48.506 --> 00:31:48.956 A:middle
+with a cast.
+
+00:31:50.356 --> 00:31:53.086 A:middle
+One way that this commonly
+arises is in methods
+
+00:31:53.426 --> 00:31:56.596 A:middle
+that defensively return nil
+when a precondition is violated.
+
+00:31:57.376 --> 00:31:59.036 A:middle
+In this example, the
+method returns nil
+
+00:31:59.296 --> 00:32:01.006 A:middle
+when an index is out of bounds.
+
+00:31:59.296 --> 00:32:01.006 A:middle
+when an index is out of bounds.
+
+00:32:02.226 --> 00:32:05.076 A:middle
+If there's existing code
+that relies on this behavior,
+
+00:32:05.866 --> 00:32:07.126 A:middle
+then you can't remove that check
+
+00:32:07.706 --> 00:32:09.236 A:middle
+and you can't replace
+it within a cert.
+
+00:32:10.096 --> 00:32:12.836 A:middle
+Instead, the right thing
+to do is tell the analyzer
+
+00:32:12.936 --> 00:32:13.796 A:middle
+that that's what you meant
+
+00:32:14.206 --> 00:32:16.656 A:middle
+by casting the return
+value to nonnull.
+
+00:32:21.476 --> 00:32:24.806 A:middle
+So that's what's new in the
+Static Analyzer and Xcode 8.
+
+00:32:26.516 --> 00:32:32.546 A:middle
+[ Applause ]
+
+00:32:33.046 --> 00:32:33.456 A:middle
+So let's wrap up.
+
+00:32:34.696 --> 00:32:37.016 A:middle
+Today we told you about
+three great tools.
+
+00:32:37.896 --> 00:32:39.546 A:middle
+These tools find real bugs.
+
+00:32:40.556 --> 00:32:43.596 A:middle
+Address Sanitizer and Thread
+Sanitizer find memory corruption
+
+00:32:43.596 --> 00:32:44.936 A:middle
+in threading issues at runtime.
+
+00:32:45.026 --> 00:32:47.306 A:middle
+And the Static Analyzer
+can find bugs
+
+00:32:47.536 --> 00:32:49.256 A:middle
+without even running your code.
+
+00:32:49.916 --> 00:32:52.836 A:middle
+So please use these tools
+on your own projects.
+
+00:32:53.426 --> 00:32:56.596 A:middle
+They will help you find your
+bugs before your users find them
+
+00:32:56.666 --> 00:32:57.006 A:middle
+for you.
+
+00:32:58.406 --> 00:32:59.736 A:middle
+If you're interested
+in more information,
+
+00:32:59.736 --> 00:33:01.076 A:middle
+you can go to your
+session website.
+
+00:32:59.736 --> 00:33:01.076 A:middle
+you can go to your
+session website.
+
+00:33:02.406 --> 00:33:04.426 A:middle
+And there's also
+several related sessions
+
+00:33:04.426 --> 00:33:05.796 A:middle
+that we think you
+might find helpful.
+
+00:33:07.386 --> 00:33:07.976 A:middle
+Thank you.
+
+00:33:09.516 --> 00:33:12.500 A:middle
+[ Applause ]
