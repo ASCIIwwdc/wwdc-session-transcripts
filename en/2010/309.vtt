@@ -1,0 +1,2821 @@
+WEBVTT
+
+00:00:07.210 --> 00:00:09.310
+>> Lynne: Good morning, everyone.
+
+00:00:09.310 --> 00:00:15.040
+My name is Lynne Salameh, and I'd like to welcome you
+to Advanced Performance Analysis with Instruments.
+
+00:00:15.040 --> 00:00:19.140
+Before we start, let's take a quick look at today's agenda.
+
+00:00:19.140 --> 00:00:25.480
+As you can see, we've got a lot of ground to cover, because
+in today's session we're going to be showing you how
+
+00:00:25.480 --> 00:00:32.040
+to use efficient and advanced profiling
+tools such as Time Profiling and Data Mining,
+
+00:00:32.040 --> 00:00:36.100
+in order to find out where your
+code is spending most of its time.
+
+00:00:36.100 --> 00:00:41.440
+We're also going to be introducing new Instrumentation
+that will allow you to understand the power characteristics
+
+00:00:41.440 --> 00:00:47.950
+of your iPhone applications and understand how your
+applications interact with the system as a whole.
+
+00:00:47.950 --> 00:00:51.650
+So let's start off, let's talk about Time Profiler.
+
+00:00:51.650 --> 00:00:59.000
+In Time Profiling is a statistical sampling
+mechanism that was first pioneered by Shark,
+
+00:00:59.000 --> 00:01:05.230
+and is today in Instruments the most efficient
+sampling mechanism for use on the iPhone
+
+00:01:05.230 --> 00:01:10.650
+and for your Mac applications in order to find out
+where your applications are spending most of their time.
+
+00:01:10.650 --> 00:01:12.910
+How does Time Profiler work?
+
+00:01:12.910 --> 00:01:24.000
+Time Profiler looks at the running threads in your code,
+and it basically takes samples at regular time intervals.
+
+00:01:24.000 --> 00:01:29.260
+And shown here are those backtraces that
+are collected when those samples occur.
+
+00:01:29.260 --> 00:01:33.760
+So these are example backtraces and we'll be
+taking a look at them in more detail later.
+
+00:01:33.760 --> 00:01:40.900
+But one thing to note here is Time Profiler also
+collects backtraces from your kernel and drivers in order
+
+00:01:40.900 --> 00:01:45.150
+to show you the time spent in that code as well.
+
+00:01:45.150 --> 00:01:55.350
+So Instruments takes these backtraces and constructs what is
+called the call tree in order to simplify and make it easier
+
+00:01:55.350 --> 00:01:59.820
+to understand what's going on in your code and make it
+easier to find where you're spending most of your time.
+
+00:01:59.820 --> 00:02:04.630
+So I'm going to show you how Instruments
+construct an inverted call tree,
+
+00:02:04.630 --> 00:02:09.220
+which means the deepest stacked frame is going
+to be at the root of the tree and we're going
+
+00:02:09.220 --> 00:02:12.210
+to work backwards and view our call history in reverse.
+
+00:02:12.210 --> 00:02:19.790
+So to start off, let's assume that we're spending
+1 millisecond in each of these backtraces.
+
+00:02:19.790 --> 00:02:24.350
+So we see that we're spending 2 milliseconds in the
+frame interpolate, and that's our deepest frame.
+
+00:02:24.350 --> 00:02:29.150
+And then we can work backwards, acquire
+image we're spending 4 milliseconds there.
+
+00:02:29.150 --> 00:02:36.010
+But 2 of those milliseconds go ahead and call
+interpolate, so we have 2 different nodes on our tree,
+
+00:02:36.010 --> 00:02:41.710
+and so forth with cg drawImage and then copyImage,
+
+00:02:41.710 --> 00:02:47.020
+which is actually a frame occurring
+in our codes, the mipmaps application.
+
+00:02:47.020 --> 00:02:52.420
+And then finally, main, which is
+our entry sequence interrupt code.
+
+00:02:52.420 --> 00:02:56.920
+So this is how Instruments combines
+backtraces to construct an inverted call tree.
+
+00:02:56.920 --> 00:02:58.690
+But the way that you view these in Instruments,
+
+00:02:58.690 --> 00:03:03.030
+or how Instruments actually displays
+these, is using an out find view.
+
+00:03:03.030 --> 00:03:12.300
+So if we take the center call tree over here, it's
+actually shown, slide let's move back 1 second.
+
+00:03:12.300 --> 00:03:13.140
+Yeah, there we go.
+
+00:03:13.140 --> 00:03:17.340
+It's actually shown in an outline format
+shown to the right in Instruments.
+
+00:03:17.340 --> 00:03:19.610
+All right.
+
+00:03:19.610 --> 00:03:25.460
+So really you should use Time Profiler for
+your sampling needs because of 3 reasons.
+
+00:03:25.460 --> 00:03:29.240
+First of all, the profiling is
+performed from within the kernel.
+
+00:03:29.240 --> 00:03:34.630
+Which means, Time Profiler has very low impact
+on the applications you're trying to look at.
+
+00:03:34.630 --> 00:03:41.740
+And it really collects stricter, more precise timing
+information about the applications you're trying to target.
+
+00:03:41.740 --> 00:03:46.700
+Secondly, you can use Time Profiler to look
+at not only the threads that are running
+
+00:03:46.700 --> 00:03:50.380
+in your applications, but also to target all thread states.
+
+00:03:50.380 --> 00:03:55.280
+And what this means is that you can also
+find where your threads are waiting in your,
+
+00:03:55.280 --> 00:03:58.180
+in the code that you've written in
+addition to when they're running.
+
+00:03:58.180 --> 00:04:04.470
+And finally, you can use Time Profiler to
+target all the processes on your system
+
+00:04:04.470 --> 00:04:09.220
+and also to collect kernel fact traces
+when you're looking at Mac applications.
+
+00:04:09.220 --> 00:04:15.960
+So we talked about Time Profiler in
+relation to overhead when recording.
+
+00:04:15.960 --> 00:04:22.780
+And let's actually talk about overhead when we're
+dealing with the recording styles that Instruments uses.
+
+00:04:22.780 --> 00:04:27.150
+So the traditional recording mode of
+Instruments is called the immediate modes.
+
+00:04:27.150 --> 00:04:32.440
+And this is very useful because it allows
+you to correlate events that you see,
+
+00:04:32.440 --> 00:04:35.430
+that you perform, sorry, in your applications.
+
+00:04:35.430 --> 00:04:39.130
+Like for example, clicking a button
+with events that you see on a track.
+
+00:04:39.130 --> 00:04:44.500
+Like a spike on the track a change
+in the tables while you're recording.
+
+00:04:44.500 --> 00:04:51.070
+Unfortunately, because Instruments is actually using the
+same CPU that your app is actually, you know, executing on,
+
+00:04:51.070 --> 00:04:56.430
+and it's using the core, it's really consuming some
+of the time that could be used by your application.
+
+00:04:56.430 --> 00:04:59.740
+So this is what we call the observer effect.
+
+00:04:59.740 --> 00:05:05.180
+Where the timing that we collect is not as
+precise as it could be, the timing information.
+
+00:05:05.180 --> 00:05:12.950
+So new in Instruments as part of the iPhone 4
+SDK, we've introduced the deferred recording mode.
+
+00:05:12.950 --> 00:05:19.970
+In the deferred mode, Instruments disables your UI, disables
+the track and the detail views while you're recording,
+
+00:05:19.970 --> 00:05:27.210
+and it defers all of the data processing towards
+the end of, until you hit basically stop recording.
+
+00:05:27.210 --> 00:05:32.650
+And what this does is it minimizes the
+observer effect, which is what we want.
+
+00:05:32.650 --> 00:05:35.070
+So how do you access the deferred mode?
+
+00:05:35.070 --> 00:05:41.540
+You access it from the file menu in Instruments, and
+you go to Record Options and select Deferred Display.
+
+00:05:41.540 --> 00:05:48.260
+After you do that, if you hit Start Recording,
+Instruments will immediately disable the UI and gray it
+
+00:05:48.260 --> 00:05:52.410
+out like you see here, and you
+start recording in deferred mode.
+
+00:05:52.410 --> 00:05:54.730
+And the UI will come up once you hit Stop Recording.
+
+00:05:54.730 --> 00:05:57.620
+All right.
+
+00:05:57.620 --> 00:06:06.370
+So also new in Instruments as part of the iPhone 4
+SDK, we've introduced, we've allowed Time Profiler
+
+00:06:06.370 --> 00:06:11.230
+to collect kernel backtraces for
+applications running on the Mac.
+
+00:06:11.230 --> 00:06:16.180
+So this allows you to peek under the covers, so
+to speak, of what your applications are doing.
+
+00:06:16.180 --> 00:06:20.470
+For example, if you see that your code is making
+a lot of system calls and you're spending a lot
+
+00:06:20.470 --> 00:06:25.750
+of time making system calls, only when you uncover the
+kernel backtraces can you see why these system calls are
+
+00:06:25.750 --> 00:06:27.150
+actually costly and what they're doing.
+
+00:06:27.150 --> 00:06:32.950
+And this is very useful for optimization of
+drivers and kernel extensions that you might write.
+
+00:06:32.950 --> 00:06:37.940
+So, for example, let's take a look at this
+stack trace we have here on the right.
+
+00:06:37.940 --> 00:06:42.290
+We can see that, you know, the lowest
+frame we have is for performing a mem copy.
+
+00:06:42.290 --> 00:06:46.020
+And only when we uncover the kernels
+stack traces can we see that some
+
+00:06:46.020 --> 00:06:49.880
+of these mem copies do incur virtual memory faults,
+
+00:06:49.880 --> 00:06:57.560
+where the memory manager pages in a
+page in order for mem copy to use.
+
+00:06:57.560 --> 00:07:02.720
+We've also unified the backtraces in the
+call tree view, so that the tops version,
+
+00:07:02.720 --> 00:07:07.640
+or the tops frames in this stack trace or kernel
+frames, and the littler ones are user frames.
+
+00:07:07.640 --> 00:07:13.470
+So to make it easier for you to
+view your code in a unified fashion.
+
+00:07:13.470 --> 00:07:20.170
+Additional backtrace improvements, or backtrace viewing
+improvements, is the introduction of stack compression.
+
+00:07:20.170 --> 00:07:27.420
+And as you can see here, I can just move the slider
+to actually simply the stack traces that I see
+
+00:07:27.420 --> 00:07:35.880
+in the external extended detail view, in order to
+collapse them along framework boundaries and collapse them
+
+00:07:35.880 --> 00:07:39.200
+down to just code executing in My Applications.
+
+00:07:39.200 --> 00:07:43.790
+So we talked about improvements to stack viewing.
+
+00:07:43.790 --> 00:07:48.840
+We've also improved the way you view your
+source code by introducing the disassembly view.
+
+00:07:48.840 --> 00:07:58.370
+The disassembly view shows you the instructions that
+your code is using for the ARM and Intel architectures.
+
+00:07:58.370 --> 00:08:04.500
+And in this case, using the disassembly view can
+be useful, for example, when you have the bunch
+
+00:08:04.500 --> 00:08:08.970
+of nested function calls, and you see
+that your code is spending a lot of time
+
+00:08:08.970 --> 00:08:10.900
+on that line with a nested function call.
+
+00:08:10.900 --> 00:08:14.350
+So only when you navigate to the
+disassembly view you can figure out precisely
+
+00:08:14.350 --> 00:08:19.420
+which function is actually consuming all the time.
+
+00:08:19.420 --> 00:08:27.000
+The disassembly view can also show you the effectiveness
+of your templates expansions and your inline code.
+
+00:08:27.000 --> 00:08:32.170
+And finally, when every instruction counts,
+and you're trying to optimize tight loops,
+
+00:08:32.170 --> 00:08:37.770
+the disassembly view lets you do optimization
+on the smallest level of granularity.
+
+00:08:37.770 --> 00:08:40.810
+You can access the disassembly view via 2 methods.
+
+00:08:40.810 --> 00:08:44.700
+So this is the source view that
+we know and love in Instruments.
+
+00:08:44.700 --> 00:08:50.440
+And you can see that it's annotated with some
+profiling information from Time Profiler.
+
+00:08:50.440 --> 00:08:57.930
+If you actually select the Information button over here,
+the Instruments will pull up, the instructions corresponding
+
+00:08:57.930 --> 00:09:03.010
+to the code that you see in the source view.
+
+00:09:03.010 --> 00:09:08.980
+You can also access the disassembly view by
+selecting the top right button in the corner.
+
+00:09:08.980 --> 00:09:12.550
+And it will toggle between the
+source views and disassembly views.
+
+00:09:12.550 --> 00:09:16.500
+And as you can see, my disassembly
+actually has my source annotated as well
+
+00:09:16.500 --> 00:09:21.740
+with the profiling information from Time Profiler.
+
+00:09:21.740 --> 00:09:31.830
+Now new in Instruments as part of Xcode 4 is
+the availability of the documentation for the
+
+00:09:31.830 --> 00:09:36.930
+in phone ARM disassembler instruction sets,
+which you can access by selecting this gear
+
+00:09:36.930 --> 00:09:41.320
+and selecting show ISA
+Reference Guide, which will then take you
+
+00:09:41.320 --> 00:09:45.090
+to the documentation for these instructions.
+
+00:09:45.090 --> 00:09:47.640
+All right, so we've talked about Time Profiler.
+
+00:09:47.640 --> 00:09:49.770
+Let's show you Time Profiler in action.
+
+00:09:49.770 --> 00:09:53.580
+I'm going to switch over to the demo machine.
+
+00:09:53.580 --> 00:09:57.680
+And here I have Instruments.
+
+00:09:57.680 --> 00:10:01.420
+And the first thing you see is a template chooser over here.
+
+00:10:01.420 --> 00:10:07.720
+So if I zoom in I can see that over here on
+the left-hand side I have several categories.
+
+00:10:07.720 --> 00:10:09.450
+And I've selected the Mac categories.
+
+00:10:09.450 --> 00:10:16.170
+And I'm going to select Time Profiler Template to add
+the Time Profiler Instruments to my trace documents.
+
+00:10:16.170 --> 00:10:21.580
+I'm also going to target an application that you might have
+seen during the State of the Union demos called Mipmap.
+
+00:10:21.580 --> 00:10:26.270
+And I'm going to hit record to bring up that application.
+
+00:10:26.270 --> 00:10:31.280
+So Mipmap is basically takes a bunch of images.
+
+00:10:31.280 --> 00:10:34.210
+It renders thumbnails to those images onto the screen.
+
+00:10:34.210 --> 00:10:40.000
+And then it continues to create scaled down
+versions of those images, which are called mipmaps.
+
+00:10:40.000 --> 00:10:42.330
+And what I'm going to do is I'm going to start recording.
+
+00:10:42.330 --> 00:10:46.500
+And you can see Instruments actually
+collecting information in the background.
+
+00:10:46.500 --> 00:10:51.060
+And I'm going to try to scroll while
+I'm trying to render these thumbnails.
+
+00:10:51.060 --> 00:10:55.300
+And as you can see my application is
+actually hung, it starts spinning.
+
+00:10:55.300 --> 00:10:56.790
+The animations are choppy.
+
+00:10:56.790 --> 00:10:58.930
+It's not really doing what I want it to do.
+
+00:10:58.930 --> 00:11:02.850
+And I really want to figure out
+what's going on in this case.
+
+00:11:02.850 --> 00:11:09.030
+So it's finished processing the images, and I can
+just switch back to Instruments and hit Stop Recording
+
+00:11:09.030 --> 00:11:11.400
+and start looking at the data I've collected.
+
+00:11:11.400 --> 00:11:16.650
+So the first thing I'm going to draw attention
+to is the configuration view over here.
+
+00:11:16.650 --> 00:11:22.320
+This basically controls how the settings
+for your backtraces and your call trees.
+
+00:11:22.320 --> 00:11:27.890
+And in this case I've selected Invert Call Tree,
+so that I can see my call tree in inverted fashion.
+
+00:11:27.890 --> 00:11:30.060
+I'm also going to select Separate by Threads.
+
+00:11:30.060 --> 00:11:38.210
+And over here to the right you see that I'm spending a
+lot of time, about 16 seconds in this frame right here,
+
+00:11:38.210 --> 00:11:42.460
+Resample Byte H for CPP vector,
+which was happening in Core Graphics.
+
+00:11:42.460 --> 00:11:44.360
+This is not really my code.
+
+00:11:44.360 --> 00:11:49.580
+And neither is this where I'm spending
+about 8 seconds, decode MCU optimize.
+
+00:11:49.580 --> 00:11:52.300
+So let's take a look at, let's investigate this further.
+
+00:11:52.300 --> 00:11:59.460
+I'm going to zoom out and bring in the extended
+detail view from the top right corner over here.
+
+00:11:59.460 --> 00:12:00.950
+It pulls out this drawer.
+
+00:12:00.950 --> 00:12:09.540
+And the first thing I see when I look at the stack
+trace, if I zoom in again, is this code the resample
+
+00:12:09.540 --> 00:12:15.150
+by 84CPP Vector is actually
+getting called from my code in ScaleImage.
+
+00:12:15.150 --> 00:12:20.330
+I'm kind of, I'm kind of expecting that I'm spending
+a lot of time scaling my images, in this case,
+
+00:12:20.330 --> 00:12:25.040
+on the separate threads that I'm using to do this process.
+
+00:12:25.040 --> 00:12:31.760
+The next frame down, what I see here is
+that a while bunch of code is going on.
+
+00:12:31.760 --> 00:12:34.500
+Let me zoom in again.
+
+00:12:34.500 --> 00:12:35.180
+Sorry. There we go.
+
+00:12:35.180 --> 00:12:37.950
+There's a whole bunch of code that's
+doing image decompression.
+
+00:12:37.950 --> 00:12:41.300
+And this is happening in frameworks that are not my code.
+
+00:12:41.300 --> 00:12:45.430
+And if we look at this part right here it's
+trying to acquire image to draw that image.
+
+00:12:45.430 --> 00:12:51.410
+If we scroll back up we're seeing that what we're
+doing here is attempting to do a lot of work to create
+
+00:12:51.410 --> 00:12:54.880
+and decompress images when we're
+in the thumbnail view draw rec.
+
+00:12:54.880 --> 00:12:57.750
+We're trying to render the thumbnails.
+
+00:12:57.750 --> 00:13:03.110
+And if we actually scroll up all the way down and zoom
+in on this backtrace, we can see that we're doing a lot
+
+00:13:03.110 --> 00:13:07.790
+of this work, this decompression
+of images on the main threads.
+
+00:13:07.790 --> 00:13:21.040
+In fact, I'm going to go ahead and select Uninvert the
+Call Tree to see my, the call stacks in a top down manner.
+
+00:13:21.040 --> 00:13:26.260
+And you can see that in this case;
+oh, let me zoom in again, I'm sorry.
+
+00:13:26.260 --> 00:13:31.410
+I'm spending; you know, I have all these threads
+that are supposed to be doing the image creation,
+
+00:13:31.410 --> 00:13:36.150
+the thumbnail creation and initialization, but I'm
+actually spending all of my time on the main thread.
+
+00:13:36.150 --> 00:13:42.830
+And there is a disproportionate amount of time
+spent there in comparison with the other threads.
+
+00:13:42.830 --> 00:13:48.860
+And this thumbnail view draw rect is
+appearing as the heaviest stack trace on my main thread.
+
+00:13:48.860 --> 00:13:53.880
+So let me take a look at my code
+and see what I'm doing there.
+
+00:13:53.880 --> 00:13:56.830
+I'm going to bring up Xcode.
+
+00:13:56.830 --> 00:14:01.950
+And this method right here, the;
+let me actually scroll up to it.
+
+00:14:01.950 --> 00:14:04.880
+The Start P Threads Methods, what
+it's doing is it's doing all the work.
+
+00:14:04.880 --> 00:14:10.790
+It's creating the thumbnails and going ahead and
+creating the scale down version of the mipmaps.
+
+00:14:10.790 --> 00:14:17.060
+And what I had assumed when I first wrote this code,
+that since this code, this part of the code is executing
+
+00:14:17.060 --> 00:14:23.630
+on a secondary thread, my call to NSImage alloc and
+it was context of URL, to create the thumbnails,
+
+00:14:23.630 --> 00:14:27.040
+would actually do all the work of
+the initialization for the images.
+
+00:14:27.040 --> 00:14:31.380
+But in fact, Time Profiler has told
+me that all this work was getting done
+
+00:14:31.380 --> 00:14:34.380
+on the main threads, so in fact, this call is actually lazy.
+
+00:14:34.380 --> 00:14:38.030
+It doesn't do any work till it
+actually needs to render the images.
+
+00:14:38.030 --> 00:14:45.940
+So to optimize this, I'm actually going to replace this
+call with code I know, takes the initialization stage
+
+00:14:45.940 --> 00:14:50.070
+and actually does it on the thread
+that I intended it do to it on.
+
+00:14:50.070 --> 00:14:53.140
+So I'm going to delete these two lines of code.
+
+00:14:53.140 --> 00:14:56.760
+And I'm going to bring in some new ones.
+
+00:14:56.760 --> 00:14:59.210
+All right.
+
+00:14:59.210 --> 00:15:03.360
+So instead of using the original
+call to create the thumbnails,
+
+00:15:03.360 --> 00:15:09.030
+I scale my image down using Scale
+Image ImageClipFracForResizeMode.
+
+00:15:09.030 --> 00:15:14.500
+And then create the thumbnails
+over here with inits with cg image,
+
+00:15:14.500 --> 00:15:18.700
+and then assign them to the mipmaps.thumbnail
+on the main threads.
+
+00:15:18.700 --> 00:15:21.060
+So hopefully this should do what I expect it to do.
+
+00:15:21.060 --> 00:15:29.770
+I'm going to save, hit build, and I'm going to verify that
+this change actually improved my performance by going back
+
+00:15:29.770 --> 00:15:34.060
+to Time Profiler and running Time Profiler again.
+
+00:15:34.060 --> 00:15:35.760
+So here's Time Profiler.
+
+00:15:35.760 --> 00:15:39.020
+So since I've already selected mipmap
+I'm just going to hit Record again.
+
+00:15:39.020 --> 00:15:41.190
+And it'll bring back my mipmap application.
+
+00:15:41.190 --> 00:15:43.270
+And now I'm going to hit Start.
+
+00:15:43.270 --> 00:15:44.510
+I'm going to scroll.
+
+00:15:44.510 --> 00:15:45.790
+It seems smooth.
+
+00:15:45.790 --> 00:15:49.750
+It's actually running through without any
+choppiness, and it's done in 5 seconds
+
+00:15:49.750 --> 00:15:53.200
+as opposed to 11 when we first started off.
+
+00:15:53.200 --> 00:15:56.490
+So to verify this actually did
+change what we wanted it to change,
+
+00:15:56.490 --> 00:15:58.930
+I'm going to go back to Instruments, hit Stop Recording.
+
+00:15:58.930 --> 00:16:05.660
+And if we zoom in actually you can see that when
+we were originally spending about 11 seconds
+
+00:16:05.660 --> 00:16:11.370
+on the main thread trying to initialize these
+images, we're now spending about 3 seconds.
+
+00:16:11.370 --> 00:16:15.900
+And the time is now more evenly distributed
+amongst our threads that are rendering the,
+
+00:16:15.900 --> 00:16:19.120
+creating the thumb nails and creating the mipmaps.
+
+00:16:19.120 --> 00:16:24.680
+All right, so this is how you use Time Profiler to
+find where your code is spending most of its time,
+
+00:16:24.680 --> 00:16:27.360
+and basically find, try to optimize this.
+
+00:16:27.360 --> 00:16:33.680
+And now I'm going to switch back to
+the slides and talk about Data Mining.
+
+00:16:33.680 --> 00:16:40.370
+So one thing we saw during our demo was
+that we were looking at a lot of frames
+
+00:16:40.370 --> 00:16:43.490
+and stacks that were not coming from our codes.
+
+00:16:43.490 --> 00:16:47.570
+There were, you know, operations that
+were getting performed in Core Graphics,
+
+00:16:47.570 --> 00:16:52.180
+all these image-rendering methods
+that we have no control over.
+
+00:16:52.180 --> 00:16:59.770
+So I'm going to tell you about a very useful tool, it allows
+you to charge the time that you spent in those libraries
+
+00:16:59.770 --> 00:17:03.850
+and in those frames to your code, because
+they're doing code on your behalf.
+
+00:17:03.850 --> 00:17:05.540
+And this is called Data Mining.
+
+00:17:05.540 --> 00:17:08.080
+So Data Mining involves a bunch of operations.
+
+00:17:08.080 --> 00:17:11.670
+And the first of these is charging a symbol to its caller.
+
+00:17:11.670 --> 00:17:16.550
+For example in this case, we have
+an example, sorry, call stack.
+
+00:17:16.550 --> 00:17:19.390
+Sorry. We have an example call tree.
+
+00:17:19.390 --> 00:17:23.720
+And we have some example times shown on that call tree.
+
+00:17:23.720 --> 00:17:28.370
+If I charge acquire image to its
+caller, I take the time spent there,
+
+00:17:28.370 --> 00:17:32.210
+the 98 milliseconds, and attribute it to its callers.
+
+00:17:32.210 --> 00:17:39.070
+And I can then combine the far end of my backtrace
+together to see that I spent 1 of 5 milliseconds
+
+00:17:39.070 --> 00:17:43.010
+in draw image in that part of the call tree.
+
+00:17:43.010 --> 00:17:48.680
+In fact, you might find it useful to
+charge an entire library to its callers.
+
+00:17:48.680 --> 00:17:54.100
+And in this case what you can do is if
+I charge Core Graphics to its callers,
+
+00:17:54.100 --> 00:17:57.990
+I take all the time spent there and
+attribute it to its calling frames.
+
+00:17:57.990 --> 00:18:05.220
+And once again, I can combine the
+furthest branches of the tree to see
+
+00:18:05.220 --> 00:18:09.670
+that I'm spending 139 milliseconds in acquire image.
+
+00:18:09.670 --> 00:18:15.910
+A lot of times you might want to take
+away the time spent in a certain region
+
+00:18:15.910 --> 00:18:17.980
+of your code from the rest of your call tree.
+
+00:18:17.980 --> 00:18:22.090
+For example, if you're not interested in that
+region, because you can't really optimize it further.
+
+00:18:22.090 --> 00:18:25.120
+So this is pruning a symbol in its subtree.
+
+00:18:25.120 --> 00:18:32.570
+And what you do, if for example, we prune away powerOf2Image
+is we take the time spent in powerOf2Image in all the frames
+
+00:18:32.570 --> 00:18:36.530
+that it called, and remove it from our tree.
+
+00:18:36.530 --> 00:18:43.170
+Which means, that instead of 98 milliseconds spent in
+interpolate, we're now spending 76 milliseconds there.
+
+00:18:43.170 --> 00:18:51.820
+And finally, you might find some cases where
+your code is making a lot of calls into frames
+
+00:18:51.820 --> 00:18:53.620
+that are happening in a different library.
+
+00:18:53.620 --> 00:18:54.970
+And there's a lot of these frames.
+
+00:18:54.970 --> 00:18:57.220
+Then it calls back into your code.
+
+00:18:57.220 --> 00:19:00.070
+And really you only care about
+the boundaries, where you know,
+
+00:19:00.070 --> 00:19:03.890
+the transition happens from your code,
+into that library, back to your code.
+
+00:19:03.890 --> 00:19:08.670
+In this case, you should flatten
+the library to its boundaries.
+
+00:19:08.670 --> 00:19:13.510
+So if we do that in this case with Core
+Graphics, we just remove away the extra frames
+
+00:19:13.510 --> 00:19:17.700
+and keep the ones that occur at the transition points.
+
+00:19:17.700 --> 00:19:21.360
+So that concludes; or that basically
+tells you how to use Data Mining.
+
+00:19:21.360 --> 00:19:26.970
+And I recommend you use it to simplify
+your backtraces and find out precisely
+
+00:19:26.970 --> 00:19:29.220
+where in your code you're spending most of your time.
+
+00:19:29.220 --> 00:19:32.600
+And with that I'd like to introduce my colleague Chad Woolf.
+
+00:19:32.600 --> 00:19:35.450
+>> Chad: All right.
+
+00:19:35.450 --> 00:19:37.850
+Good morning everyone.
+
+00:19:37.850 --> 00:19:40.100
+My name is Chad Woolf as Lynne mentioned.
+
+00:19:40.100 --> 00:19:42.610
+I work with Lynne on the Instruments team.
+
+00:19:42.610 --> 00:19:48.920
+And this morning I want to talk to you guys
+about the new iOS 4 and how it uses power.
+
+00:19:48.920 --> 00:19:52.570
+Now it's hard to talk about mobile devices these
+days and not talk about the topic of power.
+
+00:19:52.570 --> 00:19:56.950
+And this is because battery life is such an
+important part of the user experience these days.
+
+00:19:56.950 --> 00:20:03.160
+And the way that we get the most battery life on
+our devices is to use as little power as we can.
+
+00:20:03.160 --> 00:20:07.820
+Now in order for you guys to help us do that,
+we need to give you both a way to measure power,
+
+00:20:07.820 --> 00:20:12.180
+and determine where that powers being spent in the device.
+
+00:20:12.180 --> 00:20:18.070
+So I'm happy to announce in the iPhone SDK 4
+we have a new suite of power analysis tools.
+
+00:20:18.070 --> 00:20:20.750
+We have within Instruments an Energy Usage Instrument,
+
+00:20:20.750 --> 00:20:25.790
+which actually measures energy usage directly
+from the hardware in your mobile device.
+
+00:20:25.790 --> 00:20:27.990
+This come right to, as close as we can get to the battery
+
+00:20:27.990 --> 00:20:31.560
+and it measure the energy flow
+from the battery into the device.
+
+00:20:31.560 --> 00:20:35.030
+Now our next Instrument is a CPU Activity Instrument.
+
+00:20:35.030 --> 00:20:40.150
+In which case we're measuring the
+CPU activity in a given interval.
+
+00:20:40.150 --> 00:20:44.510
+We have a new Sleep-Wake Instrument,
+which records our sleep and wake events.
+
+00:20:44.510 --> 00:20:49.240
+And we have a Display Brightness Instrument, which will
+record when the display is come on and when it's gone off,
+
+00:20:49.240 --> 00:20:53.240
+and we record the user setting for
+the display brightness there as well.
+
+00:20:53.240 --> 00:21:00.480
+We also have a few radio Instruments, which monitor
+the states of the radios in the iPhone and the iPod.
+
+00:21:00.480 --> 00:21:05.140
+And we've taken all those Instruments and we've
+put them into a single energy diagnostics template,
+
+00:21:05.140 --> 00:21:10.040
+which will create a single document for
+you with all these Instruments populated.
+
+00:21:10.040 --> 00:21:13.920
+Now one of the things you'll notice when you start
+doing power measurement on a mobile device is
+
+00:21:13.920 --> 00:21:19.130
+that mobile devices tend to function differently when
+they're at home versus when they're in the field.
+
+00:21:19.130 --> 00:21:22.770
+Now in this context what I mean by home
+is really connected via the USB cable
+
+00:21:22.770 --> 00:21:26.050
+to your host machine in your development environment.
+
+00:21:26.050 --> 00:21:31.350
+Now when you connect that device up to your host, a
+couple of things happen differently in the device.
+
+00:21:31.350 --> 00:21:36.120
+First, the sleep and wake is disabled, so you're
+not going to see sleep and wake events occurring.
+
+00:21:36.120 --> 00:21:39.230
+Energy's actually flowing from the
+host into the battery to charge it.
+
+00:21:39.230 --> 00:21:41.920
+So any of the measurements that were taken at the battery
+
+00:21:41.920 --> 00:21:45.840
+to determine the energy are going to
+be fundamentally affected by that.
+
+00:21:45.840 --> 00:21:50.720
+And finally there's a little bit of data that flows
+between the device and the host when they're connected,
+
+00:21:50.720 --> 00:21:53.780
+and that can generate some activity in
+the device that you would normally not see
+
+00:21:53.780 --> 00:21:56.150
+if you were disconnected and in the field.
+
+00:21:56.150 --> 00:22:00.820
+Now when you do take your device into the field and you
+test it in the domain that it's going to be tested in,
+
+00:22:00.820 --> 00:22:06.370
+if it's a social networking application maybe a cafe, or
+if it's a turn-by-turn direction system out, you know,
+
+00:22:06.370 --> 00:22:12.600
+maybe in your car, you're going to notice that you're
+entering into a more diverse radio environment.
+
+00:22:12.600 --> 00:22:17.180
+And what I mean by that is that as you move with
+your device from cell-to-cell on a cellular network,
+
+00:22:17.180 --> 00:22:21.430
+you're going to get different levels
+of power performance for your radios.
+
+00:22:21.430 --> 00:22:26.620
+As you move within range of different Wi-Fi hotspots,
+some of those will be able to make connections to.
+
+00:22:26.620 --> 00:22:28.310
+Some of those you will not be able to make connections to.
+
+00:22:28.310 --> 00:22:32.600
+And that will affect how your device is using power as well.
+
+00:22:32.600 --> 00:22:36.070
+And then furthermore, if you are developing
+something that uses Core Location,
+
+00:22:36.070 --> 00:22:41.470
+the best way to test your Core Location app is to
+actually take the device and move it from place to place,
+
+00:22:41.470 --> 00:22:44.660
+so you can see those events coming in and
+how they interact in your application.
+
+00:22:44.660 --> 00:22:49.900
+So in the iPhone 4 SDK we have a new way
+of recording while you're in the field,
+
+00:22:49.900 --> 00:22:54.280
+and that's actually being able to
+turn on power logging on the device.
+
+00:22:54.280 --> 00:22:58.460
+So when you're, when you have your
+device and you want to do the testing
+
+00:22:58.460 --> 00:23:01.170
+of your application, you can go to the settings application.
+
+00:23:01.170 --> 00:23:06.350
+We have a new developer settings subsection
+there, and a switch for power logging.
+
+00:23:06.350 --> 00:23:11.720
+What you'd do is you'd turn that logging switch
+on and that enables the power logging service.
+
+00:23:11.720 --> 00:23:14.460
+And the power logging service can
+record data all day if you like.
+
+00:23:14.460 --> 00:23:15.650
+It's a very efficient mechanism.
+
+00:23:15.650 --> 00:23:21.180
+And then at the end of the day you can turn off
+your power logging, go back to your host machine,
+
+00:23:21.180 --> 00:23:26.470
+connect it up to Instruments, and pull of that data
+down and analyze it in the Instruments application.
+
+00:23:26.470 --> 00:23:30.830
+Now of course we always support the standard
+way of doing recording in Instruments,
+
+00:23:30.830 --> 00:23:33.410
+and that's to have the device connected to your host.
+
+00:23:33.410 --> 00:23:37.020
+And push in the Record button in
+Instruments and then you can see the data
+
+00:23:37.020 --> 00:23:40.600
+as it comes in and as you interact with the device.
+
+00:23:40.600 --> 00:23:42.160
+Now let's talk about that first Instrument.
+
+00:23:42.160 --> 00:23:43.980
+The first Instrument's the Energy Usage Instrument.
+
+00:23:43.980 --> 00:23:46.740
+And as I mentioned that is a true power measurement.
+
+00:23:46.740 --> 00:23:51.650
+We're actually going right to the hardware as close
+as we can to the battery to get these measurements.
+
+00:23:51.650 --> 00:23:53.950
+Now the Instrument is taking the
+measurements it's receiving,
+
+00:23:53.950 --> 00:23:57.520
+and it's converting it to an energy factor between 1 and 20.
+
+00:23:57.520 --> 00:24:01.050
+Low numbers means lower energy usage, which
+means you're going to get longer battery life.
+
+00:24:01.050 --> 00:24:07.150
+And higher numbers means that you're at a higher energy
+usage and you're going to have shorter battery life.
+
+00:24:07.150 --> 00:24:09.290
+So how short or how long?
+
+00:24:09.290 --> 00:24:14.520
+Well if you're able to sustain an energy
+level of 1, it would take over 20 hours
+
+00:24:14.520 --> 00:24:17.750
+to fully discharge a fully charged battery.
+
+00:24:17.750 --> 00:24:21.930
+And if you're able to sustain an energy usage level of 20,
+
+00:24:21.930 --> 00:24:26.790
+then you'll be able to discharge a fully
+charged battery in a little less than an hour.
+
+00:24:26.790 --> 00:24:29.670
+If you're somewhere in the middle,
+let's say an energy usage of about 10,
+
+00:24:29.670 --> 00:24:32.750
+that's about 10 hours of projected battery life.
+
+00:24:32.750 --> 00:24:38.480
+Now because this is being measured from the hardware,
+the sensors are only currently in the iPhone 3GS,
+
+00:24:38.480 --> 00:24:42.960
+the iPhone 4, iPod touch second and third generations.
+
+00:24:42.960 --> 00:24:48.170
+And if you have a device that's not on this
+list, the energy usage Instrument will show zero,
+
+00:24:48.170 --> 00:24:53.410
+but the rest of the Instrumentation will
+be working just the way it normally would.
+
+00:24:53.410 --> 00:24:55.460
+So let's talk about the second Instrument in there.
+
+00:24:55.460 --> 00:24:58.770
+That's the CPU activity Instrument.
+
+00:24:58.770 --> 00:25:04.290
+Now the CPU activity Instrument is like the activity
+monitor, but it's a much more compact, lightweight version.
+
+00:25:04.290 --> 00:25:09.830
+CPU activity actually ends up being a significant portion of
+your power profile and where you spend a lot of your energy.
+
+00:25:09.830 --> 00:25:16.160
+And that's because power usage from the CPU subsystem
+scales at how much work you're actually giving the CPU.
+
+00:25:16.160 --> 00:25:22.560
+So the more work you give it, the more activity that
+you show in the tools, the more power you're going
+
+00:25:22.560 --> 00:25:25.690
+to be, the more power it takes to drive that.
+
+00:25:25.690 --> 00:25:27.870
+So within the Instrument we measure the total activity,
+
+00:25:27.870 --> 00:25:31.130
+and that's the amount of the CPU is
+active in a given window of time.
+
+00:25:31.130 --> 00:25:34.970
+But we also break it down into the
+current foreground applications activity.
+
+00:25:34.970 --> 00:25:35.650
+We record that.
+
+00:25:35.650 --> 00:25:40.260
+And we also record the graphics and render
+server, and the code that's executing in there.
+
+00:25:40.260 --> 00:25:46.010
+And the audio/video server, otherwise
+known as media server D as well,
+
+00:25:46.010 --> 00:25:50.940
+and that's listed in the audio
+processing column here in the Instrument.
+
+00:25:50.940 --> 00:25:55.830
+Now, the reason that we record these and break
+these down in this fashion is because the workload
+
+00:25:55.830 --> 00:25:58.120
+of your application tends to move around.
+
+00:25:58.120 --> 00:26:01.990
+If you're using Core Animation, for
+example, your foreground activity,
+
+00:26:01.990 --> 00:26:06.250
+your foreground application activity
+may show a very small number, 1 or 2%.
+
+00:26:06.250 --> 00:26:09.780
+But you may see the graphics column showing 20 or 30%.
+
+00:26:09.780 --> 00:26:16.150
+And this occurs when Core Animation is sent a lot of the
+compositing work over to the graphics and render server.
+
+00:26:16.150 --> 00:26:21.430
+Now there's also another service
+for playing movies and audio,
+
+00:26:21.430 --> 00:26:26.760
+and that's access via the AV Foundation,
+the media player framework, and OpenAL.
+
+00:26:26.760 --> 00:26:30.370
+And if your applications are doing
+work with that type of media,
+
+00:26:30.370 --> 00:26:33.960
+you'll see the audio processing column
+show up with some activity as well.
+
+00:26:33.960 --> 00:26:40.950
+So in addition to the CPU activity, this
+Instrument also tracks application state changes.
+
+00:26:40.950 --> 00:26:47.050
+And it puts flags on the Instruments track view, so you
+can see when an application has moved to the foreground.
+
+00:26:47.050 --> 00:26:51.050
+When it's moved to the background, and when it's
+in the background, if it's become suspended.
+
+00:26:51.050 --> 00:26:53.160
+And also there's a flag for foreground obscured.
+
+00:26:53.160 --> 00:26:57.500
+And that's what happens when your foreground application
+is running and then the lock screen comes down
+
+00:26:57.500 --> 00:27:02.510
+and prevents the user from further interacting with it.
+
+00:27:02.510 --> 00:27:04.750
+Now moving on, we have 3 radio Instruments.
+
+00:27:04.750 --> 00:27:10.160
+I have 2 on this slide, which are similar and
+they're related, so I'll talk about those first.
+
+00:27:10.160 --> 00:27:16.760
+The Bluetooth and Wi-Fi Instruments are actually
+tracking the user preference for these radios.
+
+00:27:16.760 --> 00:27:22.250
+And it's pretty important to understand
+when you're recording a trace
+
+00:27:22.250 --> 00:27:26.010
+and comparing two traces what the
+current state of your radio's worth.
+
+00:27:26.010 --> 00:27:32.430
+So if the user had turned on Bluetooth, your device would be
+acting differently than it would be if that were disabled.
+
+00:27:32.430 --> 00:27:37.610
+For example, with Bluetooth enabled, you
+could be communicating with external devices.
+
+00:27:37.610 --> 00:27:40.040
+With Wi-Fi enabled, a couple of interesting things happen.
+
+00:27:40.040 --> 00:27:45.080
+Core Location is able to use the Wi-Fi hotspots
+that are around you for a more efficient form
+
+00:27:45.080 --> 00:27:49.780
+of location information, so it
+doesn't have to turn the GPS on.
+
+00:27:49.780 --> 00:27:56.660
+And if you're in a Wi-Fi hotspot that you're able to connect
+to, you could be sending your data over that Wi-Fi hotspot
+
+00:27:56.660 --> 00:28:00.100
+in a more efficient method than
+using the cellular technology.
+
+00:28:00.100 --> 00:28:02.710
+Now if it's disabled, what you're
+doing is your forcing all of your data
+
+00:28:02.710 --> 00:28:05.350
+from your application to travel over that cellular network.
+
+00:28:05.350 --> 00:28:11.460
+So if you're optimizing applications for data transfers
+over the cellular network, then you should turn off Wi-Fi
+
+00:28:11.460 --> 00:28:14.630
+and you'll see that appear in the Instrument.
+
+00:28:14.630 --> 00:28:16.720
+Now the third radio is the GPS.
+
+00:28:16.720 --> 00:28:20.990
+I want to talk about this one a little
+bit differently, because your application
+
+00:28:20.990 --> 00:28:25.150
+and how you use Core Location can actually
+drive whether the GPS is on or off.
+
+00:28:25.150 --> 00:28:31.650
+Now when it's enabled, it is one of the higher power radios
+on the iPhone, but it is needed for a high resolution
+
+00:28:31.650 --> 00:28:34.270
+and high accuracy when you're using Core Location.
+
+00:28:34.270 --> 00:28:41.320
+So when you're using Core Location and you have an instance
+of your CLLocationManager, if you set the desiredAccuracy
+
+00:28:41.320 --> 00:28:50.470
+to a lower value, so that your desire's not to see
+a meter accuracy, but maybe a kilometer accuracy,
+
+00:28:50.470 --> 00:28:57.680
+then Core Location can bypass turning on the GPS and
+use potentially the cellular technology or the Wi-Fi.
+
+00:28:57.680 --> 00:28:59.600
+The same goes for the distanceFilter.
+
+00:28:59.600 --> 00:29:04.990
+The distanceFilter tells Core Location how often to
+update your application as you move from place to place.
+
+00:29:04.990 --> 00:29:08.900
+If you set that appropriately for your application
+you might not need to turn on GPS as well.
+
+00:29:08.900 --> 00:29:14.700
+And the last and the most important API that you
+guys will be interested in on the Core Location
+
+00:29:14.700 --> 00:29:20.910
+or the CLLocationManager object is
+stopUpdatingLocation and startUpdatingLocation.
+
+00:29:20.910 --> 00:29:26.670
+As your user moves from the screen that shows
+the GPS information, the location information
+
+00:29:26.670 --> 00:29:29.460
+that you're trying to look at, to a screen that doesn't.
+
+00:29:29.460 --> 00:29:32.480
+Let's say a web page, or a text
+view, or something like that.
+
+00:29:32.480 --> 00:29:34.050
+You should stopUpdatingLocation.
+
+00:29:34.050 --> 00:29:42.270
+At that point you will actually
+disable the GPS if it's turned on.
+
+00:29:42.270 --> 00:29:44.730
+And another Instrument here we're recording brightness.
+
+00:29:44.730 --> 00:29:47.700
+Now we're recording the user-selected brightness level.
+
+00:29:47.700 --> 00:29:51.400
+And when that Instrument shows
+zero that means the display is off.
+
+00:29:51.400 --> 00:29:53.250
+The backlight does consume quite a bit of energy.
+
+00:29:53.250 --> 00:29:57.850
+So when you see that Instrument showing a
+positive value you'll know that a certain portion
+
+00:29:57.850 --> 00:30:00.440
+of your energy is going to be due to the brightness.
+
+00:30:00.440 --> 00:30:04.340
+And as you go from trace to trace you want to make sure
+that the users are using the same brightness, roughly,
+
+00:30:04.340 --> 00:30:07.290
+so that you can have comparable power traces.
+
+00:30:07.290 --> 00:30:11.160
+Now what's important about this Instrument
+is that when that screen goes off,
+
+00:30:11.160 --> 00:30:14.280
+you know that the users are no
+longer interacting with your device.
+
+00:30:14.280 --> 00:30:16.580
+And this can happen for two reasons.
+
+00:30:16.580 --> 00:30:21.500
+One it hit the Sleep/Wake button on the top of the
+phone to turn the display off and put in their pocket.
+
+00:30:21.500 --> 00:30:29.210
+Or they're not physically interacting with the device
+and it's gone to idle dim and then turned the screen off.
+
+00:30:29.210 --> 00:30:32.000
+Now the last Instrument I want to talk
+about here is the Sleep/Wake Instrument.
+
+00:30:32.000 --> 00:30:36.060
+And this is one of our most important
+Instruments, especially today in the world
+
+00:30:36.060 --> 00:30:39.520
+of the multitasking API's and background applications.
+
+00:30:39.520 --> 00:30:44.260
+In the Sleep and Wake Instrument it's going to
+help you get the most out of your battery life.
+
+00:30:44.260 --> 00:30:50.920
+And the reason is, because sleep is the most efficient
+mode of the phone, and where it spends most of its time.
+
+00:30:50.920 --> 00:30:57.870
+So in a healthy situation here the sleep should
+occur about 15 seconds after the screen turns off.
+
+00:30:57.870 --> 00:31:01.500
+The phone will finish all of its work
+and then drop down into a sleep mode.
+
+00:31:01.500 --> 00:31:06.970
+Now if you have a background application that continues
+to run, that'll obviously push that sleep out.
+
+00:31:06.970 --> 00:31:11.350
+Now with local notifications and push
+notifications and location updates,
+
+00:31:11.350 --> 00:31:14.320
+all of these technologies will cause the device to wake up.
+
+00:31:14.320 --> 00:31:20.270
+So if you're using multitasking APIs and you're
+using background application type notifications,
+
+00:31:20.270 --> 00:31:25.410
+you're going to want to watch that Sleep/Wake Instrument
+very carefully to see if those notifications are waking
+
+00:31:25.410 --> 00:31:29.950
+up your machine or your device more than they need to.
+
+00:31:29.950 --> 00:31:33.560
+All right, so I want to show you
+all of this in a single demo here.
+
+00:31:33.560 --> 00:31:37.800
+So what I want to show you is turning
+on the logging on an actual device.
+
+00:31:37.800 --> 00:31:41.140
+I want to show you how to import a trace into Instruments.
+
+00:31:41.140 --> 00:31:45.170
+And then I want to show you, with a trace
+I've already recorded, a couple of things.
+
+00:31:45.170 --> 00:31:50.690
+I sent myself in this trace, I sent myself an
+email, so that generated a push notification.
+
+00:31:50.690 --> 00:31:56.080
+Then I watched a little bit of video on YouTube,
+and then I used a few applications that use the GPS.
+
+00:31:56.080 --> 00:32:00.660
+So I want to show you how to find all
+of these events in an Instruments trace.
+
+00:32:04.150 --> 00:32:06.700
+Let me start with a device here.
+
+00:32:06.700 --> 00:32:10.060
+Now you'll notice here that the device is disconnected.
+
+00:32:10.060 --> 00:32:10.960
+I don't have this connected.
+
+00:32:10.960 --> 00:32:15.470
+This is how you're going to want
+to turn this on in the field.
+
+00:32:15.470 --> 00:32:19.420
+So let's turn on our phone.
+
+00:32:19.420 --> 00:32:23.620
+Now here we have our settings application, that's
+where you're going to find the developer settings.
+
+00:32:23.620 --> 00:32:28.600
+And if you scroll down here towards the bottom,
+you're going to see the developer setting.
+
+00:32:28.600 --> 00:32:33.690
+Now if you get to the point where you don't see the
+developer setting, there are two possibilities for that.
+
+00:32:33.690 --> 00:32:39.600
+The first is that the device hasn't been set up for
+development purposes, and that's done through Xcode.
+
+00:32:39.600 --> 00:32:41.290
+You usually do that once.
+
+00:32:41.290 --> 00:32:47.970
+But the other possibility is that you've rebooted the phone
+and you haven't yet connected it to Xcode or Instrument.
+
+00:32:47.970 --> 00:32:54.450
+And if that's the case then you won't see the
+developer panel until you first connect it up again
+
+00:32:54.450 --> 00:32:57.190
+from the reboot into Instruments or Xcode.
+
+00:32:57.190 --> 00:33:00.120
+Now this is due to a failsafe that
+we have in developer tools.
+
+00:33:00.120 --> 00:33:03.400
+If anything were to go wrong while
+you're in the development mode,
+
+00:33:03.400 --> 00:33:09.140
+simply resetting your device will take all the
+development tools off of your device, as well as the data.
+
+00:33:09.140 --> 00:33:17.570
+So you have to be careful when you're recording information
+here that you don't run the battery completely dry,
+
+00:33:17.570 --> 00:33:22.290
+because when you reboot it unfortunately
+all the data will be not there anymore.
+
+00:33:22.290 --> 00:33:27.100
+So the normal mode here would be to go
+to the developer panel, flip logging on.
+
+00:33:27.100 --> 00:33:30.040
+So there you go, on.
+
+00:33:30.040 --> 00:33:32.130
+And then we can turn it off.
+
+00:33:32.130 --> 00:33:37.060
+Now when you turn it on and off, you're
+going to be creating a new session.
+
+00:33:37.060 --> 00:33:42.670
+And so if you've turned it, once you turn it on again,
+you're going to end up removing that last session.
+
+00:33:42.670 --> 00:33:45.020
+So be aware of that.
+
+00:33:45.020 --> 00:33:49.570
+And be careful when you're flipping that switch
+back and forth because you may lose your data.
+
+00:33:49.570 --> 00:33:57.190
+So now what I'm going to do is instead of sitting here
+for 20 minutes recording power while I talk to you guys,
+
+00:33:57.190 --> 00:34:04.400
+I have another device, which I'm going to connect
+up, which has the power trace already on it here.
+
+00:34:04.400 --> 00:34:07.510
+So the visual demonstration of me connecting the device.
+
+00:34:07.510 --> 00:34:12.440
+[ applause ]
+
+00:34:12.440 --> 00:34:13.880
+>> Chad: All right.
+
+00:34:13.880 --> 00:34:16.510
+So let's move over to our demo machine.
+
+00:34:16.510 --> 00:34:23.040
+[ silence ]
+
+00:34:23.040 --> 00:34:24.020
+>> Chad: Okay.
+
+00:34:24.020 --> 00:34:30.010
+So I'm going to start a new Instruments document here.
+
+00:34:30.010 --> 00:34:33.860
+In the iPhone section of the template chooser.
+
+00:34:33.860 --> 00:34:35.880
+Try and zoom in on here for you.
+
+00:34:35.880 --> 00:34:39.230
+If you scroll down we have a new,
+here's the energy diagnostics template.
+
+00:34:39.230 --> 00:34:41.930
+Start with a new document here.
+
+00:34:41.930 --> 00:34:45.630
+We have all of our Instruments populated.
+
+00:34:45.630 --> 00:34:49.790
+Now what you want to do is, is the way you choose
+which device you want to import the document from,
+
+00:34:49.790 --> 00:34:53.240
+you, is a standard for the targets chooser.
+
+00:34:53.240 --> 00:34:54.560
+That's our iPhone.
+
+00:34:54.560 --> 00:35:03.490
+Now to import the data under the file menu we
+have an Import Energy Diagnostics From Device.
+
+00:35:03.490 --> 00:35:08.030
+We'll do that and the data will come.
+
+00:35:08.030 --> 00:35:14.390
+Now during this demonstration as I navigate the trace,
+I'm going to be using this track scale control down here.
+
+00:35:14.390 --> 00:35:16.710
+I don't know if you guys have had a chance to use that.
+
+00:35:16.710 --> 00:35:19.870
+But this allows you to zoom out, so you
+can see all of your data on the same track,
+
+00:35:19.870 --> 00:35:23.970
+or on the same screen, and zoom in for more detail.
+
+00:35:23.970 --> 00:35:30.120
+So I'll be playing with that, if you see
+this scale changing that's what I'm doing.
+
+00:35:30.120 --> 00:35:34.300
+So now I promised you that I'd show you a couple
+of things, the push notification to start with.
+
+00:35:34.300 --> 00:35:36.690
+So what does a push notification look like?
+
+00:35:36.690 --> 00:35:40.090
+Well I can tell you the push notifications
+actually right here.
+
+00:35:40.090 --> 00:35:50.910
+I'm going to scroll that over, so you can see Instruments
+with the actual Instrument name next to it here.
+
+00:35:50.910 --> 00:35:52.270
+There we go.
+
+00:35:52.270 --> 00:35:54.030
+Now this is actually the push notification.
+
+00:35:54.030 --> 00:35:58.990
+The reason I know this is a push notification is
+because I looked at our Sleep/Wake Instrument,
+
+00:35:58.990 --> 00:36:02.170
+and this dark band means the device is asleep.
+
+00:36:02.170 --> 00:36:08.560
+The light band means the device woke up and then
+it went to sleep again some short time after that.
+
+00:36:08.560 --> 00:36:15.410
+Now, the Display Brightness Instrument is telling me
+that the display did not come on for that wake up.
+
+00:36:15.410 --> 00:36:20.830
+So that's indicative of a push notification
+or some other type of notification going on.
+
+00:36:20.830 --> 00:36:26.400
+Now since I sent myself a mail, when you get a mail on
+the phone you have that friendly mail tone that generates
+
+00:36:26.400 --> 00:36:29.180
+that tells you that you have an email waiting.
+
+00:36:29.180 --> 00:36:32.800
+Maybe it's not friendly for you to receive too much email.
+
+00:36:32.800 --> 00:36:37.850
+But if we go to the Activity Instrument
+we can kind of confirm that.
+
+00:36:37.850 --> 00:36:46.470
+So if I move my inspection head to this block of activity
+here that I see, the inspection head will line up.
+
+00:36:46.470 --> 00:36:50.270
+Let's see if I can get it all on one
+screen here, maybe not for you guys.
+
+00:36:50.270 --> 00:36:55.700
+But you might notice that when I move the
+inspection head it will move to the line
+
+00:36:55.700 --> 00:36:58.170
+in the table view of where that activity is.
+
+00:36:58.170 --> 00:37:03.220
+So if we look at that line in the activity, we will
+see that we had 13% activity during that interval.
+
+00:37:03.220 --> 00:37:06.140
+And sure enough the audio processing went to 4.3%.
+
+00:37:06.140 --> 00:37:07.660
+So that is our push notification.
+
+00:37:07.660 --> 00:37:12.660
+Now next thing I said is that I had watched a YouTube video.
+
+00:37:12.660 --> 00:37:15.410
+Now how do I find that in all of this data?
+
+00:37:15.410 --> 00:37:19.710
+Well, we have these flags on the top
+here that record the interesting events.
+
+00:37:19.710 --> 00:37:25.720
+And this one's coming from the Sleep/Wake Instrument
+telling me that the device has gone through a running state.
+
+00:37:25.720 --> 00:37:28.730
+And I can navigate the flags here with these arrows.
+
+00:37:28.730 --> 00:37:33.140
+We'll see that more, that mail came to the
+foreground with me checking that mail I sent.
+
+00:37:33.140 --> 00:37:34.180
+Then it goes into the background.
+
+00:37:34.180 --> 00:37:36.200
+And ah, YouTube is started.
+
+00:37:36.200 --> 00:37:40.030
+So now I see that YouTube is the
+foreground running application.
+
+00:37:40.030 --> 00:37:45.720
+And I can move to the next one and see that where it goes
+into the background and then becomes eventually suspended.
+
+00:37:45.720 --> 00:37:51.170
+So I know in this window of activity is my YouTube activity.
+
+00:37:51.170 --> 00:37:56.260
+Try to fit all that in here.
+
+00:37:56.260 --> 00:37:58.940
+Scale out.
+
+00:37:58.940 --> 00:38:02.900
+OK. So now let's take a look at some of that activity.
+
+00:38:02.900 --> 00:38:08.150
+If we look at the Activity Instrument again here, we'll
+notice what I was talking about the workload moving around.
+
+00:38:08.150 --> 00:38:11.410
+And this is what I wanted to show you guys.
+
+00:38:11.410 --> 00:38:15.330
+If you look here we have 30% activity
+while we're playing the video.
+
+00:38:15.330 --> 00:38:17.840
+The foreground app is actually doing .4%.
+
+00:38:17.840 --> 00:38:19.300
+That's the YouTube application itself.
+
+00:38:19.300 --> 00:38:20.380
+It's doing very little work.
+
+00:38:20.380 --> 00:38:22.990
+Basically just maintaining the controls.
+
+00:38:22.990 --> 00:38:27.800
+Now the bulk of the work is being done in the audio
+processing daemon, and that's also the media daemon.
+
+00:38:27.800 --> 00:38:33.290
+So as it's playing the video and running through the
+codex that workload occurs in the audio processing.
+
+00:38:33.290 --> 00:38:40.720
+And we're doing a little bit of work in compositing in
+the graphic process; the graphics and render server.
+
+00:38:40.720 --> 00:38:45.990
+So as I move out here, now another
+interesting thing I wanted to show you
+
+00:38:45.990 --> 00:38:49.260
+about this power trace is you might
+be able to see from the monitor here
+
+00:38:49.260 --> 00:38:53.020
+that the activity levels been fairly consistent.
+
+00:38:53.020 --> 00:38:57.030
+But I'm going to move along the
+energy trace up here at the top.
+
+00:38:57.030 --> 00:39:04.040
+And if you guys want to take a look at that tool
+tip that shows the energy level at 13 out of 20.
+
+00:39:04.040 --> 00:39:12.150
+As I move long here at the beginning of this trace I
+see it's 13, 14, 13, 14, and we continue to move on.
+
+00:39:12.150 --> 00:39:14.070
+Now we move towards the end of
+the trace it starts to go down.
+
+00:39:14.070 --> 00:39:16.320
+We're actually using less power here.
+
+00:39:16.320 --> 00:39:21.330
+Now we can speculate that that's due to the
+way that we watch video on the Internet.
+
+00:39:21.330 --> 00:39:24.990
+And the way that we do that is we start
+watching the video while we're buffering.
+
+00:39:24.990 --> 00:39:29.610
+So as we're buffering the end of
+that movie, we're watching the video.
+
+00:39:29.610 --> 00:39:35.430
+So you're going to have double activity during that period,
+now that activity's mostly occurring over the radios.
+
+00:39:35.430 --> 00:39:39.130
+And when I reach about halfway point in my movie,
+the radios are going to stop becoming active
+
+00:39:39.130 --> 00:39:41.460
+and you're going to see that energy come down.
+
+00:39:41.460 --> 00:39:47.960
+Now the other thing I told you is that we're
+going to have some GPS activity in this trace.
+
+00:39:47.960 --> 00:39:55.020
+If I zoom out you'll see on this bottom band, which is the
+GPS that we do have some sporadic activity happening here.
+
+00:39:55.020 --> 00:39:56.730
+Now the question is why.
+
+00:39:56.730 --> 00:39:57.780
+Why is that occurring?
+
+00:39:57.780 --> 00:40:03.870
+Well, we'll the flags again to do some
+navigation in here around where the GPS is.
+
+00:40:03.870 --> 00:40:06.080
+I'll zoom in a bit.
+
+00:40:06.080 --> 00:40:08.270
+And we'll look at these flags.
+
+00:40:08.270 --> 00:40:11.840
+And the flag that's closest to the GPS
+turning on is Maps coming into the foreground.
+
+00:40:11.840 --> 00:40:15.870
+Now this makes a lot of sense, because the Maps application,
+
+00:40:15.870 --> 00:40:19.950
+at least the way I was using it was
+doing constant location updating.
+
+00:40:19.950 --> 00:40:25.910
+So you can see for the entire duration that
+Maps was in the foreground that GPS was active.
+
+00:40:25.910 --> 00:40:30.220
+Now there's some GPS activity a little bit later,
+so let's continue to look through our flags here
+
+00:40:30.220 --> 00:40:32.710
+to find out what might have triggered that.
+
+00:40:32.710 --> 00:40:36.730
+And we see that the next event that
+happened closest to the GPS turning
+
+00:40:36.730 --> 00:40:39.490
+on is the camera application came to the foreground.
+
+00:40:39.490 --> 00:40:44.850
+And for the duration of the camera application as it was
+recording a little bit of video, the GPS came on and off.
+
+00:40:44.850 --> 00:40:49.410
+And this is due to the feature in the
+camera application for geotagging.
+
+00:40:49.410 --> 00:40:55.330
+It uses Core Location, which uses the GPS to find out
+your information, so it can associate that with the video.
+
+00:40:55.330 --> 00:40:58.640
+So this is a full power trace, it's about 18 minutes long.
+
+00:40:58.640 --> 00:41:04.760
+You want to record traces that have similar length so
+you can try to get the significant amount of data to see
+
+00:41:04.760 --> 00:41:10.300
+if your, how well you're doing and how your
+applications are interacting with the device.
+
+00:41:10.300 --> 00:41:13.190
+So I'm going to go back to slides.
+
+00:41:13.190 --> 00:41:17.450
+Here we go.
+
+00:41:17.450 --> 00:41:23.620
+Ah, demo. OK, so now one of the things
+I want to talk about before I move on is
+
+00:41:23.620 --> 00:41:27.060
+that when you measure power the way we measure power,
+
+00:41:27.060 --> 00:41:30.900
+which is very close to the battery,
+it's both a blessing and a curse.
+
+00:41:30.900 --> 00:41:36.300
+It's a blessing because we're getting a
+measurement that shows where all the power is going.
+
+00:41:36.300 --> 00:41:38.350
+There's nothing that's sneaking by the sensor.
+
+00:41:38.350 --> 00:41:41.150
+And it's a curse in a way, because that's everything.
+
+00:41:41.150 --> 00:41:44.390
+including a lot of things that you
+don't have direct control over.
+
+00:41:44.390 --> 00:41:50.520
+So when you want to see how your application is specifically
+impacting the device, you may want to disable as many
+
+00:41:50.520 --> 00:41:53.330
+of the features as you can on the device.
+
+00:41:53.330 --> 00:41:55.590
+And a few recommendations here are mail fetching.
+
+00:41:55.590 --> 00:41:58.520
+If you don't want the activity for mail fetching to occur.
+
+00:41:58.520 --> 00:42:01.500
+Push notifications if you're application's not using those.
+
+00:42:01.500 --> 00:42:03.260
+And the auto-dimming on the display.
+
+00:42:03.260 --> 00:42:09.800
+The ambient light sensor inside the device
+will vary the power being sent to the display,
+
+00:42:09.800 --> 00:42:12.380
+which could widely affect your measurements.
+
+00:42:12.380 --> 00:42:15.440
+Especially if you're in an office
+that's changing lighting conditions.
+
+00:42:15.440 --> 00:42:17.420
+Furthermore, the radios can be disabled.
+
+00:42:17.420 --> 00:42:19.290
+Wi-Fi, as I mentioned can be disabled.
+
+00:42:19.290 --> 00:42:23.840
+But also there are settings in the phone where
+you can turn off the 3G and data connection.
+
+00:42:23.840 --> 00:42:28.950
+If you want to test the affect that
+the data's having on your power usage.
+
+00:42:28.950 --> 00:42:31.270
+And also you can disable the Bluetooth.
+
+00:42:31.270 --> 00:42:37.200
+Now a smaller point here, but one I felt was still worth
+mentioning, is that temperature does affect energy usage.
+
+00:42:37.200 --> 00:42:42.940
+As the device warms up your device is going to, the
+resistance's internally electronics is going to increase.
+
+00:42:42.940 --> 00:42:45.720
+It's going to require more power to drive the device.
+
+00:42:45.720 --> 00:42:51.250
+Up to a certain point, of course, where the device becomes
+too warm and it start throttling its power consumption back
+
+00:42:51.250 --> 00:42:55.160
+to try to bring that temperature down into
+a level that's comfortable for the user.
+
+00:42:55.160 --> 00:42:58.260
+Now unless you're really driving the
+device hard you're not going to see this.
+
+00:42:58.260 --> 00:43:03.660
+But if you do see some difficulty; if you have some
+difficulty explaining some of the measurements that you got,
+
+00:43:03.660 --> 00:43:07.550
+you may want to consider the affect
+that temperature has on the device.
+
+00:43:07.550 --> 00:43:12.340
+So in summary, we have a new set of
+power analysis tools in Instruments.
+
+00:43:12.340 --> 00:43:18.060
+We have a new template, which takes all of those tools,
+wraps them together in a nice single document for you.
+
+00:43:18.060 --> 00:43:24.100
+Now the whole goal of this is to help you
+guys extend the battery life for the end user.
+
+00:43:24.100 --> 00:43:29.240
+And so after you've done optimization in the Time
+Profiler and you have a nice crisp responsive display,
+
+00:43:29.240 --> 00:43:33.640
+you might want to push even further and try to optimize
+your application just a little bit further to try to reduce
+
+00:43:33.640 --> 00:43:39.760
+that CPU activity that could be
+contributing to a shorter battery life.
+
+00:43:39.760 --> 00:43:44.120
+Now also what's new here is that we encourage
+you guys to do the recording in the field.
+
+00:43:44.120 --> 00:43:45.680
+This is sort of a new mode for Instruments.
+
+00:43:45.680 --> 00:43:48.220
+In the past you had to have been connected to the device.
+
+00:43:48.220 --> 00:43:53.530
+But in order to get the most accurate representation
+how your device uses power, you need to take that device
+
+00:43:53.530 --> 00:43:55.780
+into the field and do your recording there.
+
+00:43:55.780 --> 00:43:57.760
+And this is new on iPhone SDK 4.
+
+00:43:57.760 --> 00:43:59.230
+All right.
+
+00:43:59.230 --> 00:44:06.250
+Thanks. I hope you guys have fun using that.
+
+00:44:06.250 --> 00:44:07.770
+It's been a lot of fun to develop.
+
+00:44:07.770 --> 00:44:13.880
+The next we want to talk about something
+completely different, and that's re-symbolication.
+
+00:44:13.880 --> 00:44:20.720
+Now if you've taken a trace sometimes you might end
+up with a series of what we call missing symbols.
+
+00:44:20.720 --> 00:44:25.460
+If you see inside the trace numeric addresses rather
+than the symbol names you're familiar with like PrintF
+
+00:44:25.460 --> 00:44:29.800
+and DrawRec, etc. You'll just see these addresses.
+
+00:44:29.800 --> 00:44:34.670
+And that's basically Instruments telling you that it
+doesn't have the information, the symbol information,
+
+00:44:34.670 --> 00:44:39.180
+or rather the way to map addresses onto symbol names.
+
+00:44:39.180 --> 00:44:44.560
+Now the way we used to fix this before the
+iPhone SDK 4 is we would rebuild the application,
+
+00:44:44.560 --> 00:44:48.350
+reinstall it on the device, and then rerun our test.
+
+00:44:48.350 --> 00:44:51.290
+Now why did that work?
+
+00:44:51.290 --> 00:44:55.660
+Well, the symbol information is actually
+a byproduct of the build process,
+
+00:44:55.660 --> 00:44:59.550
+and it stays on the host with your application binary.
+
+00:44:59.550 --> 00:45:02.870
+And every time you rebuild, and now of
+course what I mean stays on the host,
+
+00:45:02.870 --> 00:45:06.470
+it actually does not get installed
+on the device for testing.
+
+00:45:06.470 --> 00:45:12.310
+So every time you get a new build, each
+binary and symbol information has a UUID,
+
+00:45:12.310 --> 00:45:16.010
+or Universal Unique Identifier
+that shows how to match the two.
+
+00:45:16.010 --> 00:45:22.360
+And when we get data from the device into Instruments,
+the Instruments on the phone sends the UUID
+
+00:45:22.360 --> 00:45:24.880
+of the app being profiled back to Instruments on the host.
+
+00:45:24.880 --> 00:45:30.450
+And then Instruments on the host goes through the
+process of locating the binary somewhere on your host
+
+00:45:30.450 --> 00:45:33.390
+with your symbol information to try to find it.
+
+00:45:33.390 --> 00:45:40.100
+Now if you've done a clean, then you've removed the binary
+from the host and you've removed the symbol information
+
+00:45:40.100 --> 00:45:43.460
+from the host, and you end up with
+a lot of these missing symbols.
+
+00:45:43.460 --> 00:45:50.450
+Additionally, if you try to go off and rebuild the binary
+and you don't reload it or try to take another sample,
+
+00:45:50.450 --> 00:45:53.890
+then Instruments are still not going to
+be able to find that symbol information,
+
+00:45:53.890 --> 00:45:59.180
+because every time you build you get
+a new UUID for that particular binary.
+
+00:45:59.180 --> 00:46:04.630
+Now for some of you out there this still
+happens, even if you didn't do a clean.
+
+00:46:04.630 --> 00:46:11.560
+And this could be due to the way that Instruments
+looked for that symbol information based on the UUID.
+
+00:46:11.560 --> 00:46:13.850
+It uses Spotlight to do that.
+
+00:46:13.850 --> 00:46:16.730
+And Spotlight can be tricked in a few different ways.
+
+00:46:16.730 --> 00:46:23.020
+First if you've moved all of your binaries and symbol
+information into a compressed achieve, like a zip file.
+
+00:46:23.020 --> 00:46:25.290
+So obviously you're not going to find it in there.
+
+00:46:25.290 --> 00:46:28.610
+But to also Spotlight doesn't index
+certain types of network shares.
+
+00:46:28.610 --> 00:46:33.130
+So if you use a build server or a symbol
+server your Instruments is not going to be able
+
+00:46:33.130 --> 00:46:37.070
+to find your symbol information out there on the server.
+
+00:46:37.070 --> 00:46:40.220
+Also, Spotlight can be intentionally disabled.
+
+00:46:40.220 --> 00:46:44.350
+You can tell it not to look in certain places, and that
+may have been where you decided to put your build folder.
+
+00:46:44.350 --> 00:46:48.070
+And also if you put your build folder in
+temp, temp is not indexed in Spotlight.
+
+00:46:48.070 --> 00:46:51.840
+So all of those can contribute to
+Instruments not finding that information,
+
+00:46:51.840 --> 00:46:56.070
+and then you have a lot of missing symbols in your document.
+
+00:46:56.070 --> 00:47:00.260
+But, in the iPhone SDK 4 we have
+a new option under Instruments
+
+00:47:00.260 --> 00:47:04.460
+to take a trace that you recorded and re-symbolicate it.
+
+00:47:04.460 --> 00:47:10.490
+Symbolication is effectively where we take our
+symbol, our addresses and map them back to symbols.
+
+00:47:10.490 --> 00:47:14.200
+If you go into the file menu you see
+a re-symbolicate document feature.
+
+00:47:14.200 --> 00:47:15.810
+In there you'll see this panel that drops down.
+
+00:47:15.810 --> 00:47:18.610
+It's actually one panel, but I'm
+showing you two tabs on there.
+
+00:47:18.610 --> 00:47:21.170
+It allows you to locate the dSYM file.
+
+00:47:21.170 --> 00:47:25.130
+And that's a file with a .dSYM extension
+on it that usually gets built next
+
+00:47:25.130 --> 00:47:27.710
+to your binary, and associated back with the binary.
+
+00:47:27.710 --> 00:47:32.290
+So if you save those aside for your different
+builds that's how you can reassociate them.
+
+00:47:32.290 --> 00:47:34.300
+Also you can add a dSYM search path.
+
+00:47:34.300 --> 00:47:40.600
+So if you are using a symbol server or build server,
+you can put that path in of the network share in here,
+
+00:47:40.600 --> 00:47:45.330
+and Instruments will, again, find
+and locate your symbol information.
+
+00:47:45.330 --> 00:47:51.800
+So once you do that you will see the happy, healthy
+symbolication and symbol information that you're used to.
+
+00:47:51.800 --> 00:47:55.650
+And you can get back to work solving your problem.
+
+00:47:55.650 --> 00:47:58.240
+All right, that's all I have to tell you guys today.
+
+00:47:58.240 --> 00:48:02.530
+But Lean is going to come back up here
+and talk to you about Xcode 4 preview
+
+00:48:02.530 --> 00:48:04.510
+and some of the neat new features, including system trace.
+
+00:48:04.510 --> 00:48:11.780
+[ applause ]
+
+00:48:11.780 --> 00:48:13.400
+>> Lynne: Thank you Chad.
+
+00:48:13.400 --> 00:48:20.620
+So earlier in this session we saw how to use Time Profiler
+to see where your threads were spending most of their time.
+
+00:48:20.620 --> 00:48:25.350
+But it's also useful for you to know how your
+threads interact with other threads on the system.
+
+00:48:25.350 --> 00:48:31.460
+For example, you might want to know whether your threads are
+getting preempted by threads trying to service an interrupt.
+
+00:48:31.460 --> 00:48:38.060
+Or whether your threads are blocking, because they're
+exhibiting lock tension, and therefore serializing
+
+00:48:38.060 --> 00:48:40.670
+when they're not, you don't want them to.
+
+00:48:40.670 --> 00:48:45.010
+So, new in Instruments is part of Xcode 4 developer preview.
+
+00:48:45.010 --> 00:48:47.350
+We've introduced system trace.
+
+00:48:47.350 --> 00:48:52.560
+System trace records all the transitions
+that your threads make into the kernel.
+
+00:48:52.560 --> 00:48:55.610
+And they can do this because of three reasons.
+
+00:48:55.610 --> 00:48:57.530
+First, you do system calls.
+
+00:48:57.530 --> 00:48:59.860
+Second, virtual memory operations.
+
+00:48:59.860 --> 00:49:02.450
+And third, thread context switches.
+
+00:49:02.450 --> 00:49:08.030
+So before we go ahead and explain how Instruments
+record this data and what it shows you,
+
+00:49:08.030 --> 00:49:10.840
+let me go ahead and explain a couple of terms.
+
+00:49:10.840 --> 00:49:19.720
+So if your thread is running in time, it is context switched
+onto a CPU or a core when it's scheduled on that CPU.
+
+00:49:19.720 --> 00:49:23.870
+And it gets called to switch out
+when it's scheduled off of the CPU.
+
+00:49:23.870 --> 00:49:28.900
+The time which it's on the CPU is called
+a thread tenure, or a thread interval.
+
+00:49:28.900 --> 00:49:34.840
+Now during time a thread is on a CPU it
+can actually make a couple of system calls
+
+00:49:34.840 --> 00:49:38.200
+or virtual memory operations as shown here.
+
+00:49:38.200 --> 00:49:44.760
+Now some of these system calls might be blocking,
+and cause the thread to get context switched out.
+
+00:49:44.760 --> 00:49:52.210
+And other virtual memory operations a system calls can
+actually execute within the duration of the thread tenure.
+
+00:49:52.210 --> 00:49:57.090
+So, system trace is a template with three Instruments.
+
+00:49:57.090 --> 00:50:00.720
+The first of these Instruments is the scheduling Instrument.
+
+00:50:00.720 --> 00:50:06.530
+And it really records when your threads on CPU,
+which records when the thread tenures are executing.
+
+00:50:06.530 --> 00:50:12.160
+And it records why your threads get off
+the CPU, for example, if they get blocked,
+
+00:50:12.160 --> 00:50:18.030
+if they get preempted by another thread, or if they
+explicitly yield their quanta to another thread.
+
+00:50:18.030 --> 00:50:22.280
+And the scheduling Instrument records the thread priorities.
+
+00:50:22.280 --> 00:50:28.570
+So really a good rule of thumb here is you want your threads
+to run on their respective cores for as long as possible.
+
+00:50:28.570 --> 00:50:35.950
+And to help you apply certain rules of thumb that you might
+like to use when using system trace, new Instruments as part
+
+00:50:35.950 --> 00:50:40.790
+of the Xcode 4 developer preview, we've
+introduced the trace highlights view.
+
+00:50:40.790 --> 00:50:45.620
+This is a top-level statistics view that lets you
+understand what's going on with your threads or processes.
+
+00:50:45.620 --> 00:50:52.460
+In this case, it's showing me the top five processes
+that are showing the largest amount of context switches.
+
+00:50:52.460 --> 00:50:55.600
+So it really helps you understand what's
+going on and apply the rules of thumb
+
+00:50:55.600 --> 00:50:57.610
+that we're going to be talking about here.
+
+00:50:57.610 --> 00:51:04.160
+So if your application requires a lot of throughputs,
+it makes sense to maximize the time your threads are
+
+00:51:04.160 --> 00:51:06.680
+on the CPU, so maximize the thread tenures.
+
+00:51:06.680 --> 00:51:12.690
+And if your app is looking for responsiveness, you want
+to minimize the amount of time your thread is on CPUs,
+
+00:51:12.690 --> 00:51:17.210
+so that the thread tenures are short, the thread
+gets on the CPU, does the work it needs to do,
+
+00:51:17.210 --> 00:51:22.190
+and then gets off to allow for
+other threads to actually execute.
+
+00:51:22.190 --> 00:51:25.060
+The second Instrument is the system calls Instruments.
+
+00:51:25.060 --> 00:51:30.760
+And the System Calls Instrument records all
+the requests that you make into the kernel
+
+00:51:30.760 --> 00:51:34.890
+so that it does work on your behalf and accesses resources.
+
+00:51:34.890 --> 00:51:42.180
+So because system Calls access resources, they can
+actually incur a context switch they can block.
+
+00:51:42.180 --> 00:51:47.750
+And this might cause unwanted serialization
+of your otherwise parallel code.
+
+00:51:47.750 --> 00:51:52.320
+So the rule of thumb is to minimize the
+number of system calls that you make
+
+00:51:52.320 --> 00:51:57.160
+and to avoid using slow blocking
+system calls that you might know about.
+
+00:51:57.160 --> 00:52:05.190
+And once again, you can use the trace highlights
+view in order to find and see the top statistics
+
+00:52:05.190 --> 00:52:09.660
+for your applications and threads
+that are making system calls.
+
+00:52:09.660 --> 00:52:13.820
+The third Instrument is a Virtual
+Memory Operations Instrument.
+
+00:52:13.820 --> 00:52:18.150
+And it records when your code accesses new pages of memory.
+
+00:52:18.150 --> 00:52:20.740
+This can happen in three ways.
+
+00:52:20.740 --> 00:52:27.540
+Your code can, or Instruments can record when
+your code first accesses a new page of memory
+
+00:52:27.540 --> 00:52:32.240
+when the memory manager allocates a
+new page in your code's address phase.
+
+00:52:32.240 --> 00:52:39.730
+Or if your application is using file maps
+resident pages, Instruments is going to record
+
+00:52:39.730 --> 00:52:45.030
+when the memory manager makes a copy of a
+memory page into your processes' address space.
+
+00:52:45.030 --> 00:52:52.810
+And Instruments will also record page-ins and page-outs
+from disks, which are the most expensive memory operations.
+
+00:52:52.810 --> 00:52:59.520
+So those results, you know, you want to try to minimize
+the amount of paging that your application does.
+
+00:52:59.520 --> 00:53:05.400
+And to do that generally minimizing the total memory
+footprint of the applications actually reduces the number
+
+00:53:05.400 --> 00:53:08.890
+of virtual memory faults that it uses due to paging.
+
+00:53:08.890 --> 00:53:12.320
+You might also want to reuse your memory allocations.
+
+00:53:12.320 --> 00:53:20.000
+And if your applications are time sensitive, it's
+good to also preallocate memory and front load all
+
+00:53:20.000 --> 00:53:24.400
+of the memory faults to the initialization
+stage of your application,
+
+00:53:24.400 --> 00:53:28.550
+as opposed to during the applications
+execution, which might be costly.
+
+00:53:28.550 --> 00:53:32.510
+Right, with that let's go to a quick demo system trace.
+
+00:53:32.510 --> 00:53:37.370
+I'm going to bring up a demo machine over here.
+
+00:53:37.370 --> 00:53:43.120
+And hit command New to bring up Instruments again.
+
+00:53:43.120 --> 00:53:46.740
+I'm going to select the system trace template over here.
+
+00:53:46.740 --> 00:53:47.380
+Double-click it.
+
+00:53:47.380 --> 00:53:53.590
+And the first thing it does is it adds 3 Instruments onto
+my trace: scheduling, system calls, and VM operations.
+
+00:53:53.590 --> 00:53:59.090
+And by default its targeted to profile all processes.
+
+00:53:59.090 --> 00:54:05.660
+So for this demo I'm going to be using mipmaps again.
+
+00:54:05.660 --> 00:54:13.210
+And I'm going to be comparing 2 different
+algorithms for creating the mipmap thumbnails.
+
+00:54:13.210 --> 00:54:18.240
+And one of these is, takes, well actually
+let me start recording while I'm talking
+
+00:54:18.240 --> 00:54:19.860
+and explain this as I'm recording.
+
+00:54:19.860 --> 00:54:26.390
+So what I'm going to do is I'm going to hit Record
+and Instruments should pull up the deferred mode.
+
+00:54:26.390 --> 00:54:29.100
+I'm going to start recording.
+
+00:54:29.100 --> 00:54:36.200
+So the first and faster method of creating these mipmaps
+is to have a single thread go through the largest
+
+00:54:36.200 --> 00:54:43.400
+to smallest scales of my images, and
+create the thumbnails and the mipmaps.
+
+00:54:43.400 --> 00:54:45.270
+So I just hit Stop Recording.
+
+00:54:45.270 --> 00:54:52.690
+The second method, which I'm going to perform now if I go to
+Mipmaps Preferences and change this to smallest to largest,
+
+00:54:52.690 --> 00:54:59.050
+is that I'm going to have the threads that I'm using go
+through all the smallest mipmaps and create those first,
+
+00:54:59.050 --> 00:55:02.620
+and then the next, the largest up, and so forth.
+
+00:55:02.620 --> 00:55:06.520
+So back in Instruments, I'm going
+to hit Start Recording again.
+
+00:55:06.520 --> 00:55:09.430
+And Start over here.
+
+00:55:09.430 --> 00:55:12.100
+So this second algorithm we notice is slightly slower.
+
+00:55:12.100 --> 00:55:15.560
+It's going to take more than 5 seconds to complete.
+
+00:55:15.560 --> 00:55:18.730
+So I'm going to use system trace
+to find out why this is the case.
+
+00:55:18.730 --> 00:55:23.070
+All right, so we're done, hit Stop Recording.
+
+00:55:23.070 --> 00:55:26.980
+First thing we see here is the highlights view.
+
+00:55:26.980 --> 00:55:31.010
+And the highlights view is some of the
+information that, you know, is pretty useful.
+
+00:55:31.010 --> 00:55:37.010
+It's showing me that on my system most of the context
+switches are happening in mipmap, which I expect,
+
+00:55:37.010 --> 00:55:42.710
+and as I scroll down my system call wait
+times are attributed to a lot of file
+
+00:55:42.710 --> 00:55:46.240
+and directory operations, like Open, Close, No Cancel.
+
+00:55:46.240 --> 00:55:50.300
+And a lot of memory faults are
+happening on behalf of mipmap.
+
+00:55:50.300 --> 00:55:54.770
+And my process total system calls, a lot
+of them are happening in mipmap as well.
+
+00:55:54.770 --> 00:55:59.370
+When you zoom out and take a look
+at the system call wait time.
+
+00:55:59.370 --> 00:56:02.960
+I'm going to click on this and it'll
+take me to my System Calls Instruments.
+
+00:56:02.960 --> 00:56:09.770
+And if we zoom in we see in the second algorithm we're
+spending around 230 seconds waiting in our threads,
+
+00:56:09.770 --> 00:56:14.090
+as opposed to 181 milliseconds executing on the CPU.
+
+00:56:14.090 --> 00:56:18.460
+So we go back to original run and
+take a look at the first one.
+
+00:56:18.460 --> 00:56:24.760
+We can see that the first algorithm is
+actually waiting a less amount of time on,
+
+00:56:24.760 --> 00:56:26.720
+at the threads, so the threads are blocking less.
+
+00:56:26.720 --> 00:56:33.340
+It's 120 milliseconds waiting, and 150
+milliseconds executing on the CPU time.
+
+00:56:33.340 --> 00:56:37.160
+And we're actually making a lower
+number of system calls in this case.
+
+00:56:37.160 --> 00:56:43.520
+So this is an example of how to use system trace, understand
+why your threads are behaving the way they are, how,
+
+00:56:43.520 --> 00:56:46.740
+and compare algorithms as we did in this case.
+
+00:56:46.740 --> 00:56:50.700
+So let's switch back to the slides.
+
+00:56:50.700 --> 00:56:56.460
+So, in closing, what did you learn today?
+
+00:56:56.460 --> 00:57:00.160
+We learned how to use Time Profiler
+and Data Mining to find out precisely
+
+00:57:00.160 --> 00:57:04.460
+where in your code you're spending
+most of your time and resources.
+
+00:57:04.460 --> 00:57:09.580
+We've also introduced some new Instrumentation that
+allows you to understand the power characteristics
+
+00:57:09.580 --> 00:57:16.590
+of your iPhone apps and to understand how your
+application and interacts with the system as a whole.
+
+00:57:16.590 --> 00:57:23.110
+And I would like to point out that if you would
+need more information and have any questions,
+
+00:57:23.110 --> 00:57:29.910
+please feel free to contact Michael Jurewitz our Developer
+Tools Evangelist whose email is shown on this slide.
+
+00:57:29.910 --> 00:57:37.450
+So I highly recommend attending our sister session,
+which is in about an hour or so in Presidio.
+
+00:57:37.450 --> 00:57:41.870
+It's called Advanced Memory Analysis with
+Instruments, which we'll talk about memory managements
+
+00:57:41.870 --> 00:57:45.260
+and how to use Instruments to find problems with that.
+
+00:57:45.260 --> 00:57:50.690
+And also, you should definitely attend the
+Performance Optimization on iPhone talks,
+
+00:57:50.690 --> 00:57:53.050
+and there's two of those, today and tomorrow.
+
+00:57:53.050 --> 00:57:55.610
+And thank you very much for attending our talk.
+

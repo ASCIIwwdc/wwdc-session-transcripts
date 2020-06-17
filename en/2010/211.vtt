@@ -1,0 +1,2147 @@
+WEBVTT
+
+00:00:08.350 --> 00:00:10.810
+>> Daniel Steffen: Good morning.
+
+00:00:10.810 --> 00:00:14.980
+Welcome to the Simplifying iPhone App
+Development with Grand Central Dispatch.
+
+00:00:14.980 --> 00:00:22.470
+Thanks for being here on a Friday morning after
+the beer bash for learning more about GCD.
+
+00:00:22.470 --> 00:00:30.710
+My name is Daniel Steffen, I'm an engineer
+on the GCD team, and this morning we'll learn
+
+00:00:30.710 --> 00:00:38.230
+about a quick technology overview to start
+with, then go through a few examples of how
+
+00:00:38.230 --> 00:00:41.670
+to simply your existing multithreaded code by using GCD.
+
+00:00:41.670 --> 00:00:48.920
+Then my coengineer will come up to talk about
+some design patterns that we encourage you to use
+
+00:00:48.920 --> 00:00:56.360
+when you program your GCD, and finally going to some
+of our GCD objects in depth and look at their APIs.
+
+00:00:56.360 --> 00:01:07.740
+So we've introduced GCD and blocks last
+year at WWDC for Mac OS X Snow Leopard.
+
+00:01:07.740 --> 00:01:13.780
+And this year, we're very pleased to
+bring it to you in iOS 4 for the iPhone.
+
+00:01:13.780 --> 00:01:19.800
+As you can see here, Grand Central Dispatch
+lives very low down in our technology stack.
+
+00:01:19.800 --> 00:01:26.040
+This allows it to make very efficient use of
+kernel resources, kernel primitives when necessary,
+
+00:01:26.040 --> 00:01:30.180
+and also all the higher up levels on the stock to use it,
+
+00:01:30.180 --> 00:01:37.590
+and indeed many of our system fragments
+already do and now so can your application.
+
+00:01:37.590 --> 00:01:43.480
+So as you saw in that picture, GCD is part
+of libSystem, that means that it comes along
+
+00:01:43.480 --> 00:01:50.850
+with very basic system functionality like malloc and you
+don't have to provide any special linker setup to get it.
+
+00:01:50.850 --> 00:01:58.140
+It's available to all apps and all you do is
+include the dispatch header to get started.
+
+00:01:58.140 --> 00:02:04.220
+Note that the GCD API has both a block-based
+variant and the function-based variant.
+
+00:02:04.220 --> 00:02:07.130
+Today, we're only going to be talking
+about the block-based variant.
+
+00:02:07.130 --> 00:02:13.680
+We feel that that's the most convenient for new
+code or even for existing check your C-based code
+
+00:02:13.680 --> 00:02:19.460
+if you have C-based function based
+code that you've already affected.
+
+00:02:19.460 --> 00:02:23.160
+You may be interested in the function-based
+variant of the API
+
+00:02:23.160 --> 00:02:27.700
+and we've encouraged you to look
+at the documentation for that.
+
+00:02:29.040 --> 00:02:34.210
+So let's do a quick recap of our
+first session this week, on Wednesday.
+
+00:02:34.210 --> 00:02:40.480
+If you were unable to attend that, the-- you'd be glad
+to hear that we'll be repeating a session this afternoon
+
+00:02:40.480 --> 00:02:49.280
+at 2 o'clock so you may want to come to that, and in that
+session we looked at blocks and an introduction to blocks
+
+00:02:49.280 --> 00:02:57.070
+and why they are good to and very convenient to encapsulate
+units effect that you want to do maybe on a different thread
+
+00:02:57.070 --> 00:03:05.770
+or maybe asynchronously or just as iterations, and we
+looked at how to use dispatch_async to get these blocks
+
+00:03:05.770 --> 00:03:09.580
+to run somewhere else, and then when they're done,
+
+00:03:09.580 --> 00:03:14.910
+get the results back to the main
+thread, with another dispatch_async.
+
+00:03:14.910 --> 00:03:21.180
+And the location where these blocks run are
+called queues, GCD queues, dispatch queues.
+
+00:03:21.180 --> 00:03:27.060
+And we looked at the details on those, they're really
+just a lightweight list of blocks that you have committed
+
+00:03:27.060 --> 00:03:33.600
+for execution, and the enqueue and
+dequeue operations on those FIFO.
+
+00:03:33.600 --> 00:03:39.610
+Then we looked at two types of queues, one is the main
+queue which you get with the dispatch_get_main_queue API
+
+00:03:39.610 --> 00:03:43.740
+and that's tied to the main thread,
+the main run loop and you can use it
+
+00:03:43.740 --> 00:03:47.280
+to execute blocks that update the UI for instance.
+
+00:03:47.280 --> 00:03:53.640
+And we looked at queues that you can grant yourself called
+serial queues as well which execute blocks one by one
+
+00:03:53.640 --> 00:03:56.780
+but on an automatic helper thread in the background.
+
+00:03:56.780 --> 00:04:03.930
+So a quick animation to remind you what async looks like.
+
+00:04:03.930 --> 00:04:10.450
+We have the main queue here tied to the main thread,
+and one of these dispatch queues that we've created.
+
+00:04:10.450 --> 00:04:15.590
+The main thread creates a block for some unit
+of work that it wants to do somewhere else,
+
+00:04:15.590 --> 00:04:21.060
+and that block can capture a state
+as well-- data, as well as the code.
+
+00:04:21.060 --> 00:04:29.090
+And now this does the dispatch_async which enqueues that
+block onto the dispatch queue, then the system notices
+
+00:04:29.090 --> 00:04:33.960
+that there's some work available creates an
+automatic thread for you and runs the block.
+
+00:04:33.960 --> 00:04:40.790
+When done, the automatic thread goes away
+again and this is returned to steady state.
+
+00:04:40.790 --> 00:04:47.400
+So let's look at how you can simplify
+your existing multithreaded code, GCD.
+
+00:04:47.400 --> 00:04:48.650
+Why would you want to do this?
+
+00:04:48.650 --> 00:04:54.080
+You have your code already, it works but maybe the
+threading that you have to do the code and you have to write
+
+00:04:54.080 --> 00:04:56.540
+to implement the threading was very complicated.
+
+00:04:56.540 --> 00:05:04.240
+GCD brings advantages to this that may make you want
+to adopt it even for a code that you already have.
+
+00:05:04.240 --> 00:05:06.270
+In particular, it's very, very efficient.
+
+00:05:06.270 --> 00:05:15.220
+This leaves more CPU cycles for your code and
+fewer CPU cycles are used to maintain threading
+
+00:05:15.220 --> 00:05:18.140
+to synchronization or interthread communication.
+
+00:05:18.140 --> 00:05:23.870
+Also, GCD provides much better
+metaphors for multithreaded programming.
+
+00:05:23.870 --> 00:05:29.130
+As we've seen in our first session, blocks are very,
+very easy to use when doing multithreaded programming
+
+00:05:29.130 --> 00:05:34.540
+and allow you to express what you want to do
+somewhere else in line directly at that point
+
+00:05:34.540 --> 00:05:36.790
+where you think, now I want to do something.
+
+00:05:36.790 --> 00:05:40.040
+You do not have to push it somewhere
+else in your source files.
+
+00:05:40.040 --> 00:05:47.930
+And queues-- and the queue primitive in GCD is in
+turn-- inherently friendly to producer-consumer schemes,
+
+00:05:47.930 --> 00:05:53.980
+meaning that you don't have to implement your own
+facilities to keep track of work that needs to be done
+
+00:05:53.980 --> 00:05:57.910
+on a background thread and have to
+communicate results back and forth.
+
+00:05:57.910 --> 00:06:05.400
+And GCD provides a system-wide perspective on thread
+usage in your app, and this is really something
+
+00:06:05.400 --> 00:06:12.140
+that only an OS facility can do for you if you have
+threads in your application that you can manage yourself.
+
+00:06:12.140 --> 00:06:15.890
+You cannot really share those threads with
+a framework that may also be using threads
+
+00:06:15.890 --> 00:06:19.970
+or with some third party library that
+you use that may be using its own threads,
+
+00:06:19.970 --> 00:06:26.000
+and you cannot balance those subsystems on
+either-- an OS facility can really do that for you.
+
+00:06:26.000 --> 00:06:30.570
+GCD is also very compatible with your existing
+code so you don't have to adopt it all at once.
+
+00:06:30.570 --> 00:06:35.540
+It might make sense to just start using it in new code
+that you add to the app and the existing threading
+
+00:06:35.540 --> 00:06:40.520
+and synchronization primitives that we are
+using currently will be 100 percent compatible.
+
+00:06:41.530 --> 00:06:45.430
+And in fact, GCD threads are just wrapped POSIX threads.
+
+00:06:45.430 --> 00:06:52.150
+This means also that because the system creates those
+threads for you, you should not modify them in ways
+
+00:06:52.150 --> 00:06:59.040
+that will change them irreversibly, in particular
+don't cancel, exit, kill them, etcetera.
+
+00:06:59.040 --> 00:07:01.560
+You didn't create those threads, don't destroy them.
+
+00:07:01.560 --> 00:07:11.050
+And because GCD reuses threads, you may be-- may
+have to be careful about modifying any thread states,
+
+00:07:11.050 --> 00:07:15.040
+like for instance the current working
+directory in one of your blocks.
+
+00:07:15.040 --> 00:07:20.600
+If you do that, make sure that you return it to the
+state you found it in because the thread will be reused
+
+00:07:20.600 --> 00:07:26.260
+and will execute another block, maybe from a different
+queue, maybe from a system queue that you don't even know
+
+00:07:26.260 --> 00:07:33.400
+about and the block that comes after you will then find
+this-- otherwise find a state that it doesn't understand.
+
+00:07:34.700 --> 00:07:41.550
+So let's talk about threads in some more detail.
+
+00:07:41.550 --> 00:07:44.840
+Why use threads on the iPhone?
+
+00:07:44.840 --> 00:07:47.080
+There's only one core.
+
+00:07:47.080 --> 00:07:51.650
+Well, as we've gone over in some
+detail in our first session,
+
+00:07:51.650 --> 00:07:55.830
+the main reason is to increase app
+responsiveness to get work off the main thread.
+
+00:07:55.830 --> 00:08:00.470
+The main thread should really only be handling
+UIEvents and updating the user interface.
+
+00:08:00.470 --> 00:08:07.620
+It shouldn't be doing anything else and you probably are
+doing this currently and managing your threads yourself
+
+00:08:07.620 --> 00:08:11.790
+by using NSThread or even pthread_create directly.
+
+00:08:11.790 --> 00:08:19.100
+And as you know, this has nonmaterial costs, both in
+manpower needed to write that code, maintain that code,
+
+00:08:19.100 --> 00:08:27.450
+design your threading scheme, as well as in CPU and memory
+costs maybe to bring out the thread frequently on demand
+
+00:08:27.450 --> 00:08:32.660
+or otherwise have long running threads hanging
+around for the lifetime of the application.
+
+00:08:32.660 --> 00:08:40.140
+So let's look-- have a look at some code that you
+might be using currently to create on-demand threads.
+
+00:08:40.140 --> 00:08:45.010
+Imagine we have an Objective-C method that
+needs to do a time consuming operation
+
+00:08:45.010 --> 00:08:49.010
+and wants to spin up an on-demand thread for that.
+
+00:08:49.010 --> 00:08:56.240
+So you would have to-- using NSThread API, you would have
+to initialize that thread with the special purpose selector
+
+00:08:56.240 --> 00:09:04.090
+that runs that thread's code and run the thread,
+auto release it, and implement that method,
+
+00:09:04.090 --> 00:09:09.400
+and then you set up the thread and
+finally do the long running operation.
+
+00:09:09.400 --> 00:09:14.860
+How could we improve on that by using GCD?
+
+00:09:14.860 --> 00:09:18.430
+Very similar, but we have a lot less boilerplate.
+
+00:09:18.430 --> 00:09:24.520
+We create a dispatch queue with the dispatch_queue_create
+API passing in the label that allows you
+
+00:09:24.520 --> 00:09:33.210
+to identify your queue in Xcode or in the crash
+reporter and then with just dispatch_async,
+
+00:09:33.210 --> 00:09:36.970
+a block that does a long running operation to this queue.
+
+00:09:36.970 --> 00:09:38.150
+And that is all that is needed.
+
+00:09:38.150 --> 00:09:44.510
+You can release the queue if you don't need it anymore
+at this point and GCD will do all the thread management
+
+00:09:44.510 --> 00:09:49.160
+for you, do all the resource management
+for this queue for you.
+
+00:09:49.160 --> 00:09:52.720
+So what are the advantages?
+
+00:09:52.720 --> 00:09:54.660
+Firstly, it is more convenient.
+
+00:09:54.660 --> 00:10:01.730
+You can use blocks, you can remove a lot of your boilerplate
+and you don't have to do any explicit thread management.
+
+00:10:01.730 --> 00:10:05.680
+You don't have to decide when to create
+these threads and whether it's a good idea
+
+00:10:05.680 --> 00:10:10.690
+to have many threads or just one, GCD will do that for you.
+
+00:10:10.690 --> 00:10:16.580
+And it is more efficient, because GCD
+recycles threads, if you use it throughout,
+
+00:10:16.580 --> 00:10:22.460
+you will end up with fewer threads overall than if you
+manage them all yourself just because we have a better view
+
+00:10:22.460 --> 00:10:26.500
+of the thread usage throughout your application.
+
+00:10:26.500 --> 00:10:33.280
+And if you submit too many blocks to your queues, we will
+actually defer some of them based on the availability
+
+00:10:33.280 --> 00:10:37.290
+of the system and make things more efficient that way.
+
+00:10:38.890 --> 00:10:41.360
+The next topic to look at is locking.
+
+00:10:41.360 --> 00:10:45.230
+Obviously when you're doing multithreaded
+programming, you need to worry about locking usually
+
+00:10:45.230 --> 00:10:51.890
+to enforce some mutually exclusive access to
+critical sections of code or to serialize access,
+
+00:10:51.890 --> 00:10:58.070
+serialize access to some shared state between
+threads or just in general to ensure data integrity
+
+00:10:58.070 --> 00:11:03.070
+when you have some complex piece of state
+that needs to always have a consistent--
+
+00:11:03.070 --> 00:11:08.330
+in a consistent state and that can
+be modified from multiple threads.
+
+00:11:08.330 --> 00:11:14.000
+So, let's look at how you might be
+doing that currently with NSLock API.
+
+00:11:14.000 --> 00:11:20.920
+Here, as an example you have an Objective-C
+method that maintains an imageCache object
+
+00:11:20.920 --> 00:11:23.620
+that can be modified from multiple threads.
+
+00:11:23.620 --> 00:11:33.550
+So you need to have some serialization mechanism
+to ensure that our shared object is updated safely
+
+00:11:33.550 --> 00:11:36.910
+so we would be maintaining, you know,
+this lock object is part of our state
+
+00:11:36.910 --> 00:11:45.810
+and lock it before we enter the critical section that then
+modifies that shared object and unlock when we are done.
+
+00:11:45.810 --> 00:11:52.120
+One thing to note here is that if you have any early exit
+conditions or error conditions that you have to not forget
+
+00:11:52.120 --> 00:11:55.420
+to unlock, it is an easy source
+of bugs when you use locking APIs.
+
+00:11:55.420 --> 00:12:04.030
+How can we make this better and easier to use with GCD?
+
+00:12:04.030 --> 00:12:07.780
+Very similarly, we will maintain a
+dispatch queue, one of the dispatch queues
+
+00:12:07.780 --> 00:12:10.340
+that you create yourself with dispatch_queue_create.
+
+00:12:10.340 --> 00:12:17.200
+That's part of our state, and now use
+the dispatch_sync API to execute a block
+
+00:12:17.200 --> 00:12:21.540
+that wraps the whole critical section on that queue.
+
+00:12:21.540 --> 00:12:25.610
+Now, this is a slight change in perspective
+but it really has the same effect.
+
+00:12:25.610 --> 00:12:33.770
+These queues will only ever run one of these critical
+section blocks at any time, so once you're inside the block,
+
+00:12:33.770 --> 00:12:36.940
+you know that you're the only one executing on this queue
+
+00:12:36.940 --> 00:12:40.210
+so the only critical section block
+that is executing at this time.
+
+00:12:40.210 --> 00:12:44.590
+So, it's just as if you had locked--
+runs this critical section.
+
+00:12:44.590 --> 00:12:51.680
+And note that we don't have to be anything special to--
+in the early exit case, there is no unlocking returning
+
+00:12:51.680 --> 00:13:00.970
+from this block is unlocking in this pattern,
+so this removes that whole source of issues.
+
+00:13:00.970 --> 00:13:07.310
+Right, you can do things that you cannot do with
+the NSLock or other locking APIs with queues.
+
+00:13:07.310 --> 00:13:09.940
+You can implement and defer to critical section
+
+00:13:09.940 --> 00:13:14.980
+and here you will just use dispatch_async
+and async that critical section block.
+
+00:13:14.980 --> 00:13:17.230
+And for this, this would make a whole lot of sense.
+
+00:13:17.230 --> 00:13:22.090
+Probably the color of the updateImageCache method
+doesn't care that the cache is updated right away,
+
+00:13:22.090 --> 00:13:25.120
+as long as it's updated at some point safely, right?
+
+00:13:25.120 --> 00:13:31.790
+So, the color doesn't need to wait for the
+synchronized critical section block to actually execute
+
+00:13:31.790 --> 00:13:36.660
+so they can use dispatch_async
+to do this in a different way.
+
+00:13:36.660 --> 00:13:41.830
+And again, once we're inside we know that we're
+the only ones with those critical section blocks
+
+00:13:41.830 --> 00:13:45.860
+that is executing now so we can
+safely modify the shared object.
+
+00:13:45.860 --> 00:13:53.990
+So the advantage of using GCD instead of
+locks and GCD queues is that it is safe.
+
+00:13:53.990 --> 00:14:00.440
+You cannot forget to unlock, right,
+and it is more expressive.
+
+00:14:00.440 --> 00:14:05.720
+It allows you to say things like the
+deferrable critical section example that we saw.
+
+00:14:05.720 --> 00:14:07.910
+And again, it is more efficient.
+
+00:14:07.910 --> 00:14:13.220
+In fact, using queues instead of locks
+is much more efficient in general.
+
+00:14:13.220 --> 00:14:17.930
+If there's no contention, you can use this
+implement's wait-free synchronization.
+
+00:14:17.930 --> 00:14:21.560
+You can think of queues as an on-demand locking mechanism.
+
+00:14:21.560 --> 00:14:27.540
+Only if there's contention, we would actually create the
+expensive lock and the associated interthread communication.
+
+00:14:27.540 --> 00:14:35.850
+And if there is, if it detects that nobody else is currently
+in the critical section, it will be very, very cheap.
+
+00:14:35.850 --> 00:14:37.800
+Next stop is interthread communication.
+
+00:14:37.800 --> 00:14:44.000
+If you have multiple threads, you have to be able to
+communicate among them to send messages or to maybe wake
+
+00:14:44.000 --> 00:14:50.590
+up the background thread that may be waiting to do some
+work or to transfer data or data ownership at least
+
+00:14:50.590 --> 00:14:59.860
+between these threads, and the general mechanism that you
+use information for this will be the performSelector family
+
+00:14:59.860 --> 00:15:05.310
+of methods, and here we have four
+that have a relationship to threading.
+
+00:15:05.310 --> 00:15:09.310
+PerformSelectorOnMainThread, we've looked
+at that in some detail in the first session,
+
+00:15:09.310 --> 00:15:13.380
+so we'll skip that one and look at the other three.
+
+00:15:13.380 --> 00:15:17.610
+So how would you do performSelector:onThread with GCD?
+
+00:15:17.610 --> 00:15:22.290
+So this runs specified selector on one
+of your manually managed NSThreads.
+
+00:15:22.290 --> 00:15:30.050
+And with GCD, instead, we will just use a
+queue, and in the waitUntilDone note case,
+
+00:15:30.050 --> 00:15:32.720
+where you don't have to wait until the selector is executed.
+
+00:15:32.720 --> 00:15:34.530
+Just use a dispatch_async.
+
+00:15:34.530 --> 00:15:39.930
+And inside the block, you can do everything that the
+selector that you were performing before could have done,
+
+00:15:39.930 --> 00:15:43.650
+and indeed, you don't need to implement
+that selector now, right.
+
+00:15:43.650 --> 00:15:48.490
+You can do it inline at the point where
+you had to perform selector before.
+
+00:15:48.490 --> 00:15:52.540
+If you have to waitUntilDone, you
+just use dispatch_sync in the cycling.
+
+00:15:52.540 --> 00:16:02.610
+For a performSelector afterDelay, which executes
+a specified selector after some amount of time,
+
+00:16:02.610 --> 00:16:06.080
+we provide an API called the dispatch_after.
+
+00:16:06.080 --> 00:16:12.890
+This is exactly like dispatch_async, except that
+the enqueueing happens after user specified delay.
+
+00:16:12.890 --> 00:16:15.230
+I won't go into the detail on how to get the delay.
+
+00:16:15.230 --> 00:16:19.980
+It's a pretty simple API that you
+can look up in the documentation.
+
+00:16:19.980 --> 00:16:27.550
+But here, this will just run this block
+after 50 microseconds in this example.
+
+00:16:27.550 --> 00:16:31.090
+And again, because it's a block, you don't
+have to implement the special selector.
+
+00:16:31.090 --> 00:16:36.430
+You can just do what you want to
+do in the delayed fashion inline.
+
+00:16:37.700 --> 00:16:43.440
+Perform selector in background is the foundation
+facility that does create an on-demand thread for you.
+
+00:16:43.440 --> 00:16:50.620
+And in this case, you don't really care when and in
+relationships to what other things you select the runs.
+
+00:16:50.620 --> 00:16:54.420
+So here, we don't force you to
+create one of these dispatch queues.
+
+00:16:54.420 --> 00:17:00.590
+You can get one of our global queues that we provide, and
+we'll talk about this more in a second, and just again,
+
+00:17:00.590 --> 00:17:03.850
+do a dispatch_async to this global queue.
+
+00:17:05.400 --> 00:17:13.670
+So using GCD for interthread communication
+is more flexible, mainly because of blocks.
+
+00:17:13.670 --> 00:17:19.340
+They can call any selector and multiple selectors,
+and there is no need to marshal and unmarshal,
+
+00:17:19.340 --> 00:17:22.050
+pack and unpack arguments, as we
+have seen in our first session.
+
+00:17:22.050 --> 00:17:27.520
+You can call any form of selector that can
+take any number of arguments and don't have
+
+00:17:27.520 --> 00:17:31.350
+to do the usual dance that you have to in perform selector.
+
+00:17:31.350 --> 00:17:38.660
+And it is also more efficient again, because, well,
+firstly, the block capturing arguments is more efficient
+
+00:17:38.660 --> 00:17:44.900
+in you marshaling and unmarshaling them, and we
+wake up helper threads, help create them on demand.
+
+00:17:44.900 --> 00:17:51.030
+So you don't have to figure out how to do
+efficient on-demand thread management yourself.
+
+00:17:51.030 --> 00:17:57.810
+So let's talk about these global
+queues that we just saw in more detail.
+
+00:17:57.810 --> 00:18:04.490
+Global queues also, like the queues that you create
+yourself, have enqueue and dequeue operations that are FIFO.
+
+00:18:04.490 --> 00:18:08.930
+The big difference is that they may
+execute the blocks on them concurrently.
+
+00:18:08.930 --> 00:18:14.860
+This means that the completion order of
+the blocks on these queues may not be FIFO.
+
+00:18:14.860 --> 00:18:21.090
+And you get them at this dispatch_get_global_queue
+API, passing in a priority argument.
+
+00:18:21.090 --> 00:18:24.340
+So let's see a quick animation of what this would look like.
+
+00:18:24.340 --> 00:18:29.840
+This thread here will enqueue some
+blocks onto the global dispatch queue.
+
+00:18:29.840 --> 00:18:35.390
+So as you can see, they get enqueued in order.
+
+00:18:35.390 --> 00:18:41.300
+And now, the system notices there is some work
+to be done, so it creates automatic threads two
+
+00:18:41.300 --> 00:18:43.770
+in this case, and it will start running these blocks.
+
+00:18:43.770 --> 00:18:48.950
+And now, that A has completed, and now
+C will complete first, and B second.
+
+00:18:48.950 --> 00:18:53.710
+So this is the out of order part
+for the completion, alright.
+
+00:18:53.710 --> 00:19:01.300
+And when the work is done, the automatic threads
+go away again, and you return to a steady state.
+
+00:19:01.300 --> 00:19:08.550
+So global queues are actually where GCD
+activity of all types is mapped to real threads.
+
+00:19:08.550 --> 00:19:16.930
+So we allow you to control the priority of these
+threads with three bands, and this is the flag that we--
+
+00:19:16.930 --> 00:19:21.740
+the argument that you would passing
+into the API that we just saw.
+
+00:19:21.740 --> 00:19:25.160
+So we provide high default in the low priority band.
+
+00:19:25.160 --> 00:19:30.610
+And you can use these same bands to control the
+priority of the queues that you create yourself,
+
+00:19:30.610 --> 00:19:37.520
+the threads that run the blocks on those queues, and
+you will see you how to do that later on in the session.
+
+00:19:37.520 --> 00:19:45.070
+OK. So I would like to hand it over to Shiva
+now for a section on GCD design patterns.
+
+00:19:45.070 --> 00:19:47.080
+>> Shiva Bhattacharjee: Thanks Daniel.
+
+00:19:47.080 --> 00:19:49.560
+Wow, we have a full house.
+
+00:19:49.560 --> 00:19:56.400
+Either you're very serious programmers
+or you're not drinking hard enough.
+
+00:19:56.400 --> 00:19:56.880
+[ Laughter ]
+
+00:19:56.880 --> 00:19:59.870
+So Daniel showed how you can take your existing code.
+
+00:19:59.870 --> 00:20:05.290
+He went through snippets of code where you
+can take this code and use GCD to simplify it.
+
+00:20:05.290 --> 00:20:13.350
+And in this session, we are going to kind of move
+back and see some of the ways you can use GCD
+
+00:20:13.350 --> 00:20:18.370
+to your application to simplify the overall design patterns.
+
+00:20:18.370 --> 00:20:21.460
+We kind of mentioned this in the previous session.
+
+00:20:21.460 --> 00:20:28.880
+GCD is this new way or new paradigm of thinking which
+would help you to move from your application logic
+
+00:20:28.880 --> 00:20:33.820
+into our implementation, much, much, much simpler.
+
+00:20:33.820 --> 00:20:45.320
+So, one of the patterns that was-- kind of came out of
+the last session was to assign a queue to each task.
+
+00:20:45.320 --> 00:20:51.800
+The idea here is you take your application
+and you break it down into different tasks,
+
+00:20:51.800 --> 00:20:59.110
+and then you can work on those tasks
+individually and they will complete as data
+
+00:20:59.110 --> 00:21:04.760
+as available to them or in different priority orders.
+
+00:21:04.760 --> 00:21:13.640
+Well, when tasks are executing simultaneously, you need
+ways to communicate between those tasks and you saw
+
+00:21:13.640 --> 00:21:20.530
+that you can do this easily by calling dispatch_async,
+you-- you dispatch_async from one task to another task
+
+00:21:20.530 --> 00:21:24.310
+and just passing the queue to which you want to communicate.
+
+00:21:24.310 --> 00:21:28.390
+And most of the time, you will be passing data.
+
+00:21:28.390 --> 00:21:35.130
+So you can imagine, you have a network
+application, this is reading in data from a socket
+
+00:21:35.130 --> 00:21:38.670
+and then it wants to do the parsing on another task.
+
+00:21:38.670 --> 00:21:45.170
+So, one task could be responsible for actually doing
+the read syscall, and then once you have the bytes,
+
+00:21:45.170 --> 00:21:48.840
+you want to send it off to another task to do the parsing.
+
+00:21:48.840 --> 00:21:52.420
+And with blocks, you can easily
+encapsulate that and move it over.
+
+00:21:52.420 --> 00:21:56.690
+So GCD helps you that.
+
+00:21:56.690 --> 00:22:01.830
+So, one of the things you might
+wonder, well, is queues lightweight.
+
+00:22:01.830 --> 00:22:07.640
+I mean if I-- if my application
+is broken down into many queues,
+
+00:22:07.640 --> 00:22:10.290
+is this actually going to main issue for performance.
+
+00:22:10.290 --> 00:22:11.190
+And it's not.
+
+00:22:11.190 --> 00:22:13.960
+As you have seen, we do automatic thread recycling.
+
+00:22:13.960 --> 00:22:16.190
+So if you actually have a lot of queues,
+
+00:22:16.190 --> 00:22:20.250
+it doesn't necessarily mean we are
+committing that many threads at that point.
+
+00:22:20.250 --> 00:22:26.230
+So as work become available, we will create
+these threads on demand, so it is very efficient.
+
+00:22:26.230 --> 00:22:31.600
+So we encouraged that you try to
+think your applications in this terms.
+
+00:22:31.600 --> 00:22:38.160
+It will just help you with overall GCD APIs.
+
+00:22:38.160 --> 00:22:42.860
+The other pattern we want to encourage
+is to use low level notifications.
+
+00:22:42.860 --> 00:22:47.400
+So this is something that you're
+probably already familiar with.
+
+00:22:47.400 --> 00:22:52.730
+The idea here is, just as in UI,
+you're touching on a button.
+
+00:22:52.730 --> 00:22:57.250
+You're doing something under control, and
+then you're responding to those events.
+
+00:22:57.250 --> 00:23:06.030
+So similarly, you want GCD to help you monitor
+events and then respond on them on demand.
+
+00:23:06.030 --> 00:23:15.290
+So in this case again, if you take the example of a
+network app, you don't want to go ahead in your block
+
+00:23:15.290 --> 00:23:20.690
+and do the blocking read syscall or the
+receive syscall because that's just going
+
+00:23:20.690 --> 00:23:23.290
+to block the thread and wait for data to arrive.
+
+00:23:23.290 --> 00:23:30.970
+Ideally, you want some facility that will say, hey, data is
+available for you and you go ahead and then read the data.
+
+00:23:30.970 --> 00:23:37.150
+Similarly, if you're interested in knowing if
+files are being deleted or added to a directory,
+
+00:23:37.150 --> 00:23:39.700
+you don't want to pull that directory all the time.
+
+00:23:39.700 --> 00:23:43.650
+You want to-- get passes to notifications
+effectively saying, hey,
+
+00:23:43.650 --> 00:23:50.350
+data files have been added, so at
+that point you want to respond.
+
+00:23:50.350 --> 00:23:53.690
+So, we export dispatch sources.
+
+00:23:53.690 --> 00:23:55.800
+These are exactly what you would expect them to do.
+
+00:23:55.800 --> 00:23:57.960
+They monitor these sources.
+
+00:23:57.960 --> 00:24:02.790
+You register event handlers for them and when
+the event fires, you can do your handling.
+
+00:24:02.790 --> 00:24:04.970
+So this makes your apps even more responsive.
+
+00:24:04.970 --> 00:24:09.970
+Nowhere in your code-- now you have threads
+just are blocked waiting for things to happen,
+
+00:24:09.970 --> 00:24:14.360
+but rather the system tells you
+when things happen and you dispatch.
+
+00:24:14.360 --> 00:24:22.260
+Once you have-- once you know that there
+is work, you dispatch to handle that block.
+
+00:24:22.260 --> 00:24:25.930
+So let's get in more details with dispatch sources.
+
+00:24:25.930 --> 00:24:38.220
+We provide a single API and with the single API, you
+can actually monitor a variety of low level sources.
+
+00:24:38.220 --> 00:24:44.300
+Now, you might be wondering if you're familiar with our
+platform, we have run loop sources that you can register
+
+00:24:44.300 --> 00:24:46.090
+with the main thread or with any other thread.
+
+00:24:46.090 --> 00:24:54.510
+And the nice thing with dispatch sources
+is the event handler can run on any queue.
+
+00:24:54.510 --> 00:25:00.570
+And while the handler is running on this other
+queue, you are still monitoring the source.
+
+00:25:00.570 --> 00:25:05.780
+So generally, with the run loop source what happens
+is you register a run loop source with a thread
+
+00:25:05.780 --> 00:25:07.860
+and since the main thread is readily available to you,
+
+00:25:07.860 --> 00:25:12.120
+we see most app developers just
+registering it with the main thread.
+
+00:25:12.120 --> 00:25:18.890
+Now when the even fires, your thread, your main
+thread is busy handling that event handle block
+
+00:25:18.890 --> 00:25:24.260
+and therefore it's not actually monitoring the sources
+or any other sources that you have registered with it.
+
+00:25:24.260 --> 00:25:31.520
+So to get efficiency, you either spun off another thread
+to actually do the work and make the main thread go back
+
+00:25:31.520 --> 00:25:38.560
+to listening, so we are back to kind of square one where
+you are having to do with thread management explicitly.
+
+00:25:38.560 --> 00:25:45.610
+But even in that first case if you want to improve
+the performance, you also have to be careful
+
+00:25:45.610 --> 00:25:51.740
+that while I'm doing the event handling,
+that same event might fire again.
+
+00:25:51.740 --> 00:25:55.920
+So, you have to be careful about dispatching
+two of those event handlers at the same time
+
+00:25:55.920 --> 00:25:58.190
+that are running on two different threads.
+
+00:25:58.190 --> 00:26:10.250
+So GCD provides-- even though GCD monitors these events
+while threads are-- while you are handling the event,
+
+00:26:10.250 --> 00:26:14.510
+we would not actually invoke your
+event handler while you're doing it.
+
+00:26:14.510 --> 00:26:22.000
+So we will wait for it and in a sense it is reentrant
+safe, so you can do critical actions if you want
+
+00:26:22.000 --> 00:26:28.800
+in your event handler knowing that that's the only
+event handler for that event that is going to happen.
+
+00:26:28.800 --> 00:26:33.880
+Also, you can suspend dispatch sources.
+
+00:26:33.880 --> 00:26:38.360
+You are no longer interested in monitoring
+or handling the event for the time being.
+
+00:26:38.360 --> 00:26:43.650
+You are doing other work, so you can
+suspend the sources and resume them at will,
+
+00:26:43.650 --> 00:26:51.130
+and GCD will monitor this event while you're doing that.
+
+00:26:51.130 --> 00:26:56.750
+So, let's look at an example of
+how we would create a read source.
+
+00:26:56.750 --> 00:26:58.620
+So, first you have socket.
+
+00:26:58.620 --> 00:27:05.440
+You set the socket to nonblocking, and the idea here--
+we will come back to why do we set it to nonblocking.
+
+00:27:05.440 --> 00:27:10.220
+And then you set-- you create a
+source with dispatch_source_create.
+
+00:27:10.220 --> 00:27:17.810
+You pass in the type of the source you're interested,
+in this case, the read type and the socket.
+
+00:27:17.810 --> 00:27:24.180
+So, this is the file descriptor that is backing
+the read source, and you're passing a target queue.
+
+00:27:24.180 --> 00:27:31.110
+This is the queue on which your event handler
+blocks will be enqueued when the event fires.
+
+00:27:31.110 --> 00:27:36.190
+Then you set the event handler block with
+the dispatch_source_set_event_handler call,
+
+00:27:36.190 --> 00:27:39.940
+and this is where you would actually do the read syscall.
+
+00:27:39.940 --> 00:27:49.600
+Now, this is where why we set the file descriptor to be
+nonblocking because we don't want to wait on the read call.
+
+00:27:49.600 --> 00:27:58.890
+So there could be cases where in a read my return
+you have no data and you want to just retry it.
+
+00:27:58.890 --> 00:28:05.730
+So the subtle thing here is if read returns
+you error or EAGAIN for any other reason,
+
+00:28:05.730 --> 00:28:09.870
+you do not yourself have to a do while loop on that.
+
+00:28:09.870 --> 00:28:14.770
+The event source is the one that's actually
+going to drive that event handler for you,
+
+00:28:14.770 --> 00:28:20.980
+so it makes your event handling
+even much more simpler that way.
+
+00:28:20.980 --> 00:28:26.350
+And dispatch sources are created in a suspended state,
+and partly we have this created in a suspended state
+
+00:28:26.350 --> 00:28:32.380
+so that you can set all these event handler on-- in
+other configurations that we'll see later down the road.
+
+00:28:32.380 --> 00:28:37.500
+Well, once you have set all these things, you
+resume the source and at this point your event--
+
+00:28:37.500 --> 00:28:44.640
+your dispatch source is starting
+to monitor that file descriptor.
+
+00:28:44.640 --> 00:28:48.560
+So, let's look visually at what happens.
+
+00:28:48.560 --> 00:28:53.190
+You have the main thread which is tied to the main queue.
+
+00:28:53.190 --> 00:29:00.090
+You create a read source and set the target
+queue to a dispatch queue that you have created.
+
+00:29:00.090 --> 00:29:02.240
+Well, data come along.
+
+00:29:02.240 --> 00:29:11.210
+That causes the read source to fire and then the
+event handler gets enqueued on the dispatch queue.
+
+00:29:11.210 --> 00:29:19.530
+The automatic thread comes along because it sees there
+is work to be done on this queue, reads off the data,
+
+00:29:19.530 --> 00:29:25.680
+clears the condition and the read
+source is available to fire again.
+
+00:29:25.680 --> 00:29:33.370
+Now, you might be-- you might want to update
+your UI with the data that you have received.
+
+00:29:33.370 --> 00:29:37.870
+So, you async a block on to the main queue
+and you can do that with the dispatch_async.
+
+00:29:37.870 --> 00:29:43.540
+So it's kind of like a nested dispatch_async
+we took from within your blocks.
+
+00:29:44.570 --> 00:29:51.200
+So the read source that they set went back
+and is able to call, is able to fire again.
+
+00:29:51.200 --> 00:29:58.720
+The automated thread goes away because it has
+finished the work and the UI gets finally updated.
+
+00:30:00.810 --> 00:30:02.610
+So we have mentioned this in passing.
+
+00:30:02.610 --> 00:30:12.280
+So, you can suspend a source and/or the event handling
+could be happening when the source is still firing
+
+00:30:12.280 --> 00:30:15.440
+and dispatch will coalesce the
+data for you in the background.
+
+00:30:15.440 --> 00:30:17.380
+You do not have to do anything else.
+
+00:30:17.380 --> 00:30:25.290
+And dispatch_source_get_data is the API whereby
+you can get the kind of like merged result
+
+00:30:25.290 --> 00:30:30.800
+of what happened during the time when you
+were not busy handling the event handler.
+
+00:30:30.800 --> 00:30:35.290
+So, you don't have to worry about,
+you know, how do we do the coalescing.
+
+00:30:35.290 --> 00:30:38.690
+It's very high performance so it's
+OK not to handle the event.
+
+00:30:38.690 --> 00:30:42.000
+We will do the right thing.
+
+00:30:42.000 --> 00:30:45.940
+You do not have to feel obligated in any
+ways that you need to handle an event
+
+00:30:45.940 --> 00:30:50.650
+at a certain frequency or anything like that.
+
+00:30:50.650 --> 00:30:56.750
+And dispatch sources are based on BSD queue,
+kqueue, so that means we do offer the facility
+
+00:30:56.750 --> 00:31:04.570
+to monitor quite of big variety of low level events.
+
+00:31:04.570 --> 00:31:09.430
+So, let's go through some of the
+sources types that we support.
+
+00:31:09.430 --> 00:31:12.000
+You have already seen the read source.
+
+00:31:12.000 --> 00:31:13.750
+And similarly, there is the write source.
+
+00:31:13.750 --> 00:31:20.470
+It takes in the file descriptor to which you might
+want to write and the account there is telling you,
+
+00:31:20.470 --> 00:31:28.670
+when you call dispatch_source_get_data it will tell
+you how many bytes there is available for you to write.
+
+00:31:28.670 --> 00:31:30.870
+We also provided a vnode source.
+
+00:31:30.870 --> 00:31:39.510
+This is probably what you would use if you want to monitor
+the modifications to a directory structure or to a file.
+
+00:31:39.510 --> 00:31:45.830
+And when you do get data on this one, it's going to
+say what event actually triggered it, which means, hey,
+
+00:31:45.830 --> 00:31:54.160
+whether the directory-- a new file was added to a directory
+or was removed, you know, similar things like that.
+
+00:31:54.160 --> 00:31:55.530
+We also provide the timer.
+
+00:31:55.530 --> 00:31:59.980
+It doesn't take in a handle because it doesn't need to.
+
+00:31:59.980 --> 00:32:05.070
+You just specify the interval at
+which you want this source to fire.
+
+00:32:05.070 --> 00:32:11.310
+And if you have suspended the timer or you were busy
+handling the event for a long time, once you call,
+
+00:32:11.310 --> 00:32:16.580
+getData is going to tell you the number of intervals
+you missed since the last handling of the event.
+
+00:32:16.580 --> 00:32:27.030
+And this dispatch-- other custom dispatch sources, and this
+just provides application-specific custom ways to do things.
+
+00:32:27.030 --> 00:32:28.940
+You can look up the documentation.
+
+00:32:28.940 --> 00:32:31.240
+I would imagine most people would not need to use it.
+
+00:32:31.240 --> 00:32:33.500
+It's just here for completeness purposes.
+
+00:32:33.500 --> 00:32:43.020
+So, let's look at the example of where
+you would set up a dispatch source timer.
+
+00:32:43.020 --> 00:32:45.030
+You set up a timer, you give it an interval.
+
+00:32:45.030 --> 00:32:48.260
+You want this timer to fire at that interval.
+
+00:32:48.260 --> 00:32:52.690
+You set up the-- in this case, the
+target is the main queue, so the--
+
+00:32:52.690 --> 00:33:02.120
+when this timer fires, the event handling block
+is going to get delivered on this main thread.
+
+00:33:02.120 --> 00:33:08.210
+So, you want to suspend the timer, and in one instance
+you might imagine that you are looking at a progress bar
+
+00:33:08.210 --> 00:33:13.340
+and you are drawing the progress bar on the screen and
+you don't want to update your UI every now and then
+
+00:33:13.340 --> 00:33:15.570
+and then suddenly you have a lot of work to do.
+
+00:33:15.570 --> 00:33:18.280
+So you want to suspend the timer, and that's fine
+
+00:33:18.280 --> 00:33:23.320
+because in the meantime we will continue
+to monitor how many seconds have passed.
+
+00:33:23.320 --> 00:33:27.140
+So in this case, this is a timer for every second.
+
+00:33:27.140 --> 00:33:33.140
+And then once you are ready, you resume the timer.
+
+00:33:33.140 --> 00:33:40.320
+Well, at that point, the timer will deliver the
+handler to the main thread or to the main queue here
+
+00:33:40.320 --> 00:33:48.650
+and you would notice that we figured out that we-- there was
+four seconds for which we didn't really handle this event,
+
+00:33:48.650 --> 00:33:52.890
+so you can get that data and update your UI accordingly.
+
+00:33:52.890 --> 00:34:00.720
+And once you have handled the event, the timer
+source goes back and it's ready for fire again.
+
+00:34:00.720 --> 00:34:04.920
+Alright, so we have suspended sources,
+we have resume sources.
+
+00:34:04.920 --> 00:34:08.960
+Now what happens, you're not interested
+in monitoring the source anymore.
+
+00:34:08.960 --> 00:34:11.560
+You're not interested in the event anymore.
+
+00:34:11.560 --> 00:34:13.520
+So there is source cancellation.
+
+00:34:13.520 --> 00:34:22.380
+So, canceling of source effectively means that
+no further events would be delivered to you.
+
+00:34:22.380 --> 00:34:26.110
+Now, note this asynchronous, which
+means it's not preemptive in nature.
+
+00:34:26.110 --> 00:34:33.110
+If you're already handling an event, it would
+not stop that event from getting handled.
+
+00:34:33.110 --> 00:34:40.370
+But no further events would be delivered to you.
+
+00:34:40.370 --> 00:34:51.040
+Now cancellation handler is another block that you
+could set up your sources with, and this would get fired
+
+00:34:51.040 --> 00:34:54.400
+when the cancellation happens on the source.
+
+00:34:54.400 --> 00:35:00.080
+This gives you a way to deallocate the resources
+you might have used when creating your source.
+
+00:35:00.080 --> 00:35:04.880
+So in the instance when we are creating read
+sources, we pass in a file descriptor to do it,
+
+00:35:04.880 --> 00:35:10.970
+but you want to know when it is OK
+for me to close that file descriptor.
+
+00:35:10.970 --> 00:35:17.010
+And because things in the dispatch world happen
+asynchronously, when you call dispatch_source_cancel,
+
+00:35:17.010 --> 00:35:20.250
+it doesn't necessarily mean it has
+canceled the source immediately.
+
+00:35:20.250 --> 00:35:27.400
+So this is a way for us to give you a notification that
+it's OK to cancel your source, and that's why it is kind
+
+00:35:27.400 --> 00:35:31.090
+of required for all the sources
+that takes in filedescriptor.
+
+00:35:31.090 --> 00:35:36.750
+And note that cancellation handler is only delivered
+once, and that's the last event that gets delivered
+
+00:35:36.750 --> 00:35:42.900
+and it gets delivered on the queue, on the target queue,
+that you have set up at creation time of the source.
+
+00:35:42.900 --> 00:35:50.810
+Now if you have suspended a source and then
+you have canceled a source at a later point,
+
+00:35:50.810 --> 00:35:56.570
+so you suspended the source, you said, "I'm too busy
+handling other events," and then later down the road,
+
+00:35:56.570 --> 00:35:59.320
+you're like, "I don't care about the source anymore."
+
+00:35:59.320 --> 00:36:07.740
+So, we would cancel the source and no events will be
+delivered but no events were delivered to you anyway
+
+00:36:07.740 --> 00:36:10.750
+because you had the source in a suspended state.
+
+00:36:10.750 --> 00:36:17.230
+But we would not be able to deliver the cancellation handler
+until we resume the source, so make sure that you end
+
+00:36:17.230 --> 00:36:23.810
+up resuming the source and not just cancelling it.
+
+00:36:23.810 --> 00:36:27.630
+So let's look at an example of how we would cancel.
+
+00:36:27.630 --> 00:36:30.890
+A very similar example of what you saw before.
+
+00:36:30.890 --> 00:36:36.730
+We create the source, we passed in that file,
+the socket here, and the main goal here is how
+
+00:36:36.730 --> 00:36:41.370
+to handle the proper life cycle of this socket.
+
+00:36:41.370 --> 00:36:46.730
+Well, you set up a cancel handler similar
+to how you would do on an event handler,
+
+00:36:46.730 --> 00:36:50.110
+and here in this block you see
+we are just closing the socket.
+
+00:36:50.110 --> 00:36:58.490
+And in the event handler block when
+dispatch get data returns zero which means--
+
+00:36:58.490 --> 00:37:05.000
+excuse me, this is the time when maybe the
+other side of the connection has closed it.
+
+00:37:05.000 --> 00:37:09.490
+You get an EOF and which means it's
+OK for you to close the connection.
+
+00:37:09.490 --> 00:37:14.410
+Or you might decide that this is the time
+that, you know, you might want to reconnect.
+
+00:37:14.410 --> 00:37:19.050
+So, in your cancellation handler, you would
+have code to reestablish that connection,
+
+00:37:19.050 --> 00:37:23.690
+but that's how we would cancel the source.
+
+00:37:23.690 --> 00:37:29.620
+And as was stressed before, this is how
+you set up and configure the source,
+
+00:37:29.620 --> 00:37:34.360
+remember to resume the source to actually start monitoring.
+
+00:37:34.360 --> 00:37:38.430
+So, target queues.
+
+00:37:38.430 --> 00:37:44.210
+So we have mentioned this, at creation
+time of sources you pass in target queues.
+
+00:37:44.210 --> 00:37:49.320
+These are the queues where your event
+handler blocks are going to get delivered.
+
+00:37:49.320 --> 00:37:52.940
+Now, for most of you, if you're using--
+
+00:37:52.940 --> 00:37:59.330
+you're new to dispatch, you're using dispatch APIs
+for doing asynchronization, this is good enough.
+
+00:37:59.330 --> 00:38:07.060
+When you create sources for which you want to respond,
+you can do with what ever we have talked so far.
+
+00:38:07.060 --> 00:38:16.420
+And now, we are going into Jedi training which is
+you can even set the target queues of these sources.
+
+00:38:16.420 --> 00:38:22.320
+So, not only at creation time can you
+sort of-- give it passing a target queue.
+
+00:38:22.320 --> 00:38:26.330
+While event handles are being handled,
+you might dynamically say,
+
+00:38:26.330 --> 00:38:29.490
+I don't want my event handlers to
+be delivered on this queue anymore.
+
+00:38:29.490 --> 00:38:33.210
+I want them to be delivered on other queues.
+
+00:38:33.210 --> 00:38:39.450
+So you can do that with this API.
+
+00:38:39.450 --> 00:38:50.000
+Well, not only can you change the target queues of sources,
+you can change the target queues of queues and this is
+
+00:38:50.000 --> 00:38:58.790
+where it-- you know, it gets a little more confusing but if
+you follow along and I have some visualizations to follow
+
+00:38:58.790 --> 00:39:05.360
+on this, you'll probably get more
+of what GCD is capable of doing.
+
+00:39:05.360 --> 00:39:07.510
+So Daniel mentioned this in passing.
+
+00:39:07.510 --> 00:39:13.890
+He mentioned that you have global queues and in
+the global queues is where the real work gets done.
+
+00:39:13.890 --> 00:39:19.690
+So if you have the semantic model of where we
+had a queue and an automatic thread came in
+
+00:39:19.690 --> 00:39:26.080
+and that was executing those blocks on that
+thread, and that's a good semantic model to have.
+
+00:39:26.080 --> 00:39:32.600
+But your blocks finally get executed
+on to the global queues.
+
+00:39:32.600 --> 00:39:46.240
+Now when you set that target queue of a dispatch queue,
+it's-- you can imagine that's effectively saying, hey,
+
+00:39:46.240 --> 00:39:50.870
+if I have a subqueue and I set the target
+queue of this subqueue, then the blocks running
+
+00:39:50.870 --> 00:39:59.190
+on the subqueue is effectively
+being run by that target queue.
+
+00:39:59.190 --> 00:40:03.190
+Now, we never passed in a target queue
+when we created our dispatched queue.
+
+00:40:03.190 --> 00:40:06.230
+We just passed in a name and that was it.
+
+00:40:06.230 --> 00:40:14.140
+Because we set up the target queue of this dispatch queues
+that we created as the global default priority queue.
+
+00:40:14.140 --> 00:40:22.670
+So, the target queue of the queues that you create are by
+default going to get run on the default priority queue.
+
+00:40:22.670 --> 00:40:30.300
+So, let's quickly look at a code example
+and then we will move to a visualization
+
+00:40:30.300 --> 00:40:33.830
+which will probably make it simpler to understand.
+
+00:40:33.830 --> 00:40:41.700
+So here, you would create a queue, probably
+familiar to many of you from the first session.
+
+00:40:41.700 --> 00:40:45.900
+And this is how you would get one
+of those background queues.
+
+00:40:45.900 --> 00:40:51.720
+So, as I mentioned, when you originally create
+this queue, its target queue is the default queue,
+
+00:40:51.720 --> 00:40:56.250
+and you might want to change it to the low priority queue.
+
+00:40:56.250 --> 00:41:03.750
+So, in this case, we get the low priority queue, and
+then we set the target queue to that low priority queue.
+
+00:41:09.300 --> 00:41:13.670
+So now, overall in our system, we have four queues --
+
+00:41:13.670 --> 00:41:18.790
+the main queue where the main queue
+is being drained by the main thread.
+
+00:41:18.790 --> 00:41:24.330
+So, this is the queue you want to submit
+works on which you want to update the UI.
+
+00:41:24.330 --> 00:41:31.950
+And in addition, we have these three global queues, the
+low priority one, the default, and the high priority,
+
+00:41:31.950 --> 00:41:38.840
+which means the blocks running on this low
+priority queue are drained by low priority threads.
+
+00:41:38.840 --> 00:41:41.960
+The default queue is drained by default priority threads.
+
+00:41:41.960 --> 00:41:46.020
+And the high priority queue is
+drained by high priority threads.
+
+00:41:46.020 --> 00:41:52.820
+Say we have a source A and we set the target
+queue to be opt out at the main queue.
+
+00:41:52.820 --> 00:41:56.780
+So blocks are events from these sources.
+
+00:41:56.780 --> 00:42:02.010
+When events fire for this source, the event handling
+block is going to get delivered on the main queue.
+
+00:42:02.010 --> 00:42:10.890
+Now, you create a dispatch_queue, and by default, the target
+queue of this queue becomes that of the default priority.
+
+00:42:10.890 --> 00:42:18.510
+You create another source, in this case,
+source B, and you set the target queue
+
+00:42:18.510 --> 00:42:22.040
+of source B to that queue that you have created.
+
+00:42:22.040 --> 00:42:26.200
+What it means is when events for this source fires,
+
+00:42:26.200 --> 00:42:33.440
+the event handling blocks would ultimately
+get run by the default priority queue.
+
+00:42:33.440 --> 00:42:40.490
+You can change the target queue of your queue to the
+low priority queue using the example that we saw before.
+
+00:42:40.490 --> 00:42:46.210
+What this changes is now your blocks are
+going to get run, the event handling blocks
+
+00:42:46.210 --> 00:42:49.860
+at source B is going get run by low priority threads.
+
+00:42:49.860 --> 00:42:58.170
+Now, before we change the target queue of source A, source
+A and source B could fire independent of each other,
+
+00:42:58.170 --> 00:43:03.100
+and the event handling blocks would be handled
+independent of each other, one on the main thread
+
+00:43:03.100 --> 00:43:06.450
+and one drained by the low priority threads.
+
+00:43:06.450 --> 00:43:12.220
+If you set the target queue of source A to
+this intermediate queue that you have created,
+
+00:43:12.220 --> 00:43:17.210
+then both of these event handling
+blocks get channeled through this queue.
+
+00:43:17.210 --> 00:43:23.310
+And because of the FIFO nature of these queues, only
+one event handling block is going to get executed.
+
+00:43:23.310 --> 00:43:30.110
+So, now, from this parallel or simultaneous
+ways of handling both events, now,
+
+00:43:30.110 --> 00:43:35.310
+you have only one event handling
+block that is going to get delivered.
+
+00:43:35.310 --> 00:43:40.000
+So, target queues are quite powerful.
+
+00:43:40.000 --> 00:43:46.180
+You can create all these hierarchies and you can
+solve complicated ordering problems with them.
+
+00:43:46.180 --> 00:43:52.980
+But don't go too crazy because there is
+no way for us to do detection of loops.
+
+00:43:52.980 --> 00:43:58.030
+And in your particular instance, you might
+find, oh, this is quite simple, but try it--
+
+00:43:58.030 --> 00:44:02.050
+I mean, believe us, we tried it, and
+we've-- we couldn't do it very well.
+
+00:44:02.050 --> 00:44:10.950
+So, it's difficult to do loop detection
+in these kinds of things.
+
+00:44:10.950 --> 00:44:19.750
+Now, when you set the target queue of a queue or when
+you set the target queue of the subqueue to a queue,
+
+00:44:19.750 --> 00:44:24.360
+you can also guarantee some kind of a
+block ordering, and what do I mean by that?
+
+00:44:24.360 --> 00:44:29.260
+Imagine you have blocks that were
+getting executed on your subqueue,
+
+00:44:29.260 --> 00:44:35.570
+and you decided to change the target
+queue of this subqueue to a parent queue.
+
+00:44:35.570 --> 00:44:45.460
+That means at that point, all the blocks within the
+subqueue that were enqueued to be run kind of gets moved
+
+00:44:45.460 --> 00:44:56.610
+as a super block containing all the subqueues which
+gets run on the parent queue of the target queue.
+
+00:44:56.610 --> 00:44:59.550
+So here, hopefully, that visualization will help.
+
+00:44:59.550 --> 00:45:06.450
+You have a queue A, again by default, it had set the
+target queue to that of the default priority queue.
+
+00:45:06.450 --> 00:45:09.380
+You have queue B and queue C.
+
+00:45:09.380 --> 00:45:11.760
+All the blocks are running concurrently.
+
+00:45:11.760 --> 00:45:18.180
+Well, not that the blocks in queue B are still running
+serially, but blocks of queue A, blocks from within queue B
+
+00:45:18.180 --> 00:45:25.410
+and blocks from within queue C
+could be executing at the same time.
+
+00:45:25.410 --> 00:45:29.260
+So, you have queue B and queue C.
+
+00:45:29.260 --> 00:45:33.280
+So, you change the target queues of
+queue B and queue C to that of queue A.
+
+00:45:33.280 --> 00:45:41.000
+What you've done with this from the simultaneous execution
+of blocks in queue B and queue C, since you channeled them
+
+00:45:41.000 --> 00:45:47.660
+to queue A, now only one block is going to
+run at one time because of the FIFO nature.
+
+00:45:51.110 --> 00:45:55.210
+Now, you might imagine why do I stack these queues,
+
+00:45:55.210 --> 00:46:05.410
+what's the point of doing this kind
+of arbitrary hierarchy and stuff?
+
+00:46:05.410 --> 00:46:14.590
+One way to look at it is say, for instance, you are writing
+a transaction system, and for which you have different types
+
+00:46:14.590 --> 00:46:19.630
+of operation, an update, a delete, and things like that.
+
+00:46:19.630 --> 00:46:24.760
+But obviously, these operations are
+working on the same data structure.
+
+00:46:24.760 --> 00:46:29.450
+So, you have seen previously that you
+can use queues as locking mechanism.
+
+00:46:29.450 --> 00:46:32.910
+So, you have a queue protecting that data structure.
+
+00:46:32.910 --> 00:46:38.310
+But you also want partial ordering between
+the types of operation that are coming in.
+
+00:46:38.310 --> 00:46:42.860
+So you have a bunch of update operations,
+a bunch of delete operations.
+
+00:46:42.860 --> 00:46:49.270
+So, it is important for you to kind of order the
+update operations among all the update operations
+
+00:46:49.270 --> 00:46:53.340
+that there are, and also within the delete operations.
+
+00:46:53.340 --> 00:47:00.010
+So, you have a queue to do the serial ordering
+between the different types of operation.
+
+00:47:00.010 --> 00:47:03.630
+You also get the flexibility to manage these operations.
+
+00:47:03.630 --> 00:47:07.870
+So, you want to suspend all delete
+operations for the time being,
+
+00:47:07.870 --> 00:47:11.770
+and you can actually suspend the queue as we'll see later.
+
+00:47:11.770 --> 00:47:16.610
+So, it gives you a lot of flexibility in your data
+structure in the ways you want it to be accessed,
+
+00:47:16.610 --> 00:47:27.260
+and you can use the in-build flexibles, you have
+the queue into your algorithms if you want to.
+
+00:47:27.260 --> 00:47:30.560
+So, we have talked about sources,
+we have talked about queues.
+
+00:47:30.560 --> 00:47:34.070
+And that's the main big part of GCD.
+
+00:47:34.070 --> 00:47:41.080
+But GCD still has-- is a little bit
+bigger than just these two things.
+
+00:47:41.080 --> 00:47:47.410
+And as you will see, as I just said, you know, the queues
+and sources are big part of it, but there is other stuff
+
+00:47:47.410 --> 00:47:49.960
+in GCD, and these are all available to you.
+
+00:47:49.960 --> 00:47:57.310
+But we are going to concentrate on the common
+operations that you can do on this GCD objects.
+
+00:47:57.310 --> 00:48:04.910
+Well, one of these is the retain and release.
+
+00:48:04.910 --> 00:48:13.870
+You have seen that you can do dispatch_retain
+and dispatch_release to do your memory management
+
+00:48:13.870 --> 00:48:20.460
+of these objects, very similar to
+what you would do on CF objects.
+
+00:48:21.780 --> 00:48:30.450
+With dispatch calls, dispatch actually
+retains the queues that you're synching on,
+
+00:48:30.450 --> 00:48:37.060
+which means when you call dispatch_async or
+you call dispatch_sync and you pass in a queue,
+
+00:48:37.060 --> 00:48:42.670
+we retain the queue for you, so you do not have
+to explicitly do memory management for those.
+
+00:48:42.670 --> 00:48:48.520
+In other words, if there is a dispatch API that
+requires you to pass a dispatch object to it,
+
+00:48:48.520 --> 00:48:53.080
+we will do the proper memory management
+for you, you do not have to know this.
+
+00:48:53.080 --> 00:49:02.470
+Let's talk a little bit about managing
+object lifetime and why is this important.
+
+00:49:02.470 --> 00:49:07.290
+The issue here is you have a function A,
+and from within the body of function A,
+
+00:49:07.290 --> 00:49:11.620
+you call dispatch_async, and you dispatch you async a block.
+
+00:49:11.620 --> 00:49:19.750
+When function A returns, at some point later, that
+block is going to get executed asynchronously.
+
+00:49:19.750 --> 00:49:23.780
+So, whatever variables you've captured
+within the block in this--
+
+00:49:23.780 --> 00:49:28.560
+within the function body, you have to
+make sure that they have proper lifetime.
+
+00:49:28.560 --> 00:49:37.800
+So, that is where this lifetime management comes into play
+because you're dealing with this asynchronous model of piece
+
+00:49:37.800 --> 00:49:43.300
+of code working on data that is
+kind of beyond the functional scope.
+
+00:49:45.050 --> 00:49:50.920
+So, you-- what you have to do therefore is make sure
+that you retained the objects within these blocks.
+
+00:49:50.920 --> 00:49:57.380
+So, to extend the lifetime beyond the functional scope,
+you have to make sure these objects are retained so that
+
+00:49:57.380 --> 00:50:06.080
+when at a later point when dispatch tries to
+execute them, these objects are still valid.
+
+00:50:08.650 --> 00:50:16.060
+The good news or the very good news for most of you is
+most of the time you're dealing with Objective-C objects,
+
+00:50:16.060 --> 00:50:22.120
+and the block runtime will do this automatically for
+you, so you don't have to think about it too much.
+
+00:50:22.120 --> 00:50:31.540
+But other objects, so for instance-- and we went
+over this in great depth in the first session,
+
+00:50:31.540 --> 00:50:37.220
+so if you want to take a look at it
+or want to come back to the next one,
+
+00:50:37.220 --> 00:50:43.000
+you will see how we do retaining of objects that we need to.
+
+00:50:43.000 --> 00:50:50.370
+The idea here is that if you're passing CF objects,
+blocks would not be very helpful in managing that lifetime
+
+00:50:50.370 --> 00:50:54.040
+and you have to explicitly retain and release them.
+
+00:50:54.040 --> 00:50:56.050
+We've kind of already seen this.
+
+00:50:56.050 --> 00:50:59.000
+We can resuspend and resume dispatched objects.
+
+00:50:59.000 --> 00:51:05.720
+So, dispatch sources, suspension is very clear,
+it means your event handling is suspended,
+
+00:51:05.720 --> 00:51:09.480
+event handler blocks are not going to get enqueued anymore.
+
+00:51:09.480 --> 00:51:16.350
+For queues, suspending a queue effectively means
+blocks enqueued on that queue are not going to get run.
+
+00:51:16.350 --> 00:51:21.610
+One thing to note here again is sources
+are created in a suspended state.
+
+00:51:21.610 --> 00:51:25.360
+Now, you might be getting tired of
+this same thing that I'm repeating.
+
+00:51:25.360 --> 00:51:31.120
+One of the things that we see is people creates
+sources and if they forget to resume it,
+
+00:51:31.120 --> 00:51:35.280
+and they blame Grand Central for
+not monitoring those sources.
+
+00:51:35.280 --> 00:51:39.480
+So, just make sure that you resume the
+source to actually start monitoring.
+
+00:51:39.480 --> 00:51:46.610
+Also, when you call suspension
+on a queue, it is asynchronous.
+
+00:51:46.610 --> 00:51:52.510
+So, it is executing blocks one at a time, it's not
+going to preempt the executing block from running,
+
+00:51:52.510 --> 00:51:55.780
+it's going to finish that and then going to suspend.
+
+00:51:55.780 --> 00:52:04.600
+But imagine you have a source, and you set the
+target queue of that source to fire on a queue.
+
+00:52:04.600 --> 00:52:14.980
+You can reliably suspend this source by calling
+dispatch_suspend on that source from the event handler.
+
+00:52:14.980 --> 00:52:21.830
+Because when the event handler is firing, that means
+that is the only block that is working on the source.
+
+00:52:21.830 --> 00:52:29.440
+Even though the event is firing and GCD is maintaining
+the state and coalescing the state as the event is firing
+
+00:52:29.440 --> 00:52:33.910
+at the background, that is the only
+user block that is getting executed.
+
+00:52:33.910 --> 00:52:40.270
+So, you can suspend the source from the block, and
+this will reliable suspend the dispatched source.
+
+00:52:40.270 --> 00:52:47.800
+So, we try to be as close to CF objects in this case.
+
+00:52:47.800 --> 00:52:53.580
+And we also provide application context to dispatch sources.
+
+00:52:53.580 --> 00:52:55.520
+So, we have set and get specifiers.
+
+00:52:55.520 --> 00:53:02.010
+So, we can set a context on any of these dispatched sources.
+
+00:53:02.010 --> 00:53:04.700
+And we also provide finalizer callbacks.
+
+00:53:04.700 --> 00:53:16.720
+The idea is that when the dispatched source is destroyed,
+you cannot reliable actually know what the state is.
+
+00:53:16.720 --> 00:53:23.650
+So that object is already destroyed, and therefore,
+you can only call a function pointer at that point.
+
+00:53:23.650 --> 00:53:26.260
+So, that's about it.
+
+00:53:26.260 --> 00:53:29.330
+You can get more information in the Developer Forums.
+
+00:53:29.330 --> 00:53:34.920
+There's a good GCD guide that you can look into.
+
+00:53:34.920 --> 00:53:36.760
+You can ask Michael.
+
+00:53:36.760 --> 00:53:39.000
+And you can even look at the code yourself.
+
+00:53:39.000 --> 00:53:43.660
+It's open source, so feel free to use that resource.
+
+00:53:44.690 --> 00:53:52.530
+There is a repeat session for this
+that's happening today at 2 o'clock.
+

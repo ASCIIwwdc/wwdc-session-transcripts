@@ -1,0 +1,1644 @@
+WEBVTT
+
+00:00:06.200 --> 00:00:07.320
+>>Hi everyone.
+
+00:00:07.320 --> 00:00:08.720
+I'm Henry Mason.
+
+00:00:08.720 --> 00:00:14.730
+I'm an Application Engineer on the
+Application and Frameworks iOS Group at Apple.
+
+00:00:14.730 --> 00:00:22.380
+And today we're going talk about future proofing your
+applications, which is a pretty simple concept really.
+
+00:00:22.380 --> 00:00:28.170
+We want applications written today to run
+on devices that run iOS in the future.
+
+00:00:28.170 --> 00:00:36.140
+So it means devices like iPad and iPhone and iPod touch,
+we want your apps to run on future versions of those
+
+00:00:36.140 --> 00:00:43.130
+and any other devices we have running iOS and we want your
+applications to run on versions we haven't announced yet.
+
+00:00:43.130 --> 00:00:49.170
+We work really hard to do this and we know you really
+want that to happen and we really want it to happen
+
+00:00:49.170 --> 00:00:52.840
+so we want a little bit of your help to make
+sure this continues to happen in the future.
+
+00:00:52.840 --> 00:01:00.020
+So what we're briefly going to go over is
+some concrete examples of problems we've seen
+
+00:01:00.020 --> 00:01:02.830
+which have caused compatibility problems.
+
+00:01:02.830 --> 00:01:09.440
+So this means things that application developers have
+done that have caused problems in future versions of iOS.
+
+00:01:09.440 --> 00:01:14.380
+We're going to go over some examples of how to fix those
+and what you can do to prevent those kind of problems.
+
+00:01:14.380 --> 00:01:19.450
+Then we're going to go over a few tools and techniques
+we have to sort of find problems before they happen.
+
+00:01:19.450 --> 00:01:27.610
+So just to get this out of the way real quick,
+one of the major and highly preventable problems
+
+00:01:27.610 --> 00:01:31.680
+that can cause compatibility problems
+is use of non-public API.
+
+00:01:31.680 --> 00:01:38.300
+And just to be very simple about this, if you
+don't find a class method, function, symbol,
+
+00:01:38.300 --> 00:01:43.470
+in a header or a documentation, you really shouldn't use it.
+
+00:01:43.470 --> 00:01:49.700
+It's generally not documented or not in a header, not
+because we're trying to be malicious or we don't like you
+
+00:01:49.700 --> 00:01:51.940
+but because it's not ready for your use yet.
+
+00:01:51.940 --> 00:01:57.920
+If you find something you need and
+it's not in a header or documentation,
+
+00:01:57.920 --> 00:02:00.260
+the correct solution is to file an enhancement request.
+
+00:02:00.260 --> 00:02:03.980
+Just let us know you need this
+feature because it's not there yet
+
+00:02:03.980 --> 00:02:07.470
+and we'll see what we can do about
+adding that as soon as possible.
+
+00:02:07.470 --> 00:02:13.170
+Keep in mind we do, you know when we get duplicate requests,
+usually these are what we've already heard about a problem,
+
+00:02:13.170 --> 00:02:19.050
+something isn't available, we consider
+the number of dupes in scheduling fixes.
+
+00:02:19.050 --> 00:02:23.280
+So please do let us know when you have a new
+use case that we probably haven't thought of yet
+
+00:02:23.280 --> 00:02:26.300
+and then we can get that maybe added as public API.
+
+00:02:26.300 --> 00:02:31.970
+And of course even if something is in a
+header or is documented there are ways
+
+00:02:31.970 --> 00:02:36.100
+to misuse API, you're going to cause problems.
+
+00:02:36.100 --> 00:02:41.790
+So here's an example we've seen in a few applications,
+we want to get a view controller and put it
+
+00:02:41.790 --> 00:02:48.850
+on to a navigation controller and then at the end of it,
+after the animation is done, we want to well do something,
+
+00:02:48.850 --> 00:02:53.130
+you know have an alert, take off a task, whatever.
+
+00:02:53.130 --> 00:02:59.930
+Well one thing you might realize is that the animation on
+one version of iOS always takes the same amount of time.
+
+00:02:59.930 --> 00:03:06.570
+And this is some very kind of clever reverse engineering
+to discover that it takes .4 seconds to do this animation
+
+00:03:06.570 --> 00:03:11.710
+but this isn't future proof because it is entirely
+possible that we'll change that duration in the future.
+
+00:03:11.710 --> 00:03:18.020
+And even if we didn't change that duration, performs select
+their effort delay isn't guaranteed to be precisely timed
+
+00:03:18.020 --> 00:03:21.320
+so this could end up sort of breaking
+the sync of your application.
+
+00:03:21.320 --> 00:03:27.380
+And in almost all cases where we've seen
+this, there are real public ways of doing it.
+
+00:03:27.380 --> 00:03:31.640
+In this case you can just use the
+navigation controller, delegate callback,
+
+00:03:31.640 --> 00:03:35.150
+to know when the view controller is done
+being pushed and then you can do your work.
+
+00:03:35.150 --> 00:03:39.770
+And this will work much nicer and we'll be able to
+change the duration of the animation in the future
+
+00:03:39.770 --> 00:03:46.720
+and maybe even the style of the animation
+and your app will actually require less code.
+
+00:03:46.720 --> 00:03:51.000
+Another example of this is sort of
+going through our view hierarchy.
+
+00:03:51.000 --> 00:03:56.510
+We've seen a few cases where we have system
+classes, in this case a UI video editor controller,
+
+00:03:56.510 --> 00:04:02.740
+and some applications have needed
+some part of that system view.
+
+00:04:02.740 --> 00:04:09.750
+I've sort of changed the names to protect the
+innocent here but this isn't really going to work.
+
+00:04:09.750 --> 00:04:15.850
+The hierarchy of our views and our view
+controllers is very much subject to change.
+
+00:04:15.850 --> 00:04:22.960
+The way we lay out our views and even the way they
+look are almost certain to change between iOS releases.
+
+00:04:22.960 --> 00:04:26.980
+In particular, the ordering of subviews is not defined.
+
+00:04:26.980 --> 00:04:31.580
+And of course the contents of the layers of
+these views is also not really well defined.
+
+00:04:31.580 --> 00:04:36.640
+In the vast majority of cases that have done
+this, there are now lower level API available
+
+00:04:36.640 --> 00:04:38.110
+to get the information you're looking for.
+
+00:04:38.110 --> 00:04:42.830
+In particular, if you really just want to
+grab an image off the video capture device,
+
+00:04:42.830 --> 00:04:49.940
+you're going to look at the new AV foundation,
+AVCaptureDevice class, new in iOS 4.
+
+00:04:49.940 --> 00:04:59.710
+So another technique in Objective C is Categories, which
+is a really powerful technique for adding functionality
+
+00:04:59.710 --> 00:05:05.860
+to system classes and sort of organizing your classes
+into multiple segments so you can have, you know,
+
+00:05:05.860 --> 00:05:09.720
+one part of your class in one file,
+one part in another file.
+
+00:05:09.720 --> 00:05:13.750
+It really isn't a great way for over-riding
+the behavior of system classes, however.
+
+00:05:13.750 --> 00:05:18.540
+Although the runtime and the linker will let
+you do it, it's kind of fraught with peril.
+
+00:05:18.540 --> 00:05:24.660
+For example, if you really want all of your
+views to be green, it isn't the right technique
+
+00:05:24.660 --> 00:05:29.090
+to just over-ride DrawRect for all your
+views and make the background green.
+
+00:05:29.090 --> 00:05:36.070
+Although this might work in one version,
+the implementation of DrawRect isn't stable.
+
+00:05:36.070 --> 00:05:38.320
+You know we could be changing that in the future.
+
+00:05:38.320 --> 00:05:41.800
+So you don't want to do this.
+
+00:05:41.800 --> 00:05:47.620
+The correct solution is to you know make your own view
+or even just use some other public API we have available.
+
+00:05:47.620 --> 00:05:53.140
+So you make your own subclass, you know insert that where
+you need it and this will prevent you from kind of stomping
+
+00:05:53.140 --> 00:05:59.090
+on other code like system classes that
+depend on behavior or will in the future.
+
+00:05:59.090 --> 00:06:08.470
+Another little problem with categories is that it's actually
+very easy to accidentally over-ride a method for a class
+
+00:06:08.470 --> 00:06:10.710
+that doesn't exist, for a method that doesn't exist yet.
+
+00:06:10.710 --> 00:06:18.360
+It sort of sounds weird but let me give you a hypothetical
+here, let's say for a convenience you want to have a getter
+
+00:06:18.360 --> 00:06:24.850
+for the height of a view so you add
+height to UIView, well that's okay.
+
+00:06:24.850 --> 00:06:30.920
+The problem is it's entirely possible that UIView
+in the future will actually have a height property
+
+00:06:30.920 --> 00:06:33.510
+and it might be defined differently
+than what your app considers height.
+
+00:06:33.510 --> 00:06:35.580
+And then all of our system frameworks that are built
+
+00:06:35.580 --> 00:06:39.540
+on having the height property behave
+some way are not going to work.
+
+00:06:39.540 --> 00:06:44.900
+So you have to kind of use your imagination here
+but the basic point is that any system class
+
+00:06:44.900 --> 00:06:49.470
+with a common name is very likely that,
+you have to assume that we're going
+
+00:06:49.470 --> 00:06:52.050
+to add some method with that name in the future.
+
+00:06:52.050 --> 00:06:59.910
+So a really easy work around for this is to sort of
+name prefix methods that you add to system classes.
+
+00:06:59.910 --> 00:07:05.890
+So if your app is called my app, just sort of add my app to
+the beginning of the method name you add to system classes
+
+00:07:05.890 --> 00:07:12.420
+and then if we add a height property in the future,
+you won't sort of stomp on the system implementation.
+
+00:07:12.420 --> 00:07:17.770
+And this isn't a purely hypothetical example, by the way.
+
+00:07:17.770 --> 00:07:25.770
+Back in the early 2000's when there were dinosaurs, there
+was also use hidden property on NSView back on the desktop,
+
+00:07:25.770 --> 00:07:33.770
+on app kit so a number of applications actually broke when
+they were adding their own use hidden property to views
+
+00:07:33.770 --> 00:07:41.720
+and when they would run on the new version, the OS that had
+hidden property built into NSView, everything went crazy.
+
+00:07:41.720 --> 00:07:45.510
+So you don't want to do that.
+
+00:07:45.510 --> 00:07:52.050
+Something else that's caused some compatibility
+problems, you know crashing of applications when run
+
+00:07:52.050 --> 00:08:00.000
+on new OS versions, is sort of not correctly handling
+some of the more surprising API we have in the system.
+
+00:08:00.000 --> 00:08:04.430
+Exceptions by and large are designed
+to catch programmer error.
+
+00:08:04.430 --> 00:08:08.470
+You shouldn't really rely on exceptions
+being catchable and your application
+
+00:08:08.470 --> 00:08:11.420
+in its normal operation should never throw an exception.
+
+00:08:11.420 --> 00:08:12.660
+Well that seems good.
+
+00:08:12.660 --> 00:08:16.700
+The problem is that there are some API that
+actually do throw exceptions under sort
+
+00:08:16.700 --> 00:08:22.080
+of surprising circumstances and this is one of those.
+
+00:08:22.080 --> 00:08:29.400
+So there's a very subtle bug here but let's say this method
+has a user input string so it's some sort of untrusted input
+
+00:08:29.400 --> 00:08:34.800
+from the user types and we convert it
+to a URL, we get the host out of it,
+
+00:08:34.800 --> 00:08:37.790
+we make a mutable string, we mess
+with it, we do with it whatever.
+
+00:08:37.790 --> 00:08:48.570
+The tricky bit here is that NSURL actually will
+return nil if the input is not valid, not a valid URL,
+
+00:08:48.570 --> 00:08:50.820
+which normally in most of our API is okay.
+
+00:08:50.820 --> 00:08:53.260
+We're pretty safe about dealing with nil.
+
+00:08:53.260 --> 00:09:03.750
+The trick is that if you then send that nil object
+of URL a host message and then here you pass
+
+00:09:03.750 --> 00:09:07.820
+that nil objects immutable string with
+string, that's actually going to crash.
+
+00:09:07.820 --> 00:09:15.980
+It's going to throw an exception and it is documented but
+it's kind of, this can cause some compatibility problems.
+
+00:09:15.980 --> 00:09:20.950
+If in one version URL is slightly more
+strict about handle how it parcels URL's
+
+00:09:20.950 --> 00:09:24.820
+or if the user input is somehow
+changing so it isn't URL anymore,
+
+00:09:24.820 --> 00:09:29.870
+this is going crash on one version and
+work fine on another version of iOS.
+
+00:09:29.870 --> 00:09:34.030
+So there's a couple of things you can do
+here, one is basically just check to see
+
+00:09:34.030 --> 00:09:38.030
+that API UCall doesn't throw exceptions
+or you handle those cases.
+
+00:09:38.030 --> 00:09:44.640
+Another is to use slightly more safe non-exception
+throwing API, in this case you can use mutable copy
+
+00:09:44.640 --> 00:09:48.580
+on NSString which is okay with a nil receiver.
+
+00:09:48.580 --> 00:09:55.950
+Something else I'm sure a lot of people have noticed is
+that we don't really have name spaces so we have to deal
+
+00:09:55.950 --> 00:10:02.530
+with naming conventions for all of our system
+classes, which basically means that system classes
+
+00:10:02.530 --> 00:10:10.940
+and functions have a two letter prefix
+like UI or NS or CA or whatever.
+
+00:10:10.940 --> 00:10:12.250
+You can't really use those.
+
+00:10:12.250 --> 00:10:14.160
+Those are considered system private.
+
+00:10:14.160 --> 00:10:27.450
+Don't use two letter prefixes for your classes, much
+better to just sort of create your own prefix and use that.
+
+00:10:27.450 --> 00:10:31.910
+Event handling in UIKit is another
+sort of area of framework gotchas.
+
+00:10:31.910 --> 00:10:37.190
+There's some sort of surprising
+behaviors at the way events work in UIKit
+
+00:10:37.190 --> 00:10:40.720
+that have caused problems with backwards compatibility.
+
+00:10:40.720 --> 00:10:45.800
+The biggest one is the way some
+people like to forward UITouches.
+
+00:10:45.800 --> 00:10:54.920
+What this means is you get a touch in one view and then you
+send it off to another view, you know for whatever reason.
+
+00:10:54.920 --> 00:11:00.350
+This is technically supported but it is fraught with peril.
+
+00:11:00.350 --> 00:11:07.860
+Every responder that gets the UITouch
+must be your own custom subclass of UIView
+
+00:11:07.860 --> 00:11:10.430
+or there's going to be crazy, undefined behavior.
+
+00:11:10.430 --> 00:11:17.210
+And as a result this also means that you can't
+insert any of our system classes or system views
+
+00:11:17.210 --> 00:11:19.900
+into your view hierarchy and have it work correctly.
+
+00:11:19.900 --> 00:11:26.230
+You can't use some of the more nice touch
+handling controls that we've been adding recently.
+
+00:11:26.230 --> 00:11:29.480
+So again, it's supported but highly discouraged.
+
+00:11:29.480 --> 00:11:34.070
+And I'll show you there's a much better
+solution for that in iOS 3.2 and later.
+
+00:11:34.070 --> 00:11:37.760
+It's also important to remember
+to implement touchesCancelled.
+
+00:11:37.760 --> 00:11:46.160
+We've seen a lot of cases of people overriding touches
+began, moved, ended and forgetting to do cancelled,
+
+00:11:46.160 --> 00:11:48.820
+which leaves their application in some weird state.
+
+00:11:48.820 --> 00:11:53.440
+And it's entirely possible through a reasonably
+rigorous testing run through through your application,
+
+00:11:53.440 --> 00:12:00.290
+to not catch this but it really can leave your application
+in a weird place and especially now that we're getting more
+
+00:12:00.290 --> 00:12:05.130
+like Local Notifications and Push Notifications,
+there's going to be more and more cases
+
+00:12:05.130 --> 00:12:09.330
+where your applications will have to handle touches getting
+cancelled because of an alert popping up or something.
+
+00:12:09.330 --> 00:12:14.420
+So it's really critical you implement
+and work with touches getting cancelled.
+
+00:12:14.420 --> 00:12:21.010
+And on a related note, just going back to
+UITouch forwarding, in the vast majority of cases
+
+00:12:21.010 --> 00:12:26.390
+where people were doing it, UI Adjuster
+Recognizer is a much better solution.
+
+00:12:26.390 --> 00:12:33.410
+It's new in 3.2 and will solve a lot of your problems.
+
+00:12:33.410 --> 00:12:40.330
+Another little UIKit surprising problem
+is the way UITableViewCells are views
+
+00:12:40.330 --> 00:12:45.470
+which necessarily means they have subviews but you
+shouldn't be adding views directly to UITableViewCells.
+
+00:12:45.470 --> 00:12:52.830
+If you want to add something to a TableViewCell, like a
+custom view, you actually want to add it to the content view
+
+00:12:52.830 --> 00:12:57.990
+and this will allow you to get the highlighting
+to work correctly and our layout will work better.
+
+00:12:57.990 --> 00:13:03.820
+So again we can't really catch people actually
+doing this but it will cause compatibility problems
+
+00:13:03.820 --> 00:13:07.420
+and has actually caused a number of
+applications to have weird behaviors
+
+00:13:07.420 --> 00:13:11.320
+in their table views when upgrading to iOS 4.
+
+00:13:11.320 --> 00:13:19.670
+So another problem, it's actually sort of a more general
+purpose problem, is accidental blocking of your UI.
+
+00:13:19.670 --> 00:13:27.880
+The main thread in iOS applications is primarily designed
+for servicing your user's requests, responding to touches
+
+00:13:27.880 --> 00:13:32.600
+and motion events from the user and
+interpreting that sort of thing.
+
+00:13:32.600 --> 00:13:35.650
+It isn't designed for, you shouldn't
+be doing long-running computation
+
+00:13:35.650 --> 00:13:39.920
+or network access or file reading on your main thread.
+
+00:13:39.920 --> 00:13:46.650
+And this is actually something of a forward compatibility
+problem because something may very well be fast
+
+00:13:46.650 --> 00:13:49.900
+in one release of the OS but then get slower later.
+
+00:13:49.900 --> 00:13:54.750
+And in this example we're doing a
+loading of a URL into a TableViewCell.
+
+00:13:54.750 --> 00:14:01.270
+The problem here is, although the
+NSString, string with contents of URL,
+
+00:14:01.270 --> 00:14:03.820
+may very well be fast in one version of the OS.
+
+00:14:03.820 --> 00:14:09.020
+You know let's say that the URL is a file URL or
+something like that and it's very quick to load,
+
+00:14:09.020 --> 00:14:12.700
+it's entirely possible that in a future
+version of the OS, that will get slow.
+
+00:14:12.700 --> 00:14:15.760
+Maybe that URL will turn into a
+web URL or something and it has
+
+00:14:15.760 --> 00:14:21.630
+to make some long running request
+to you know the internet, the cloud.
+
+00:14:21.630 --> 00:14:24.480
+So you don't want to do this kind of thing.
+
+00:14:24.480 --> 00:14:28.450
+You want to use either non-blocking API
+or move your long running computation
+
+00:14:28.450 --> 00:14:32.810
+and network access and file access to a background thread.
+
+00:14:32.810 --> 00:14:37.000
+So this leads to another common mistake
+which can cause compatibility problems.
+
+00:14:37.000 --> 00:14:43.170
+All right you see here, well I don't want to do this in
+the main thread so let me do it on a background thread.
+
+00:14:43.170 --> 00:14:50.090
+Okay well I can use performSelectorInBackground and now my
+work runs in the background thread and doesn't block the UI
+
+00:14:50.090 --> 00:14:54.780
+and my table scrolls nicely and my
+image on the TableViewCell just kind
+
+00:14:54.780 --> 00:14:58.350
+of pops in when it gets loaded and no big deal.
+
+00:14:58.350 --> 00:15:04.550
+The problem is there's another common gotcha which
+is that UIKit classes really should only be used
+
+00:15:04.550 --> 00:15:08.010
+from the main thread, with a few very specific exceptions.
+
+00:15:08.010 --> 00:15:14.790
+In particular imageNamed, accessing the image view of
+a TableViewCell and changing the image of an imageView,
+
+00:15:14.790 --> 00:15:17.970
+none of that can be done from a background thread.
+
+00:15:17.970 --> 00:15:27.070
+It may very well work on one release but then
+cause crashes later and you really don't want that.
+
+00:15:27.070 --> 00:15:30.940
+So to solve this you have this sort of three step process.
+
+00:15:30.940 --> 00:15:34.020
+First you kick off your work to a background thread.
+
+00:15:34.020 --> 00:15:40.110
+You do the background safe work, in this case loading the
+content of the string content of URL on the background.
+
+00:15:40.110 --> 00:15:45.670
+And then you message back to the main
+thread to do the UIKit stuff there.
+
+00:15:45.670 --> 00:15:51.520
+So we're doing the imageNamed loading and the
+imageView manipulation back on the main thread,
+
+00:15:51.520 --> 00:15:56.330
+which will be nice and safe for your user and for your app.
+
+00:15:56.330 --> 00:15:59.290
+iOS 4 actually makes it a bit easier.
+
+00:15:59.290 --> 00:16:09.070
+You can use libdispatch or the MS operation QAPI
+and the new block syntax to handle this nicely.
+
+00:16:09.070 --> 00:16:15.760
+So this is an equivalent thing that requires less code and
+gives you a bit better compile time with error checking.
+
+00:16:15.760 --> 00:16:22.670
+So you just sort of create a block that does the string
+contents loading and then another block that does the work
+
+00:16:22.670 --> 00:16:30.270
+on the image view and the UIImage on the main thread
+and you sort of dispatch those to the queues you need
+
+00:16:30.270 --> 00:16:37.900
+and requires a little bit less code
+and does basically the same thing.
+
+00:16:37.900 --> 00:16:46.490
+Another case where, another thing that's new in iOS 4, which
+kind of goes back to the idea of not using your main thread
+
+00:16:46.490 --> 00:16:52.230
+to do long running computations, is your
+applicationDidEnterBackground method.
+
+00:16:52.230 --> 00:16:59.040
+When you adopt fast app switching, your application
+delegate will receive applicationDidEnterBackground
+
+00:16:59.040 --> 00:17:03.490
+when the user switches out of your app.
+
+00:17:03.490 --> 00:17:07.210
+This might seem like a good time to sort
+of do some cleanup and it usually is.
+
+00:17:07.210 --> 00:17:13.950
+The problem is you actually only have about
+10 seconds in iOS 4 to respond to this.
+
+00:17:13.950 --> 00:17:17.870
+If you don't return from that quickly enough,
+your application will be forcibly terminated
+
+00:17:17.870 --> 00:17:22.450
+and you'll effectively be opting out of fast app switching.
+
+00:17:22.450 --> 00:17:28.260
+So if this dual out of work with object does a
+lot of work with this object that takes a minute,
+
+00:17:28.260 --> 00:17:35.850
+your app is effectively not working with fast
+app switching when you implement it this way.
+
+00:17:35.850 --> 00:17:41.130
+So you can do a similar thing we were doing with
+the TableViewCell in the DidEnterBackground,
+
+00:17:41.130 --> 00:17:46.320
+except when you're editing the background
+you need to first request a background task
+
+00:17:46.320 --> 00:17:49.040
+from the application and then you can start doing your work.
+
+00:17:49.040 --> 00:17:53.280
+So here we request a background task from the application.
+
+00:17:53.280 --> 00:18:00.170
+If we get it we do the lots of work on a background
+global concurrent queue that won't block the main thread
+
+00:18:00.170 --> 00:18:06.450
+and then we terminate the task and then
+the app can go to sleep and the system,
+
+00:18:06.450 --> 00:18:10.960
+your app will be able to quickly resume
+when the user goes back to your application.
+
+00:18:10.960 --> 00:18:21.350
+Another cool thing in iOS 4 is that there's a few
+more thread safe API, UIGraphics and part of UIImage
+
+00:18:21.350 --> 00:18:25.490
+and of course the background task identifier
+stuff is now accessible off the main thread.
+
+00:18:25.490 --> 00:18:28.970
+So there's a few new UIKit things you're
+now allowed to do in the background,
+
+00:18:28.970 --> 00:18:34.920
+which is great for not blocking your main thread and not
+causing your UI to lock up and also great for, you know,
+
+00:18:34.920 --> 00:18:40.480
+future compatibility if we get a little
+bit more strict about how long you have
+
+00:18:40.480 --> 00:18:45.000
+to block the main thread before we kill you.
+
+00:18:45.000 --> 00:18:50.620
+So let's look at a few kind of nasty
+assumptions that have caused some kind
+
+00:18:50.620 --> 00:18:57.420
+of embarrassing problems on applications
+between OS releases.
+
+00:18:57.420 --> 00:19:06.940
+You really should never be hard coating pixel or point
+values of our widgets in your applications and views.
+
+00:19:06.940 --> 00:19:11.670
+The font metrics and the margins of our views
+and labels and stuff aren't really stable.
+
+00:19:11.670 --> 00:19:13.980
+It's possible those can change.
+
+00:19:13.980 --> 00:19:17.450
+You know we might make slight pixel changes.
+
+00:19:17.450 --> 00:19:21.270
+The way our buttons and table U cells
+look are sort of subject to change.
+
+00:19:21.270 --> 00:19:25.950
+We might make those a little tighter, a little smaller,
+a little bigger so you don't want to just, you know,
+
+00:19:25.950 --> 00:19:30.150
+sort of reverse engineer again that oh well it's
+always 10 pixels here so I'll just hard code
+
+00:19:30.150 --> 00:19:33.050
+that I'm going to move my drawing over by 10 pixels.
+
+00:19:33.050 --> 00:19:37.300
+We provide API like in the string editions,
+
+00:19:37.300 --> 00:19:42.550
+in UIKit to determine how big strings
+should be and you really want to use those.
+
+00:19:42.550 --> 00:19:46.140
+And it isn't just good for compatibility
+of the future versions of the OS.
+
+00:19:46.140 --> 00:19:48.560
+It's also really good for internationalization.
+
+00:19:48.560 --> 00:19:54.390
+When you want to start supporting languages beyond
+English or whatever languages you are on now,
+
+00:19:54.390 --> 00:20:00.250
+you really need to be able to handle longer and
+shorter human readable strings in your applications.
+
+00:20:00.250 --> 00:20:05.390
+So you know kind of getting started on that early
+and making sure the UI is kind of flexible to handle
+
+00:20:05.390 --> 00:20:08.470
+that sort of thing, is a really good idea.
+
+00:20:08.470 --> 00:20:12.270
+And of course we are no longer in a 320 by 480 world.
+
+00:20:12.270 --> 00:20:21.240
+You know just in the last few months we've gone from 320
+by 480 to iPad size devices and now the retina display
+
+00:20:21.240 --> 00:20:25.270
+on iPhone 4 and who knows where we're going from there.
+
+00:20:25.270 --> 00:20:30.410
+[laughter] So really do make use of
+the UIScreen bounds that we provide.
+
+00:20:30.410 --> 00:20:34.540
+You know if you want to make your
+thing full screen, we provide it.
+
+00:20:34.540 --> 00:20:37.040
+We provide a way to get that.
+
+00:20:37.040 --> 00:20:41.570
+Just say, you know get the main screen or whatever
+screen you're drawing on, if you're using TV out,
+
+00:20:41.570 --> 00:20:45.500
+get the bounds of it and that gives
+you the points you want to use to lay
+
+00:20:45.500 --> 00:20:50.240
+out your views, which is a really, really good idea.
+
+00:20:50.240 --> 00:20:55.360
+Another case we saw with the introduction of
+the iPad was that we actually had very good luck
+
+00:20:55.360 --> 00:20:59.890
+with the application compatibility in compatibility mode.
+
+00:20:59.890 --> 00:21:07.170
+So the vast majority of iPhone applications work very nicely
+when we're in an iPad incompatibility mode but a couple
+
+00:21:07.170 --> 00:21:10.020
+of them, we launched them and nothing happened.
+
+00:21:10.020 --> 00:21:17.980
+And in a huge proportion of these cases we ended up finding
+code in these applications that look something like this.
+
+00:21:17.980 --> 00:21:24.460
+You should really never be using the model property
+of the UIDevice object for almost anything.
+
+00:21:24.460 --> 00:21:30.700
+It exists sort of just a purely informative thing
+to determine, you know maybe the name of the device
+
+00:21:30.700 --> 00:21:36.160
+to show the user like you know thank you
+for running my application on your iPhone.
+
+00:21:36.160 --> 00:21:39.330
+You should never use it to determine how your UI looks.
+
+00:21:39.330 --> 00:21:46.930
+So there's two main problems with this code here, the
+first is it makes the unfortunate assumption that iPhones
+
+00:21:46.930 --> 00:21:52.930
+and iPod touches, you know having that model
+name determines what capabilities you have,
+
+00:21:52.930 --> 00:22:00.490
+which is actually already a problem because you can see
+that even since last year iPod touches have had microphone
+
+00:22:00.490 --> 00:22:04.730
+in accessories so if your application
+requires a microphone, camera, SMS,
+
+00:22:04.730 --> 00:22:08.860
+you don't want to be using a device name to determine that.
+
+00:22:08.860 --> 00:22:15.210
+And of course the bigger problem is, if device model
+returns something other than an iPhone or iPod touch,
+
+00:22:15.210 --> 00:22:19.740
+your application will set up no user interface,
+which is what we saw on all these iPad examples.
+
+00:22:19.740 --> 00:22:23.060
+No UI got set up at all.
+
+00:22:23.060 --> 00:22:27.000
+So what you do want to use are the
+capabilities based API provide.
+
+00:22:27.000 --> 00:22:31.550
+If you want to know if a microphone is
+available, AVAudioSession can tell you.
+
+00:22:31.550 --> 00:22:36.420
+If you want to know if there's a camera, the ImagePicker
+can tell you and if you want to know if you can send SMS,
+
+00:22:36.420 --> 00:22:40.340
+you can ask the application if it can open an SMS URL.
+
+00:22:40.340 --> 00:22:45.060
+There's a few other examples in the documentation
+but the critical thing is use specific API
+
+00:22:45.060 --> 00:22:52.510
+for the capability you need and secondly, if the capability
+isn't available but you still want to support that device,
+
+00:22:52.510 --> 00:22:55.260
+just set it up unconditionally, not based on the model name.
+
+00:22:55.260 --> 00:22:57.550
+So basically, always make sure to set up something.
+
+00:22:57.550 --> 00:23:04.660
+And of course there's a few new capabilities
+in iOS 4 and in iPhone 4 and we have new API
+
+00:23:04.660 --> 00:23:08.480
+for that so I want to show you a couple of those.
+
+00:23:08.480 --> 00:23:12.160
+So one is the new message framework
+stuff lets you compose SMS's,
+
+00:23:12.160 --> 00:23:17.980
+text messages so there's a cool new
+class method called canSendText,
+
+00:23:17.980 --> 00:23:22.450
+which lets you know if your device has
+been set up for sending text messages.
+
+00:23:22.450 --> 00:23:28.530
+The event kit system has a new support
+for calendar and date based stuff
+
+00:23:28.530 --> 00:23:32.860
+and you can see what events are
+supported in a given calendar.
+
+00:23:32.860 --> 00:23:38.300
+The gyroscope in iPhone 4 is exposed through core motion.
+
+00:23:38.300 --> 00:23:44.200
+And this also works for using the excelerometer,
+there's new stuff in core motion for that.
+
+00:23:44.200 --> 00:23:50.370
+So just check to see if the gyro is available on
+the CMMotionManager and that will work nicely.
+
+00:23:50.370 --> 00:23:56.680
+If you want to know if you have a retinal display,
+you can check the scale property of a screen.
+
+00:23:56.680 --> 00:24:02.640
+In iPhone 4 the scale is 2, for
+all the other devices it's 1.
+
+00:24:02.640 --> 00:24:04.900
+But you should handle any scale.
+
+00:24:04.900 --> 00:24:12.750
+And of course the new cameras, there's great
+availability stuff in the image controller
+
+00:24:12.750 --> 00:24:17.380
+for the new camera capabilities to
+determine if there's a front or back camera,
+
+00:24:17.380 --> 00:24:22.030
+how you can determine which camera has
+a flash, if any and you can determine
+
+00:24:22.030 --> 00:24:25.260
+which camera has a video or still capabilities.
+
+00:24:25.260 --> 00:24:31.630
+I'm going to switch gears a little bit and
+talk about some of the tools we have available
+
+00:24:31.630 --> 00:24:35.080
+to let you sort of catch problems before they happen.
+
+00:24:35.080 --> 00:24:37.460
+And the biggest tool is just the new versions of the SDK.
+
+00:24:37.460 --> 00:24:45.550
+As soon as new betas become available, it is absolutely
+critical that everyone download them, install them,
+
+00:24:45.550 --> 00:24:50.270
+recompile your application with
+the new SDK and make sure it work.
+
+00:24:50.270 --> 00:24:57.290
+If there's any unexpected behavior change, well first
+check to see if there's a bug in your code that was exposed
+
+00:24:57.290 --> 00:25:02.660
+by this but if you can't find a bug in your code, we
+really want to hear about it, even if you're not sure,
+
+00:25:02.660 --> 00:25:09.110
+please file a bug and say my app used to
+do this, now it does this, what gives?
+
+00:25:09.110 --> 00:25:11.890
+We really, really want to hear that.
+
+00:25:11.890 --> 00:25:14.940
+And in particular, turn on deprecation warnings.
+
+00:25:14.940 --> 00:25:22.520
+Just go into your project target settings and check the warn
+about deprecated functions checkbox and it will tell you
+
+00:25:22.520 --> 00:25:25.710
+about any API that we aren't supporting anymore.
+
+00:25:25.710 --> 00:25:30.060
+Deprecated means we're not adding
+features to it, we're not fixing bugs in it
+
+00:25:30.060 --> 00:25:32.250
+and there's a better replacement available.
+
+00:25:32.250 --> 00:25:40.150
+So in this example on the screen we've got the final
+attributes of path traverse link method on File Manager,
+
+00:25:40.150 --> 00:25:41.960
+which has been deprecated for a little while.
+
+00:25:41.960 --> 00:25:47.240
+You definitely don't want to use that anymore
+and the header can explain some reasons why.
+
+00:25:47.240 --> 00:25:51.960
+So why is it important that you link
+against new versions of the SDK?
+
+00:25:51.960 --> 00:25:56.440
+Why not just take the binary you had, you
+know your old version of your application,
+
+00:25:56.440 --> 00:26:01.000
+put it on you know the new beta OS and see how it works?
+
+00:26:01.000 --> 00:26:05.510
+The answer is we employ a technique
+we call linked on or after.
+
+00:26:05.510 --> 00:26:11.980
+Every once in a while we do find
+bugs in our system frameworks.
+
+00:26:11.980 --> 00:26:18.080
+And by and large we try to fix those bugs
+but if we have third party applications
+
+00:26:18.080 --> 00:26:24.160
+that could potentially be inadvertently depending on those
+bugs, we have to be very careful about how we fix them.
+
+00:26:24.160 --> 00:26:30.580
+And our technique is that if there's any chance that
+fixing this bug will cause applications to crash,
+
+00:26:30.580 --> 00:26:37.210
+we try to use what's called a linked on or after
+check, which is to say we check to see what version
+
+00:26:37.210 --> 00:26:40.030
+of the SDK was used to compile the application.
+
+00:26:40.030 --> 00:26:47.330
+And if it was a version from before the bug was
+discovered and fixed, we maintain the old buggy behavior.
+
+00:26:47.330 --> 00:26:57.110
+So let me give you a little example of this, I'm not
+sure if anyone noticed but up until 2.0 or up until 3.0,
+
+00:26:57.110 --> 00:27:01.860
+in iPhone OS 2, imageNamed actually leaked.
+
+00:27:01.860 --> 00:27:09.670
+It returned images that were a little bit
+over retained, just by 1 but that was enough.
+
+00:27:09.670 --> 00:27:16.200
+[laughter] You shouldn't, you know, rely on this particular
+example of retain count but this just shows the problem.
+
+00:27:16.200 --> 00:27:20.380
+So image named, it should be returning
+something with retained count of effectively 1
+
+00:27:20.380 --> 00:27:27.820
+but it was actually returning one with 2, obviously
+auto released but well when we discovered this problem,
+
+00:27:27.820 --> 00:27:32.420
+we didn't want to just start returning a retained
+count of you know a correctly retained object
+
+00:27:32.420 --> 00:27:37.610
+because applications could have been inadvertently
+depending on the application being over retained.
+
+00:27:37.610 --> 00:27:44.360
+So even on future versions of iOS, as long
+as the app was compiled with an older SDK,
+
+00:27:44.360 --> 00:27:46.920
+we'll still return an over retained object.
+
+00:27:46.920 --> 00:27:52.290
+But as soon as you compile with the new SDK's,
+we'll return a correctly retained object.
+
+00:27:52.290 --> 00:27:57.950
+So if any application was inadvertently depending
+on that behavior, they'll start to crash.
+
+00:27:57.950 --> 00:28:02.510
+And we employ this by and large pretty much anywhere we can.
+
+00:28:02.510 --> 00:28:07.790
+It will cause sort of behavior changes and
+accidental memory corruption and stuff like that.
+
+00:28:07.790 --> 00:28:13.080
+So it is really, really critical to compile with
+new versions of the SDK when they become available.
+
+00:28:13.080 --> 00:28:20.580
+And another great way to find bugs before they
+sort of become problems is the static analyzer.
+
+00:28:20.580 --> 00:28:24.820
+It really is just about the best thing ever.
+
+00:28:24.820 --> 00:28:30.920
+It catches a lot of errors and the cool thing about
+it is that it can actually catch errors on code paths
+
+00:28:30.920 --> 00:28:34.130
+that you don't test in your normal testing
+
+00:28:34.130 --> 00:28:40.130
+because for whatever reason your application
+doesn't go down that code path yet.
+
+00:28:40.130 --> 00:28:45.480
+It truly can like walk through functions and methods
+and branches and all that stuff and find over-retains
+
+00:28:45.480 --> 00:28:50.120
+and uses of uninitialized variables and
+I can't say enough great things about it.
+
+00:28:50.120 --> 00:28:57.050
+One really cool new thing in recent versions of Xcode 3
+and later, is that you can now turn the Static Analyzer
+
+00:28:57.050 --> 00:29:03.840
+on immediately after, by default so that every time
+you build your application, a Static Analyzer runs.
+
+00:29:03.840 --> 00:29:06.680
+I would highly advise doing that.
+
+00:29:06.680 --> 00:29:15.290
+It can catch bugs before they become problems and will
+really, really make development much easier and much nicer.
+
+00:29:15.290 --> 00:29:23.520
+There is one small problem with the Static Analyzer,
+which is that because it's built on the new LLVM compiler,
+
+00:29:23.520 --> 00:29:29.640
+anything it can't compile won't get analyzed
+and will just come back with zero bugs,
+
+00:29:29.640 --> 00:29:34.060
+which means you might not be getting as
+much coverage of your code as you think.
+
+00:29:34.060 --> 00:29:40.240
+So that also means that one thing we
+can't solve just yet is coverage of C++,
+
+00:29:40.240 --> 00:29:43.200
+which actually the Static Analyzer
+can't quite cover yet anyway.
+
+00:29:43.200 --> 00:29:50.720
+But also there are some C and Objective C idioms
+we've seen in code, including ours, which GCC accepts
+
+00:29:50.720 --> 00:29:55.250
+but the new compiler won't like, won't deal with.
+
+00:29:55.250 --> 00:30:03.400
+So as a result, one way to get better coverage of the
+Static Analyzer is to switch to the LLVM compiler.
+
+00:30:03.400 --> 00:30:07.770
+You don't necessarily have to switch to
+it permanently, if you're not quite ready
+
+00:30:07.770 --> 00:30:14.690
+to use the cutting edge compiler system but just
+maybe once in a while switch to the LLVM compiler.
+
+00:30:14.690 --> 00:30:20.150
+Make sure your app compiles cleanly with it and then
+the Static Analyzer will give you much better results.
+
+00:30:20.150 --> 00:30:27.540
+There's some great new features
+in the iPhone Simulator in iOS 4.
+
+00:30:27.540 --> 00:30:30.290
+The biggest is that we've bought over the new run time.
+
+00:30:30.290 --> 00:30:38.600
+It has a lot of cool new features but the best part of it is
+you can now run newly, you know, iOS 4 compiled applications
+
+00:30:38.600 --> 00:30:42.670
+on older versions of the SDK and we're
+going to support this going forward.
+
+00:30:42.670 --> 00:30:48.250
+Currently we only support as far back as 3.2 but even with
+just that, that's a pretty great thing because that means
+
+00:30:48.250 --> 00:30:58.390
+for universal app development you can compile with the
+iOS 4 SDK and simulate it on the iPhone OS 3.2 system.
+
+00:30:58.390 --> 00:31:04.700
+So since some of the new stuff in iOS 4 isn't quite
+available in the iPad yet, iPad's are still going to run 3.2
+
+00:31:04.700 --> 00:31:08.040
+for a while, this is a really, really convenient thing.
+
+00:31:08.040 --> 00:31:10.990
+And again, we're going to continue
+to support this in the future.
+
+00:31:10.990 --> 00:31:12.940
+And obviously it also works the other way.
+
+00:31:12.940 --> 00:31:18.870
+You can compile something for 3.2 and
+then run it on the 4.0 SDK, the Simulator.
+
+00:31:18.870 --> 00:31:27.400
+The Simulator is also really great to support
+sort of unusual configurations that you might not,
+
+00:31:27.400 --> 00:31:30.390
+you know, consider testing on your devices.
+
+00:31:30.390 --> 00:31:34.380
+You know test to make sure your UI
+is good with the in-call status bar.
+
+00:31:34.380 --> 00:31:39.290
+You know the double height status bar
+which is going to become, you know,
+
+00:31:39.290 --> 00:31:41.890
+more and more apps are going to use
+that sort of thing in the future.
+
+00:31:41.890 --> 00:31:48.710
+Low memory warnings, in an era of multitasking when
+you've got lots of applications on your system,
+
+00:31:48.710 --> 00:31:51.010
+it's entirely possible that you're going to get more,
+
+00:31:51.010 --> 00:31:54.490
+you're more likely to get memory
+warnings today than you used to be.
+
+00:31:54.490 --> 00:31:57.380
+And applications are getting bigger and all that stuff.
+
+00:31:57.380 --> 00:32:01.310
+So make sure to test low memory warnings,
+which the simulator can do very easily.
+
+00:32:01.310 --> 00:32:07.470
+You just go into menu, go to simulate low memory
+warning and make sure your application works correctly.
+
+00:32:07.470 --> 00:32:10.090
+Just do that every once in a while.
+
+00:32:10.090 --> 00:32:14.480
+But of course the simulator is still
+not a replacement for the device.
+
+00:32:14.480 --> 00:32:17.780
+If you plan to ship on, given on OS version it is critical
+
+00:32:17.780 --> 00:32:21.790
+that you actually test on that
+OS hardware version on a device.
+
+00:32:21.790 --> 00:32:27.300
+In particular, the performance characteristics are different
+and we don't support some of the new background modes
+
+00:32:27.300 --> 00:32:33.480
+like background location, navigation and
+void stuff and the background audio playback.
+
+00:32:33.480 --> 00:32:42.380
+That stuff isn't correctly stimulated so stick with,
+you know, make sure to use the device when you can.
+
+00:32:42.380 --> 00:32:46.500
+Instruments is great for catching sort of runtime problems.
+
+00:32:46.500 --> 00:32:51.590
+It's a great idea to run leaks in the
+allocations instruments every once in a while,
+
+00:32:51.590 --> 00:32:54.050
+just you know maybe once a week or something.
+
+00:32:54.050 --> 00:32:59.560
+And if you notice your application is leaking
+memory, what we have typically found is that,
+
+00:32:59.560 --> 00:33:00.930
+well first of all that's a very bad thing.
+
+00:33:00.930 --> 00:33:02.170
+You want to fix that.
+
+00:33:02.170 --> 00:33:08.210
+But you could have been accidentally, you know,
+relying on that leak to cover up some other over retain
+
+00:33:08.210 --> 00:33:13.430
+or over release, which is going to cause crashing later on.
+
+00:33:13.430 --> 00:33:18.250
+So every once, you know run leaks, fix your
+leaks, make sure you're not abandoning memory
+
+00:33:18.250 --> 00:33:21.760
+and then make sure your app doesn't
+crash after you fix those leaks.
+
+00:33:21.760 --> 00:33:25.560
+If you have a leak and you fix
+it and your app starts crashing,
+
+00:33:25.560 --> 00:33:29.250
+it is not the correct thing to put the leak back in.
+
+00:33:29.250 --> 00:33:34.630
+[laughter] That means you have a problem you need to fix.
+
+00:33:34.630 --> 00:33:39.680
+One of the really great things in iOS
+4 SDK is the automation instrument,
+
+00:33:39.680 --> 00:33:44.520
+which lets you sort of automatedly
+test your user interface, you know,
+
+00:33:44.520 --> 00:33:48.750
+and drilling down through the UI
+without manually tapping things.
+
+00:33:48.750 --> 00:33:50.030
+I would make use of that.
+
+00:33:50.030 --> 00:33:54.370
+It's really great for finding, you know,
+behavioral differences between OS versions.
+
+00:33:54.370 --> 00:33:57.620
+Sort of set up a good test suite of automated tests.
+
+00:33:57.620 --> 00:33:59.310
+Run it on different versions.
+
+00:33:59.310 --> 00:34:01.020
+Make sure everything works correctly.
+
+00:34:01.020 --> 00:34:08.060
+So we're going to kind of switch gears again for a
+second and talk about sort of past proofing your app.
+
+00:34:08.060 --> 00:34:16.200
+A lot of people want to ship their application such that
+it takes advantage of new features on new operating systems
+
+00:34:16.200 --> 00:34:24.270
+but at the same time can still run on old operating
+systems that don't support those features, which is noble.
+
+00:34:24.270 --> 00:34:25.570
+It's a good thing to do.
+
+00:34:25.570 --> 00:34:27.970
+But you have to do a little bit of
+work to make sure that works correctly.
+
+00:34:27.970 --> 00:34:34.650
+If you want to call a new C function or use
+a new C symbol, if you compile against it
+
+00:34:34.650 --> 00:34:37.850
+with the correct minimal version set but using the new SDK,
+
+00:34:37.850 --> 00:34:42.640
+when you run on older devices,
+that symbol will just be null.
+
+00:34:42.640 --> 00:34:45.870
+So calling it is going to crash.
+
+00:34:45.870 --> 00:34:54.530
+So for example if you want to use the new UI Accessibility
+VoiceOverRunning C Function and you still want your app,
+
+00:34:54.530 --> 00:35:00.640
+which is new in iOS 4, but you still want your app to run
+on old versions, you need to sort of gracefully fall back
+
+00:35:00.640 --> 00:35:07.150
+by checking to see if the function is available and not
+null and if it is available, you can go ahead and call it,
+
+00:35:07.150 --> 00:35:10.040
+otherwise sort of fall back to some reasonable behavior.
+
+00:35:10.040 --> 00:35:13.480
+So just assuming that it's not
+running is probably reasonable here.
+
+00:35:13.480 --> 00:35:15.650
+So that's a nice way of doing that.
+
+00:35:15.650 --> 00:35:22.540
+There's a new method that's available on Existing
+Class that's not available on older versions of the OS.
+
+00:35:22.540 --> 00:35:29.840
+You can use RespondsToSelector, which
+is a class instance method on NSObject.
+
+00:35:29.840 --> 00:35:34.990
+So for example if you want to see if the
+beginBackgroundTask with identifier API is available.
+
+00:35:34.990 --> 00:35:40.190
+You take an application, probably your
+application, the shared application in your process,
+
+00:35:40.190 --> 00:35:43.430
+you ask if it responds to that method, that selector
+
+00:35:43.430 --> 00:35:47.630
+and if it does you can use the, you
+can call it and use that result.
+
+00:35:47.630 --> 00:35:51.690
+On old devices you'll just use the
+background test unifier invalid,
+
+00:35:51.690 --> 00:35:56.150
+which is also what happens on older devices running iOS 4.
+
+00:35:56.150 --> 00:36:02.820
+So for example, on the original iPhone 3G you'll get an
+invalid background task identifier anyway so you're going
+
+00:36:02.820 --> 00:36:07.850
+to handle that regardless but this will work
+nicely even on older operation system versions.
+
+00:36:07.850 --> 00:36:12.580
+If you want to use a new class,
+you can use NS Class from String.
+
+00:36:12.580 --> 00:36:17.300
+You pass the name of the class you want to use,
+in this case let's say you want to use UI NIB
+
+00:36:17.300 --> 00:36:21.460
+for the cool new NIB loading stuff we have in iOS 4.
+
+00:36:21.460 --> 00:36:27.770
+That will return an object which is a
+class, in Objective C classes are objects.
+
+00:36:27.770 --> 00:36:30.270
+If the class is available you can use it.
+
+00:36:30.270 --> 00:36:32.620
+If not, you need to create some kind of fall back behavior.
+
+00:36:32.620 --> 00:36:38.150
+You can use maybe the NS bundles
+loading stuff, NIB loading code.
+
+00:36:38.150 --> 00:36:41.480
+So there is one thing we don't quite support yet.
+
+00:36:41.480 --> 00:36:47.000
+Let's say you want to subclass a new class, like
+let's say you want to subclass UIGestureRecognizer
+
+00:36:47.000 --> 00:36:50.220
+and have it run on old versions of the OS.
+
+00:36:50.220 --> 00:36:57.130
+This is technically feasible with our runtime
+so that the framework is there but our compiler
+
+00:36:57.130 --> 00:37:00.190
+and linker don't actually support it just yet.
+
+00:37:00.190 --> 00:37:06.320
+So if you do have a real need for this, please file
+an enhancement request and we'll see what we can do.
+
+00:37:06.320 --> 00:37:13.530
+So just to go over it one more time, finding compatibility
+is not an easy problem but we are committed to it
+
+00:37:13.530 --> 00:37:19.400
+and we want your apps to work on future versions
+of the OS as much as you do and your customers do.
+
+00:37:19.400 --> 00:37:27.130
+So be vigilant about compiling with new versions of the
+SDK, finding bugs, file those bugs and let us know about it
+
+00:37:27.130 --> 00:37:36.170
+and there's really great tools available to, well
+catch these problems before they become real problems.
+
+00:37:36.170 --> 00:37:39.320
+For more information you can talk to Bill.
+
+00:37:39.320 --> 00:37:46.490
+Definitely, as always, read the documentation and check out
+the Dev Forums, in particular the Coding Guidelines goes
+
+00:37:46.490 --> 00:37:55.020
+over some of the stuff about how we handle future, you
+know future methods and stuff like that in our frameworks
+
+00:37:55.020 --> 00:37:57.590
+and the Dev Forum's always great
+for answering questions you have
+
+00:37:57.590 --> 00:38:00.540
+about you know what might work
+in different versions of the OS.
+

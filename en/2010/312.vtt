@@ -1,0 +1,2479 @@
+WEBVTT
+
+00:00:06.150 --> 00:00:07.580
+>> Chris Lattner: My name is Chris Lattner.
+
+00:00:07.580 --> 00:00:11.350
+I am the LLVM Architect here at Apple.
+
+00:00:11.350 --> 00:00:15.250
+We're doing a lot of exciting things at LLVM,
+and so, I hope, that's what you're interested
+
+00:00:15.250 --> 00:00:17.870
+in because that's what we're going to learn about.
+
+00:00:17.870 --> 00:00:20.770
+So, let's talk about compilers at Apple.
+
+00:00:20.770 --> 00:00:22.550
+So, for a long time, Apple has been using GCC.
+
+00:00:22.550 --> 00:00:26.470
+And GCC has been an important part of the
+platform and it has done a lot for us.
+
+00:00:26.470 --> 00:00:34.510
+But increasingly, GCC has become problematic and
+it's struggling to do things we needed to do.
+
+00:00:34.510 --> 00:00:39.250
+Modern design is lacking and a lot of
+problems are happening in that space.
+
+00:00:39.250 --> 00:00:42.970
+And fortunately, LLVM is a great solution for that problem.
+
+00:00:42.970 --> 00:00:48.420
+Apple has been investing heavily in it driving it
+forward, and today, we're going to talk about that.
+
+00:00:48.420 --> 00:00:52.730
+One aspect of this is we don't get to talk about
+a lot of the other great tools in the tool chain.
+
+00:00:52.730 --> 00:00:58.090
+So, there's a lot of other good things that
+are in, for example, the Xcode 4 release.
+
+00:00:58.090 --> 00:01:01.720
+One thing I want to point out is that the
+linker in Xcode 4 is twice as fast as the linker
+
+00:01:01.720 --> 00:01:04.600
+in Xcode 3, and we won't get to see that.
+
+00:01:04.600 --> 00:01:06.900
+But if you're building big apps,
+that's actually a pretty good win.
+
+00:01:06.900 --> 00:01:07.110
+[ Applause ]
+
+00:01:07.110 --> 00:01:13.760
+So, I'm going to talk a lot about LLVM.
+
+00:01:13.760 --> 00:01:18.690
+So, what is this LLVM thing, if you don't know already?
+
+00:01:18.690 --> 00:01:20.860
+Well, LLVM is a technology project.
+
+00:01:20.860 --> 00:01:23.090
+We're building compilers and low-level tools.
+
+00:01:23.090 --> 00:01:26.850
+And the number one thing we care
+about is building great tools.
+
+00:01:26.850 --> 00:01:31.840
+Well, great in how-- great in what way, right.
+
+00:01:31.840 --> 00:01:35.430
+There's a lot of interesting technology in compilers.
+
+00:01:35.430 --> 00:01:40.380
+And compilers are typically built as large
+monolithic pieces of software, right.
+
+00:01:40.380 --> 00:01:46.350
+When you build an operating system, you build a large
+application, there's this new-found theory that instead
+
+00:01:46.350 --> 00:01:51.660
+of building a large monolithic application, breaking it down
+into multiple libraries that can be reused is a good thing.
+
+00:01:51.660 --> 00:01:56.640
+And it turns out that it applies not just to
+applications, but also to compilers and tools.
+
+00:01:56.640 --> 00:02:00.960
+And so, one of the major differences of
+LLVM from pretty much any other compiler
+
+00:02:00.960 --> 00:02:04.750
+out there is that it's very modular, right.
+
+00:02:04.750 --> 00:02:07.230
+Well, as an end user, that doesn't
+really benefit you, right.
+
+00:02:07.230 --> 00:02:09.310
+I mean you just want something that compiles code.
+
+00:02:09.310 --> 00:02:14.780
+But modularity is actually a critical component of bringing
+this technology forward into a number of different areas.
+
+00:02:14.780 --> 00:02:19.970
+And so, the integration with Xcode that you saw on
+Monday, for example, is one key example of that.
+
+00:02:19.970 --> 00:02:23.400
+And so, we'll be talking about
+this more throughout the talk.
+
+00:02:23.400 --> 00:02:27.120
+One common thing that LLVM and GCC do
+have is that they're both open source.
+
+00:02:27.120 --> 00:02:32.010
+And so, if you're interested in the LLVM Project, you want
+to learn more, you want to see things happening in real time
+
+00:02:32.010 --> 00:02:35.200
+in the community, I strongly encourage
+you go to the llvm.org website.
+
+00:02:35.200 --> 00:02:36.700
+And of course, we welcome patches.
+
+00:02:36.700 --> 00:02:40.570
+So, if you don't like something, you can fix it.
+
+00:02:40.570 --> 00:02:45.660
+So, today, we're going to talk about the compiler landscape,
+talk about where things are and where we're going.
+
+00:02:45.660 --> 00:02:49.650
+And so, the first part of this landscape
+is the actual compilers themselves.
+
+00:02:49.650 --> 00:02:56.240
+Today, we have three compilers that are interesting:
+GCC 4.2, LLVM-GCC, and the LLVM Compiler.
+
+00:02:56.240 --> 00:02:58.570
+Well, what are these?
+
+00:02:58.570 --> 00:03:05.570
+They are basically three different compilers
+with increasing levels of LLVM-ness in them.
+
+00:03:05.570 --> 00:03:10.440
+And so, if you take a compiler, you can break
+it into two pieces at the highest level.
+
+00:03:10.440 --> 00:03:13.100
+The first part of it is the Parser;
+the thing that read your source code,
+
+00:03:13.100 --> 00:03:17.330
+the thing that analyzes and tries
+to understand is it correct.
+
+00:03:17.330 --> 00:03:20.180
+If it's incorrect, it tells you-- gives
+you an error message, for example.
+
+00:03:20.180 --> 00:03:25.880
+If it is correct, it sends it back to the optimizer and
+code generator, which are responsible for making it run fast
+
+00:03:25.880 --> 00:03:30.240
+and actually generating Intel code
+or ARM code for the iPhone.
+
+00:03:30.240 --> 00:03:36.510
+So, what these two parts, we-- because LLVM is
+modular, we're able to mix and match pieces with GCC.
+
+00:03:36.510 --> 00:03:43.180
+And so, GCC, of course, uses the GCC Parser and
+the GCC Optimizer or the GCC Code Generator.
+
+00:03:43.180 --> 00:03:45.490
+LLVM-GCC is a hybrid compiler.
+
+00:03:45.490 --> 00:03:50.820
+And so, this compiler actually combines the LLVM
+Optimizer and Code Generator with the Parser from GCC,
+
+00:03:50.820 --> 00:03:54.960
+and I'll talk about why that's interesting later.
+
+00:03:54.960 --> 00:04:00.990
+The LLVM Compiler uses a Parser named
+the Clang Parser, the Clang front end.
+
+00:04:00.990 --> 00:04:02.950
+And it's a fully LLVM-base solution.
+
+00:04:02.950 --> 00:04:09.020
+And so, everything in this compiler is LLVM
+technology, and this gives you a number of advantages
+
+00:04:09.020 --> 00:04:13.530
+over either other, over either other compiler.
+
+00:04:13.530 --> 00:04:15.180
+Other, either, well.
+
+00:04:15.180 --> 00:04:19.220
+So, beyond the compilers we have today,
+we have two platforms, of course,
+
+00:04:19.220 --> 00:04:23.650
+we have iOS, an iPhone OS, we also have the Mac.
+
+00:04:23.650 --> 00:04:28.210
+And of course, the other final access of
+our releases today is we have two releases,
+
+00:04:28.210 --> 00:04:33.350
+we have the Xcode 3 Production Release
+and the Xcode 4 Developer Preview.
+
+00:04:33.350 --> 00:04:39.120
+So, today, I'm going to start by talking about Xcode 3
+and the new features we have in the Production Release.
+
+00:04:39.120 --> 00:04:42.880
+And then later in the talk, Doug Gregor
+will come up and talk you about Xcode 4
+
+00:04:42.880 --> 00:04:44.070
+and the great things that are happening there.
+
+00:04:44.070 --> 00:04:52.670
+So, let's talk about Xcode 3.2.3, amazingly long
+sequence of digits, but it has some cool stuff in it.
+
+00:04:52.670 --> 00:04:57.610
+So, the biggest compiler change
+from previous versions of Xcode 3 is
+
+00:04:57.610 --> 00:05:02.000
+that the LLVM Compilers both now support iPhone and iPad.
+
+00:05:02.000 --> 00:05:05.240
+And so, this means that if you're an iPhone developer,
+suddenly, all these technology that we've talking
+
+00:05:05.240 --> 00:05:09.580
+about for several years is now very relevant
+to you and brings you a lot of advantages.
+
+00:05:09.580 --> 00:05:12.870
+Beyond that, there's also been a larger
+number of enhancements for the Mac
+
+00:05:12.870 --> 00:05:16.810
+in LLVM Compiler, and we'll talk about those.
+
+00:05:16.810 --> 00:05:23.510
+So, before I go into all of that, I want to talk about what
+the LLVM Code Generator and Optimizer bring to the table,
+
+00:05:23.510 --> 00:05:31.180
+and LLVM-GCC, the hybrid compiler, is a great way to
+explain what these benefits of the LLVM Optimizer are.
+
+00:05:31.180 --> 00:05:33.730
+So, the LLVM Optimizer has a very modular design.
+
+00:05:33.730 --> 00:05:39.090
+It brings in a lot of recent compiler research
+that's happened in say the last 10 to 15 years,
+
+00:05:39.090 --> 00:05:41.260
+and it brings a lot of power to the table.
+
+00:05:41.260 --> 00:05:47.480
+From the high-level perspective, LLVM-GCC, which
+combines the GCC front end with the LLVM back end,
+
+00:05:47.480 --> 00:05:52.690
+brings you those advantages, which I'll talk about in
+a second, but it also combines with the GCC front end.
+
+00:05:52.690 --> 00:05:59.830
+The key thing that the GCC front end brings the table is
+great support for C++ because in Xcode 3 the LLVM Compiler
+
+00:05:59.830 --> 00:06:06.140
+which is fully LLVM technology doesn't
+support C++, that's in Xcode 4.
+
+00:06:06.140 --> 00:06:11.000
+And so, if you're interested in doing shipping
+products, I strongly recommend you use LLVM-GCC.
+
+00:06:11.000 --> 00:06:17.900
+In fact, LLVM-GCC is the most stable production
+compiler on our system more so even than GCC 4.
+
+00:06:17.900 --> 00:06:21.590
+And so, if you're using GCC, I strongly
+urge that you upgrade to LLVM-GCC
+
+00:06:21.590 --> 00:06:25.150
+because we're just not fixing bugs in GCC anymore.
+
+00:06:25.150 --> 00:06:32.090
+And LLVM-GCC is definitely a great compiler;
+I strongly recommend you use at least it.
+
+00:06:32.090 --> 00:06:33.520
+So, there you go.
+
+00:06:33.520 --> 00:06:37.080
+We actually strongly considered making
+this the default compiler in this release,
+
+00:06:37.080 --> 00:06:42.810
+but it turns out that changing default
+compilers in a dot release is frowned upon.
+
+00:06:42.810 --> 00:06:45.650
+So, we did that on Xcode 4, and you can use it there.
+
+00:06:45.650 --> 00:06:50.860
+The versions of LLVM-GCC in both Xcodes are identical.
+
+00:06:50.860 --> 00:06:54.320
+So, why is the LLVM back end good?
+
+00:06:54.320 --> 00:06:55.040
+Why do you care?
+
+00:06:55.040 --> 00:07:00.030
+Well, as you saw on Monday, the LLVM Compiler brings
+substantial performance wins in a lot of cases.
+
+00:07:00.030 --> 00:07:04.780
+So, OpenSSL is one great example where
+it's a very complicated large system.
+
+00:07:04.780 --> 00:07:09.690
+If you aggregate many performance metrics across
+the board, you'll get overall a 28 percent speedup.
+
+00:07:09.690 --> 00:07:11.880
+This is on iPhone.
+
+00:07:11.880 --> 00:07:14.020
+Another interesting case is JavaScriptCore.
+
+00:07:14.020 --> 00:07:18.760
+JavaScriptCore is actually a really critical part of WebKit.
+
+00:07:18.760 --> 00:07:25.860
+Well, WebKit is really performance-sensitive code,
+and it's used for a lot of things on the system.
+
+00:07:25.860 --> 00:07:28.980
+And a very interesting benchmark is the SunSpider Benchmark.
+
+00:07:28.980 --> 00:07:34.130
+SunSpider is one of the industry's standard
+JavaScript benchmarks, and it beats on JavaScriptCore.
+
+00:07:34.130 --> 00:07:36.720
+JavaScriptCore is the key thing that controls performance.
+
+00:07:36.720 --> 00:07:41.610
+If you build JavaScriptCore on WebKit
+with LLVM, it speeds up 11 percent.
+
+00:07:41.610 --> 00:07:46.810
+Well, 11 percent doesn't seem like it's very much
+necessarily, but this is code that's been highly tuned
+
+00:07:46.810 --> 00:07:49.570
+and highly optimized because people really care about this.
+
+00:07:49.570 --> 00:07:54.330
+And just switching compilers, gaining a double
+digit percentage speedup is a pretty big deal.
+
+00:07:54.330 --> 00:07:55.940
+This is on iPhone.
+
+00:07:55.940 --> 00:08:00.630
+Well, more than just that, actually, in iOS
+4, several key pieces of the system were built
+
+00:08:00.630 --> 00:08:03.920
+with LLVM including WebKit and JavaScriptCore.
+
+00:08:03.920 --> 00:08:05.540
+So, this is a great technology.
+
+00:08:05.540 --> 00:08:08.270
+There's a lot of advantages of using it.
+
+00:08:08.270 --> 00:08:11.680
+Beyond performance, there's actually
+another area where the optimizer can help,
+
+00:08:11.680 --> 00:08:16.510
+and that is, well, how fast does code build, right?
+
+00:08:16.510 --> 00:08:21.620
+One of the major things we want or that I want as a
+developer is I want the compiler to do its thing getting
+
+00:08:21.620 --> 00:08:25.460
+out of my way, right, because it's the thing
+that's preventing me from running my code.
+
+00:08:25.460 --> 00:08:28.530
+And so, if you look at a large number of applications,
+
+00:08:28.530 --> 00:08:32.550
+these are some random ones we pulled
+out, OpenSSL is a C code base.
+
+00:08:32.550 --> 00:08:34.970
+AppKit is the large Objective-C code base.
+
+00:08:34.970 --> 00:08:39.610
+JavaScriptCore and the LLVM code
+base itself are both large C++ apps.
+
+00:08:39.610 --> 00:08:47.570
+These are the build times to build these applications at
+O2 or O3 or OS or whatever the default release builds are.
+
+00:08:47.570 --> 00:08:50.960
+And if you look at them, of course, they
+have different size code basis mixed
+
+00:08:50.960 --> 00:08:54.470
+up with different things especially building with LLVM-GCC.
+
+00:08:54.470 --> 00:09:00.440
+And suddenly, they build quite a bit faster, right,
+in, you know, it varies based on the code base,
+
+00:09:00.440 --> 00:09:03.290
+but 20 to 60 percent faster is a big win, right.
+
+00:09:03.290 --> 00:09:06.580
+This is cutting minutes off build times here.
+
+00:09:06.580 --> 00:09:10.510
+Well, the reason for this is that, again, the
+LLVM Optimizer is built on much more mature
+
+00:09:10.510 --> 00:09:13.530
+and modern technology than the GCC Optimizer.
+
+00:09:13.530 --> 00:09:16.950
+And so, using more modern techniques
+means you're not burning cycles,
+
+00:09:16.950 --> 00:09:21.960
+running old school bit vector data-flow
+that you read about in the Dragon Book.
+
+00:09:21.960 --> 00:09:24.540
+So, this is a major win.
+
+00:09:24.540 --> 00:09:27.650
+Now, you notice up there it says "Release Builds", right.
+
+00:09:27.650 --> 00:09:31.180
+Well, the problem is is that in debug builds,
+
+00:09:31.180 --> 00:09:35.160
+the Optimizer's not doing anything,
+right, because you have it turned off.
+
+00:09:35.160 --> 00:09:43.220
+Well, unfortunately, LLVM-GCC is using the exact
+same front end as GCC, and in debug builds,
+
+00:09:43.220 --> 00:09:45.480
+you're not spending anytime in the Optimizer.
+
+00:09:45.480 --> 00:09:52.580
+Well, that means that LLVM has no real-- nothing
+to really add to the performance picture here.
+
+00:09:52.580 --> 00:09:54.340
+So, what can we do?
+
+00:09:54.340 --> 00:09:59.300
+Well, it turns out that when you get into this
+mode, the front end is really the critical thing.
+
+00:09:59.300 --> 00:10:03.980
+For debug builds, the front end matters a lot
+because the back end is just not doing very much.
+
+00:10:03.980 --> 00:10:07.290
+Well, so, this is the diagram that explains LLVM-GCC.
+
+00:10:07.290 --> 00:10:14.410
+If you take the Clang Parser and put it in place at the GCC
+front end, we get a fully LLVM Compiler as I said before.
+
+00:10:14.410 --> 00:10:17.610
+But what is this?
+
+00:10:17.610 --> 00:10:21.070
+Well, it's available for iPhone OS.
+
+00:10:21.070 --> 00:10:23.450
+So, what is the Clang front end?
+
+00:10:23.450 --> 00:10:28.320
+Well, as I said before, it's a Parser, it's
+a Parser for the C family of languages.
+
+00:10:28.320 --> 00:10:32.190
+This includes C, Objective-C, C++, Objective C++.
+
+00:10:32.190 --> 00:10:38.140
+In Xcode 3, the LLVM Compiler does not
+or it doesn't have C++ support turned on.
+
+00:10:38.140 --> 00:10:44.260
+And so, if you're interested in C++, Xcode 4 has
+that and Doug will be talking about that later today.
+
+00:10:44.260 --> 00:10:50.100
+But beyond being a front end, it's actually built
+with the LLVM style library-based design approach.
+
+00:10:50.100 --> 00:10:53.470
+This means that it's built as a
+series of reusable libraries that mean
+
+00:10:53.470 --> 00:10:56.060
+that we can do a lot of interesting source-level things.
+
+00:10:56.060 --> 00:10:58.880
+The compiler front end is the thing
+that knows about your source code.
+
+00:10:58.880 --> 00:11:03.260
+It knows that macros are being instantiated or the,
+you know, templates are flying all over the place
+
+00:11:03.260 --> 00:11:05.960
+or exactly where that parenthesis was, right.
+
+00:11:05.960 --> 00:11:10.330
+And so, the front end is really interesting
+technology both from performance standpoint
+
+00:11:10.330 --> 00:11:12.740
+but also because you can build a lot
+of interesting source-level tools
+
+00:11:12.740 --> 00:11:16.410
+on it, because this is what knows your source.
+
+00:11:16.410 --> 00:11:20.370
+So, like the rest of LLVM, the Clang
+front end is an open source project.
+
+00:11:20.370 --> 00:11:26.540
+And if you're interested, I heartily recommend you go
+to the clang.llvm.org webpage, which explains what it is
+
+00:11:26.540 --> 00:11:29.260
+and why you should care if you like that.
+
+00:11:29.260 --> 00:11:31.180
+So, why do we care?
+
+00:11:31.180 --> 00:11:36.360
+Well, you break it down and we're just not getting
+a great experience at the GCC front end, right.
+
+00:11:36.360 --> 00:11:39.310
+So, as I mentioned before, debug builds, right?
+
+00:11:39.310 --> 00:11:44.790
+The front end is the critical piece that's holding back
+a really fast debug builds, and we want to fix this
+
+00:11:44.790 --> 00:11:51.090
+because when I'm doing my development, I'm actually sitting
+there doing debug builds and then running and then debugging
+
+00:11:51.090 --> 00:11:56.020
+and then doing another editing, doing another
+debug build, and we want this cycle be really fast.
+
+00:11:56.020 --> 00:12:00.500
+And for me, I just, again, want the
+compiler to get out of the way particularly
+
+00:12:00.500 --> 00:12:03.320
+when there's a bug, and I really want to figure that out.
+
+00:12:03.320 --> 00:12:07.230
+Beyond that, the front end is also chiefly
+responsible for the user experience.
+
+00:12:07.230 --> 00:12:11.280
+So, it's not just, you know, the
+flags you pass in the compiler,
+
+00:12:11.280 --> 00:12:14.290
+which it is also responsible for,
+but it's OK you get an error message.
+
+00:12:14.290 --> 00:12:17.770
+Is it going to explain to you in
+a way that makes sense or not?
+
+00:12:17.770 --> 00:12:20.590
+How much effort are we going to put into that?
+
+00:12:20.590 --> 00:12:23.160
+What other features does the front end have?
+
+00:12:23.160 --> 00:12:28.200
+Beyond everything else, we are committed
+and we have to be compatible with GCC.
+
+00:12:28.200 --> 00:12:34.080
+This means both source-level support, we need to be able
+to support all those funky GCC extensions so that have,
+
+00:12:34.080 --> 00:12:36.300
+you know, have been grown over the years.
+
+00:12:36.300 --> 00:12:38.070
+It also means binary-level support.
+
+00:12:38.070 --> 00:12:44.010
+If you build things with the LLVM Compiler, you can drop
+in individual .O files and mix and match them with GCC.
+
+00:12:44.010 --> 00:12:49.120
+So, everything is extremely compatible,
+and trying things out is really easy.
+
+00:12:49.120 --> 00:12:51.310
+So, again, coming back to faster debug builds, right?
+
+00:12:51.310 --> 00:12:52.980
+We're building a new front end.
+
+00:12:52.980 --> 00:13:01.260
+Well, even of last year on the Mac, we've shown the
+Clang front end provides really fast debug builds.
+
+00:13:01.260 --> 00:13:06.750
+This is a broad variety of Objective-C code on Mac
+from everything, AddressBook, Automator, Dashcode,
+
+00:13:06.750 --> 00:13:14.160
+Interface Builder, Mail, AppleScriptEditor, Xcode itself,
+and there's a couple of open source applications over here.
+
+00:13:14.160 --> 00:13:14.950
+These are big apps.
+
+00:13:14.950 --> 00:13:17.600
+Xcode has millions of lines of code, right.
+
+00:13:17.600 --> 00:13:22.260
+And getting three times faster builds
+is a huge productivity boost, right?
+
+00:13:22.260 --> 00:13:27.000
+Well, this is because this has been designed
+from the start to be all about performance,
+
+00:13:27.000 --> 00:13:30.910
+features, modern design, make it reusable, right.
+
+00:13:30.910 --> 00:13:36.240
+And I'm happy to say that this has a
+certain amount of success in that range.
+
+00:13:36.240 --> 00:13:39.890
+And if you switch from GCC or LLVM-GCC to the LLVM Compiler,
+
+00:13:39.890 --> 00:13:44.790
+I think you'll notice that it's noticeably
+faster and more memory efficient.
+
+00:13:44.790 --> 00:13:47.160
+So, let's talk about user experience here.
+
+00:13:47.160 --> 00:13:50.890
+And one of the easiest ways is to
+talk about errors and warnings.
+
+00:13:50.890 --> 00:13:54.900
+And I don't know about you, but I
+almost never make a bug in my code,
+
+00:13:54.900 --> 00:13:58.590
+and the compiler almost never tells
+me that there's something wrong in it.
+
+00:13:58.590 --> 00:14:01.740
+But I've seen other people's codes that have problems.
+
+00:14:01.740 --> 00:14:07.000
+So, the way this works is that the
+compiler detects an error, right?
+
+00:14:07.000 --> 00:14:11.180
+It says, "Oh, I don't, you know, there's supposed
+to be a parenthesis here, what's going on?"
+
+00:14:11.180 --> 00:14:16.940
+Right. You know, there's a 4 and then something
+like an int and that doesn't make sense.
+
+00:14:16.940 --> 00:14:20.690
+Well, the compiler doesn't know what you did
+wrong, it just knows that there is something wrong.
+
+00:14:20.690 --> 00:14:24.580
+And so, there's actually a lot of room for the
+compiler to guess what is the actual problem.
+
+00:14:24.580 --> 00:14:30.390
+And how well the compiler guesses and how much effort we've
+put in to making the compiler smart, controls a lot of,
+
+00:14:30.390 --> 00:14:34.450
+you know, how good it is at diagnosing what
+the actual problem is that you're facing.
+
+00:14:34.450 --> 00:14:38.560
+GCC hasn't really been so great at this, it turns out.
+
+00:14:38.560 --> 00:14:43.280
+I don't know exactly why, but I think
+they're more focused on making it work,
+
+00:14:43.280 --> 00:14:46.300
+and they don't really care so much
+about the user experience.
+
+00:14:46.300 --> 00:14:50.470
+And there's lots of examples of this, but
+this is, perhaps, my favorite one, right.
+
+00:14:50.470 --> 00:14:54.300
+This message tells me almost nothing, right.
+
+00:14:54.300 --> 00:14:59.890
+And it doesn't even matter if you saw the source code, when
+I get something like this out of GCC, I just say, OK, well,
+
+00:14:59.890 --> 00:15:02.640
+I'll go to that line of code and try to understand
+
+00:15:02.640 --> 00:15:06.640
+from first principles what's going
+on because this is isn't helping.
+
+00:15:06.640 --> 00:15:11.650
+If you run the LLVM Compiler, which on the command line
+is named Clang, you get something like this, right.
+
+00:15:11.650 --> 00:15:15.080
+In this case, it's a very simple
+thing, a misspelled NSString.
+
+00:15:15.080 --> 00:15:22.460
+And instead of telling me expected gobbledygook because
+the attribute was really likely to be there and asm too,
+
+00:15:22.460 --> 00:15:26.160
+it actually diagnoses the real problem, right.
+
+00:15:26.160 --> 00:15:30.500
+It actually says, "Hey, you know, I
+needed a type and NSstring is not a type."
+
+00:15:30.500 --> 00:15:31.510
+Well--
+
+00:15:31.510 --> 00:15:36.130
+[ Applause ]
+
+00:15:36.130 --> 00:15:38.410
+So this is, you know, one small example.
+
+00:15:38.410 --> 00:15:39.440
+There are a lot of other ones.
+
+00:15:39.440 --> 00:15:43.930
+But if you upgrade to build with Clang, the LLVM Compiler,
+
+00:15:43.930 --> 00:15:48.260
+you will get much better user experience
+and faster builds, which is great.
+
+00:15:48.260 --> 00:15:50.910
+Well, this actually existed last year on the Mac.
+
+00:15:50.910 --> 00:15:53.660
+And we've been pushing it much farther this year.
+
+00:15:53.660 --> 00:15:55.930
+And so, there are some really great enhancements here.
+
+00:15:55.930 --> 00:15:58.120
+One of these is spell checking, right.
+
+00:15:58.120 --> 00:16:01.440
+And so, the compiler actually has
+a huge corpus of information
+
+00:16:01.440 --> 00:16:04.290
+about your program by the time it detects a problem.
+
+00:16:04.290 --> 00:16:07.440
+It turns out that, you know, misspelling NSString especially
+
+00:16:07.440 --> 00:16:11.620
+with all the inner caps is something
+that really happens in real world code.
+
+00:16:11.620 --> 00:16:18.210
+And so, if you're using the LLVM Compiler now, it actually
+autodetects many common spellings, and it doesn't--
+
+00:16:18.210 --> 00:16:22.970
+they're not hardcoded in, it actually works by
+checking to see how far your spelling was away
+
+00:16:22.970 --> 00:16:27.240
+from all the other possibilities
+it's seen, it actually autosuggests.
+
+00:16:27.240 --> 00:16:31.690
+The really great thing about this is this
+helps with the cascade of error effect, right,
+
+00:16:31.690 --> 00:16:35.080
+because if the compiler gets something
+wrong, it gets confused then, you know,
+
+00:16:35.080 --> 00:16:38.590
+all the stuff downstream turns into nonsense very quickly.
+
+00:16:38.590 --> 00:16:44.230
+Because it says you probably meant NSString, from
+that point on, it assumes that is actually an NSString
+
+00:16:44.230 --> 00:16:46.080
+and the compilers your code according to that.
+
+00:16:46.080 --> 00:16:50.510
+And that means that the error messages that
+come out later are much improved as well.
+
+00:16:50.510 --> 00:16:56.080
+[ Applause ]
+
+00:16:56.080 --> 00:17:01.680
+So, if you're interested in learning more detail about how
+this works, we have another session later this afternoon
+
+00:17:01.680 --> 00:17:07.030
+which talks about how it all fits together, how Xcode is
+using it, how we pull this into the user interface there.
+
+00:17:07.030 --> 00:17:10.250
+And that again, builds on the library-based
+design of the compiler.
+
+00:17:10.250 --> 00:17:12.040
+And so, it will do that.
+
+00:17:12.040 --> 00:17:16.310
+Another major feature which applies both to Mac
+and iPhone is that we've implemented a number
+
+00:17:16.310 --> 00:17:19.790
+of new warning flags that GCC has supported for sometime.
+
+00:17:19.790 --> 00:17:24.770
+And I'm not going to go through all these, but
+these have been highly requested by developers
+
+00:17:24.770 --> 00:17:27.640
+who have been using the LLVM Compiler since last year.
+
+00:17:27.640 --> 00:17:29.620
+And I'm happy to say that they all work.
+
+00:17:29.620 --> 00:17:34.770
+And beyond just working, we've actually put a
+lot of energy into making them really great.
+
+00:17:34.770 --> 00:17:40.410
+And so, the format string warning is a great example
+where not only does it tell you that there's a problem
+
+00:17:40.410 --> 00:17:44.300
+and it tells you the types and what it expects,
+it actually points to the format string.
+
+00:17:44.300 --> 00:17:49.630
+It actually tells you this is what you need to change,
+which in Xcode is really great because you jump right
+
+00:17:49.630 --> 00:17:53.080
+to the point in the editor with the caret.
+
+00:17:53.080 --> 00:17:57.930
+So, there are a lot of great things in here.
+
+00:17:57.930 --> 00:18:04.160
+So, if you're interested in picking this in Xcode 3, as
+I mentioned before, the default compiler is still GCC,
+
+00:18:04.160 --> 00:18:10.150
+but you can go into the Build Settings Inspector
+and get the full list of compilers here.
+
+00:18:10.150 --> 00:18:15.880
+GCC 4.0 is on its way out as Doug will talk about
+later, so I strongly recommend you don't use that.
+
+00:18:15.880 --> 00:18:17.850
+GCC 4.2 is the system default.
+
+00:18:17.850 --> 00:18:21.960
+LLVM-GCC is a great compiler particularly
+if you want C++ support.
+
+00:18:21.960 --> 00:18:28.800
+In Xcode 3, if you pick LLVM Compiler and you have a mixed
+project which has C, Objective-C, and some C++ code in it,
+
+00:18:28.800 --> 00:18:33.170
+it'll actually build the C and Objective-C parts with
+the LLVM Compiler, and it'll automatically switch
+
+00:18:33.170 --> 00:18:36.180
+to the LLVM-GCC Compiler for the C++ code.
+
+00:18:36.180 --> 00:18:38.530
+And so, you can actually just pick
+the bottom one on the mixed project
+
+00:18:38.530 --> 00:18:41.670
+and everything will just work, which is really nice.
+
+00:18:41.670 --> 00:18:42.670
+And you can play around with these.
+
+00:18:42.670 --> 00:18:48.250
+They are all binary compatible, so you
+can actually go crazy playing with things.
+
+00:18:48.250 --> 00:18:51.660
+So, as I mentioned before, though, again,
+this is all about libraries, right?
+
+00:18:51.660 --> 00:18:56.680
+We want to do great things with this,
+not just build monolithic compiler tools.
+
+00:18:56.680 --> 00:18:58.180
+Well, so what are we doing with them?
+
+00:18:58.180 --> 00:19:03.470
+You know, we've already talked about a lot of
+different applications that this stuff is used for.
+
+00:19:03.470 --> 00:19:06.790
+The Clang front end, for example, is
+used both by the LLVM Compiler, right,
+
+00:19:06.790 --> 00:19:09.690
+but it's also used by the Xcode Static Analyzer.
+
+00:19:09.690 --> 00:19:11.010
+We'll talk about that in a second.
+
+00:19:11.010 --> 00:19:13.450
+It's heavily embedded in Xcode 4.
+
+00:19:13.450 --> 00:19:20.460
+And you saw some of the examples of what that can bring
+to you as a user through the IDE in Monday's keynote.
+
+00:19:20.460 --> 00:19:25.350
+The LLDB Debugger also uses a lot of LLVM technologies.
+
+00:19:25.350 --> 00:19:32.580
+OpenCL, the graphics programming framework on the
+Desktop is a great technology, which, you know,
+
+00:19:32.580 --> 00:19:36.930
+is parsing C-like code fragments for
+your kernels and running them on the GPU.
+
+00:19:36.930 --> 00:19:38.060
+And this is all going through LLVM.
+
+00:19:38.060 --> 00:19:44.030
+So, there are a lot of great things that building
+these tools as libraries enables us to make, right.
+
+00:19:44.030 --> 00:19:47.710
+And if this were a monolithic application,
+we really wouldn't be able to do that.
+
+00:19:47.710 --> 00:19:55.080
+Building something like OpenCL, well, the first step would
+be to write a C-parser, and that's actually a lot of work.
+
+00:19:55.080 --> 00:19:58.340
+So, I want to talk about one of these
+which is the Xcode Static Analyzer.
+
+00:19:58.340 --> 00:20:00.630
+And I don't know if you've been using it at all.
+
+00:20:00.630 --> 00:20:02.340
+Have you tried it out?
+
+00:20:02.340 --> 00:20:06.640
+[ Applause ]
+
+00:20:06.640 --> 00:20:13.700
+So, the Xcode Static Analyzer is this great idea of saying,
+"Hey, we want to use all this compiler information we have,
+
+00:20:13.700 --> 00:20:17.680
+this dataflow and the deep compiler
+knowledge about what's going on in the program
+
+00:20:17.680 --> 00:20:19.670
+to automatically see if we can find bugs."
+
+00:20:19.670 --> 00:20:22.230
+And it turns out that this is pretty good.
+
+00:20:22.230 --> 00:20:27.610
+Finding bugs early is key to this, because the earlier
+you find the bug, the cheaper it is to fix it, right.
+
+00:20:27.610 --> 00:20:29.790
+In worst case, you end up shipping the bug to your customer
+
+00:20:29.790 --> 00:20:33.420
+and then you get unhappy people and
+you don't want to go there, right.
+
+00:20:33.420 --> 00:20:38.340
+So, the great thing about the Xcode Static Analyzer is it
+directly integrates with your workflow as you're building
+
+00:20:38.340 --> 00:20:41.240
+and developing your applications it's really easy to use.
+
+00:20:41.240 --> 00:20:45.130
+So, even as of last year, this has worked on iPhone and Mac.
+
+00:20:45.130 --> 00:20:50.690
+And so if you have either style project,
+you can use this with no problem.
+
+00:20:50.690 --> 00:20:55.280
+To do this, you just pick the Build
+and Analyze menu option out of Xcode,
+
+00:20:55.280 --> 00:20:58.360
+and this is Xcode 3, it got renamed in Xcode 4.
+
+00:20:58.360 --> 00:21:03.660
+But you just pick Build and Analyze, it'll scan your
+code, and then present a list of potential issues.
+
+00:21:03.660 --> 00:21:04.560
+What do these issues look like?
+
+00:21:04.560 --> 00:21:09.270
+Well, these issues pop up, and they actually
+show you exactly what's going on in your code.
+
+00:21:09.270 --> 00:21:14.430
+And so, because this is heavily integrated with the
+Xcode editor, even in Xcode 3, this can show you,
+
+00:21:14.430 --> 00:21:17.930
+and I'm not going to go into details on what
+this bug is, but it can show you that, you know,
+
+00:21:17.930 --> 00:21:23.570
+this bug occurs on this loop, and the first iteration of
+this loop interacts with the second iteration of this loop,
+
+00:21:23.570 --> 00:21:26.200
+and this is all the control flow that has to happen.
+
+00:21:26.200 --> 00:21:29.740
+And because it's tightly integrated with the
+editor, you get a really great experience
+
+00:21:29.740 --> 00:21:31.170
+of it explaining to you what the problem is.
+
+00:21:31.170 --> 00:21:34.390
+And so, you get the combination of the
+deep information the compiler knows
+
+00:21:34.390 --> 00:21:39.950
+with the great code integration
+experience that the Xcode IDE can provide.
+
+00:21:39.950 --> 00:21:41.130
+And it's a really great thing.
+
+00:21:41.130 --> 00:21:44.650
+If you haven't tried it, I strongly recommend it.
+
+00:21:44.650 --> 00:21:49.320
+Well, in this version of Xcode, the second analyzer has
+actually gotten quite a bit smarter which is really great.
+
+00:21:49.320 --> 00:21:50.940
+So, most of this is all under the covers.
+
+00:21:50.940 --> 00:21:54.490
+The user interface is still the
+same, but there's many enhancements.
+
+00:21:54.490 --> 00:21:57.120
+For example, the analyzer now understands Blocks.
+
+00:21:57.120 --> 00:22:01.500
+And so if you're using Blocks in your code, the analyzer
+will actually go into the bodies of those Blocks
+
+00:22:01.500 --> 00:22:04.810
+and look at how they're used and actually detect bugs there.
+
+00:22:04.810 --> 00:22:09.160
+And it knows much better, much more precise
+information about arrays and structures.
+
+00:22:09.160 --> 00:22:13.840
+And so, it treats each structure element as a distinct
+variable, and it can analyze those independently,
+
+00:22:13.840 --> 00:22:15.860
+so you get much many fewer false positives.
+
+00:22:15.860 --> 00:22:17.410
+There are more API checks.
+
+00:22:17.410 --> 00:22:20.170
+Grand Central Dispatch is a great new
+API that's available on the phone.
+
+00:22:20.170 --> 00:22:22.340
+It's been available on the Desktop for sometime.
+
+00:22:22.340 --> 00:22:27.970
+And so, those APIs have a few common things that are
+easier to misuse and the analyzer can help you out with it.
+
+00:22:27.970 --> 00:22:31.930
+Overall, the message, though, is that
+this release adds a lot of enhancements.
+
+00:22:31.930 --> 00:22:36.640
+It will find more bugs, it has fewer false positives,
+and overall, just gives a better experience.
+
+00:22:36.640 --> 00:22:40.290
+And so, I think that you should definitely try
+this out even if you've used the analyzer before
+
+00:22:40.290 --> 00:22:44.150
+because there's a lot of great work that's going on here.
+
+00:22:44.150 --> 00:22:49.400
+So, this-- the second analyzer
+was the-- it's also open source,
+
+00:22:49.400 --> 00:22:52.940
+so you can go to the LLVM webpage and
+read about it and contribute to it.
+
+00:22:52.940 --> 00:22:56.100
+The second analyzer is the first
+example of tight integration
+
+00:22:56.100 --> 00:22:59.750
+between the LLVM Compiler and the Xcode user interface.
+
+00:22:59.750 --> 00:23:05.510
+And so, we pushed that much further in Xcode
+4, and I'd like Doug to come talk about that.
+
+00:23:05.510 --> 00:23:10.640
+[ Applause ]
+
+00:23:10.640 --> 00:23:12.320
+>> Doug Gregor: Thank you, Chris.
+
+00:23:12.320 --> 00:23:20.060
+So, in Xcode 4, our next major release of developer tools,
+Xcode developer tools, it's Developer Preview here at WWDC.
+
+00:23:20.060 --> 00:23:24.160
+But we're taking the idea of the
+modular reuse of the LLVM Compiler
+
+00:23:24.160 --> 00:23:27.750
+and all of its pieces and pushing it further into Xcode.
+
+00:23:27.750 --> 00:23:29.350
+So, this comes in several forms.
+
+00:23:29.350 --> 00:23:30.650
+It comes with new tools.
+
+00:23:30.650 --> 00:23:35.680
+So, the Xcode 4 Developer Preview has a new
+compiler, version 2 of the LLVM Compiler,
+
+00:23:35.680 --> 00:23:39.920
+and it has a new debugger, LLDB
+that's based on LLVM technologies.
+
+00:23:39.920 --> 00:23:47.180
+Moreover, we're really taking LLVM, in particular the Clang
+front end, the Parser, and we're moving it into Xcode 4
+
+00:23:47.180 --> 00:23:50.640
+to give you a much richer experience
+when you're editing your source code.
+
+00:23:50.640 --> 00:23:56.170
+So, this involves source code indexing, right, which is
+the program, which is Xcode understanding your source code,
+
+00:23:56.170 --> 00:23:59.960
+producing symbols for the symbol browser
+and cross referencing information,
+
+00:23:59.960 --> 00:24:02.310
+your project, so you can jump to the definition.
+
+00:24:02.310 --> 00:24:07.850
+It means better syntax highlighting with more
+semantic information, better code completion results,
+
+00:24:07.850 --> 00:24:11.980
+because who but the compilers knows exactly
+what you can do at any point in your program.
+
+00:24:11.980 --> 00:24:15.370
+It has to handle whatever you can write
+there, so it knows what you can write.
+
+00:24:15.370 --> 00:24:21.010
+And finally, once we've taken the compiler
+front end and we've moved it into Xcode,
+
+00:24:21.010 --> 00:24:25.490
+we can now do other interesting things like we can
+give you warnings and errors live as you type them.
+
+00:24:25.490 --> 00:24:29.060
+As soon as you make a mistake, you get
+an indication that you made a mistake.
+
+00:24:29.060 --> 00:24:30.610
+And we can also do Fix-its, right.
+
+00:24:30.610 --> 00:24:35.950
+You saw Fix-its on Monday in the initial
+state of the union talk for developer tools.
+
+00:24:35.950 --> 00:24:41.930
+Fix-its are the compiler saying, "I actually think I know
+how you want to fix this code and giving you the UI to make
+
+00:24:41.930 --> 00:24:46.070
+that fix quickly and easily without breaking your flow."
+
+00:24:46.070 --> 00:24:49.820
+So, in this talk, we're going to
+focus on the LLVM Compiler 2.
+
+00:24:49.820 --> 00:24:54.350
+If you're interested in peeking behind the curtain
+to see how will these other features exists,
+
+00:24:54.350 --> 00:24:57.890
+how is it that you actually use a
+compiler to build a new debugger, right,
+
+00:24:57.890 --> 00:25:01.230
+how do you integrate a compiler front end into Xcode.
+
+00:25:01.230 --> 00:25:05.820
+I suggest you come to our LLVM Technologies
+In Depth Session later this afternoon.
+
+00:25:05.820 --> 00:25:10.640
+I think it'll be really interesting to see how
+this stuff actually works under the covers.
+
+00:25:11.790 --> 00:25:17.690
+So, with Xcode 4, the Developer Preview,
+we're moving the compiler landscape forward.
+
+00:25:17.690 --> 00:25:21.940
+So, GCC 4.0 is on its way out, it is gone.
+
+00:25:21.940 --> 00:25:28.380
+If you're still using it, please move to a new
+compiler preferably one based on LLVM, alright.
+
+00:25:28.380 --> 00:25:30.550
+GCC 4.2 will still be there.
+
+00:25:30.550 --> 00:25:36.340
+But again, we really want you to move
+forward to LLVM-GCC or the LLVM Compiler.
+
+00:25:36.340 --> 00:25:43.680
+And we're making LLVM-GCC 4.2 the default compiler
+in the Xcode 4 Developer Preview, alright.
+
+00:25:43.680 --> 00:25:49.750
+Now the new kid on the block is the LLVM Compiler
+version 2.0, and we're going to talk about that.
+
+00:25:49.750 --> 00:25:54.610
+So, last year, we released the first
+version of the LLVM Compiler 1.0,
+
+00:25:54.610 --> 00:25:57.700
+and the LLVM Compiler supports C and Objective-C.
+
+00:25:57.700 --> 00:26:00.870
+We've improved that compiler for Xcode 3 here.
+
+00:26:00.870 --> 00:26:08.510
+But the big feature with the version 2 of the LLVM Compiler
+is that we've implemented the entirety of the C++ language.
+
+00:26:08.510 --> 00:26:14.320
+[ Applause ]
+
+00:26:14.320 --> 00:26:15.570
+So, this is great.
+
+00:26:15.570 --> 00:26:19.840
+I mean we've gone from implementing classes,
+and name spaces, and the other easy things
+
+00:26:19.840 --> 00:26:27.150
+through multiple inheritance, operator overloading,
+templates, right, the grand daddy of all C++ features.
+
+00:26:27.150 --> 00:26:29.640
+There's one feature we did not implement.
+
+00:26:29.640 --> 00:26:31.950
+If you're a C++ guru, you know what it is.
+
+00:26:31.950 --> 00:26:32.780
+But I'll tell it to you any way.
+
+00:26:32.780 --> 00:26:34.570
+It's called exported templates.
+
+00:26:34.570 --> 00:26:37.400
+If you're not a C++ guru and you
+haven't heard of this, that's fine.
+
+00:26:37.400 --> 00:26:38.620
+GCC doesn't support it.
+
+00:26:38.620 --> 00:26:41.000
+Most mainstream compilers don't support it.
+
+00:26:41.000 --> 00:26:46.770
+And in fact, it's so utterly useless that the C++
+standards committee took it out of the next standard.
+
+00:26:46.770 --> 00:26:48.520
+So don't worry about it.
+
+00:26:48.520 --> 00:26:52.780
+For all practical purposes, we've
+implemented the entirety of the C++ language.
+
+00:26:52.780 --> 00:26:59.100
+And this is wonderful for us as a compiler team because
+it turns out the entire LLVM Compiler is written in C++.
+
+00:26:59.100 --> 00:27:04.850
+It's about three-quarters of million lines of
+C++ source code and it can build itself, right.
+
+00:27:04.850 --> 00:27:06.160
+It built itself very well.
+
+00:27:06.160 --> 00:27:10.850
+We live on it on a daily basis, and we
+love using our own compiler for ourselves.
+
+00:27:10.850 --> 00:27:13.070
+And actually, in the Developer
+Preview that we shipped to you,
+
+00:27:13.070 --> 00:27:18.500
+the LLVM Compiler built itself right,
+and we've shifted to this that way.
+
+00:27:18.500 --> 00:27:23.170
+So, there are other things that actually work,
+that's not the only C++ program that LLVM can build.
+
+00:27:23.170 --> 00:27:26.680
+We handle, for example, the Boost C++ libraries.
+
+00:27:26.680 --> 00:27:32.000
+So, Boost is a relatively large collection
+of peer-reviewed open source C++ libraries.
+
+00:27:32.000 --> 00:27:39.990
+Boost is known for really pushing the C++ language to its
+limits, and pushing compilers well beyond their limits.
+
+00:27:39.990 --> 00:27:45.610
+So, the great news here is that the
+LLVM Compiler built all of Boost.
+
+00:27:45.610 --> 00:27:48.510
+We passed 100 percent of the regression tests in Boost.
+
+00:27:48.510 --> 00:27:53.500
+[ Applause ]
+
+00:27:53.500 --> 00:27:57.030
+So this speaks well to our language
+conformance for the C++ standard.
+
+00:27:57.030 --> 00:28:02.850
+And in fact, GCC doesn't pass a 100 percent of those
+regression tests neither does Visual Studio right,
+
+00:28:02.850 --> 00:28:06.220
+despite having lots of workarounds
+in Boost for those compilers.
+
+00:28:06.220 --> 00:28:08.560
+We don't have workarounds, we just do C++ right.
+
+00:28:08.560 --> 00:28:10.080
+So we can handle--
+
+00:28:10.080 --> 00:28:11.410
+[ Laughter ]
+
+00:28:11.410 --> 00:28:13.360
+Sorry, I had to.
+
+00:28:13.360 --> 00:28:16.650
+[ Applause ]
+
+00:28:16.650 --> 00:28:19.140
+So, we can build Xcode 4, right.
+
+00:28:19.140 --> 00:28:23.160
+So, this is actually a mixed application, lots
+of Objective-C, lots of Objective-C++ in there.
+
+00:28:23.160 --> 00:28:25.160
+We can handle Objective-C++.
+
+00:28:25.160 --> 00:28:26.550
+And FreeBSD is interesting.
+
+00:28:26.550 --> 00:28:31.590
+So, we can build the entire FreeBSD-base
+system, lots of C and C++ code in there.
+
+00:28:31.590 --> 00:28:34.530
+And the FreeBSD community is actually really excited.
+
+00:28:34.530 --> 00:28:38.810
+Just yesterday, they imported the LLVM
+Compiler into their own source trees,
+
+00:28:38.810 --> 00:28:42.390
+and it's going to start becoming available on FreeBSD.
+
+00:28:42.390 --> 00:28:43.620
+And they're looking toward the future.
+
+00:28:43.620 --> 00:28:47.290
+They really want to use the LLVM
+Compiler as their platform compiler,
+
+00:28:47.290 --> 00:28:51.110
+just like Apple wants to move for the LLVM Compiler.
+
+00:28:51.110 --> 00:28:56.590
+C++ support in the LLVM Compiler
+actually makes that possible.
+
+00:28:56.590 --> 00:28:59.820
+So, if you want to, right, why would
+you actually want to use this compiler?
+
+00:28:59.820 --> 00:29:03.620
+Well, if you like Boost, you want to use this compiler.
+
+00:29:03.620 --> 00:29:05.620
+However, it has other benefits, right.
+
+00:29:05.620 --> 00:29:07.010
+It has faster compilation.
+
+00:29:07.010 --> 00:29:10.300
+We saw this with C and Objective-C.
+
+00:29:10.300 --> 00:29:14.830
+Also with C++, we provide faster
+compile so you can get back to work.
+
+00:29:14.830 --> 00:29:17.660
+We provide much better warnings and errors.
+
+00:29:17.660 --> 00:29:21.740
+When something goes wrong, we tell
+you what went wrong and why,
+
+00:29:21.740 --> 00:29:25.970
+we don't just point out something
+happened here, we don't know what it is.
+
+00:29:25.970 --> 00:29:30.560
+Of course, it provides complete binary
+compatibility with GCC and with LLVM-GCC.
+
+00:29:30.560 --> 00:29:36.340
+So, you don't have to move your whole world over
+to the LLVM Compiler to try out the C++ support,
+
+00:29:36.340 --> 00:29:40.850
+you can just build parts of your application or
+some of your frameworks with the LLVM Compiler.
+
+00:29:41.970 --> 00:29:43.840
+We offer better C++ standards conformance.
+
+00:29:43.840 --> 00:29:45.910
+Of course the Boost results show that.
+
+00:29:45.910 --> 00:29:49.640
+But, you know, we have some of an
+advantage in that we just started recently.
+
+00:29:49.640 --> 00:29:54.760
+So, we have a very good understanding of the C++ standard,
+and we can implement it to the letter to make sure
+
+00:29:54.760 --> 00:29:58.160
+that if your code compiles with the
+LLVM Compiler, it's going to be portable
+
+00:29:58.160 --> 00:30:03.330
+to other compilers including future
+versions of the LLVM Compiler.
+
+00:30:03.330 --> 00:30:06.040
+We fully support Objective-C++.
+
+00:30:06.040 --> 00:30:11.490
+Of course this is the union of Objective-C and C++, and
+there are some corners there what we need to deal with,
+
+00:30:11.490 --> 00:30:16.630
+we've done so, and we think we have a great product
+here for Objective-C++ programmers that want to use C++
+
+00:30:16.630 --> 00:30:20.720
+and they want to use Cocoa together, or UIKit.
+
+00:30:20.720 --> 00:30:26.240
+Now, no compiler transition is
+completely easy, we understand that.
+
+00:30:26.240 --> 00:30:29.610
+And the flip side of having better
+C++ standards conformance is
+
+00:30:29.610 --> 00:30:34.720
+that LLVM Compiler is actually more
+strict about C++ than GCC was, right.
+
+00:30:34.720 --> 00:30:41.270
+It actually does much more especially in area of templates
+to make sure that your code is conforming C++ code.
+
+00:30:41.270 --> 00:30:46.020
+To that end, there's a C++ compatibility
+page up on the Open Source website.
+
+00:30:46.020 --> 00:30:49.470
+When you're trying out the LLVM Compiler, I
+strongly recommend that you go check it out.
+
+00:30:49.470 --> 00:30:54.350
+It has common pitfalls along with the
+explanations of why the LLVM Compiler is right
+
+00:30:54.350 --> 00:30:58.130
+and how to fix your code, and avoid this case.
+
+00:30:58.130 --> 00:31:01.630
+Yeah, avoid this case in the future.
+
+00:31:01.630 --> 00:31:06.710
+If you want to try out this new compiler, which
+I highly recommend, in Xcode 4, very easy.
+
+00:31:06.710 --> 00:31:08.350
+First of all, you can just start a new project.
+
+00:31:08.350 --> 00:31:09.790
+It is the default compiler.
+
+00:31:09.790 --> 00:31:12.320
+Start new project, start writing C++ code.
+
+00:31:12.320 --> 00:31:16.700
+If you're importing a project from Xcode 3 into
+Xcode 4, just go into the project build settings,
+
+00:31:16.700 --> 00:31:21.110
+search for compiler, and select the LLVM Compiler 2.0.
+
+00:31:21.110 --> 00:31:29.870
+And as we've pointed out, notice the GCC 4.0 is not on
+this list, right, GCC 4.0 is gone, please move forward.
+
+00:31:29.870 --> 00:31:34.500
+OK. If you're a command line user, you use make
+files some other tool, then you can get that Clang
+
+00:31:34.500 --> 00:31:37.350
+and Clang C++ support with the LLVM Compiler.
+
+00:31:37.350 --> 00:31:43.130
+In Xcode 4, usr/bin/clang, this is the
+replacement for GCC for C and Objective-C code,
+
+00:31:43.130 --> 00:31:50.100
+or Xcode/user/bin/clang++ is the replacement
+for G++, for C++ and Objective-C++ code.
+
+00:31:50.100 --> 00:31:56.050
+Now, the Clang driver program, which is the LLVM
+Compiler, is drop-in compatible with GCC and G++.
+
+00:31:56.050 --> 00:32:01.000
+So, just change your compiler, run a
+make file project, it should just work.
+
+00:32:01.000 --> 00:32:04.750
+Alright. Let's take a look at performance.
+
+00:32:04.750 --> 00:32:10.930
+I claimed that the LLVM Compiler is faster at building
+C++ code than GCC, so here are a couple of examples.
+
+00:32:10.930 --> 00:32:14.280
+So, this is Compile-Time Performance
+on a debug build, right.
+
+00:32:14.280 --> 00:32:19.260
+Debug build is where it's the front end, the
+Parser that actually takes a lot of time.
+
+00:32:19.260 --> 00:32:26.390
+So, we have two projects here, we have the Mac OS X Linker,
+which is small but meaty C++ application that uses a lot
+
+00:32:26.390 --> 00:32:31.600
+of the C++ feature set, and we
+have the LLVM Compiler itself.
+
+00:32:31.600 --> 00:32:37.850
+So, with the Linker, we can build the Linker
+about 25 percent faster than GCC could.
+
+00:32:37.850 --> 00:32:42.290
+With the LLVM Compiler, things are about the
+same, so there's a much larger code base.
+
+00:32:42.290 --> 00:32:48.280
+You know, three-quarters of a million lines
+of C++ code, we built it 27 percent faster.
+
+00:32:48.280 --> 00:32:54.520
+Now, we use this, and I can tell you that 25 percent-27
+percent is actually significant, you notice this,
+
+00:32:54.520 --> 00:32:57.490
+this is minutes off your build time, and that's wonderful.
+
+00:32:57.490 --> 00:32:59.720
+But we think we're not done yet.
+
+00:32:59.720 --> 00:33:05.290
+So, we spent all of the last year just bringing up
+C++ support, it turns out to be a huge language.
+
+00:33:05.290 --> 00:33:07.220
+And we have not yet gotten to the point--
+
+00:33:07.220 --> 00:33:08.380
+[ Laughter ]
+
+00:33:08.380 --> 00:33:10.230
+Oh, you agree with me?
+
+00:33:10.230 --> 00:33:16.200
+OK. We haven't yet gotten to the point of actually being
+able to really tune the front end, to be really fast, right.
+
+00:33:16.200 --> 00:33:20.780
+We have got lots of low-hanging fruit, so we're hoping
+in the future we can do better than this just 25
+
+00:33:20.780 --> 00:33:28.140
+to 27 percent faster for your C++ applications,
+because, you know, this actually really matters
+
+00:33:28.140 --> 00:33:31.530
+for our build times and for our own productivity.
+
+00:33:31.530 --> 00:33:36.630
+So, Memory Usage is another area where the LLVM
+Compiler has typically been very good, right.
+
+00:33:36.630 --> 00:33:39.730
+So, let's take an example of building the Mac OS X Linker.
+
+00:33:39.730 --> 00:33:43.050
+So, this is just some representative
+sample out of the Linker.
+
+00:33:43.050 --> 00:33:44.870
+GCC versus the LLVM Compiler.
+
+00:33:44.870 --> 00:33:52.280
+GCC takes about 220 megabytes to compile
+one file in the Mac OS X Linker, right.
+
+00:33:52.280 --> 00:33:59.510
+The LLVM Compiler comes in at 33 percent smaller, less
+than 150 megabytes to do the exact same thing, right.
+
+00:33:59.510 --> 00:34:04.320
+[ Applause ]
+
+00:34:04.320 --> 00:34:06.160
+For a variety of reasons, this is great.
+
+00:34:06.160 --> 00:34:12.020
+Of course using less memory uses less memory bandwidth,
+you get better performance, but far more important is
+
+00:34:12.020 --> 00:34:18.900
+that when you're building 16-way right, you've got 16 C++
+jobs going, 33 percent smaller means it's much more likely
+
+00:34:18.900 --> 00:34:23.470
+that you're not going to start swapping, you're not going
+to have to kill apps to actually be able to build your code.
+
+00:34:23.470 --> 00:34:28.820
+This is really, really helpful in the development
+process, and of course, it makes things faster.
+
+00:34:28.820 --> 00:34:34.330
+So, let's move on to the other main feature of the LLVM
+Compiler, right, which is better errors and warnings
+
+00:34:34.330 --> 00:34:39.810
+that actually describes things in a way that you
+can understand them and fix the problem quickly.
+
+00:34:39.810 --> 00:34:44.040
+So, let's take a typical C++ problem, right, access control.
+
+00:34:44.040 --> 00:34:46.220
+And look at what GCC says.
+
+00:34:46.220 --> 00:34:49.530
+So, here we have a relatively simple
+example, we've got a clear function.
+
+00:34:49.530 --> 00:34:51.710
+It looks like it's public to me.
+
+00:34:51.710 --> 00:34:56.360
+Some part down at the bottom of the code we tried
+to call clear, and we get a diagnostic that says,
+
+00:34:56.360 --> 00:35:04.350
+"Hey this clear function is inaccessible" over
+here some place later in the code, that's GCC.
+
+00:35:04.350 --> 00:35:07.110
+What can the LLVM Compiler do to actually help us?
+
+00:35:07.110 --> 00:35:11.350
+Well, the LLVM Compiler is going to
+give us much more precise information.
+
+00:35:11.350 --> 00:35:15.440
+So, first of all, the error that
+shows up shows up at exactly the point
+
+00:35:15.440 --> 00:35:19.210
+where the clear function is called,
+that's where the error is.
+
+00:35:19.210 --> 00:35:22.960
+It's not up at the declaration of clear which on line 3,
+
+00:35:22.960 --> 00:35:26.100
+which is where GCC told us to look
+first, that's wrong, right.
+
+00:35:26.100 --> 00:35:30.930
+So, this is the problem at the call to
+clear, however, this is a private member,
+
+00:35:30.930 --> 00:35:33.150
+maybe you didn't mean it to be a private member.
+
+00:35:33.150 --> 00:35:38.470
+So, what the LLVM Compiler does is it will give
+you notes following the error or the warning
+
+00:35:38.470 --> 00:35:42.790
+with relevant information to help
+you diagnose what's going wrong.
+
+00:35:42.790 --> 00:35:48.740
+So, in this case, the first note is highlighting our
+inheritance of vector from the vector implementation class.
+
+00:35:48.740 --> 00:35:53.730
+Alright. What you notice here is we didn't write that
+it was public inheritance or private inheritance.
+
+00:35:53.730 --> 00:35:58.770
+And so, the compiler is forced to implicitly
+assume you meant private, well, that's not great,
+
+00:35:58.770 --> 00:36:01.990
+the note says this is implicitly
+private, probably not what you meant,
+
+00:36:01.990 --> 00:36:04.890
+maybe you want to make this public
+and the example actually work.
+
+00:36:04.890 --> 00:36:10.690
+We'll give you a second note at the bottom to say
+this is the clear member we actually found, right.
+
+00:36:10.690 --> 00:36:11.850
+Why is this important?
+
+00:36:11.850 --> 00:36:16.160
+Well, in this case, there's only one clear
+function, however in many cases, you have overloads
+
+00:36:16.160 --> 00:36:18.870
+and some of them might be public,
+and some of them might be private.
+
+00:36:18.870 --> 00:36:24.490
+So, we have to show you which one we found so you can say,
+"Ah, this is what I meant to find, there's another problem"
+
+00:36:24.490 --> 00:36:30.070
+or "This isn't the function I meant to
+call, let me go see what I did wrong."
+
+00:36:30.070 --> 00:36:32.130
+Ambiguity is multiple inheritance, right.
+
+00:36:32.130 --> 00:36:36.480
+This is another complicated area of C++
+where the compiler could really help you.
+
+00:36:36.480 --> 00:36:39.960
+So, here we have some of the classic
+multiple inheritance problem, right.
+
+00:36:39.960 --> 00:36:43.850
+We have a Person class, we have Teacher and
+Student classes that inherit from person,
+
+00:36:43.850 --> 00:36:48.090
+and then we have a Teaching Assistant,
+who's both a Teacher and a Student.
+
+00:36:48.090 --> 00:36:48.870
+And this is fine.
+
+00:36:48.870 --> 00:36:52.280
+This is perfectly valid C++ code up
+until the point where you actually want
+
+00:36:52.280 --> 00:36:54.000
+to treat your TeachingAssistants like people.
+
+00:36:54.000 --> 00:36:54.770
+[ Laughter ]
+
+00:36:54.770 --> 00:37:02.220
+So, any compiler is going to tell you that
+there's an ambiguous conversion here, right.
+
+00:37:02.220 --> 00:37:07.860
+You can't convert from a TeachingAssistant object to a
+Person object because there's an ambiguity in the hierarchy.
+
+00:37:07.860 --> 00:37:13.400
+So, what LLVM Compiler is going to tell you is
+it's actually going to show you what are the paths
+
+00:37:13.400 --> 00:37:16.090
+through the hierarchy that causes the ambiguities.
+
+00:37:16.090 --> 00:37:18.010
+You're going to have to find these yourself, right.
+
+00:37:18.010 --> 00:37:20.980
+You're going to have to go look up at the
+source code and trace there and say, "Oh, wait,
+
+00:37:20.980 --> 00:37:27.450
+the TeachingAssistant is a Teacher, oh, that inherits from
+Person this way, and so on," you'll have to do this twice.
+
+00:37:27.450 --> 00:37:30.520
+What the LLVM Compiler does is it shows you the paths,
+
+00:37:30.520 --> 00:37:33.380
+so you don't have to go hunt it
+down in your source code, right.
+
+00:37:33.380 --> 00:37:36.510
+You just see what the problem is and realize,
+"Oops, I needed virtual inheritance."
+
+00:37:36.510 --> 00:37:42.340
+[ Applause ]
+
+00:37:42.340 --> 00:37:47.200
+And the LLVM Compiler tries to do this everywhere it can to
+try to give you the information you need so you don't have
+
+00:37:47.200 --> 00:37:57.760
+to go hunting for your source code to
+figure out what actually went wrong.
+
+00:37:57.760 --> 00:37:59.170
+So, spellchecking, right.
+
+00:37:59.170 --> 00:38:02.830
+This is in LLVM Compiler 1.5 in Xcode 3.
+
+00:38:02.830 --> 00:38:04.840
+It also shows up in Xcode 4.
+
+00:38:04.840 --> 00:38:08.490
+And we use it throughout C++, throughout
+the compiler to give you corrections.
+
+00:38:08.490 --> 00:38:14.090
+So, here, well, we've mistyped the name of vector
+when we refer to it in namespace std, so therefore,
+
+00:38:14.090 --> 00:38:19.250
+we give a correction that says, "Hey, we think you
+meant this other vector thing, here's the correction."
+
+00:38:19.250 --> 00:38:24.800
+And then, we'll put a follow-on note to say if
+, that tells you what we actually corrected to.
+
+00:38:24.800 --> 00:38:29.080
+And if that's the thing that you expected
+to write there, perfect, you're all set.
+
+00:38:29.080 --> 00:38:33.350
+Now notice this little vector down below the caret line.
+
+00:38:33.350 --> 00:38:37.920
+So, this is actually how you see Fix-it hints
+if you're using the command line compiler.
+
+00:38:37.920 --> 00:38:42.460
+It's just a totally different UI on Fix-its
+that says here's the text that you should put
+
+00:38:42.460 --> 00:38:45.450
+at the point that I'm pointing too in the caret.
+
+00:38:45.450 --> 00:38:50.380
+Now, of course, if you're on the Xcode 4 IDE
+and building C++ code there or C code there,
+
+00:38:50.380 --> 00:38:55.950
+these Fix-its turn into the little Fix-it UI that allows
+you just to apply the change quickly and keep moving on.
+
+00:38:55.950 --> 00:38:58.440
+Again, this is modularity and reuse.
+
+00:38:58.440 --> 00:39:03.180
+We can have multiple UIs for the
+same core feature of the Fix-it.
+
+00:39:03.180 --> 00:39:07.520
+OK. One last example of diagnostics.
+
+00:39:07.520 --> 00:39:10.860
+So, this is one of the worst parts of programming in C++.
+
+00:39:10.860 --> 00:39:17.220
+You have some overloaded functions, and you make a call to
+those overloaded functions, but you make a mistake, right,
+
+00:39:17.220 --> 00:39:20.450
+none of those functions actually does match.
+
+00:39:20.450 --> 00:39:24.830
+With any other compiler, the LLVM
+Compiler will tell you, "Well,
+
+00:39:24.830 --> 00:39:28.280
+none of these function matches,
+I'm sorry, I can't call draw."
+
+00:39:28.280 --> 00:39:33.940
+At this point, what you're used to expecting, of
+course, is a long list of candidate functions, right.
+
+00:39:33.940 --> 00:39:38.620
+What did the compiler consider, consider this,
+this, this, this, and this, good luck with that.
+
+00:39:38.620 --> 00:39:42.570
+So, the LLVM Compiler, of course, it
+has to tell you this candidate list.
+
+00:39:42.570 --> 00:39:47.070
+It's important for it to tell you what did it
+consider so you can go look at those things.
+
+00:39:47.070 --> 00:39:49.010
+But what the LLVM Compiler does, in addition,
+
+00:39:49.010 --> 00:39:54.660
+is it tells you why it rejected this
+particular candidate for each of the candidates.
+
+00:39:54.660 --> 00:39:56.730
+So in this case, we have the second function.
+
+00:39:56.730 --> 00:39:58.940
+This is probably the one we meant to call, right.
+
+00:39:58.940 --> 00:40:03.980
+The first parameter matches up, we've got a pointer
+to points, had to match the pointer to points.
+
+00:40:03.980 --> 00:40:06.660
+It's the second argument where
+there's no conversation here, right.
+
+00:40:06.660 --> 00:40:10.480
+We can't convert a pointer down to
+an integer for the second argument.
+
+00:40:10.480 --> 00:40:11.820
+That tells us what the mistake was.
+
+00:40:11.820 --> 00:40:15.400
+We should have passed the length or the
+difference between these two pointers rather
+
+00:40:15.400 --> 00:40:17.340
+than just passing the two pointers along.
+
+00:40:17.340 --> 00:40:21.570
+And LLVM Compiler helps us zero
+in on that as our actual mistake.
+
+00:40:21.570 --> 00:40:26.320
+Now, of course, it's going to tell us that there's another
+candidate function here, right, the first function.
+
+00:40:26.320 --> 00:40:28.720
+And here, we had the wrong number of arguments, right.
+
+00:40:28.720 --> 00:40:31.850
+We've passed in three arguments that
+actually expected two arguments.
+
+00:40:31.850 --> 00:40:34.040
+This function is clearly on visible.
+
+00:40:34.040 --> 00:40:36.470
+There's something else very subtle going on here.
+
+00:40:36.470 --> 00:40:42.690
+Notice that the order in which I have the functions
+written up in the source code is different.
+
+00:40:42.690 --> 00:40:47.130
+It's actually the opposite of the order
+that the diagnostic show up in the notes.
+
+00:40:47.130 --> 00:40:50.270
+So, the LLVM Compiler is actually
+using some heuristics here to try
+
+00:40:50.270 --> 00:40:55.040
+to tell you first the function it thinks is
+mostly likely that you actually meant to call,
+
+00:40:55.040 --> 00:40:58.510
+and put the less relevant candidate below, right.
+
+00:40:58.510 --> 00:41:03.040
+[ Applause ]
+
+00:41:03.040 --> 00:41:05.150
+So I expect to be working on these heuristics for a while.
+
+00:41:05.150 --> 00:41:09.570
+But it is very, very helpful to help
+you zero in on this is the problem,
+
+00:41:09.570 --> 00:41:13.550
+here is why the compiler rejected what
+I wrote so you can fix it quickly.
+
+00:41:13.550 --> 00:41:17.560
+Instead of having to second guess
+what the compiler is doing.
+
+00:41:17.560 --> 00:41:22.480
+OK. So, we have very good diagnostics in
+the LLVM Compiler, we have good performance.
+
+00:41:22.480 --> 00:41:26.510
+I guess we're done right, not so.
+
+00:41:26.510 --> 00:41:29.360
+C++ language isn't a static language, right.
+
+00:41:29.360 --> 00:41:35.910
+It's not that it's been written once and it never
+changes, in fact the C++ language is continually evolving,
+
+00:41:35.910 --> 00:41:41.620
+and the C++ standardization committee is
+working hard on the next C++ standard, right.
+
+00:41:41.620 --> 00:41:44.900
+This is called C++'0x typically.
+
+00:41:44.900 --> 00:41:50.040
+And it actually has a whole of great new
+features in both the language and in the library.
+
+00:41:50.040 --> 00:41:55.680
+So, language features, of course, you can go look
+this up, but it has things like simple-type inference
+
+00:41:55.680 --> 00:42:00.390
+where you can have auto variables that determine their
+type based on their initializers to save you a whole lot
+
+00:42:00.390 --> 00:42:02.690
+of typing when you're writing things quickly.
+
+00:42:02.690 --> 00:42:07.850
+And it has moved semantics to help you actually improve
+the performance of your code by moving resources
+
+00:42:07.850 --> 00:42:09.790
+around rather than making expensive copies.
+
+00:42:09.790 --> 00:42:16.290
+And these features have made it into a new
+C++ standard library that comes with C++ '0x.
+
+00:42:16.290 --> 00:42:21.370
+It uses move semantics throughout to give you better
+performance in your applications just by recompiling.
+
+00:42:21.370 --> 00:42:28.100
+And also it has new features like regular expression
+support built-in, and hash cables in the library.
+
+00:42:28.100 --> 00:42:34.700
+Now, all these new features in the C++ '0x standard
+are backward compatible with the current C++ standard.
+
+00:42:34.700 --> 00:42:41.450
+So, if your code builds as C++ code today, and it's
+correct, it will work tomorrow except for a few corners
+
+00:42:41.450 --> 00:42:44.720
+where they've decided to break backward compatibility.
+
+00:42:44.720 --> 00:42:48.160
+So, the C++ '0x standard is not finished.
+
+00:42:48.160 --> 00:42:49.700
+It's still in the works.
+
+00:42:49.700 --> 00:42:57.070
+Right now, it's looking like we'll get a finalized
+standard sometime next year for C++ '0x, right.
+
+00:42:57.070 --> 00:43:03.370
+So, rather than actually delaying until all the ink is
+dry, we've actually started working on the C++ '0x standard
+
+00:43:03.370 --> 00:43:10.570
+in the form of a completely new implementation
+of the C++ standard library, called libc++.
+
+00:43:10.570 --> 00:43:15.010
+So, this is a complete redesign of the C++
+standard library, so it's built from the ground
+
+00:43:15.010 --> 00:43:21.480
+up for complete C++ '0x support so that when that standard
+is available, we can actually be ready for it, right,
+
+00:43:21.480 --> 00:43:23.970
+and you can start using C++ '0x features.
+
+00:43:23.970 --> 00:43:28.650
+And one of the great things about starting a
+new C++ standard library is we've learned a lot
+
+00:43:28.650 --> 00:43:31.790
+in the past decade of using the new C++ standard library.
+
+00:43:31.790 --> 00:43:36.810
+And now, we can actually know how to build new
+implementations for the algorithms in the standard library
+
+00:43:36.810 --> 00:43:39.610
+that are faster, that provide better performance.
+
+00:43:39.610 --> 00:43:43.380
+We know how to build data structures
+that are smaller, faster, right.
+
+00:43:43.380 --> 00:43:50.440
+So, your applications get better just by compiling with
+the new library and using these better implementations.
+
+00:43:50.440 --> 00:43:58.500
+And like all of the other LLVM projects,
+libc++ is part of the LLVM umbrella project.
+
+00:43:58.500 --> 00:44:00.420
+It's a 100 percent open source.
+
+00:44:00.420 --> 00:44:05.610
+If you're interested in it, you can go check it
+out at libcxx.llvm.org to see what the future
+
+00:44:05.610 --> 00:44:09.320
+of the C++ standard library is going
+to look like for the '0x standard.
+
+00:44:09.320 --> 00:44:17.650
+So, talking a lot about C++, let's take
+a look back at sort of the evolution
+
+00:44:17.650 --> 00:44:22.260
+of tools here for-- the Apple tools for C++.
+
+00:44:22.260 --> 00:44:27.220
+So, the current compiler, what you should
+be using for C++ code here is LLVM-GCC.
+
+00:44:27.220 --> 00:44:30.750
+So, this is a production quality compiler, it's very stable.
+
+00:44:30.750 --> 00:44:34.880
+It combines the GCC front end with the LLVM back end, right,
+
+00:44:34.880 --> 00:44:39.250
+gives better performance, and the
+existing GCC standard library.
+
+00:44:39.250 --> 00:44:41.840
+Moving forward, we have the LLVM Compiler.
+
+00:44:41.840 --> 00:44:47.300
+So, this is using the Clang front end, we've
+been talking about with the LLVM back end.
+
+00:44:47.300 --> 00:44:54.440
+And for C++ '98 applications, which is the current
+C++ standard, we'll use the GCC standard library
+
+00:44:54.440 --> 00:44:58.410
+to provide perfect interoperability with LLVM-GCC.
+
+00:44:58.410 --> 00:45:07.010
+Now moving forward to the C++ '0x standard, we're only going
+to be implementing C++ '0x features in the Clang front end.
+
+00:45:07.010 --> 00:45:10.380
+There will be no C++ '0x support in GCC or LLVM-GCC.
+
+00:45:10.380 --> 00:45:14.840
+So, if you're interested in the new standard,
+you're going to need to move to the new compiler.
+
+00:45:14.840 --> 00:45:21.810
+Similarly on the library side, C++ '0x support will require
+the libc++ standard library where we've been able to build
+
+00:45:21.810 --> 00:45:25.850
+and engineer the entire thing for proper C++ '0x support.
+
+00:45:25.850 --> 00:45:30.890
+Now, to wrap up the session here, we've talked
+about two completely different Xcode releases.
+
+00:45:30.890 --> 00:45:34.360
+We have the newest Xcode 3 release, Xcode 3.2.3.
+
+00:45:34.360 --> 00:45:37.680
+It includes a completely new LLVM-GCC Compiler.
+
+00:45:37.680 --> 00:45:44.120
+So, this is the first LLVM-GCC that supports
+iPhone OS development for the iPad and the iPhone.
+
+00:45:44.120 --> 00:45:50.720
+It has better optimizers right to produce
+smaller compiled binaries that run faster.
+
+00:45:50.720 --> 00:45:53.970
+We also have the new version of
+the LLVM Compiler, version 1.5.
+
+00:45:53.970 --> 00:46:00.250
+So, this has all the benefits of LLVM-GCC, the iPhone OS
+development support, great performance and compiled code,
+
+00:46:00.250 --> 00:46:08.340
+but it provides you with super fast compiles, right, three
+times faster we've seen on large Objective-C applications.
+
+00:46:08.340 --> 00:46:15.040
+And over the previous version of the LLVM Compiler,
+it has a whole bunch of new warnings, spellchecking,
+
+00:46:15.040 --> 00:46:20.890
+and many improvements to the Static Analyzer
+to find more bugs with fewer false positives.
+
+00:46:20.890 --> 00:46:26.980
+So looking forward, we have the Developer Preview of
+Xcode 4, right, where we've really taken the LLVM Compiler
+
+00:46:26.980 --> 00:46:31.130
+and moved it inside the IDE to
+give you a much better experience.
+
+00:46:31.130 --> 00:46:37.300
+With the new version of the LLVM Compiler we talked about
+here, that C++ and Objective-C++ support for the first time,
+
+00:46:37.300 --> 00:46:40.810
+and a brand new debugger based on LLVM technologies.
+
+00:46:40.810 --> 00:46:44.650
+And many of the features like code
+completion, source code indexing, and so on,
+
+00:46:44.650 --> 00:46:49.370
+are built into the Xcode 4 IDE using the Clang front end.
+
+00:46:49.370 --> 00:46:52.590
+Including live warnings and Fix-its
+to help you get to your code.
+
+00:46:52.590 --> 00:46:54.030
+There's a couple of related sessions.
+
+00:46:54.030 --> 00:46:58.700
+So later on, we have the LLVM Technologies
+In-Depth Session where we'll talk
+
+00:46:58.700 --> 00:47:03.530
+about how these technologies are
+actually going to be used within Xcode 4
+
+00:47:03.530 --> 00:47:06.120
+to produce better tools and give you better experience.
+
+00:47:06.120 --> 00:47:11.300
+There's also a Debugging Session
+tomorrow on using the LLDB debugger.
+
+00:47:11.300 --> 00:47:14.030
+So, if you're interested in these
+technologies, if you want more information,
+
+00:47:14.030 --> 00:47:18.240
+you can talk to our Developer Tools
+Evangelist, Michael Jurewitz.
+
+00:47:18.240 --> 00:47:23.830
+Or you can surf over to the LLVM Project Open
+Source homepage at llvm.org for more information
+
+00:47:23.830 --> 00:47:27.100
+about the entire project, or talk
+to us at the Apple Developer Forums.
+

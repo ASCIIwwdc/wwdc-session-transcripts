@@ -1,0 +1,2191 @@
+WEBVTT
+
+00:00:06.360 --> 00:00:07.270
+>> Kevin van Vechten: Good morning everyone!
+
+00:00:07.270 --> 00:00:12.140
+And welcome to Introducing Blocks
+in Grand Central Dispatch on iPhone.
+
+00:00:12.140 --> 00:00:13.830
+Looks like we have a pretty full room today.
+
+00:00:13.830 --> 00:00:18.840
+If you have friends who weren't able to make it inside
+we will be repeating this session later in the week.
+
+00:00:18.840 --> 00:00:21.170
+More details on that to come.
+
+00:00:22.730 --> 00:00:24.120
+My name is Kevin van Vechten.
+
+00:00:24.120 --> 00:00:29.120
+I'm the engineering manager of the
+Grand Central Dispatch team at Apple.
+
+00:00:29.120 --> 00:00:37.290
+And last year we were very excited to release Grand
+Central Dispatch and Blocks in Mac OS X Snow Leopard.
+
+00:00:37.290 --> 00:00:47.670
+Blocks is a language feature that allows you to organize
+your code into independent snippets of code for easy reuse
+
+00:00:47.670 --> 00:00:52.730
+and Grand Central Dispatch is a runtime
+API that lets you execute those snippets
+
+00:00:52.730 --> 00:00:57.450
+of code asynchronously and in an event driven fashion.
+
+00:00:57.450 --> 00:01:00.920
+It is a very low level technology.
+
+00:01:00.920 --> 00:01:02.470
+It's part of libSystem.
+
+00:01:02.470 --> 00:01:10.150
+It's available for all applications to use without needing
+to link against any additional libraries and frameworks.
+
+00:01:10.150 --> 00:01:18.500
+And this year, we're very excited to announce its
+availability in iOS 4 for use by your UIKit applications.
+
+00:01:18.500 --> 00:01:22.000
+So with all of last year's emphasis
+on the multicore benefits
+
+00:01:22.000 --> 00:01:27.060
+of Grand Central Dispatch you may be wondering
+whether there are any real world benefits
+
+00:01:27.060 --> 00:01:30.900
+to an iPhone or an iPad that only has a single core.
+
+00:01:30.900 --> 00:01:32.850
+And the answer is yes.
+
+00:01:32.850 --> 00:01:38.750
+Fundamentally, Grand Central Dispatch is a very
+efficient runtime for intrathread communication
+
+00:01:38.750 --> 00:01:46.390
+and asynchronous execution and these benefits
+scale up to many cores as we see on the Mac
+
+00:01:46.390 --> 00:01:50.870
+or scale down to a single core
+as we see on the iPhone and iPad.
+
+00:01:50.870 --> 00:01:55.570
+And by running work asynchronously it allows
+you to free up your main threads event loop
+
+00:01:55.570 --> 00:02:01.680
+to keep your application responsive to
+the user especially for touch events.
+
+00:02:01.680 --> 00:02:08.010
+So please join me in welcoming Bill Bumgarner
+to the stage to talk more about Blocks.
+
+00:02:08.010 --> 00:02:10.420
+[ Applause ]
+
+00:02:10.420 --> 00:02:11.630
+>> Bill Bumgarner: Thanks Kevin.
+
+00:02:11.630 --> 00:02:17.820
+So if you saw the talk earlier today
+about effective use of Objective-C.
+
+00:02:17.820 --> 00:02:23.560
+I'm going to be repeating some of the concepts from that
+and maybe a little bit different and then we're going
+
+00:02:23.560 --> 00:02:25.680
+to repeat it again a little later in the week.
+
+00:02:25.680 --> 00:02:29.480
+And part of the reason why we're doing this
+repetition is because Blocks are pervasive.
+
+00:02:29.480 --> 00:02:30.920
+They're our foundation.
+
+00:02:30.920 --> 00:02:37.000
+They're throughout everything and by understanding this
+technology effectively you will be able to take advantage
+
+00:02:37.000 --> 00:02:44.720
+of it and your code will be simpler, faster, more
+efficient, more stable, which let's you ship better apps.
+
+00:02:44.720 --> 00:02:47.500
+So with that let's talk about Blocks.
+
+00:02:47.500 --> 00:02:54.680
+Now, if you've come to this platform from other
+languages like the scheme list Ruby, Smalltalk,
+
+00:02:54.680 --> 00:03:02.220
+then you're probably familiar with lambdas, closures,
+Blocks even they're called, or anonymous functions.
+
+00:03:02.220 --> 00:03:07.450
+JavaScript has anonymous functions
+with querying and in Snow Leopard
+
+00:03:07.450 --> 00:03:12.650
+like Kevin said we added this concept
+to see, we call it Blocks.
+
+00:03:12.650 --> 00:03:19.310
+We use a very simple syntax but that
+simple syntax belies an underlying power.
+
+00:03:19.310 --> 00:03:24.720
+Now, on our platform are the foundation languages C.
+
+00:03:24.720 --> 00:03:26.860
+Out of C we have Objective-C.
+
+00:03:26.860 --> 00:03:27.900
+We have C++.
+
+00:03:27.900 --> 00:03:33.870
+And of course we smashed the two together
+in an unholy marriage called objective C++.
+
+00:03:33.870 --> 00:03:35.460
+[ Laughter ]
+
+00:03:35.460 --> 00:03:38.060
+So where are Blocks available?
+
+00:03:38.060 --> 00:03:41.430
+Blocks are available fully and
+completely in C and Objective-C.
+
+00:03:41.430 --> 00:03:46.680
+However, the C++ and objective
+C++ report is not quite complete.
+
+00:03:46.680 --> 00:03:55.250
+Though I am exceedingly happy to be the first on
+stage I think to tell you that in LLVM 2.0 top
+
+00:03:55.250 --> 00:04:00.820
+of tree the Block support passes all 912 unit tests in C++.
+
+00:04:00.820 --> 00:04:01.810
+[ Applause ]
+
+00:04:01.810 --> 00:04:14.460
+And if you want to play with that you
+can grab LLVM 2.0 from the llvm.org site.
+
+00:04:14.460 --> 00:04:16.510
+So, basic Blocks.
+
+00:04:16.510 --> 00:04:21.740
+What is the most common patterns you're going to see with
+Blocks and how are you most commonly going to use them?
+
+00:04:21.740 --> 00:04:27.300
+Well, quite literally you will
+be using the caret everywhere.
+
+00:04:27.300 --> 00:04:29.790
+You see the caret, this operator?
+
+00:04:29.790 --> 00:04:31.500
+That introduces a Block.
+
+00:04:31.500 --> 00:04:32.830
+Why caret?
+
+00:04:32.830 --> 00:04:40.420
+It's the only unary operator we knew of that
+could not be operator overloaded in C++, so.
+
+00:04:40.420 --> 00:04:41.060
+[ Laughter ]
+
+00:04:41.060 --> 00:04:49.830
+Makes things a little simpler, that and we couldn't
+use the snow man because Unicode is not allowed.
+
+00:04:49.830 --> 00:04:52.090
+[ Laughter ]
+
+00:04:52.090 --> 00:04:56.550
+So when you're writing code and you
+want to take advantage of Blocks.
+
+00:04:56.550 --> 00:04:59.210
+There's a lot of APIs that take Blocks as arguments.
+
+00:04:59.210 --> 00:05:01.360
+These are two of them, one is Objective-C.
+
+00:05:01.360 --> 00:05:05.590
+One is from Grand Central Dispatch
+that you'll hear more about shortly
+
+00:05:05.590 --> 00:05:09.150
+and quite literally, you throw a Block Literal in your code.
+
+00:05:09.150 --> 00:05:10.630
+You pass it as an argument.
+
+00:05:10.630 --> 00:05:11.770
+It can do some work.
+
+00:05:11.770 --> 00:05:17.580
+It can return values and it's,
+you know, simple elegant in line.
+
+00:05:17.580 --> 00:05:24.800
+Now, two things of note: one, by a standard we
+generally only pass one Block as an argument
+
+00:05:24.800 --> 00:05:28.470
+to anything and it is always the last argument.
+
+00:05:28.470 --> 00:05:29.840
+That was two.
+
+00:05:29.840 --> 00:05:33.110
+And by doing this it just simply
+makes the code more readable.
+
+00:05:33.110 --> 00:05:36.630
+So if you write your own APIs to
+take blocks try to stick with that.
+
+00:05:36.630 --> 00:05:41.160
+There's occasion where it's violated
+but hopefully for good reason.
+
+00:05:41.160 --> 00:05:47.360
+So when we look at the Block Literal syntax, the
+Block Literals, what does the syntax look like?
+
+00:05:47.360 --> 00:05:49.760
+Here is an arbitrary Block.
+
+00:05:49.760 --> 00:05:51.240
+Returns a BOOL.
+
+00:05:51.240 --> 00:05:54.520
+Takes an argument called of type ID.
+
+00:05:54.520 --> 00:05:59.940
+It does something simple and this
+is what the syntax looks like.
+
+00:05:59.940 --> 00:06:06.410
+Now we also wanted Blocks to be
+exceedingly convenient to use.
+
+00:06:06.410 --> 00:06:12.030
+And so if you don't return a specific
+type you don't need to declare that type
+
+00:06:12.030 --> 00:06:17.920
+or the compiler can actually automatically infer
+the type, there's no need for the return type in.
+
+00:06:17.920 --> 00:06:23.040
+Similarly, if you don't take any
+arguments, you get a void argument list
+
+00:06:23.040 --> 00:06:25.340
+and a void return type of an inferred return type.
+
+00:06:25.340 --> 00:06:29.160
+You're going to just drop all of that
+and have a very simple Block Literal.
+
+00:06:29.160 --> 00:06:33.360
+Most of the APIs that your going
+to see shortly take this form.
+
+00:06:33.360 --> 00:06:38.810
+Now, Blocks are more than just code.
+
+00:06:38.810 --> 00:06:41.970
+Blocks can be treated as data.
+
+00:06:41.970 --> 00:06:44.790
+That's kind of how dispatch and other things work.
+
+00:06:44.790 --> 00:06:49.340
+They allow you to capture code and some state
+as a chunk of data that get managed and cued,
+
+00:06:49.340 --> 00:06:53.650
+and executed and handled automatically behind the scenes.
+
+00:06:53.650 --> 00:06:54.490
+So how does this work?
+
+00:06:54.490 --> 00:07:00.490
+Well, in C we had function pointers,
+we've always had function pointers.
+
+00:07:00.490 --> 00:07:02.630
+That was kind of, how you could
+pass around callbacks and stuff.
+
+00:07:02.630 --> 00:07:05.380
+But there was no way to attach data to it.
+
+00:07:05.380 --> 00:07:08.660
+So Block Pointers look very, very similar.
+
+00:07:08.660 --> 00:07:12.740
+It's simply the caret instead of the pointer.
+
+00:07:12.740 --> 00:07:18.750
+Now, of course this can get ugly
+very quick like most C types.
+
+00:07:18.750 --> 00:07:21.920
+When you start returning pointers to
+stuff that return pointers to other stuff
+
+00:07:21.920 --> 00:07:25.230
+that has functions and blocks and stuff, it gets ugly.
+
+00:07:25.230 --> 00:07:29.100
+To simplify that, of course you can use typedefs.
+
+00:07:29.100 --> 00:07:33.110
+So in this case we've declared a
+typedef that we can capture the type
+
+00:07:33.110 --> 00:07:36.620
+of that Block argument that we're
+passing to that other block.
+
+00:07:36.620 --> 00:07:42.920
+And let's look at how this works as a whole.
+
+00:07:42.920 --> 00:07:45.550
+So, we'll define it simple type a Worker Block.
+
+00:07:45.550 --> 00:07:49.590
+It takes in integer as an argument, has no return type.
+
+00:07:49.590 --> 00:07:56.790
+And we can then define a simple function, a repeat
+function, that will call that Block some number of times
+
+00:07:56.790 --> 00:08:03.440
+and pass the iteration count to the Block as
+the sole argument, and then we can use it.
+
+00:08:03.440 --> 00:08:08.200
+So, we declare a variable D, give it a value.
+
+00:08:08.200 --> 00:08:12.270
+We declare this Worker Block which uses that value,
+
+00:08:12.270 --> 00:08:18.150
+and that's interesting because that means the Block is
+actually capturing the value and then it can be used later.
+
+00:08:18.150 --> 00:08:23.820
+And then we're going to call the repeat function
+and as you would expect this is the output.
+
+00:08:23.820 --> 00:08:32.520
+Now, in iOS 4, what I've shown you
+now is basically the foundations
+
+00:08:32.520 --> 00:08:37.020
+for creating and using your own APIs with Blocks.
+
+00:08:37.020 --> 00:08:45.670
+However, in iOS 4, I haven't gotten used to that yet,
+there are actually over 100 APIs that use Blocks.
+
+00:08:45.670 --> 00:08:48.190
+Like I said, Blocks are pervasive.
+
+00:08:48.190 --> 00:08:55.950
+You are going to use Blocks if you use the audio
+kit, if you use core motion, core telephony,
+
+00:08:55.950 --> 00:08:58.300
+the game kit you're going to be using Blocks.
+
+00:08:58.300 --> 00:09:01.140
+You're going to be declaring Blocks passing to the system.
+
+00:09:01.140 --> 00:09:06.530
+And more than just at the individual framework layers,
+you're also going to be using Blocks to implement features
+
+00:09:06.530 --> 00:09:09.350
+like multitasking across the foundation kit.
+
+00:09:09.350 --> 00:09:15.580
+You're going to be using it in Grand Central
+Dispatch very heavily, as you'll see shortly.
+
+00:09:15.580 --> 00:09:21.890
+So in particular there are four common patterns of
+usage you will see with Blocks and you are encouraged
+
+00:09:21.890 --> 00:09:25.200
+to embrace these in your own code as well.
+
+00:09:25.200 --> 00:09:27.110
+You have synchronous execution.
+
+00:09:27.110 --> 00:09:35.060
+In this case we are, say, filtering a set or we're
+enumerating a dictionary exceedingly efficiently.
+
+00:09:35.060 --> 00:09:41.300
+And in this case, you're taking a Block, you're calling
+some method and it will return, you know, synchronous.
+
+00:09:41.300 --> 00:09:42.340
+There is no concurrency.
+
+00:09:42.340 --> 00:09:43.660
+There is no multitasking here.
+
+00:09:43.660 --> 00:09:46.820
+It's an immediate kind of thing.
+
+00:09:46.820 --> 00:09:51.110
+It's also-- Blocks are also exceptionally
+useful in the callback role.
+
+00:09:51.110 --> 00:09:55.660
+So normally with a callback you have
+some Function Pointer, in a lot of cases.
+
+00:09:55.660 --> 00:09:56.690
+You throw it over somewhere.
+
+00:09:56.690 --> 00:10:00.750
+And then when you get the callback maybe
+there's a Void Pointer that's your context.
+
+00:10:00.750 --> 00:10:06.640
+You got to do the type cast to some other type and that's
+really unsafe because it's basically telling the compiler
+
+00:10:06.640 --> 00:10:10.310
+that you know what your doing and often
+we don't and then your code crashes.
+
+00:10:10.310 --> 00:10:16.370
+With Blocks because you can capture state
+you don't have to have that context.
+
+00:10:16.370 --> 00:10:19.560
+It makes the API simpler and it makes them more robust.
+
+00:10:19.560 --> 00:10:21.180
+It makes them type safe.
+
+00:10:21.180 --> 00:10:26.080
+So these are actually both examples
+of APIs you'll find in iOS 4.
+
+00:10:26.080 --> 00:10:32.160
+Another role you will see is asynchronous execution and
+you're going to get into this is in depth in a moment.
+
+00:10:32.160 --> 00:10:38.280
+In particular NSOperationQueue and Grand
+Central Dispatch can both take Blocks
+
+00:10:38.280 --> 00:10:43.800
+that will then be executed later,
+or on another thread, or whenever.
+
+00:10:43.800 --> 00:10:52.010
+And finally, there is a very interesting role for Blocks,
+that's really a role provided by Grand Central Dispatch
+
+00:10:52.010 --> 00:10:58.210
+and that's that by having this queued invocations of
+Blocks you can have lockless exclusion for resources.
+
+00:10:58.210 --> 00:11:04.600
+In this case, if we say we have a queue and
+that queue is associated entirely with an image
+
+00:11:04.600 --> 00:11:11.430
+or some data source then every time we dispatch something
+onto to that queue and that's executed serially,
+
+00:11:11.430 --> 00:11:14.950
+we know that nothing else can touch
+that resource and the Blocks allow us
+
+00:11:14.950 --> 00:11:20.080
+to capture the work related to that very easily.
+
+00:11:20.080 --> 00:11:26.600
+So with this pervasive nature of Blocks you need
+to know some of the details of the implementation,
+
+00:11:26.600 --> 00:11:32.320
+and this is where we're going to get kind of technical.
+
+00:11:32.320 --> 00:11:36.460
+First, Blocks are in fact Objective-C objects, always.
+
+00:11:36.460 --> 00:11:39.290
+They can be messaged as objects.
+
+00:11:39.290 --> 00:11:41.230
+They have very, very few methods.
+
+00:11:41.230 --> 00:11:44.730
+Block objects start out on the stack.
+
+00:11:44.730 --> 00:11:51.960
+Why? Because the stack's really, really fast, making
+allocation in the heap is relatively expensive.
+
+00:11:51.960 --> 00:11:56.070
+So for synchronous execution that's fine
+because your frame where you'd clear the stack
+
+00:11:56.070 --> 00:12:00.040
+or where you'd clear the Block isn't going
+to go away before the execution is done.
+
+00:12:00.040 --> 00:12:05.290
+However, of course, for asynchronous you need
+to be able to copy the Block onto the heap.
+
+00:12:05.290 --> 00:12:08.990
+So that stack frame can be destroyed
+and the Block's not going to explode.
+
+00:12:08.990 --> 00:12:14.280
+And this is where we see two of
+the methods that Blocks respond to.
+
+00:12:14.280 --> 00:12:17.290
+They respond to the copy method and the release method.
+
+00:12:17.290 --> 00:12:25.150
+There is also an analogous Block_copy and
+Block_release function that you can use.
+
+00:12:25.150 --> 00:12:30.350
+So when a Block-- when the code
+execution passes over a Block declaration,
+
+00:12:30.350 --> 00:12:36.630
+effectively what happens is the Block
+snapshots or captures a constant copy
+
+00:12:36.630 --> 00:12:40.890
+of any data it references from the surrounding scope.
+
+00:12:40.890 --> 00:12:46.050
+So that also means though that objects,
+references to objects can be captured in this way
+
+00:12:46.050 --> 00:12:54.420
+and Blocks will actually automatically retain those objects
+and then will release them when the Block is destroyed.
+
+00:12:54.420 --> 00:13:00.200
+So for example, if you refer to an instance
+variable, then a reference to self will be captured.
+
+00:13:00.200 --> 00:13:03.920
+Self will be retained and your
+object will survive for the lifespan
+
+00:13:03.920 --> 00:13:09.540
+of that Block even if the calling scope is destroyed.
+
+00:13:09.540 --> 00:13:15.130
+Now, of course, const copies are useful most of
+the time, but sometimes you want to get stuff out.
+
+00:13:15.130 --> 00:13:18.560
+You want the Block to be able to update
+some of that stuff in that local scope.
+
+00:13:18.560 --> 00:13:23.590
+Or maybe you want three blocks to all be able to kind of
+share state or have some kind of state map between them.
+
+00:13:23.590 --> 00:13:29.830
+For that, there is a new storage keyword in
+the C language on our platform called __block.
+
+00:13:29.830 --> 00:13:35.500
+What that says is that that variable is now going
+to be mutable from within the Block from within
+
+00:13:35.500 --> 00:13:39.100
+that scope it was declared, from
+within any other Block that uses it.
+
+00:13:39.100 --> 00:13:45.030
+The issue though is that __block
+references to objects are not retained.
+
+00:13:45.030 --> 00:13:48.370
+The memory management, you have to
+do the memory management manually.
+
+00:13:48.370 --> 00:13:51.270
+The reason why that is, is because
+there are some very subtle conditions
+
+00:13:51.270 --> 00:13:54.300
+under which it's absolutely impossible
+to do it automatically.
+
+00:13:54.300 --> 00:13:57.450
+Let's look at this lifetime thing in detail.
+
+00:13:57.450 --> 00:14:00.070
+This is just critical.
+
+00:14:00.070 --> 00:14:07.500
+So we have a simple piece of code down at the bottom
+there's some function that declares a Block, block1.
+
+00:14:07.500 --> 00:14:12.200
+Block1 updates a shared variable with the
+captured variable, with the const copy captured.
+
+00:14:12.200 --> 00:14:18.540
+Our program pointer is that big orange ugly arrow pointing
+right at that code and now we're going to go ahead
+
+00:14:18.540 --> 00:14:22.680
+and we're going to go to the next line of code.
+
+00:14:22.680 --> 00:14:25.130
+So we passed over the declaration of the block.
+
+00:14:25.130 --> 00:14:28.900
+At this point in time, the Block
+object has captured the data.
+
+00:14:28.900 --> 00:14:31.590
+The block object is now on the Stack.
+
+00:14:31.590 --> 00:14:34.800
+It has a copy of that captured variable.
+
+00:14:34.800 --> 00:14:37.870
+And notice that the shared variable, nothing happened to it.
+
+00:14:37.870 --> 00:14:40.750
+Because it doesn't need to move
+yet, it's still on the Stack.
+
+00:14:40.750 --> 00:14:42.190
+It's fine.
+
+00:14:42.190 --> 00:14:46.870
+So let's go ahead and copy that block and we're
+going to make a second Block reference block2.
+
+00:14:46.870 --> 00:14:51.970
+At that point in time, block1 is still on the stack.
+
+00:14:51.970 --> 00:14:58.650
+Block2 is now a heap-based allocation and because
+that shared variable is now referenced by something
+
+00:14:58.650 --> 00:15:04.940
+that might outlast the scope of declaration,
+it has to be moved to the heap too.
+
+00:15:04.940 --> 00:15:09.730
+And even though it's been moved to the heap block1
+still going to work, block2 is going to work.
+
+00:15:09.730 --> 00:15:11.080
+It's all fine.
+
+00:15:11.080 --> 00:15:16.140
+And let's just see what happens when we
+actually make a second copy of the Block.
+
+00:15:16.140 --> 00:15:20.430
+In this case, we've copied block1 the second time.
+
+00:15:20.430 --> 00:15:22.460
+We actually have two heap allocations now.
+
+00:15:22.460 --> 00:15:26.660
+I just get a little warning sign because
+this can be a problem if you're going
+
+00:15:26.660 --> 00:15:30.580
+to say schedule a thousand copies of the Block.
+
+00:15:30.580 --> 00:15:32.910
+Then you're going to end up with a thousand heap allocations
+
+00:15:32.910 --> 00:15:37.810
+or if that block is capturing a
+big array that's going to be bad.
+
+00:15:37.810 --> 00:15:39.100
+So how do you avoid that?
+
+00:15:39.100 --> 00:15:49.370
+Well, once the block is copied to the heap there is
+no reason for the heap to keep accumulating copies.
+
+00:15:49.370 --> 00:15:51.420
+That's a bug.
+
+00:15:51.420 --> 00:15:55.180
+That line in code it's pointing at
+right now, that should be block2 copy.
+
+00:15:55.180 --> 00:15:57.430
+Sorry, I don't know how that happened.
+
+00:15:57.430 --> 00:16:00.730
+Anyway, so imagine that was block2 copy.
+
+00:16:02.320 --> 00:16:04.670
+I love it-- live debugging.
+
+00:16:04.670 --> 00:16:06.310
+In keynote even.
+
+00:16:06.310 --> 00:16:10.810
+So, now we have block2 and block3
+referring to the same Block on the heap.
+
+00:16:10.810 --> 00:16:13.130
+There's only one copy of the captured variable.
+
+00:16:13.130 --> 00:16:18.360
+Shared is still on the heap because well, it had two
+on the first copy, so that's how you can avoid copies.
+
+00:16:18.360 --> 00:16:26.540
+Now, one of the details of the APIs in the system, anytime
+an API is going to take a Block and potentially execute it,
+
+00:16:26.540 --> 00:16:35.690
+somewhere other than the local thread, somewhere other than
+where the scope the block was created in may exist or not.
+
+00:16:35.690 --> 00:16:37.830
+The system APIs will copy the Block.
+
+00:16:37.830 --> 00:16:40.920
+This is generally handled automatically for you.
+
+00:16:40.920 --> 00:16:44.500
+There's one case though you kind of got
+to keep your, you know, in your head.
+
+00:16:44.500 --> 00:16:51.960
+Because if your going to say enqueue a thousand copies
+of one Block, make a copy first and then release after.
+
+00:16:51.960 --> 00:16:56.230
+Anyway, so what happens when the Blocks end?
+
+00:16:56.230 --> 00:17:01.880
+Well, if block2 and block3 finish first
+and we're assuming garbage collection here.
+
+00:17:01.880 --> 00:17:04.860
+Blocks are fully compatible garbage
+collection on the desktop.
+
+00:17:04.860 --> 00:17:11.090
+If I had a room on the slide, I would have put
+Block_release after the execution of the Blocks.
+
+00:17:11.090 --> 00:17:13.520
+Then, the heap stuff gets destroyed.
+
+00:17:13.520 --> 00:17:15.070
+The allocation is gone.
+
+00:17:15.070 --> 00:17:21.180
+The shared variable doesn't move back to the stack because
+that would be a waste of CPU cycles and life goes on.
+
+00:17:21.180 --> 00:17:28.430
+Now, if the function and block1 were to finish,
+if that scope of the function that stack frame
+
+00:17:28.430 --> 00:17:35.800
+for the function gets destroyed, then dip stacks cleared,
+stacks pop, stuff lives on, on the heap and eventually
+
+00:17:35.800 --> 00:17:40.220
+when execution ends, then of course everything
+is cleaned up and everything goes away.
+
+00:17:40.220 --> 00:17:47.560
+So that's Blocks in detail and this will be reiterated
+again on Friday and in even more depth if you're interested
+
+00:17:47.560 --> 00:17:52.440
+in the advanced Objective-C and
+Garbage Collection Techniques session.
+
+00:17:52.440 --> 00:18:00.020
+With that, I'd like to pass over to Shiva to
+dive into detail on Grand Central Dispatch.
+
+00:18:00.020 --> 00:18:06.840
+[ Applause ]
+
+00:18:06.840 --> 00:18:08.300
+>> Shiva Bhattacharjee: Thanks Will.
+
+00:18:08.300 --> 00:18:14.470
+So in the remaining part of this session we're going
+to show how to use GCD or Grand Central Dispatch
+
+00:18:14.470 --> 00:18:20.850
+to make your apps responsive and without
+you actually having to do a lot of work.
+
+00:18:20.850 --> 00:18:23.370
+And why do you want to make your apps responsive?
+
+00:18:23.370 --> 00:18:30.460
+Well, you want happy customers and we are
+all here to make your customers happy.
+
+00:18:30.460 --> 00:18:33.010
+So before we start let me ask you.
+
+00:18:33.010 --> 00:18:37.870
+How many of you wake up in the morning and
+say, you know, "My day is not complete today
+
+00:18:37.870 --> 00:18:42.630
+until I write some really hard multi coded thread."
+
+00:18:42.630 --> 00:18:45.400
+Exactly, because threading is a hard problem.
+
+00:18:45.400 --> 00:18:51.550
+Because the way you think about your apps,
+in a task oriented fashion most probably,
+
+00:18:51.550 --> 00:18:57.110
+is not how easily you can map that
+thinking into the implementation.
+
+00:18:57.110 --> 00:19:02.430
+Threading is more granular and it's not the way
+you kind of like think about the implementation
+
+00:19:02.430 --> 00:19:06.510
+as you are thinking about the logistics of your application.
+
+00:19:06.510 --> 00:19:13.250
+So hopefully at the end of this session you would,
+
+00:19:13.250 --> 00:19:17.990
+all of you would be actually writing
+multithreaded code and it will be fun.
+
+00:19:17.990 --> 00:19:23.530
+It-- you will be using GCD to do threading
+without actually thinking about threads
+
+00:19:23.530 --> 00:19:29.720
+and that's a very powerful paradigm to write your code in.
+
+00:19:29.720 --> 00:19:35.010
+And one of the ways we do this is
+there is no explicit thread management.
+
+00:19:35.010 --> 00:19:38.860
+We do not expose threads to you.
+
+00:19:38.860 --> 00:19:43.780
+You do not think in terms of thread
+and therefore you can easily,
+
+00:19:43.780 --> 00:19:50.130
+more easily map your application logic into your code.
+
+00:19:50.130 --> 00:19:57.450
+As Kevin mentioned before, we introduced GCD
+in Snow Leopard and probably you have gone
+
+00:19:57.450 --> 00:20:01.110
+to other talks and seen people talk about GCD before.
+
+00:20:01.110 --> 00:20:12.160
+So, most of our frameworks are using GCD which means any ad
+hoc threading implementation that you might do on your own,
+
+00:20:12.160 --> 00:20:16.770
+GCD will probably perform better than that.
+
+00:20:16.770 --> 00:20:27.250
+And we saw how Blocks are this way to encapsulate
+your data in the work associated with that data.
+
+00:20:27.250 --> 00:20:35.680
+So with GCD using Blocks, it provides a really
+powerful expressive way for you to write your code.
+
+00:20:35.680 --> 00:20:49.070
+So, since this is the age of writing Twitter apps, we
+decided that we will give our shot to writing a similar app.
+
+00:20:49.070 --> 00:20:59.330
+To give a brief overview, you would see a stream
+off messages-- a stream of tweets coming along.
+
+00:20:59.330 --> 00:21:04.400
+We want to display those tweets and at the
+same time, we are going to show the images,
+
+00:21:04.400 --> 00:21:10.030
+the profile images of the people who posted it.
+
+00:21:10.030 --> 00:21:14.960
+Let's move to the demo.
+
+00:21:14.960 --> 00:21:17.090
+So, we have two demos here.
+
+00:21:17.090 --> 00:21:24.690
+One that probably uses the naive approach of doing most
+of this work on the main thread, and one of the reasons,
+
+00:21:24.690 --> 00:21:29.650
+one of the things that we have seen people do is you
+might think that you are doing a nominal amount of work
+
+00:21:29.650 --> 00:21:35.400
+on the main thread, and that's because you're testing on
+your Wi-Fi network, there is no latency so you figure,
+
+00:21:35.400 --> 00:21:37.820
+"Oh, I will get the synchronous connection.
+
+00:21:37.820 --> 00:21:41.540
+Get the result back and display the output."
+
+00:21:41.540 --> 00:21:49.090
+But when that application goes in the hand of your customers
+and they are on a 3G network and on the edge connection,
+
+00:21:49.090 --> 00:21:53.900
+you know, the experience is completely different.
+
+00:21:53.900 --> 00:22:00.930
+So, what you're going to see flee-- I
+mean, carefully see the user interaction.
+
+00:22:00.930 --> 00:22:04.370
+I mean, it looks fine as it is.
+
+00:22:04.370 --> 00:22:08.710
+Yes, the messages-- we've put a
+lot of thought in those messages.
+
+00:22:10.210 --> 00:22:16.660
+So, now I'm trying to scroll and as you can see, I can--
+I cannot even barely make it register my UI touch events
+
+00:22:16.660 --> 00:22:24.480
+because the main thread is busy waiting for
+those messages to come along and-- Oh, here.
+
+00:22:24.480 --> 00:22:30.260
+And you can see, I mean let alone the-- yeah.
+
+00:22:30.260 --> 00:22:32.270
+Yeah. So, let alone the scrolling part, I mean,
+
+00:22:32.270 --> 00:22:36.960
+you cannot even barely register your UI
+touch events to even grab the screen.
+
+00:22:36.960 --> 00:22:38.820
+And that is what the experience would be like.
+
+00:22:38.820 --> 00:22:45.030
+You know, in the hands of a real customer where the
+network is not good and you're blocking the main thread
+
+00:22:45.030 --> 00:22:50.470
+and therefore, not letting it listen for events.
+
+00:22:50.470 --> 00:22:57.990
+OK. So, now, let's see what GCD can do for us.
+
+00:22:57.990 --> 00:23:02.460
+So you have to believe me on this and we
+will show more examples as we go along.
+
+00:23:02.460 --> 00:23:05.110
+Is-- We took the same existing code base.
+
+00:23:05.110 --> 00:23:07.020
+We didn't add selectors.
+
+00:23:07.020 --> 00:23:14.060
+We didn't add more code into our existing
+code but simply used the existing code,
+
+00:23:14.060 --> 00:23:22.920
+wrapped it around with some basic simple
+GCD APIs and made our apps more responsive.
+
+00:23:22.920 --> 00:23:29.080
+Again, from the look of it, it looks similar
+so if you're not doing any user interactions,
+
+00:23:29.080 --> 00:23:35.290
+you won't really see any difference but now
+let's see if we do the same kind of experiments
+
+00:23:35.290 --> 00:23:38.600
+of scrolling down and back, and there you go.
+
+00:23:42.190 --> 00:23:45.250
+And that's all we did.
+
+00:23:45.250 --> 00:23:51.080
+[ Applause ]
+
+00:23:51.080 --> 00:23:53.470
+Thanks. Alright.
+
+00:23:53.470 --> 00:23:56.110
+So, what's the gist of the story?
+
+00:23:56.110 --> 00:23:58.000
+Like how to make your acts responsive?
+
+00:23:58.000 --> 00:24:01.390
+And this is probably something that you
+know but it's good to go over these.
+
+00:24:01.390 --> 00:24:03.380
+Well, one is never block the main thread.
+
+00:24:03.380 --> 00:24:08.190
+The main thread is there to display
+your UI and to listen for events.
+
+00:24:08.190 --> 00:24:14.030
+So, even though you might think that it's OK to
+do the nominal amount of work, it's not and it--
+
+00:24:14.030 --> 00:24:21.420
+the nominal amount of work that you might think is OK
+would not be a nominal amount of work for your customers.
+
+00:24:21.420 --> 00:24:28.280
+So, if you do not block the main thread, well
+you have to do that work on to some other thread.
+
+00:24:28.280 --> 00:24:35.020
+And what has been the case is the accessory code, the
+boiler plate code that you need to write to move that work
+
+00:24:35.020 --> 00:24:42.540
+from your main thread to a background thread is
+generally more than the actual work you want to do.
+
+00:24:42.540 --> 00:24:48.040
+And then obviously once you have the
+result from the background thread,
+
+00:24:48.040 --> 00:24:52.360
+you want to show the result on
+the main thread and display it.
+
+00:24:52.360 --> 00:24:58.680
+And that has to be done on the main thread so
+you have to have a way to ship that result back
+
+00:24:58.680 --> 00:25:04.030
+from the background thread to the main thread.
+
+00:25:04.030 --> 00:25:09.970
+And we will show how you can do this with GCD.
+
+00:25:09.970 --> 00:25:16.510
+Very simply, again, without changing your existing code.
+
+00:25:16.510 --> 00:25:19.800
+So, let's look at a code example here.
+
+00:25:19.800 --> 00:25:23.890
+You would imagine that's the naive way of doing it.
+
+00:25:23.890 --> 00:25:26.000
+You we're listening for tweets.
+
+00:25:26.000 --> 00:25:30.280
+You got the tweet message back and
+with that, you've got the profile URL
+
+00:25:30.280 --> 00:25:32.820
+from where you're supposed to get the profile image.
+
+00:25:32.820 --> 00:25:34.570
+The tweets were coming from a server.
+
+00:25:34.570 --> 00:25:38.160
+The profile images were coming from an image server.
+
+00:25:38.160 --> 00:25:42.850
+So, that's the function that will
+be called on to your main thread.
+
+00:25:42.850 --> 00:25:48.080
+So here, you go ahead and add the
+tweet to your history of tweets.
+
+00:25:48.080 --> 00:25:52.820
+This is-- this lets us scroll the
+history of tweets as we were doing
+
+00:25:52.820 --> 00:25:58.210
+and we add the tweet and we say, you know, display it.
+
+00:25:58.210 --> 00:26:04.900
+Then, and this is the bottleneck here, is we
+get the profile image from the image cache.
+
+00:26:04.900 --> 00:26:07.960
+Now, if it's there we would get it immediately.
+
+00:26:07.960 --> 00:26:13.750
+But if it's not there, it's actually going to get
+this image from the network and on a 3G network
+
+00:26:13.750 --> 00:26:16.860
+or an edge network, this is going to block.
+
+00:26:16.860 --> 00:26:24.370
+And during this time when the main thread is blocked on
+this call, you are not responding to user interactions.
+
+00:26:24.370 --> 00:26:31.100
+This is why I was not able to even register those
+UI touch events as I was trying to grab the screen.
+
+00:26:31.100 --> 00:26:35.490
+And once you have the result, you want to update it.
+
+00:26:35.490 --> 00:26:41.780
+And this is exactly why you do these things on the
+main thread because it's easy to update the result
+
+00:26:41.780 --> 00:26:43.800
+because you are already on the main thread.
+
+00:26:43.800 --> 00:26:49.370
+So now let's see how we can use GCD to simplify this.
+
+00:26:49.370 --> 00:26:54.300
+Again, as you will see no change to your code.
+
+00:26:54.300 --> 00:26:56.720
+Well, some changes but no refractory.
+
+00:26:56.720 --> 00:26:59.120
+[ Laughter ]
+
+00:26:59.120 --> 00:27:07.740
+So what we did is we enter this dispatch_async call
+and dispatch_async the quick and dirty way of thinking
+
+00:27:07.740 --> 00:27:13.370
+about it is that your just dispatch_asynching
+means roundness on the background.
+
+00:27:13.370 --> 00:27:19.430
+So, you take the Block of work that you were supposed to
+do and in this case, this is the work of getting the image
+
+00:27:19.430 --> 00:27:23.220
+which might block and you call dispatch_async.
+
+00:27:23.220 --> 00:27:29.670
+This frees up your main thread so your add tweet with
+message call is going to return and your main thread is free
+
+00:27:29.670 --> 00:27:34.310
+to again listen for events and display as they come along--
+
+00:27:34.310 --> 00:27:38.990
+as the background thread is waiting
+for the image to show up.
+
+00:27:38.990 --> 00:27:42.230
+Now, there you can block and the image will show up finally.
+
+00:27:42.230 --> 00:27:46.170
+But you want to update the image.
+
+00:27:46.170 --> 00:27:48.300
+So, beforehand, since you were on the main thread,
+
+00:27:48.300 --> 00:27:52.610
+you could just do it from the main
+thread without having to do anything.
+
+00:27:52.610 --> 00:28:00.460
+But now, this Block of code is running on the background
+thread and you have to do the update on the main thread.
+
+00:28:00.460 --> 00:28:01.890
+But we use the same trick again.
+
+00:28:01.890 --> 00:28:06.430
+We call dispatch_async and here
+we call it on the main queue.
+
+00:28:06.430 --> 00:28:12.740
+The main queue is effectively in the dispatch
+while running things on the main thread.
+
+00:28:12.740 --> 00:28:17.180
+So, let's look at this in more details with
+a visualization which I think would help.
+
+00:28:17.180 --> 00:28:24.590
+So, here you have the main queue that is drained by the
+main thread and we have already realized that we want
+
+00:28:24.590 --> 00:28:31.590
+to get the image from URL block
+and not run it from the main queue.
+
+00:28:31.590 --> 00:28:40.940
+So, we dispatch_async effectively entering that block onto
+this image queue that is going to run our background task.
+
+00:28:40.940 --> 00:28:43.780
+Now, note how GCD is efficient because as it--
+
+00:28:43.780 --> 00:28:51.060
+as soon as it sees there is work to do an automatic
+thread comes along and starts executing that block.
+
+00:28:51.060 --> 00:28:55.660
+Your main thread is free so it can handle
+all these other events that are happening.
+
+00:28:57.230 --> 00:28:59.720
+Your automatic thread executes.
+
+00:28:59.720 --> 00:29:05.840
+gets the result and then similarly end queues
+the update Block on to the main thread.
+
+00:29:05.840 --> 00:29:13.940
+And the main thread along its way
+is going to update the display.
+
+00:29:13.940 --> 00:29:18.970
+The automatic thread is done, executing
+the Block, it goes away.
+
+00:29:18.970 --> 00:29:25.760
+And your main thread finally updates your UI
+and you're back to having a single main thread.
+
+00:29:25.760 --> 00:29:29.150
+It doesn't hold on to that automatic thread.
+
+00:29:29.150 --> 00:29:31.640
+So, let's go back to the three main points that we had.
+
+00:29:31.640 --> 00:29:34.160
+We didn't want to block the main thread.
+
+00:29:34.160 --> 00:29:41.560
+We wanted to move work from the main thread to a
+background thread, and we wanted to move the result
+
+00:29:41.560 --> 00:29:50.180
+from the background thread to the main thread,
+and we did all of these with dispatch_async.
+
+00:29:50.180 --> 00:29:52.390
+This is really the gist of GCD.
+
+00:29:52.390 --> 00:29:55.680
+I mean, this is a pattern that
+you will see over and over again.
+
+00:29:55.680 --> 00:30:01.990
+You dispatch work from the main thread to a
+background thread and from the background thread,
+
+00:30:01.990 --> 00:30:05.100
+dispatch the result on to the main thread.
+
+00:30:05.100 --> 00:30:09.400
+So, now you have seen we have mentioned
+queues and I'm going to ask Daniel to talk
+
+00:30:09.400 --> 00:30:13.500
+about some of the more basics of dispatch queues.
+
+00:30:13.500 --> 00:30:21.030
+[ Applause ]
+
+00:30:21.030 --> 00:30:21.520
+>> Daniel Steffen: Thank you, Shiva.
+
+00:30:21.520 --> 00:30:23.000
+I'm Daniel Steffen.
+
+00:30:23.000 --> 00:30:29.910
+I'm an engineer on the GCD team and I'd like to
+talk to you about the details of GCD queues today.
+
+00:30:29.910 --> 00:30:35.540
+So, you've probably seen in other sessions
+already mentioned of dispatch queues or GCD queues
+
+00:30:35.540 --> 00:30:40.650
+and these are really the fundamental
+concept in GCD that is really important
+
+00:30:40.650 --> 00:30:44.080
+to understand to use this technology effectively.
+
+00:30:44.080 --> 00:30:45.830
+So, what is a GCD queue?
+
+00:30:45.830 --> 00:30:52.620
+A GCD is actually a very simple lightweight list
+of blocks that you have committed for execution.
+
+00:30:52.620 --> 00:30:56.870
+The enqueue and dequeue operations
+are FIFO and the enqueueing
+
+00:30:56.870 --> 00:31:00.230
+as we have seen happens when we call dispatch_async.
+
+00:31:00.230 --> 00:31:06.450
+This takes acute parameter and a block parameter
+and enqueues that block on to the queue.
+
+00:31:06.450 --> 00:31:12.260
+The dequeuing happens automatically for you on one of
+these automatic backgrounds threads that we've seen
+
+00:31:12.260 --> 00:31:18.490
+or on the main thread, depending on the queue
+type and its worth noting that's this dequeuing
+
+00:31:18.490 --> 00:31:24.890
+and running a Block is the only way that you can get a
+Block off a queue once you have dispatch_async the Block,
+
+00:31:24.890 --> 00:31:26.500
+it will run.
+
+00:31:26.500 --> 00:31:29.440
+You cannot stop that.
+
+00:31:29.440 --> 00:31:36.130
+So, one queue type we've looked at already is the main
+queue and the main queue executes Blocks one at a time
+
+00:31:36.130 --> 00:31:43.200
+on the main thread and it cooperates with the UIKit
+main run loop which as you know is responsible
+
+00:31:43.200 --> 00:31:47.060
+for dealing with UI event and updating the UI.
+
+00:31:47.060 --> 00:31:51.880
+So, to get the main queue you call dispatch_get_main_queue.
+
+00:31:51.880 --> 00:31:54.280
+It's very simple.
+
+00:31:54.280 --> 00:31:58.440
+So, let's see an example of this in action.
+
+00:31:58.440 --> 00:32:01.900
+So, remember these codes that we had before.
+
+00:32:01.900 --> 00:32:09.770
+This method that is a callback and adds a message to our
+user interface, this is a call back on the main thread.
+
+00:32:09.770 --> 00:32:18.490
+What do we need to do today with foundation to call this
+from an background thread probably something like this.
+
+00:32:18.490 --> 00:32:25.730
+Here, we have a method that's called on the background
+thread with a message and a URL and we really want
+
+00:32:25.730 --> 00:32:33.090
+to do the thing at the very bottom of this slide which
+is called this addTweetWithMsg method on the main thread
+
+00:32:33.090 --> 00:32:37.010
+and all the rest on the slide is the body
+part that you have to do with foundation.
+
+00:32:37.010 --> 00:32:42.960
+You have to wrap up to two arguments in a dictionary,
+you have to call performSelectorOnMainThread
+
+00:32:42.960 --> 00:32:45.560
+with a special type of selector passing that dictionary.
+
+00:32:45.560 --> 00:32:52.500
+You have to implement that special purpose selector,
+unpack the dictionary again taking the message and URL out,
+
+00:32:52.500 --> 00:32:55.970
+and then you can finally call your addTweetWithMsg.
+
+00:32:55.970 --> 00:32:58.800
+How can you improve this with GCD?
+
+00:32:58.800 --> 00:33:05.090
+Well, take away all the boilerplate and we
+call what we really want to call directly
+
+00:33:05.090 --> 00:33:08.630
+and we wrap this in a dispatch_async and that's it.
+
+00:33:08.630 --> 00:33:15.310
+[ Applause ]
+
+00:33:15.310 --> 00:33:20.770
+And as you can see here, we've used the dispatch kit
+main queue API to get the main queue which we passed
+
+00:33:20.770 --> 00:33:23.860
+as the first parameter to dispatch_async.
+
+00:33:23.860 --> 00:33:29.470
+So these are the queues that we've seen that
+I mentioned that you can create yourself.
+
+00:33:29.470 --> 00:33:36.280
+So, these queues also execute blocks one at a time like
+the main queue and that's why you see them referred
+
+00:33:36.280 --> 00:33:43.710
+to as serial queues in documentation or in other sessions
+and the difference is that these execute their blocks
+
+00:33:43.710 --> 00:33:46.560
+on an automatic help as written in the background.
+
+00:33:46.560 --> 00:33:50.710
+And you can use this for instance
+to queue up some background work.
+
+00:33:50.710 --> 00:33:53.650
+So how do you create one of these queues?
+
+00:33:53.650 --> 00:33:59.330
+You just call the dispatch_queue_create
+API and you pass in a text label.
+
+00:33:59.330 --> 00:34:06.220
+This can be anything you like but we recommend that you
+use the reverse dns notification that makes it very easy
+
+00:34:06.220 --> 00:34:13.090
+to identify and distinguish your queues from the queues
+that may already be present on the system and these are left
+
+00:34:13.090 --> 00:34:16.620
+in the Xcode debugger or in crash reports as well.
+
+00:34:16.620 --> 00:34:21.600
+And when you're done with your queue, you call
+dispatch_release on it to a free the storage.
+
+00:34:21.600 --> 00:34:24.700
+So, there's much you can do with these queues.
+
+00:34:24.700 --> 00:34:31.410
+Bill has already mentioned just a bit earlier
+queues can be used instead of locks and why is this?
+
+00:34:31.410 --> 00:34:38.150
+The enqueueing operation that I mentioned is in fact
+thread-safe so it's perfectly fine to call dispatch_async
+
+00:34:38.150 --> 00:34:42.420
+on a queue from multiple threads at
+once and everything will work fine.
+
+00:34:42.420 --> 00:34:51.530
+And because the execution of locks is serial, is one by
+one, these two things combined allow you to protect access
+
+00:34:51.530 --> 00:35:01.330
+to a shared data structure by executing blocks on a queue
+and accessing the data structure only from those blocks.
+
+00:35:01.330 --> 00:35:08.880
+And because queues are lightweight, this is actually
+easier and cheaper in many cases than using locking.
+
+00:35:08.880 --> 00:35:15.360
+You can imagine queues being an on demand
+locking mechanism that only creates a lock
+
+00:35:15.360 --> 00:35:18.180
+when there is contention and when a lock is really needed.
+
+00:35:18.180 --> 00:35:21.310
+So, let's see an example of this.
+
+00:35:21.310 --> 00:35:33.550
+Imagine in our Twitter app, we have to maintain
+this history of tweets that we are displaying.
+
+00:35:33.550 --> 00:35:38.210
+This is a global object in our
+application and multiple threads wants
+
+00:35:38.210 --> 00:35:44.630
+to apply domain the background thread then gets new
+network messages and the main thread at displacement.
+
+00:35:44.630 --> 00:35:47.570
+So, we need to protect access to
+this shared resource somehow.
+
+00:35:47.570 --> 00:35:50.380
+So, let's use a dispatch queue for this.
+
+00:35:50.380 --> 00:35:56.310
+So, we create a dispatch queue with dispatch_queue_create,
+give a nice label that tells us that this operates
+
+00:35:56.310 --> 00:36:04.100
+on these tweets object and then in the main thread
+wants to modify the object, say to remove the last item.
+
+00:36:04.100 --> 00:36:08.670
+It might be this too much history and
+we want to cut down on the history.
+
+00:36:08.670 --> 00:36:09.700
+We remove the last item.
+
+00:36:09.700 --> 00:36:16.520
+We dispatch_async to this queue and to block
+that executes can modify the shared DOC.
+
+00:36:16.520 --> 00:36:22.520
+And then when the background display gets some new messages
+from the network, it also dispatch_async to this queue
+
+00:36:22.520 --> 00:36:31.000
+to add the new item and because queues execute these
+blocks one by one, the rest of those threads can be sure
+
+00:36:31.000 --> 00:36:35.670
+that once they're inside the block, they are the only
+ones operating on that shared object at that time
+
+00:36:35.670 --> 00:36:38.650
+and so, they can do safely without colliding.
+
+00:36:38.650 --> 00:36:42.240
+Also, note that we've used dispatch_async
+in both of these cases
+
+00:36:42.240 --> 00:36:47.540
+because the caller here doesn't actually
+care that this update happens right away.
+
+00:36:47.540 --> 00:36:54.410
+So, you don't need to block like you would be locking, and
+wait for this operation to finish before you can go on.
+
+00:36:54.410 --> 00:36:58.910
+If you do want to block like in
+this case, we call dispatch_sync.
+
+00:36:58.910 --> 00:37:02.500
+That is exactly like dispatch_async
+except that they will wait for the block
+
+00:37:02.500 --> 00:37:05.960
+that it enqueues to finish executing before returning.
+
+00:37:05.960 --> 00:37:13.500
+So, here we would want to display the tweets, get a snapshot
+of the shared object and not refuse the __blocks syntax
+
+00:37:13.500 --> 00:37:18.860
+that you've seen earlier to extract
+the result from this block.
+
+00:37:18.860 --> 00:37:24.490
+And at the end, you call dispatch_release
+when you're done with the queue.
+
+00:37:24.490 --> 00:37:26.980
+So let's see this in an animation.
+
+00:37:26.980 --> 00:37:29.510
+We have the main thread, the background thread,
+
+00:37:29.510 --> 00:37:34.260
+dispatch_queue that protects this
+shared object represented as a box.
+
+00:37:34.260 --> 00:37:41.230
+And these two threads enqueue some blocks and as
+you can see when they enqueue at the same time,
+
+00:37:41.230 --> 00:37:44.180
+they get enqueued safely in some undetermined order.
+
+00:37:44.180 --> 00:37:47.790
+Here at the background thread one
+and its block that enqueued first.
+
+00:37:47.790 --> 00:37:53.880
+Now, the dispatch_queue has some work to do so an
+automatic thread comes along and runs these blocks
+
+00:37:53.880 --> 00:37:57.570
+and they can safely modify the
+shared resource because they know
+
+00:37:57.570 --> 00:38:01.110
+that they're the only ones executing
+a dispatch_queue at that time.
+
+00:38:01.110 --> 00:38:08.730
+So, we remove an item, add an item, and the copy can
+take snapshots safely and update the main thread.
+
+00:38:08.730 --> 00:38:11.660
+And that's the end and there's no more block.
+
+00:38:11.660 --> 00:38:13.460
+The automatic thread goes away.
+
+00:38:13.460 --> 00:38:18.450
+So, now that you know how to create queues,
+you have to know how to manage their lifetime.
+
+00:38:18.450 --> 00:38:23.300
+So, as you have probably guessed queues are
+reference counted like other object types.
+
+00:38:23.300 --> 00:38:28.420
+And you use dispatch_retain/release
+to manage the reference code.
+
+00:38:28.420 --> 00:38:31.880
+And note that GCD retains parameters to dispatch API.
+
+00:38:31.880 --> 00:38:38.810
+So, in many cases you don't actually have to
+do anything to manage this reference count.
+
+00:38:38.810 --> 00:38:47.430
+But if you have queues that get captured by blocks, you may
+have to do manual reference counting to ensure that lifetime
+
+00:38:47.430 --> 00:38:54.070
+of these queues is correct across asynchronous
+operations as we'll see in an example right now.
+
+00:38:54.070 --> 00:39:01.050
+So, imagine in our Twitter app we have, want to--
+asyncParse the data that we get from the network
+
+00:39:01.050 --> 00:39:07.540
+and extract the Twitter messages and we
+want this asyncParseData Objective-C method
+
+00:39:07.540 --> 00:39:09.950
+which takes the data and parses it.
+
+00:39:09.950 --> 00:39:14.600
+And when it has a result it calls
+back the user asynchronously
+
+00:39:14.600 --> 00:39:17.200
+and this is the pattern that Bill already mentioned.
+
+00:39:17.200 --> 00:39:24.350
+The last parameter is a block that gets called, a callback
+block that the user gives us that we call when we're done
+
+00:39:24.350 --> 00:39:27.080
+and the queue that that block gets called on.
+
+00:39:27.080 --> 00:39:33.000
+So, here-- in here we will be calling a dispatch_async
+on a parse queue which will do the parsing
+
+00:39:33.000 --> 00:39:34.690
+on the, you know, on a background thread.
+
+00:39:34.690 --> 00:39:41.570
+And note that the block that gets enqueued here
+captures this queue parameter that the user gave us.
+
+00:39:41.570 --> 00:39:47.290
+So, this is a case where you have to manually
+manage the reference cont of that queue object.
+
+00:39:47.290 --> 00:39:51.320
+Basically you can execute it after this method has returned
+
+00:39:51.320 --> 00:39:54.660
+and the caller may do anything they
+want with the queue at that point right?
+
+00:39:54.660 --> 00:39:57.740
+So you have to have a reference
+to the queue object to make sure
+
+00:39:57.740 --> 00:40:01.240
+that it's still there when the block actually gets executed.
+
+00:40:01.240 --> 00:40:03.540
+So, the way to do that is to call dispatch_retain
+
+00:40:03.540 --> 00:40:08.130
+on that queue object before calling the
+async with the block that captured it.
+
+00:40:08.130 --> 00:40:13.110
+And inside that block, you can then call
+dispatch_release and you're done with it.
+
+00:40:13.110 --> 00:40:19.660
+So now that you've done that it's safe to async and we
+can parse our data and dispatch_async the result back
+
+00:40:19.660 --> 00:40:26.730
+to user provider queue and now we can release
+because as mentioned this dispatch_async is
+
+00:40:26.730 --> 00:40:30.370
+in an async retains its arguments so it retains that queue.
+
+00:40:30.370 --> 00:40:40.010
+So the pattern to remember is-- sorry-- the pattern
+to remember is to dispatch_retain before the async
+
+00:40:40.010 --> 00:40:47.240
+and release inside the block that captured the queue.
+
+00:40:47.240 --> 00:40:50.430
+The same is true with other kinds of objects.
+
+00:40:50.430 --> 00:40:55.100
+In-- the general rule is that you have to ensure that
+objects that are captured by blocks are still valid
+
+00:40:55.100 --> 00:41:00.230
+when those blocks are executed and with
+dispatch_async that could be much later.
+
+00:41:00.230 --> 00:41:04.340
+So the good news is that as Bill has mentioned from
+objective-C objects you don't have to do anything
+
+00:41:04.340 --> 00:41:11.710
+and that would cover the large majority of your cases,
+these get auto retained and released by the blocks runtime
+
+00:41:11.710 --> 00:41:14.550
+and although it's just transparently,
+in our previous example
+
+00:41:14.550 --> 00:41:18.390
+for instance we have this NSData object we didn't
+have to manage the reference counts on that
+
+00:41:18.390 --> 00:41:21.780
+because the blocks runtime dealt with that for us.
+
+00:41:21.780 --> 00:41:26.570
+However, if you have other objects like
+co-foundation objects, these need that same pattern
+
+00:41:26.570 --> 00:41:32.850
+that we saw they would see every time before an async
+and see a full list inside the block that gets async.
+
+00:41:32.850 --> 00:41:37.320
+So let's talk about doing App Design with Queues.
+
+00:41:37.320 --> 00:41:45.280
+So one pattern we recommend that you look at is to
+employ one queue per task or per subsystem in your app.
+
+00:41:45.280 --> 00:41:50.680
+This will allow you to make these tasks very
+easily independent and communicate among them
+
+00:41:50.680 --> 00:41:56.110
+by using dispatch_async and because
+queues are very lightweight and efficient,
+
+00:41:56.110 --> 00:42:00.160
+it's not a problem to have many
+tasks and the associated queues.
+
+00:42:00.160 --> 00:42:03.220
+That doesn't mean that you will
+have many threads necessarily
+
+00:42:03.220 --> 00:42:08.640
+because in fact GCD does automatic thread recycling so
+one of these automatic threads that we saw could get used
+
+00:42:08.640 --> 00:42:12.490
+to execute blocks from many different
+queues during its lifetime.
+
+00:42:12.490 --> 00:42:16.390
+So let's apply this idea to our demo.
+
+00:42:16.390 --> 00:42:22.460
+Essentially we have four tasks in this app,
+receiving and parsing the network stream,
+
+00:42:22.460 --> 00:42:29.870
+maintaining this shared message history object, fetching
+and caching images, and displaying the user interface.
+
+00:42:29.870 --> 00:42:35.210
+So how can we employ the one queue per task idea to this?
+
+00:42:35.210 --> 00:42:43.040
+Well, the code in one thread for all these tasks might look
+like something like this, we get the data from the network,
+
+00:42:43.040 --> 00:42:51.760
+you parse it to create a tweet object, add this
+object to the shared storage, update the UI,
+
+00:42:51.760 --> 00:42:57.280
+then get the image from the imageCache
+and update the image display
+
+00:42:57.280 --> 00:43:00.660
+when we have received that and release it at the end.
+
+00:43:00.660 --> 00:43:06.580
+So how can we use one queue per task
+to make these tasks independent?
+
+00:43:06.580 --> 00:43:13.840
+For the networking, as you can probably guess, we will
+dispatch_async to a queue that manages the network task
+
+00:43:13.840 --> 00:43:21.280
+and the network subsystem and as we've seen
+in the first part of the GCD section here,
+
+00:43:21.280 --> 00:43:26.050
+this will run potentially blocking
+like on a background thread.
+
+00:43:26.050 --> 00:43:31.380
+Now when we have this data from the
+network, we will dispatch_async to the queue
+
+00:43:31.380 --> 00:43:38.380
+that manages the shared history object subsystem
+which we call tweets_queue here and from that--
+
+00:43:38.380 --> 00:43:43.820
+inside that block when we need to update the UI, we
+dispatch_async to the queue that manages the UI subsystem
+
+00:43:43.820 --> 00:43:50.220
+which is the main queue and similarly for
+the imageCache, we dispatch_async to a queue
+
+00:43:50.220 --> 00:43:57.220
+that manages the imageCache subsystem and that can operate
+independently of the other paths and again from inside there
+
+00:43:57.220 --> 00:44:01.280
+when we have the image, we dispatch_async
+back to the main queue to update the UI.
+
+00:44:01.280 --> 00:44:08.500
+So obviously this is a very simplistic contrived example
+but I'm sure you can imagine the power of this technique
+
+00:44:08.500 --> 00:44:16.800
+when applied to a complex application, here we've separated
+the code out with four queues and just used dispatch_async
+
+00:44:16.800 --> 00:44:19.550
+to communicate between the different subsystems.
+
+00:44:19.550 --> 00:44:27.370
+So there are some pitfalls to be aware of when you use
+this pattern, firstly, same as with the main queue,
+
+00:44:27.370 --> 00:44:32.900
+if you have this for subsystem queues, don't block them
+because if that's the way you communicate with the subsystem
+
+00:44:32.900 --> 00:44:35.590
+and you block that queue, you will
+block the whole subsystem.
+
+00:44:35.590 --> 00:44:39.690
+Alright so the same technique applies
+to getting back off the main thread,
+
+00:44:39.690 --> 00:44:47.010
+you use another queue where you would push anywhere I
+think that would take a significant amount of time off too.
+
+00:44:47.010 --> 00:44:54.910
+And also when you use dispatch_sync API or other
+waiting API, be careful when you have many queues
+
+00:44:54.910 --> 00:44:58.350
+and multiple queues that you don't
+get into a deadlock situation.
+
+00:44:58.350 --> 00:45:02.860
+GCD doesn't protect you from the traditional
+mistakes you can make with multithreading and locking
+
+00:45:02.860 --> 00:45:07.410
+and if you do a dispatch_sync from one queue
+to another one which then dispatch_syncs back
+
+00:45:07.410 --> 00:45:10.240
+to the first queue, you will get into a deadlock.
+
+00:45:10.240 --> 00:45:12.950
+So that's something to be aware of.
+
+00:45:12.950 --> 00:45:20.100
+Also if you block one of these automatic workers
+threads waiting on some external resource,
+
+00:45:20.100 --> 00:45:26.970
+this will actually make this pattern expensive where
+you said that dispatch queues were very efficient
+
+00:45:26.970 --> 00:45:32.550
+and lightweight but if all of those dispatch queues
+execute a block that waits since its there and parts one
+
+00:45:32.550 --> 00:45:37.510
+of these automatic worker threads you'll end up
+with many threads and that is actually expensive.
+
+00:45:37.510 --> 00:45:44.500
+So you can get into a situation like in this
+animation, here we have one queue that runs a block
+
+00:45:44.500 --> 00:45:47.540
+that cross a receive and it just never receives anything.
+
+00:45:47.540 --> 00:45:57.160
+Maybe the network is slow and this will block this
+automatic thread in this receive block so if this happens
+
+00:45:57.160 --> 00:46:03.590
+with one queue that's not a big problem but if
+you have many queues and many occurrences of this
+
+00:46:03.590 --> 00:46:09.980
+and many automatic threads that get blocked, you can get
+into a situation where you will end up using a lot of memory
+
+00:46:09.980 --> 00:46:16.520
+and as you know on iOS if you do
+that, your app might get killed.
+
+00:46:16.520 --> 00:46:21.650
+So one way around this problem is to use an API
+that allows you to respond to external events rather
+
+00:46:21.650 --> 00:46:27.460
+than having a blocking API that waits for
+something to happen and in GCD we provide one
+
+00:46:27.460 --> 00:46:33.680
+such API called dispatch_sources and we won't have
+time to go into this in a lot of detail today,
+
+00:46:33.680 --> 00:46:40.850
+we have a second session later on in the week that will
+cover this fully but just to give you an introduction,
+
+00:46:40.850 --> 00:46:46.730
+dispatch_sources allow you to monitor external event sources
+like files, like network sub groups, like directories,
+
+00:46:46.730 --> 00:46:52.430
+timers, very low-level things, and
+if an event happens on these sources,
+
+00:46:52.430 --> 00:46:57.280
+an event handler that you specified can be
+delivered to any queue you choose so this isn't
+
+00:46:57.280 --> 00:47:03.920
+like with the run loop sources that you might be familiar
+with where the event handling is tied to one specific thread
+
+00:47:03.920 --> 00:47:10.890
+and we recommend that you use these sources to replace
+any polling you are doing or blocking API calls
+
+00:47:10.890 --> 00:47:14.160
+for low level events and for more details, please come
+
+00:47:14.160 --> 00:47:18.970
+to the session Simplifying iPhone App
+Development with Grand Central Dispatch on Friday.
+
+00:47:18.970 --> 00:47:24.760
+Just to give you a very quick teaser, remember this
+example with the many queues that we had before,
+
+00:47:24.760 --> 00:47:29.830
+here we have the dispatch_async to a network queue so this
+could be one of these examples where we might block one
+
+00:47:29.830 --> 00:47:33.970
+of the automatic threads waiting for
+networking communications to come in.
+
+00:47:33.970 --> 00:47:40.150
+If you wanted to replace this with the dispatch source,
+all that we would need to do is to set up the source
+
+00:47:40.150 --> 00:47:47.240
+which we won't go into now, which will listen on a socket
+and then set the same block, the same code as the handler
+
+00:47:47.240 --> 00:47:55.490
+for that dispatch source and now, the source will trigger,
+will evoke this handler when there is actual network data
+
+00:47:55.490 --> 00:47:59.060
+on the socket so that we can immediately
+read it and don't have to wait
+
+00:47:59.060 --> 00:48:05.230
+and this will get re-invoked every time there is network
+data whereas before, with the async you would have had
+
+00:48:05.230 --> 00:48:09.130
+to do this every time to wait for more
+data as we process the last piece.
+
+00:48:09.130 --> 00:48:12.620
+So where do I find this technology?
+
+00:48:12.620 --> 00:48:19.550
+The introduction already mentioned., GCD is part of
+loop system and that means that it comes along for free
+
+00:48:19.550 --> 00:48:25.080
+with malloc and other basic functionality, you don't have
+to do any special linking, it's available to all apps,
+
+00:48:25.080 --> 00:48:30.300
+you just include the header here,
+dispatch the edge, and you're good to go.
+
+00:48:30.300 --> 00:48:33.600
+Also worth mentioning, GCD's Open Source.
+
+00:48:33.600 --> 00:48:40.920
+You can go to the libdispatch homepage on macosforge to
+get more details on that and there is also a mailing list
+
+00:48:40.920 --> 00:48:45.080
+where you can ask questions and for more
+information, please contact Michael Jurewitz,
+
+00:48:45.080 --> 00:48:47.620
+our development tools and performance evangelist.
+
+00:48:47.620 --> 00:48:53.620
+There is some very good documentation on the developer's
+side in particular the concurrency programming guide
+
+00:48:53.620 --> 00:49:00.810
+and there is extensive header DOC in the dispatch headers
+that you can look at as well as very good man pages
+
+00:49:00.810 --> 00:49:07.910
+on your Snow Leopard system which apply equally well
+to this technology on the iOS, and again the reference
+
+00:49:07.910 --> 00:49:15.900
+to the homepage on the Open Source site and on the Apple
+developer forums there is also a section labeled Core OS
+
+00:49:15.900 --> 00:49:22.950
+where you can ask questions about GCD and we have related
+sessions, on Friday the simplifying up an App development
+
+00:49:22.950 --> 00:49:30.140
+with GCD that has been mentioned this morning there
+was a working effectively with objective-C session
+
+00:49:30.140 --> 00:49:35.010
+that also talked about blocks briefly
+and there is an advance objective-C
+
+00:49:35.010 --> 00:49:39.780
+and garbage collection technique
+session on Friday after the GCD session.
+
+00:49:39.780 --> 00:49:40.930
+Alright, thanks for your attention.
+
+00:49:40.930 --> 00:49:52.080
+[ Applause ]
+

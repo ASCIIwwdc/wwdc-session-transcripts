@@ -1,0 +1,2631 @@
+WEBVTT
+
+00:00:06.360 --> 00:00:08.240
+>> My name is Dan Omachi.
+
+00:00:08.240 --> 00:00:13.440
+I work for the Apples GPU Software Team
+on the OpenGL Framework for Mac OS X,
+
+00:00:13.440 --> 00:00:17.740
+as well as the OpenGL ES Framework on iOS 4.
+
+00:00:17.740 --> 00:00:21.140
+I hope you guys are here today, because you'd really
+
+00:00:21.140 --> 00:00:27.560
+like to add some stunning visual
+effects to your Mac or iOS applications.
+
+00:00:27.560 --> 00:00:32.950
+Perhaps you thought of adding some shadows,
+reflections, or refractions into your app.
+
+00:00:32.950 --> 00:00:34.800
+Maybe you've heard of some advanced techniques,
+
+00:00:34.800 --> 00:00:39.420
+such as parallax occlusion mapping,
+tone mapping, or deferred shading.
+
+00:00:39.420 --> 00:00:45.870
+I'm not going to be talking so much about those advanced
+techniques today, however, I am going to be talking
+
+00:00:45.870 --> 00:00:53.060
+about some essential design practices that you'll need
+to consider in your applications if you want to add
+
+00:00:53.060 --> 00:00:58.590
+such advanced techniques, or invent
+your own techniques using OpenGL.
+
+00:01:00.970 --> 00:01:03.380
+So what is OpenGL?
+
+00:01:03.380 --> 00:01:07.590
+So many of you know OpenGL as a 3D graphics API.
+
+00:01:07.590 --> 00:01:11.720
+The OpenGL specification, which is
+the definitive document on OpenGL,
+
+00:01:11.720 --> 00:01:16.960
+actually has what I think is a
+slightly more accurate definition.
+
+00:01:16.960 --> 00:01:21.310
+OpenGL is a software interface to graphics hardware.
+
+00:01:21.310 --> 00:01:24.680
+In other words, it's an interface
+with a graphics processing unit.
+
+00:01:24.680 --> 00:01:32.350
+Every device that ships with iOS 4 and
+Mac OS X has a pretty capable GPU on it.
+
+00:01:32.350 --> 00:01:35.440
+So what does this GPU do?
+
+00:01:35.440 --> 00:01:42.300
+Well, many people believe that the GPU is
+just there to make your graphics look good.
+
+00:01:42.300 --> 00:01:47.910
+Actually, you can make some pretty high
+quality renderers using just the CPU.
+
+00:01:47.910 --> 00:01:50.300
+Movie studios do this all the time.
+
+00:01:50.300 --> 00:01:54.760
+They make very high quality renderers,
+and you see some great special effects.
+
+00:01:54.760 --> 00:02:00.530
+However, their renderers take many,
+many minutes to render a single frame.
+
+00:02:00.530 --> 00:02:03.510
+This isn't so good for an interactive application.
+
+00:02:03.510 --> 00:02:05.610
+So what does the GPU do?
+
+00:02:05.610 --> 00:02:07.280
+It accelerates your rendering.
+
+00:02:07.280 --> 00:02:12.130
+And when you're talking about interactive
+frame rates, this matters.
+
+00:02:12.130 --> 00:02:16.070
+Faster rendering equals better image quality.
+
+00:02:16.070 --> 00:02:23.540
+Drawing efficiently, allows drawing more: more models,
+more vertices in those models, more pixels, longer shaders,
+
+00:02:23.540 --> 00:02:27.120
+better special effects in your application.
+
+00:02:27.120 --> 00:02:29.010
+All at an interactive frame rate.
+
+00:02:29.010 --> 00:02:33.210
+All right, so what will you learn today?
+
+00:02:33.210 --> 00:02:40.090
+So let's say you've got a Formula One car and just because
+you've got it you've driven to work every day doesn't mean
+
+00:02:40.090 --> 00:02:44.100
+that you're going to be winning any Formula
+One races or even qualifying for them,
+
+00:02:44.100 --> 00:02:48.350
+even though you've got this very
+advanced, almost 1,000 horsepower machine.
+
+00:02:48.350 --> 00:02:51.330
+You need to know how to use it effectively.
+
+00:02:51.330 --> 00:02:53.290
+Same thing with the GPU in OpenGL.
+
+00:02:53.290 --> 00:02:55.410
+It's a very complex machine.
+
+00:02:55.410 --> 00:03:02.220
+You need to know how to utilize it and use it
+efficiently in order to harness that power.
+
+00:03:02.220 --> 00:03:06.670
+So I'll tell you a little bit about
+how OpenGL works under the hood.
+
+00:03:06.670 --> 00:03:13.370
+Like any good Formula 1 driver, he knows exactly
+the strengths and weaknesses of his machine,
+
+00:03:13.370 --> 00:03:16.450
+where it excels, where he needs to work at it more.
+
+00:03:16.450 --> 00:03:19.550
+I'll talk a lot about this process called state validation.
+
+00:03:19.550 --> 00:03:25.850
+This is where OpenGL translates API calls into GPU commands.
+
+00:03:25.850 --> 00:03:30.460
+Now this is actually a CPU intensive operation,
+and a lot of applications stumble on it.
+
+00:03:30.460 --> 00:03:33.930
+So you need to be aware of what happens there.
+
+00:03:33.930 --> 00:03:45.590
+I'll also give you some fundamental OpenGL techniques to
+avoid these CPU bottlenecks, and efficiently access the GPU.
+
+00:03:45.590 --> 00:03:52.150
+Now it's important to note that these
+techniques apply equally to iOS 4 and Mac OS X.
+
+00:03:52.150 --> 00:03:56.010
+So the codes you write on one platform and the knowledge
+
+00:03:56.010 --> 00:03:59.690
+that you've gained here, you can
+leverage on the other platform.
+
+00:03:59.690 --> 00:04:07.910
+They've got pretty different architectures,
+very different GPU's, very different devices.
+
+00:04:07.910 --> 00:04:13.710
+But the OpenGL software stack is quite similar,
+so you can leverage that knowledge pretty easily.
+
+00:04:13.710 --> 00:04:20.750
+So let me talk a little bit about OpenGL's design.
+
+00:04:20.750 --> 00:04:26.620
+OpenGL is designed to be a low level API to
+allow it direct access to the GPU's capabilities.
+
+00:04:26.620 --> 00:04:32.720
+Allow you to get in and get out, not interfere, not
+have the software stack interfere with your code.
+
+00:04:32.720 --> 00:04:34.480
+Really lean.
+
+00:04:34.480 --> 00:04:39.940
+However, it's high enough level
+to drive many heterogeneous GPU's.
+
+00:04:39.940 --> 00:04:41.810
+On the Mac we support many GPU's.
+
+00:04:41.810 --> 00:04:45.150
+On the iOS we support many as well.
+
+00:04:45.150 --> 00:04:51.690
+So there is a fair amount of work to
+translate from these API calls to GPU commands.
+
+00:04:51.690 --> 00:04:56.210
+Not the lowest level way to actually get to the GPU.
+
+00:04:56.210 --> 00:04:58.670
+I mean we could make an API that's to the metal.
+
+00:04:58.670 --> 00:05:07.320
+However, what this allows, this high level allows for you to
+do is write code that's portable, and also write code today
+
+00:05:07.320 --> 00:05:13.620
+that will run on devices that have changed
+drastically underneath your application tomorrow.
+
+00:05:13.620 --> 00:05:20.570
+So as architecture changes, your code
+remains the same and works quite efficiently.
+
+00:05:20.570 --> 00:05:22.620
+So OpenGL is a state machine.
+
+00:05:22.620 --> 00:05:27.120
+And this state maps roughly to the GPU pipeline.
+
+00:05:27.120 --> 00:05:33.510
+If you were to look at Apple's implementation of
+OpenGL, what you'd see is this gigantic C Struct.
+
+00:05:33.510 --> 00:05:37.800
+OK? And what would, be in this struct you could
+actually look at the OpenGL specification.
+
+00:05:37.800 --> 00:05:41.710
+At the back you'd see this pretty
+large table that says, OpenGL state.
+
+00:05:41.710 --> 00:05:45.190
+And it has things like, you know, what stuff is enabled.
+
+00:05:45.190 --> 00:05:49.180
+The various GL enables in OpenGL, whether it's on and off.
+
+00:05:49.180 --> 00:05:53.760
+It has things like what's bound at certain points.
+
+00:05:53.760 --> 00:05:58.800
+And so that's basically what's in this context.
+
+00:05:58.800 --> 00:06:00.930
+All right?
+
+00:06:00.930 --> 00:06:08.370
+So much of OpenGL's live time is just
+spent tracking state that your app makes.
+
+00:06:08.370 --> 00:06:13.150
+So your application, there's a certain class
+of calls that OpenGL has that just exists
+
+00:06:13.150 --> 00:06:16.870
+to change this context state, this state becker.
+
+00:06:16.870 --> 00:06:20.850
+[phonetic] So for instance, you
+call glEnable, some state changes.
+
+00:06:20.850 --> 00:06:25.710
+You call glBindTexter some more state changes.
+
+00:06:25.710 --> 00:06:31.680
+You call glUseProgram, and again, the
+context is updated with new state.
+
+00:06:31.680 --> 00:06:36.400
+So at this point we're actually
+doing nothing that's GPU specific.
+
+00:06:36.400 --> 00:06:38.110
+It's all GPU agnostic.
+
+00:06:38.110 --> 00:06:41.680
+There's no hardware specific command getting generated.
+
+00:06:41.680 --> 00:06:44.600
+The real work happens when you make a draw call.
+
+00:06:44.600 --> 00:06:48.130
+This is when API calls get translated into GPU commands.
+
+00:06:48.130 --> 00:06:52.830
+All of that work is deferred until you draw.
+
+00:06:52.830 --> 00:06:59.210
+So for instance you call glDrawArrays, and look what
+happens here is we're munching all of this context state,
+
+00:06:59.210 --> 00:07:03.290
+taking that draw call, and creating a GPU command.
+
+00:07:03.290 --> 00:07:09.580
+So one thing to note about this is that this
+translation state is a CPU intensive operation.
+
+00:07:09.580 --> 00:07:14.640
+We need to do a lot of processing on the CPU to
+figure out exactly what your application has done,
+
+00:07:14.640 --> 00:07:18.590
+what it wants, and translate that into a GPU command.
+
+00:07:18.590 --> 00:07:21.680
+All right, so now we've got this
+GPU command, what happens to it?
+
+00:07:21.680 --> 00:07:26.760
+Well, GPU commands are inserted to a command
+buffer that's allocated by the kernel.
+
+00:07:26.760 --> 00:07:29.310
+So we've put that in there.
+
+00:07:29.310 --> 00:07:36.490
+And as the command buffer fills up, or your
+application calls glFlush, we flush it to the GPU.
+
+00:07:36.490 --> 00:07:38.500
+The GPU now can process it.
+
+00:07:38.500 --> 00:07:41.590
+But actually there's one step that needs to happen first.
+
+00:07:41.590 --> 00:07:46.370
+We need to actually transfer all the
+resources that are needed for those commands.
+
+00:07:46.370 --> 00:07:49.710
+For instance, we need to put textures
+that are used for those draw commands.
+
+00:07:49.710 --> 00:07:52.700
+And we need to download those to the GPU.
+
+00:07:52.700 --> 00:07:57.890
+And that can make this process a CPU intensive process.
+
+00:07:57.890 --> 00:08:03.060
+In addition to state validation, this is another
+potential bottleneck your application could incur.
+
+00:08:03.060 --> 00:08:07.510
+Now this is why we recommend not
+calling glFlush for really any reason.
+
+00:08:07.510 --> 00:08:14.730
+There are some very specific reasons where you might want
+to call glFlush for multicontext, multithreading rendering.
+
+00:08:14.730 --> 00:08:18.750
+But for the majority of applications,
+you're only talking about a single thread,
+
+00:08:18.750 --> 00:08:21.080
+and you should never need to call glFlush.
+
+00:08:21.080 --> 00:08:23.820
+It's an expensive operation.
+
+00:08:23.820 --> 00:08:29.880
+Now you've got the command buffer on the
+GPU, and the GPU can begin processing it.
+
+00:08:29.880 --> 00:08:38.600
+And it starts by fetching vertices, and
+then it pushes that data down the pipeline.
+
+00:08:38.600 --> 00:08:46.620
+So it's important to note that there are
+many potential bottlenecks on the GPU.
+
+00:08:46.620 --> 00:08:48.950
+Any one of these stages could be a bottleneck.
+
+00:08:48.950 --> 00:08:53.860
+However, a very common bottleneck is actually the CPU.
+
+00:08:53.860 --> 00:08:56.190
+All of those stages that I just talked about.
+
+00:08:56.190 --> 00:09:00.740
+So a key point, the GPU is another
+processor that runs in parallel to the CPU.
+
+00:09:00.740 --> 00:09:05.840
+Like any good multithreaded apps, you don't want
+one thread blocking and locking up the other thread.
+
+00:09:05.840 --> 00:09:13.320
+You want both cords being running at the same
+time, really maximizing the use of the CPU.
+
+00:09:13.320 --> 00:09:15.410
+Well, same thing happens with a GPU.
+
+00:09:15.410 --> 00:09:24.230
+As OpenGL pushes commands into a command buffer, the GPU
+fetches commands that have already been submitted to it.
+
+00:09:24.230 --> 00:09:26.100
+So, let me show that again.
+
+00:09:26.100 --> 00:09:32.720
+OpenGL is simultaneously adding commands to one command
+buffer while the GPU is fetching commands from another.
+
+00:09:32.720 --> 00:09:36.950
+So you really don't want to let the GPU wait for the CPU.
+
+00:09:36.950 --> 00:09:39.890
+That's just wasting the GPU's resources.
+
+00:09:39.890 --> 00:09:45.740
+You could be rendering 1,000 enemies in your
+game, and maybe you could be rendering 3,000
+
+00:09:45.740 --> 00:09:50.550
+if you're not, if you are utilizing the GPU fully.
+
+00:09:50.550 --> 00:09:55.420
+If you're stalling it, well, you're
+not utilizing the GPU as much,
+
+00:09:55.420 --> 00:09:59.410
+and you're not rendering its cool effects
+or as many effects as you could be.
+
+00:09:59.410 --> 00:10:04.810
+Also, some applications tend to use
+the CPU to do some graphics work.
+
+00:10:04.810 --> 00:10:08.450
+Well, as I mentioned before, the
+CPU is good at a lot of things.
+
+00:10:08.450 --> 00:10:11.710
+And you can do some high quality
+rendering with it, but it's very slow.
+
+00:10:11.710 --> 00:10:16.290
+And you really want to use the GPU for
+this work, really offload the work.
+
+00:10:16.290 --> 00:10:24.060
+There are certain calls that; so this is what happens
+when you let the GPU wait, it just sits there.
+
+00:10:24.060 --> 00:10:30.160
+There are a certain class of calls where the
+CPU may need to wait for the GPU to process.
+
+00:10:30.160 --> 00:10:40.440
+Anytime the GPU needs to process something for the CPU and
+give it to the CPU, the CPU will sit there waiting for it.
+
+00:10:40.440 --> 00:10:43.340
+These things are like readpixels, queries, and fences.
+
+00:10:43.340 --> 00:10:48.790
+Here's what happens, CPU sort of just sits there
+waiting until it gets the data it needs from the GPU.
+
+00:10:48.790 --> 00:10:54.230
+Now there are ways you can use readpixels, queries, and
+fences efficiently where you're not stalling the CPU,
+
+00:10:54.230 --> 00:10:58.840
+and I can go into that a little bit later.
+
+00:10:58.840 --> 00:11:03.250
+So one thing I really want to reiterate
+here is that for each draw call,
+
+00:11:03.250 --> 00:11:07.300
+context state is translated into GPU command.
+
+00:11:07.300 --> 00:11:10.070
+This is a very CPU intensive operation.
+
+00:11:10.070 --> 00:11:11.650
+We call this state validation.
+
+00:11:11.650 --> 00:11:15.940
+Here's what happens you called
+glDrawElements, the CPU processing goes way
+
+00:11:15.940 --> 00:11:20.960
+up and we translate this GPU command here.
+
+00:11:20.960 --> 00:11:27.660
+If you were to profile your application and
+what you would see here is that the draw calls,
+
+00:11:27.660 --> 00:11:35.200
+in this case glDrawElements takes a substantially
+more time than any of the other OpenGL calls.
+
+00:11:35.200 --> 00:11:42.530
+OK, here you see it takes order of magnitude more
+than any of the other OpenGL calls that you see here.
+
+00:11:42.530 --> 00:11:47.530
+And what's important to note about this, is
+that there is some cost in making a draw call.
+
+00:11:47.530 --> 00:11:54.710
+It's actually not the draw call itself that is very
+expensive, or causing this expense, it's state setting calls
+
+00:11:54.710 --> 00:11:57.670
+that your app has made before the draw call.
+
+00:11:57.670 --> 00:12:05.920
+So you enable something, you bind something, those look
+cheap on a Shark profile, but that cost does show up.
+
+00:12:05.920 --> 00:12:10.710
+It doesn't show up in that particular call,
+but it shows up in the subsequent draw call.
+
+00:12:10.710 --> 00:12:16.590
+So state sending calls look cheap, they're
+not really as cheap as they might appear.
+
+00:12:16.590 --> 00:12:23.760
+So I'm going to over a couple of techniques,
+which you can use to reduce your CPU overhead.
+
+00:12:23.760 --> 00:12:30.140
+The first of which is to use OpenGL's various objects.
+
+00:12:30.140 --> 00:12:34.020
+The second is to manage your rendering state.
+
+00:12:34.020 --> 00:12:37.100
+Sort it, so that you're not making redundant state changes.
+
+00:12:37.100 --> 00:12:43.560
+State changes that incur more CPU costs,
+unnecessary state changes, and batcher state.
+
+00:12:43.560 --> 00:12:46.510
+Reduce some state by combining objects into one.
+
+00:12:46.510 --> 00:12:51.010
+[ silence ]
+
+00:12:51.010 --> 00:12:52.300
+So objects.
+
+00:12:52.300 --> 00:12:59.510
+Whenever you use an OpenGL objects, some of that
+state is cached in that object and pre-validated.
+
+00:12:59.510 --> 00:13:03.350
+It's not validated at draw time; it's validated up front.
+
+00:13:03.350 --> 00:13:07.300
+So when it's bound it's easily translated into GPU command.
+
+00:13:07.300 --> 00:13:10.370
+So let's take texture objects for example.
+
+00:13:10.370 --> 00:13:15.780
+You call glGenTextures, and you create this texture object.
+
+00:13:15.780 --> 00:13:19.350
+All right, you call tech image and
+you see this object state here.
+
+00:13:19.350 --> 00:13:22.800
+It's this little state vectors that the object itself has.
+
+00:13:22.800 --> 00:13:25.620
+And that gets updated and validated.
+
+00:13:25.620 --> 00:13:29.080
+You call tech parameter and that state
+gets validated and updated again.
+
+00:13:29.080 --> 00:13:36.790
+And finally, when you call bind texture, that
+state is merged with the rest of the context state,
+
+00:13:36.790 --> 00:13:45.670
+and cached much more easy to validate, much more, much
+less CPU processing required to create that GPU command.
+
+00:13:45.670 --> 00:13:53.480
+Now it's important to note that this process of
+setting up objects is actually somewhat expensive.
+
+00:13:53.480 --> 00:13:57.970
+So you really want to do this upfront, when
+you're app, your level, your document is loading
+
+00:13:57.970 --> 00:14:01.650
+when the user isn't expecting some high frame rate.
+
+00:14:01.650 --> 00:14:06.060
+Don't wait until your middle of your, you're
+in the middle of your real time run loop.
+
+00:14:06.060 --> 00:14:07.950
+Do it up front.
+
+00:14:07.950 --> 00:14:13.730
+So now I've described one way in
+which you can reduce CPU validation.
+
+00:14:13.730 --> 00:14:16.850
+I'll also describe a few other ways.
+
+00:14:16.850 --> 00:14:23.520
+And I'll also describe some ways in which not
+using objects can be an inefficient use of the API.
+
+00:14:23.520 --> 00:14:29.750
+The first thing I'll describe is how fixed function,
+vertex and fragment pipe, how that fixed function,
+
+00:14:29.750 --> 00:14:33.460
+vertex and fragment pipe, can be
+an inefficient use of the API.
+
+00:14:33.460 --> 00:14:41.530
+And instead, how using GLSL programmable
+objects can be a much more efficient use.
+
+00:14:41.530 --> 00:14:49.160
+So modern hardware doesn't have any fixed
+function vertex or fragment pipeline.
+
+00:14:49.160 --> 00:14:58.360
+OpenGL needs to convert all of your fixed function
+calls, glEnableLight, etc., into a shader internally.
+
+00:14:58.360 --> 00:15:00.970
+And this can be pretty costly.
+
+00:15:00.970 --> 00:15:01.600
+Here's what happens.
+
+00:15:01.600 --> 00:15:07.010
+You call glEnableLight, some context
+state changes, as it usually does.
+
+00:15:07.010 --> 00:15:10.440
+GL text in another fixed function call.
+
+00:15:10.440 --> 00:15:13.390
+And that state gets updated.
+
+00:15:13.390 --> 00:15:15.130
+glDrawArrays.
+
+00:15:15.130 --> 00:15:19.760
+Here's what happened, we generate this large
+shader under the hood for your application.
+
+00:15:19.760 --> 00:15:22.690
+Now you don't have to pay attention
+to exactly what's going on.
+
+00:15:22.690 --> 00:15:28.390
+We're just emulating what you've told us,
+what the state that you'd like to use.
+
+00:15:28.390 --> 00:15:30.790
+And this can be a pretty expensive operation.
+
+00:15:30.790 --> 00:15:33.750
+We actually cache the shader away,
+so we don't generate shader
+
+00:15:33.750 --> 00:15:36.950
+and complete it every single time that we use fix function.
+
+00:15:36.950 --> 00:15:39.120
+But we cached it away in the cache table.
+
+00:15:39.120 --> 00:15:45.950
+And when you use this, you use fixed function, we need
+to generate this cache key, which is somewhat expensive.
+
+00:15:45.950 --> 00:15:49.710
+And then go inside of our cache and
+pull out your shader and set it.
+
+00:15:49.710 --> 00:15:51.920
+This can be pretty expensive.
+
+00:15:51.920 --> 00:15:57.110
+So instead what we'd rather have you do, and which
+could be a much more efficient use of the API,
+
+00:15:57.110 --> 00:16:00.230
+is to use program object, shader objects.
+
+00:16:00.230 --> 00:16:03.110
+This is a most efficient way to set up the pipeline.
+
+00:16:03.110 --> 00:16:06.110
+So you specify shader code, you compile and link it
+
+00:16:06.110 --> 00:16:11.600
+into a program object while you're document
+your level, your document, your app is loading.
+
+00:16:11.600 --> 00:16:14.190
+Before you venture your real time run loop.
+
+00:16:14.190 --> 00:16:21.460
+And then when you want to use that pipeline
+you set it, and bam, easily set on the GPU.
+
+00:16:21.460 --> 00:16:26.200
+No looking into some weird hash table
+to pull out the fix function shader.
+
+00:16:26.200 --> 00:16:27.690
+Very efficient use of the API.
+
+00:16:27.690 --> 00:16:34.600
+So some people would like a little bit more
+understanding of how vertex and fragment shaders work.
+
+00:16:34.600 --> 00:16:36.080
+They are kind of a complex piece.
+
+00:16:36.080 --> 00:16:40.100
+So I'm just going to go through and
+describe a little bit about how they work.
+
+00:16:40.100 --> 00:16:44.250
+So the vertex shader is the first
+part of the programmable pipeline.
+
+00:16:44.250 --> 00:16:48.220
+A shader is executed every time for every vertex.
+
+00:16:48.220 --> 00:16:51.570
+So let' say you've got a model with 1,000 vertices.
+
+00:16:51.570 --> 00:16:54.350
+And you draw that model.
+
+00:16:54.350 --> 00:16:57.610
+Your vertex shader will run 1,000 times.
+
+00:16:57.610 --> 00:17:01.360
+OK, now this is great, this is fine, because
+the GPU's are very efficient at that.
+
+00:17:01.360 --> 00:17:02.560
+It's designed for this.
+
+00:17:02.560 --> 00:17:08.230
+It's a high bandwidth processor specifically
+designed to do this sort of professing.
+
+00:17:08.230 --> 00:17:10.840
+OK, so let's talk about the inputs.
+
+00:17:10.840 --> 00:17:14.300
+Inputs are per-vertex attributes that
+are specified outside the shader.
+
+00:17:14.300 --> 00:17:22.680
+Things like pre-transformed positions,
+pre-transformed normals, untransform texture coordinate.
+
+00:17:22.680 --> 00:17:24.420
+Specified outside the shader.
+
+00:17:24.420 --> 00:17:27.130
+Now there are two classes of inputs.
+
+00:17:27.130 --> 00:17:30.690
+The first is a position in clip space.
+
+00:17:30.690 --> 00:17:33.580
+OK? This is the glPosition built-invariable.
+
+00:17:33.580 --> 00:17:35.640
+You've assigned this, glpresent variable.
+
+00:17:35.640 --> 00:17:42.190
+And this clip space is used for
+OpenGL to map, map to the screen.
+
+00:17:42.190 --> 00:17:47.260
+OK? It's to map your 3D model onto a 2D screen.
+
+00:17:47.260 --> 00:17:49.980
+So that's one output of the vertex shader.
+
+00:17:49.980 --> 00:17:52.940
+The second are one or many bearings.
+
+00:17:52.940 --> 00:17:59.540
+And so the type of data that these bearings usually
+consist of are colors, normal, and texture coordinates.
+
+00:17:59.540 --> 00:18:04.110
+Values that you'd like to read in your fragment shader.
+
+00:18:04.110 --> 00:18:08.900
+Now these values are interpolated
+across any rasterized triangle.
+
+00:18:08.900 --> 00:18:14.760
+So, let's say this triangle was generated by three vertices.
+
+00:18:14.760 --> 00:18:20.080
+And on one vertex you signed 0.4 to one of these varying.
+
+00:18:20.080 --> 00:18:22.740
+One the other you would sign 0.8.
+
+00:18:22.740 --> 00:18:25.240
+You output that in your vertex here.
+
+00:18:25.240 --> 00:18:32.730
+OK, so halfway through the pixel generated
+on this polygon will have a value of 0.6.
+
+00:18:32.730 --> 00:18:35.760
+One-quarter of the way down it'll have 0.5.
+
+00:18:35.760 --> 00:18:38.210
+Three-quarters, 0.7.
+
+00:18:38.210 --> 00:18:47.540
+So in other words, it's distributed across the polygon from
+the two varyings that you output in your vertex shader.
+
+00:18:47.540 --> 00:18:54.710
+Now it's not it's not linearly output like
+it looks here where it's evenly distributed.
+
+00:18:54.710 --> 00:18:57.890
+In fact, if the polygon is facing you it will be.
+
+00:18:57.890 --> 00:19:03.340
+But if it's a little bit on edge you'll have
+this sort of perspective correct interpolation.
+
+00:19:03.340 --> 00:19:09.080
+Where values that are closer to you will be
+nearer, or actually be a little further apart.
+
+00:19:09.080 --> 00:19:12.590
+That's to give it this 3D effect that you need.
+
+00:19:12.590 --> 00:19:19.500
+OK, so let me give you an example
+of a pretty simple vertex shader.
+
+00:19:19.500 --> 00:19:28.560
+So here is a varying that we define,
+varTexCoord And this will, this is,
+
+00:19:28.560 --> 00:19:33.570
+this works just like the variances I just
+described that are distributed across the polygon.
+
+00:19:33.570 --> 00:19:37.420
+And here is the main body where all this work is going on.
+
+00:19:37.420 --> 00:19:45.390
+On the first line what we're doing is we're multiplying
+the incoming glVertex, the pre-transformed position,
+
+00:19:45.390 --> 00:19:49.420
+and multiply it by the modelViewProjectionMatrix.
+
+00:19:49.420 --> 00:19:51.270
+And then we output it to glPosition.
+
+00:19:51.270 --> 00:19:54.720
+So now this position is in clip
+space, because we transformed it.
+
+00:19:54.720 --> 00:20:05.920
+And then the second step here is we take in a texture
+coordinate that is specified outside the shader.
+
+00:20:05.920 --> 00:20:11.110
+We take the two components, S and T
+components, and we assign it to this varying.
+
+00:20:11.110 --> 00:20:15.750
+And this varying, again, it works just
+like that diagram I just showed you.
+
+00:20:15.750 --> 00:20:19.440
+And you can read varTexCoord in the fragment shader.
+
+00:20:19.440 --> 00:20:22.290
+The second stage of the programmable pipeline.
+
+00:20:22.290 --> 00:20:24.680
+Now there are a couple of things to note about this shader.
+
+00:20:24.680 --> 00:20:30.050
+We're using these built in variables here.
+
+00:20:30.050 --> 00:20:33.740
+Now these are sort of a throw back
+to the fixed function days.
+
+00:20:33.740 --> 00:20:36.690
+And they're only available on the Mac.
+
+00:20:36.690 --> 00:20:41.820
+They're not available if you use ES 2.0 on iOS 4.
+
+00:20:41.820 --> 00:20:45.200
+They're based on, sort of, the legacy pipeline.
+
+00:20:45.200 --> 00:20:50.390
+And actually we would prefer that you
+do not use them for a couple of reasons.
+
+00:20:50.390 --> 00:20:54.100
+There needs to be some mapping
+performed in order to use them.
+
+00:20:54.100 --> 00:20:55.900
+And they're not forward compatible.
+
+00:20:55.900 --> 00:20:58.210
+OpenGL ES doesn't have them as I decided.
+
+00:20:58.210 --> 00:21:01.000
+And code without them isn't the future of OpenGL.
+
+00:21:01.000 --> 00:21:07.170
+In fact, there are a number of extensions that would
+ship on Mac OS X where you can't use these variables.
+
+00:21:07.170 --> 00:21:08.780
+There a whole set of these variables.
+
+00:21:08.780 --> 00:21:13.250
+In fact, on the right hand side are
+varyings and attributes that are, you know,
+
+00:21:13.250 --> 00:21:16.830
+these legacy fixed function based variables.
+
+00:21:16.830 --> 00:21:23.190
+And on the left here, so excuse me on the
+right those are the varying attributes.
+
+00:21:23.190 --> 00:21:26.410
+And on the left here we've got uniforms.
+
+00:21:26.410 --> 00:21:33.410
+ModelViewProjectionMatrix, lighting, points, stuff that
+just doesn't exist anymore in the programmable pipeline.
+
+00:21:33.410 --> 00:21:37.240
+But OpenGL has them for a legacy reason.
+
+00:21:37.240 --> 00:21:43.240
+So instead of using these variables, you can use generics.
+
+00:21:43.240 --> 00:21:48.720
+Here's an example of a shader, which does
+the exact same thing as the previous shader.
+
+00:21:48.720 --> 00:21:52.490
+Except instead of using built in variables we use our own.
+
+00:21:52.490 --> 00:22:02.270
+We define our own, so that we have portable code and OpenGL
+can map them to the programmable pipeline much more easily.
+
+00:22:02.270 --> 00:22:06.810
+So we define an input position
+and an input texture coordinate.
+
+00:22:06.810 --> 00:22:10.750
+Well don't use the built in glVertex or glMultitexture cord.
+
+00:22:10.750 --> 00:22:12.920
+We use our own.
+
+00:22:12.920 --> 00:22:15.500
+And we define our own model view projection matrix.
+
+00:22:15.500 --> 00:22:17.910
+We don't use glView projection matrix.
+
+00:22:17.910 --> 00:22:20.800
+And we sat that outside the shader.
+
+00:22:20.800 --> 00:22:28.090
+And just as in our last shader, we have bar,
+TexCoord another varying that we output to.
+
+00:22:28.090 --> 00:22:36.340
+And in the main body we multiply our model view
+projection matrix by our input position that we've defined.
+
+00:22:36.340 --> 00:22:38.070
+And we output it to glPosition.
+
+00:22:38.070 --> 00:22:43.340
+Now glPosition is a built in variable, but it's
+not one of these legacy throwback variables.
+
+00:22:43.340 --> 00:22:45.210
+You still need to use it.
+
+00:22:45.210 --> 00:22:52.550
+And then again we take our input text TexCoord
+variable and pass it through to varTexCoord.
+
+00:22:52.550 --> 00:22:55.460
+So that it may now be read in the fragmentator.
+
+00:22:55.460 --> 00:22:56.830
+The fragmentator.
+
+00:22:56.830 --> 00:23:01.500
+So this runs once per pixel produced by each polygon.
+
+00:23:01.500 --> 00:23:07.880
+So let's say you've got a model with 1,000
+vertices, and it draws 100,000 pixels.
+
+00:23:07.880 --> 00:23:10.910
+This shader will be run 100,000 times.
+
+00:23:10.910 --> 00:23:14.320
+Again, GPU's efficient at processing this, so that's great.
+
+00:23:14.320 --> 00:23:19.360
+But in general, if you have some processing
+that could be done higher up in a pipeline
+
+00:23:19.360 --> 00:23:21.800
+in the vertex shader, instead of the fragment shader.
+
+00:23:21.800 --> 00:23:25.950
+You probably want to do it up there,
+because that will be run less times.
+
+00:23:25.950 --> 00:23:29.350
+A little bit less processing, a
+little bit less work for the GPU.
+
+00:23:29.350 --> 00:23:34.580
+The cool thing about this programmable
+pipeline is that you can render effects
+
+00:23:34.580 --> 00:23:37.570
+that aren't possible using the fixed function pipeline.
+
+00:23:37.570 --> 00:23:40.270
+So here we've got this tune shading effect.
+
+00:23:40.270 --> 00:23:43.080
+OK? And here's how that works.
+
+00:23:43.080 --> 00:23:46.260
+Per fragment we calculate this edginess factor.
+
+00:23:46.260 --> 00:23:53.380
+So if the pixel on the polygon, if the polygon
+on which it lies is more on edge to the user,
+
+00:23:53.380 --> 00:23:55.970
+we'll give it a value that's lower to zero.
+
+00:23:55.970 --> 00:23:57.530
+That's closer to zero.
+
+00:23:57.530 --> 00:24:06.070
+OK? However, if the polygon is facing the camera,
+the user will give it a value that's closer to 1.
+
+00:24:06.070 --> 00:24:10.220
+So we now know whether this polygon is on edge or facing.
+
+00:24:10.220 --> 00:24:15.400
+And then we could use this edginess
+factor to give it a color.
+
+00:24:15.400 --> 00:24:20.440
+So, for instance, if it's on edge, it's probably we
+want to give it the sort of tune effect, you know,
+
+00:24:20.440 --> 00:24:25.310
+as the silhouette of the teapot
+hat, so we'll give it a black value.
+
+00:24:25.310 --> 00:24:26.850
+And otherwise we'll give it a blue value.
+
+00:24:26.850 --> 00:24:32.410
+And then we assign this color that we've determined
+the glFragColor, another built in variable,
+
+00:24:32.410 --> 00:24:36.750
+which is the ultimate color that
+will be rendered for that pixel.
+
+00:24:36.750 --> 00:24:40.010
+Let's talk about the inputs to the vertex shader.
+
+00:24:40.010 --> 00:24:47.140
+There's this call, glVertexAttribPointer, which
+points to data that can be fed to the vertex shader.
+
+00:24:47.140 --> 00:24:52.010
+Input position, for instance, or
+texture coordinates, things like that.
+
+00:24:52.010 --> 00:24:54.210
+Here's how it works.
+
+00:24:54.210 --> 00:24:58.890
+You allocate some memory in your
+application; in this case we're using malloc.
+
+00:24:58.890 --> 00:25:02.930
+And then you load data into this
+buffer that you've allocated.
+
+00:25:02.930 --> 00:25:08.640
+You call glEnableVertexAttrib to let OpenGL
+know that hey, I'm going to use a vertex array.
+
+00:25:08.640 --> 00:25:15.710
+And you give it a position at index, or
+some index 0 to 16 that maps to the shader.
+
+00:25:15.710 --> 00:25:21.340
+And then you call glVertexAttribPointer and you
+give it this position data that you've allocated.
+
+00:25:21.340 --> 00:25:29.550
+OK? Position data is basically tells
+OpenGL hey, my vertex data lives here.
+
+00:25:29.550 --> 00:25:32.120
+So there are some issues with using OpenGL this way.
+
+00:25:32.120 --> 00:25:38.870
+Because you're allocating the buffer on your end,
+you're not telling OpenGL to allocate it itself.
+
+00:25:38.870 --> 00:25:43.690
+OpenGL has to copy this data into its own stream.
+
+00:25:43.690 --> 00:25:50.890
+So CPU's cycles will be required to copy that vertex data.
+
+00:25:50.890 --> 00:25:51.530
+Here's what happens.
+
+00:25:51.530 --> 00:25:57.400
+You call glVertexAttribPointer, OpenGL now
+knows about this buffer that you've allocated,
+
+00:25:57.400 --> 00:26:05.800
+but then when you call glDrawArrays or draw with this
+buffer, OpenGL copies it into the command buffer.
+
+00:26:05.800 --> 00:26:08.130
+And there's a double whammy here.
+
+00:26:08.130 --> 00:26:14.140
+Because the CPU's also needing to copy,
+there's some CPU cycles being incurred.
+
+00:26:14.140 --> 00:26:18.010
+But also we're filling up the command
+buffer much more quickly.
+
+00:26:18.010 --> 00:26:20.670
+And then a flush will occur.
+
+00:26:20.670 --> 00:26:24.140
+Flushes will happen much more often, a second whammy.
+
+00:26:24.140 --> 00:26:31.450
+So instead of doing this, we'd like you to be
+able to just cache that vertex data on the GPU.
+
+00:26:31.450 --> 00:26:32.740
+And here's how you do it.
+
+00:26:32.740 --> 00:26:33.790
+You can store it in a VBL.
+
+00:26:33.790 --> 00:26:47.340
+You call glBufferData and BufferData allocates some space
+on the GPU, and then loads your vertex data into the GPU.
+
+00:26:47.340 --> 00:26:58.570
+Then you'll call glDrawArrays, a command is created and
+it simply references this data that's already on the GPU.
+
+00:26:58.570 --> 00:27:05.490
+You would call BufferData probably when your application
+loads before you're in the real time run loop.
+
+00:27:05.490 --> 00:27:07.090
+There is some cost to it.
+
+00:27:07.090 --> 00:27:13.590
+But if you do that it'll be cached ready
+to be used in a real time run loop.
+
+00:27:13.590 --> 00:27:15.260
+So here's how it works.
+
+00:27:15.260 --> 00:27:18.880
+You call glGenBuffers, that creates
+this vertex buffer object.
+
+00:27:18.880 --> 00:27:21.360
+You can call bindBuffer to bind it to the context.
+
+00:27:21.360 --> 00:27:24.650
+Tell OpenGL, hey I'm going to work with this object now.
+
+00:27:24.650 --> 00:27:29.890
+And you call glBufferData to allocate and load your data.
+
+00:27:29.890 --> 00:27:35.680
+Then you call glVertexAttribPointer the same call
+that you made before with client side vertex arrays.
+
+00:27:35.680 --> 00:27:39.630
+But this time instead of giving it
+a pointer, you give it an offset
+
+00:27:39.630 --> 00:27:43.220
+into the vertex buffer object, where your vertex data lives.
+
+00:27:43.220 --> 00:27:48.540
+So in this case we give it 0, which says, hey my
+vertex data is at the beginning of this buffer.
+
+00:27:48.540 --> 00:27:53.990
+You can actually store many attributes within a single
+vertex buffer object, so it doesn't have to be 0.
+
+00:27:53.990 --> 00:28:01.920
+Let's say you've got color data 50 bytes down, then
+you give it a value of 50 for the color attributes.
+
+00:28:01.920 --> 00:28:07.120
+You may want to modify your data
+for animations or some other reason.
+
+00:28:07.120 --> 00:28:13.890
+If you have a constant number of animations, if you have
+few of them, few enough of them, just create multiple VBOs.
+
+00:28:13.890 --> 00:28:20.080
+Let's say you've got 10 frames, 10 models
+that you want to animate for your character.
+
+00:28:20.080 --> 00:28:21.720
+Just make 10 VBOs.
+
+00:28:21.720 --> 00:28:25.120
+That way all 10 of them are cached on the GPU.
+
+00:28:25.120 --> 00:28:28.480
+However, you may generate data on the fly.
+
+00:28:28.480 --> 00:28:30.330
+Maybe you'll load it from disk.
+
+00:28:30.330 --> 00:28:33.400
+Someway that OpenGL may not know about it.
+
+00:28:33.400 --> 00:28:41.640
+In this case you can call glBufferSubData Or
+MapBuffer to modify this cached vertex buffer object.
+
+00:28:41.640 --> 00:28:43.050
+Here's how this works.
+
+00:28:43.050 --> 00:28:49.010
+You call glBufferData as you normally would,
+but instead you give it this glDynamicDrawHint.
+
+00:28:49.010 --> 00:28:54.690
+And that says to OpenGL, hey, I'm going to modify this
+buffer, so put in someplace that's easily accessible
+
+00:28:54.690 --> 00:28:59.580
+by the GPU, but can be easily modified by the CPU.
+
+00:28:59.580 --> 00:29:03.950
+Then you modify this data that you want
+to update in the vertex buffer object.
+
+00:29:03.950 --> 00:29:13.150
+And you call BufferSubData with this update data
+pointer, and it's loaded into the vertex buffer object.
+
+00:29:13.150 --> 00:29:14.160
+There are some caveats.
+
+00:29:14.160 --> 00:29:19.870
+There are some potential problems where if
+you're updating buffer a lot, buffers a lot,
+
+00:29:19.870 --> 00:29:23.860
+you can have some, encounter some problems.
+
+00:29:23.860 --> 00:29:26.100
+You can force the GPU to sync with the CPU.
+
+00:29:26.100 --> 00:29:28.570
+So all of a sudden you're running full out in parallel,
+
+00:29:28.570 --> 00:29:32.440
+and then you call BufferSubData and
+then lock, one depends on the other.
+
+00:29:32.440 --> 00:29:33.550
+And you don't want that.
+
+00:29:33.550 --> 00:29:40.840
+So instead what you can do, well so, basically
+what will happen is this CPU will wait for the GPU
+
+00:29:40.840 --> 00:29:44.790
+to finish drawing the buffer before it updates the buffer.
+
+00:29:44.790 --> 00:29:51.320
+OK? Both the CPU and GPU can't read and
+write from the buffer at the same time.
+
+00:29:51.320 --> 00:29:56.080
+So this can happen whenever you use
+glSubData or glBufferSubData or MapBuffer.
+
+00:29:56.080 --> 00:29:59.580
+You can use a double buffering
+technique to avoid this problem.
+
+00:29:59.580 --> 00:30:02.060
+And let me explain how that works.
+
+00:30:02.060 --> 00:30:05.970
+So, you have two vertex buffer objects.
+
+00:30:05.970 --> 00:30:14.740
+On an odd frame you'll load, you'll
+bind and load an odd buffer.
+
+00:30:14.740 --> 00:30:18.890
+OK? And you draw with it just as you normally would.
+
+00:30:18.890 --> 00:30:23.730
+But on an even frame you bind and load this other buffer.
+
+00:30:23.730 --> 00:30:29.820
+This way the CPU is loading this even buffer, while the
+GPU is reading from an odd buffer, a different object.
+
+00:30:29.820 --> 00:30:35.500
+They don't need to synchronize, because they're
+not accessing the same object, the same data.
+
+00:30:35.500 --> 00:30:38.550
+OK? And then you draw with an even
+buffer as you normally would.
+
+00:30:38.550 --> 00:30:45.870
+And so what you would do is you'd ping-pong between these
+two buffers updating one, while the other is being drawn.
+
+00:30:45.870 --> 00:30:46.890
+Vertex array layout.
+
+00:30:46.890 --> 00:30:47.560
+So vertex array layout.
+
+00:30:47.560 --> 00:30:50.610
+So VertexAttribPointers are really important to GL call.
+
+00:30:50.610 --> 00:30:58.680
+Because not only does it tell you, tell OpenGL where
+your vertices live, it tells it the vertex layout.
+
+00:30:58.680 --> 00:31:05.330
+So you call glVertexAttribPointer and you give
+it some data, like what kind of data is it?
+
+00:31:05.330 --> 00:31:07.020
+It's a floating point in this case.
+
+00:31:07.020 --> 00:31:09.220
+The size of the data.
+
+00:31:09.220 --> 00:31:14.930
+It's probably, it's a position,
+so maybe it has an X, Y, and Z.
+
+00:31:14.930 --> 00:31:16.720
+So it needs a value of 3.
+
+00:31:16.720 --> 00:31:22.170
+Describe the number of bytes from the
+one vertex, one attribute to the next.
+
+00:31:22.170 --> 00:31:28.090
+So in this case there's 16 bytes between
+to the next attribute 0, OK, in the array.
+
+00:31:28.090 --> 00:31:32.150
+And offset, where it lives within the vertex buffer object.
+
+00:31:32.150 --> 00:31:38.590
+Call glVertexAttribPointer again and some more
+data is updated for a different attribute.
+
+00:31:38.590 --> 00:31:46.800
+OK? So wouldn't be nice to cache this in the GPU so that
+you're not always having to call the glVertexAttribPointer.
+
+00:31:46.800 --> 00:31:51.550
+Well now you can, because now you
+have a vertex array object.
+
+00:31:51.550 --> 00:31:56.310
+And the way this works is you call glGenVertexArrays.
+
+00:31:56.310 --> 00:31:59.580
+And this creates this vertex array object.
+
+00:31:59.580 --> 00:32:07.710
+And any subsequent vertexAttribPointer call
+actually changes the data within this VAO.
+
+00:32:07.710 --> 00:32:10.980
+So it's all cached right there.
+
+00:32:10.980 --> 00:32:12.050
+Let me show you some code.
+
+00:32:12.050 --> 00:32:15.180
+You call glGenVertexArrays, create the vertex array object.
+
+00:32:15.180 --> 00:32:19.730
+You bind it to the context, tell OpenGL, hey;
+I'm going to work with the vertex array object.
+
+00:32:19.730 --> 00:32:25.180
+You call glEnableVertexAttrib just as you
+normally would, and glVertexAttribPointer.
+
+00:32:25.180 --> 00:32:30.530
+But instead of this getting set in
+the context, it's set in the VAO.
+
+00:32:30.530 --> 00:32:36.180
+You can set multiple vertex attributes
+and it'll all cache within the VAO.
+
+00:32:36.180 --> 00:32:42.510
+And then you can call glBindVertexArrays
+when you want to use this VAO to draw with.
+
+00:32:42.510 --> 00:32:49.460
+You don't have to call VertexAttribPointer many, many
+times to set it up, to set up your model data to be drawn.
+
+00:32:49.460 --> 00:32:56.450
+You just call BindVertexArray once and it's
+already cached ready to go to be drawn.
+
+00:32:56.450 --> 00:32:57.980
+Framebuffer objects.
+
+00:32:57.980 --> 00:33:00.720
+These are pretty cool objects.
+
+00:33:00.720 --> 00:33:05.820
+So with EAGL and OpenGL ES you must
+always use an FBO in some form.
+
+00:33:05.820 --> 00:33:10.310
+The EAGL IT guide requires that you use and FBO
+
+00:33:10.310 --> 00:33:15.600
+to allocate your backing store your
+store from, to which you will render to.
+
+00:33:15.600 --> 00:33:21.540
+However, you can do some pretty cool effects by
+attaching a texture to a frame buffer object.
+
+00:33:21.540 --> 00:33:23.850
+So, here we've got this little demon character.
+
+00:33:23.850 --> 00:33:29.420
+And what I've done here is we've rendered
+this demon character to a texture.
+
+00:33:29.420 --> 00:33:30.160
+All right?
+
+00:33:30.160 --> 00:33:36.740
+And then we bind that texture and textured
+this plane that you see here on the bottom.
+
+00:33:36.740 --> 00:33:44.420
+And this plane is the image that we've rendered
+to that we're now mapping to this polygon.
+
+00:33:44.420 --> 00:33:47.830
+So you can do all sorts of reflections,
+refractions, shadows.
+
+00:33:47.830 --> 00:33:52.870
+Some pretty neat effects with a
+renderable texture and framebuffer object.
+
+00:33:52.870 --> 00:33:58.640
+The way this works you call glGenTextures, create your
+texture as you normally would, bind it to the context,
+
+00:33:58.640 --> 00:34:03.900
+and then you allocate some data by, with glTexImage2D.
+
+00:34:03.900 --> 00:34:07.930
+In this case we're making a 512 x 512 texture.
+
+00:34:07.930 --> 00:34:14.850
+OK? And then we can create a frame
+buffer object, called glGenFramebuffers.
+
+00:34:14.850 --> 00:34:17.660
+And bind that to the context.
+
+00:34:17.660 --> 00:34:23.610
+Later when the texture is no longer bound to the
+context, we can attach it to this framebuffer object,
+
+00:34:23.610 --> 00:34:29.050
+which basically says, any drawing that
+you do in OpenGL, draw to this texture.
+
+00:34:29.050 --> 00:34:30.740
+Don't draw it to the screen.
+
+00:34:30.740 --> 00:34:37.010
+OK? And then later on you can bind that
+texture to the context, and you can read it
+
+00:34:37.010 --> 00:34:40.830
+and map your rendered image to some other object.
+
+00:34:40.830 --> 00:34:43.600
+Some notes about objects mutability.
+
+00:34:43.600 --> 00:34:47.520
+OpenGL objects can be changed at
+any time during their lifetime.
+
+00:34:47.520 --> 00:34:52.390
+So in this case we've created a texture,
+and we've given it GL Linear Filtering.
+
+00:34:52.390 --> 00:34:59.210
+And then later on maybe in a real time run loop when
+the user is expecting an interactive frame rate,
+
+00:34:59.210 --> 00:35:04.250
+we can do something like glLinearMipmapLinear
+and change that texture object.
+
+00:35:04.250 --> 00:35:06.170
+Change the way that it works.
+
+00:35:06.170 --> 00:35:13.070
+I would really avoid doing this, because this forces
+OpenGL to revalidate the object the next time it's used.
+
+00:35:13.070 --> 00:35:17.370
+If you need an object with 2 different
+states, just create 2 different objects.
+
+00:35:17.370 --> 00:35:21.030
+Set them up at fronts, don't change
+them, because then OpenGL needs
+
+00:35:21.030 --> 00:35:24.420
+to do some revalidation, and that's
+going to cause a stutter.
+
+00:35:24.420 --> 00:35:29.220
+Or it's potentially going to cause
+a stutter in your application.
+
+00:35:29.220 --> 00:35:33.830
+So OpenGL objects aren't actually
+pre-validated when they're created.
+
+00:35:33.830 --> 00:35:39.010
+Instead they're validated when they're first used to draw.
+
+00:35:39.010 --> 00:35:40.670
+Now there's some reasons for this.
+
+00:35:40.670 --> 00:35:47.490
+Shader objects can't be compiled until their first use of
+draw; because the compiler needs to know some context state
+
+00:35:47.490 --> 00:35:50.090
+that that shader's going to be used with.
+
+00:35:50.090 --> 00:35:55.040
+For instance, they may need to know that FBO, VAO, or
+textures that are bound, the blend states that is used
+
+00:35:55.040 --> 00:36:02.490
+in conjunction with that shader in order for it to
+do a good job compiling and optimizing your shader.
+
+00:36:02.490 --> 00:36:10.550
+Texture objects and vertex buffer objects, memory resources
+don't get cached in VRAM until they're first used to draw.
+
+00:36:10.550 --> 00:36:16.940
+Now this lazy validation step that I just spoke
+about, can cause some hiccups in your run loop.
+
+00:36:16.940 --> 00:36:20.020
+And there are some methods to get to avoid this.
+
+00:36:20.020 --> 00:36:25.990
+So you can avoid this validation, this
+hiccup by pre-warming your objects.
+
+00:36:25.990 --> 00:36:31.410
+And the way this works is, you bind the object
+and draw with it to an offscreen buffer.
+
+00:36:31.410 --> 00:36:34.320
+Maybe the back buffer and you don't
+present that to the user.
+
+00:36:34.320 --> 00:36:37.850
+And you use the state and other objects it's used with.
+
+00:36:37.850 --> 00:36:39.660
+So let's say you got a shader.
+
+00:36:39.660 --> 00:36:45.680
+Make sure you use it, you turn on all the blending state
+you bind all the textures that that shader is used with,
+
+00:36:45.680 --> 00:36:50.570
+and draw with it first before you're
+in your real time run loop.
+
+00:36:50.570 --> 00:36:54.220
+Don't wait until you're in your
+run loop and cause a stutter.
+
+00:36:54.220 --> 00:36:55.590
+Hey, here's a little bit of pseudo code.
+
+00:36:55.590 --> 00:37:00.990
+Oh, so one thing I should note is really only consider
+this if your application experiences a hiccup.
+
+00:37:00.990 --> 00:37:07.270
+If it experiences a hiccup, particularly when you've bound
+an object that you've never used to draw with previously.
+
+00:37:07.270 --> 00:37:10.100
+So here's some pseudo code for how this works.
+
+00:37:10.100 --> 00:37:13.890
+For every program in your scene bind it to the context.
+
+00:37:13.890 --> 00:37:18.480
+For every VAO that's used with that program bind that.
+
+00:37:18.480 --> 00:37:23.220
+And for every texture used with that VAO program, bind that.
+
+00:37:23.220 --> 00:37:29.770
+And then for every blend state use with all those
+other objects, etc., etc. You set that stake.
+
+00:37:29.770 --> 00:37:30.680
+And then you draw.
+
+00:37:30.680 --> 00:37:32.670
+Draw to the offscreen buffer.
+
+00:37:32.670 --> 00:37:36.580
+This isn't to present to the user,
+it's just to warm up OpenGL.
+
+00:37:36.580 --> 00:37:39.330
+Note about object size.
+
+00:37:39.330 --> 00:37:43.610
+Know how much memory your objects take.
+
+00:37:43.610 --> 00:37:47.760
+All current graphics resources
+need to fit in memory somehow.
+
+00:37:47.760 --> 00:37:49.330
+And memory is limited.
+
+00:37:49.330 --> 00:37:52.920
+On iOS 4 there's no virtual memory
+system, so this constrains.
+
+00:37:52.920 --> 00:37:55.570
+On Mac OS X.
+
+00:37:55.570 --> 00:37:57.420
+Some of the devices have limited VRAM.
+
+00:37:57.420 --> 00:38:02.000
+So, you know, if you're using too
+much memory there's some cost to it.
+
+00:38:02.000 --> 00:38:09.710
+There's some paging that might need to happen, and
+you don't want to have that in a real time run loop.
+
+00:38:09.710 --> 00:38:11.580
+Try to use compressed textures.
+
+00:38:11.580 --> 00:38:13.160
+Textures take up a lot of memory.
+
+00:38:13.160 --> 00:38:16.020
+There are a number of compressed
+texture formats that you can use.
+
+00:38:16.020 --> 00:38:20.390
+Also, don't use the data types like
+a 32-bit float for your textures,
+
+00:38:20.390 --> 00:38:23.300
+when you could be using an unsigned, 8-bit unsigned byte.
+
+00:38:23.300 --> 00:38:25.890
+An 8-bit unsigned byte.
+
+00:38:25.890 --> 00:38:27.640
+Use what you need.
+
+00:38:27.640 --> 00:38:32.600
+Use the smallest state as possible
+that you need for your scene.
+
+00:38:32.600 --> 00:38:37.990
+We see a lot of time, some applications
+allocate this humongous texture.
+
+00:38:37.990 --> 00:38:45.890
+A 2,000 by 2,000 pixel texture for a little tiny model
+that's going to fill up maybe only 200 pixels on the screen.
+
+00:38:45.890 --> 00:38:49.630
+You're never going to see most of that texture.
+
+00:38:49.630 --> 00:38:51.230
+It's just a waste of resources.
+
+00:38:51.230 --> 00:38:55.620
+So fit the texture to the size of the model that's rendered.
+
+00:38:55.620 --> 00:38:59.130
+Use a 256 x 256 texture in that case.
+
+00:38:59.130 --> 00:39:07.970
+And really to ensure a smooth frame rate, try to fit, the
+entire frames resources into VRAM so that we never need
+
+00:39:07.970 --> 00:39:10.910
+to page out a texture from VRAM in the middle of a frame.
+
+00:39:10.910 --> 00:39:15.300
+And if possible, fits entire level
+or scene's textures into VRAM.
+
+00:39:15.300 --> 00:39:20.190
+That way we will never need to
+page in the middle of your scene.
+
+00:39:21.530 --> 00:39:27.050
+So, OpenGL's objects are a very
+efficient way to use the API.
+
+00:39:27.050 --> 00:39:32.220
+However, there is still some costs to binding an object.
+
+00:39:32.220 --> 00:39:35.960
+You really need to determine this
+costs through profiling, however.
+
+00:39:35.960 --> 00:39:40.530
+Batch or draw calls to reduce this
+binding of more expensive objects.
+
+00:39:40.530 --> 00:39:44.970
+OK? Let's say you've got, you've determined that
+some texture takes a really long time to bind,
+
+00:39:44.970 --> 00:39:47.830
+or takes a fair number of CPU cycles to bind.
+
+00:39:47.830 --> 00:39:50.120
+In two objects that use this texture.
+
+00:39:50.120 --> 00:39:54.220
+Don't bind it once then draw, bind it again, and then draw.
+
+00:39:54.220 --> 00:39:58.620
+We said bind it once and draw, and draw the second one.
+
+00:39:58.620 --> 00:39:59.960
+Visibility.
+
+00:39:59.960 --> 00:40:04.090
+OpenGL processes every thing sent to it in some form.
+
+00:40:04.090 --> 00:40:06.110
+Even if it's ultimately not visible.
+
+00:40:06.110 --> 00:40:09.550
+You know, we're not going to draw something
+that's, you know, behind the camera.
+
+00:40:09.550 --> 00:40:11.790
+But there is some processing that needs to occur.
+
+00:40:11.790 --> 00:40:14.600
+The CPU needs to process the draw call.
+
+00:40:14.600 --> 00:40:22.820
+The vertex shader needs to run to determine whether
+or not the camera can actually see this object.
+
+00:40:22.820 --> 00:40:25.980
+So try not to send them to OpenGL.
+
+00:40:25.980 --> 00:40:29.680
+Imagine this is the scene of your application.
+
+00:40:29.680 --> 00:40:32.590
+Here's the view point, the user, the camera.
+
+00:40:32.590 --> 00:40:35.710
+Here's its field of view.
+
+00:40:35.710 --> 00:40:39.610
+And here is the frustum OK, this
+includes the right and left clip planes,
+
+00:40:39.610 --> 00:40:43.410
+the top and bottom clip planes,
+and the Z near and far clip planes.
+
+00:40:43.410 --> 00:40:48.210
+So now it will iterate through your list of objects
+and determine whether or not they're visible.
+
+00:40:48.210 --> 00:40:50.850
+Anything within this area we'll send to OpenGL.
+
+00:40:50.850 --> 00:40:55.170
+Anything outside of this frustum we'll
+just discard, we won't send it to OpenGL.
+
+00:40:55.170 --> 00:40:58.750
+And draw this robot; he's clearly behind the camera.
+
+00:40:58.750 --> 00:41:00.820
+We won't draw him.
+
+00:41:00.820 --> 00:41:04.530
+We draw this hero character; he's off to the right.
+
+00:41:04.530 --> 00:41:06.750
+We won't draw him.
+
+00:41:06.750 --> 00:41:12.620
+We draw this demon, hey, he is definitely
+visible, so we'll mark him as object 0.
+
+00:41:12.620 --> 00:41:15.300
+We draw this other robot, hey, you know, he's visible.
+
+00:41:15.300 --> 00:41:17.920
+So we'll draw him.
+
+00:41:17.920 --> 00:41:21.500
+We check this other demon character;
+he's not visible way off to the left.
+
+00:41:21.500 --> 00:41:23.980
+We won't send him to OpenGL.
+
+00:41:23.980 --> 00:41:25.770
+This hero character, he's definitely visible.
+
+00:41:25.770 --> 00:41:27.280
+He' also in the frustum.
+
+00:41:27.280 --> 00:41:32.330
+So we'll send him to OpenGL and then
+this demon character also visible.
+
+00:41:32.330 --> 00:41:34.030
+We'll send him to OpenGL.
+
+00:41:34.030 --> 00:41:38.710
+OK? So now we have the set of objects
+that we want to send to OpenGL.
+
+00:41:38.710 --> 00:41:43.100
+You can put this inside of a visibility list.
+
+00:41:43.100 --> 00:41:47.130
+Ok? Now one thing to note about this
+is you don't want to draw the objects
+
+00:41:47.130 --> 00:41:49.530
+in the same order they were determined visible.
+
+00:41:49.530 --> 00:41:51.640
+Ok? You want to sort it by render state.
+
+00:41:51.640 --> 00:41:53.700
+What would happen here you'd bind the demon's texture?
+
+00:41:53.700 --> 00:41:55.970
+Draw him, bind the robot's texture, draw him.
+
+00:41:55.970 --> 00:41:57.930
+Bind the hero's texture, draw him.
+
+00:41:57.930 --> 00:42:02.890
+And then we'd rebind the demon sections
+that we bound originally and draw the demon.
+
+00:42:02.890 --> 00:42:09.000
+OK? Instead what you want to do is sort them, so
+that now the demons are together, one bind two draw.
+
+00:42:09.000 --> 00:42:13.250
+All right, so here's an algorithm that
+you can use to sort your rendering state.
+
+00:42:13.250 --> 00:42:14.270
+It's called a state tree.
+
+00:42:14.270 --> 00:42:16.950
+So let's say you've got these four characters.
+
+00:42:16.950 --> 00:42:20.400
+You've got these two guys and they're
+clearly using the same texture.
+
+00:42:20.400 --> 00:42:25.110
+And you've got these two guys, and you've got this
+human character and he's got some metal armor on him
+
+00:42:25.110 --> 00:42:27.210
+and you've got this robot clearly all metal.
+
+00:42:27.210 --> 00:42:31.570
+So you want to have the shader that
+does some little shininess effect.
+
+00:42:31.570 --> 00:42:34.100
+They used the same shader.
+
+00:42:34.100 --> 00:42:38.820
+You stick them inside of a tree
+and you traverse it in order.
+
+00:42:38.820 --> 00:42:42.800
+So starting from the top, you bind the first shader.
+
+00:42:42.800 --> 00:42:45.590
+You bind the texture that's used by these two guys.
+
+00:42:45.590 --> 00:42:49.740
+You bind the VAO, and you render the demon.
+
+00:42:49.740 --> 00:42:53.120
+You go up and you've already bound
+the texture, don't do it again.
+
+00:42:53.120 --> 00:42:56.730
+You bind the new VAO and you render this guy.
+
+00:42:56.730 --> 00:43:02.470
+Go up to the top and now we bind this new GLSL program.
+
+00:43:02.470 --> 00:43:04.390
+This shininess program.
+
+00:43:04.390 --> 00:43:12.100
+And we bind the texture, bind the
+VAO, render this robot, go on up.
+
+00:43:12.100 --> 00:43:18.720
+You've already bound the GLSL program, so now we just bind
+the texture for this human guy, find his VAO and render him.
+
+00:43:18.720 --> 00:43:22.800
+Now it looks kind of like a binary tree here,
+but it would actually be an enary tree.
+
+00:43:22.800 --> 00:43:24.170
+This is a very simplistic scene.
+
+00:43:24.170 --> 00:43:29.090
+You probably would have, you know, many, many
+shaders, which would make this tree much wider.
+
+00:43:29.090 --> 00:43:31.620
+Also, you might want to account
+for different rendering state.
+
+00:43:31.620 --> 00:43:39.850
+Like you might want to account for depth, blend, clip
+state, etc., which would make this a deeper tree.
+
+00:43:39.850 --> 00:43:46.490
+OK? In this case I determined that the GLSL program
+objects I said, well those are pretty expensive to bind.
+
+00:43:46.490 --> 00:43:48.740
+So I'm going to put them at the top of the tree.
+
+00:43:48.740 --> 00:43:53.690
+We're going to set those first, so that
+we don't have to rebind them very often.
+
+00:43:53.690 --> 00:43:56.440
+OK? So the more expensive objects at the top of your tree,
+
+00:43:56.440 --> 00:44:01.540
+less expensive objects like vertex
+arrays towards the bottom.
+
+00:44:01.540 --> 00:44:09.190
+One way in which you can reduce CPU overhead, the CPU
+overhead of draw calls, is to combine the draw calls.
+
+00:44:09.190 --> 00:44:11.970
+Basically make less draw calls.
+
+00:44:11.970 --> 00:44:14.060
+And there are two methods that I'll talk about.
+
+00:44:14.060 --> 00:44:15.420
+One is texture atlasing.
+
+00:44:15.420 --> 00:44:19.190
+And this is basically combining
+multiple textures into a single texture.
+
+00:44:19.190 --> 00:44:21.910
+And the second one is instancing.
+
+00:44:21.910 --> 00:44:25.830
+Instancing requires some special hardware
+that's only available on Mac OS X.
+
+00:44:25.830 --> 00:44:30.550
+My colleague Matt Collins will be talking about
+that a little bit more tomorrow and how to use that.
+
+00:44:30.550 --> 00:44:35.010
+I'm actually going to talk about texture atlasing.
+
+00:44:35.010 --> 00:44:41.880
+Here you have these four characters, and you've
+got these four textures to map to these characters.
+
+00:44:41.880 --> 00:44:48.400
+In order to draw this in a naive way would be to bind this
+texture, draw to it, bind the second texture, draw to it,
+
+00:44:48.400 --> 00:44:52.270
+find the third texture, draw, find the fourth texture, draw.
+
+00:44:52.270 --> 00:44:56.880
+OK, you're binding four times for four textures.
+
+00:44:56.880 --> 00:44:59.360
+Instead you can bind it into one uber texture.
+
+00:44:59.360 --> 00:45:01.040
+A texture atlas.
+
+00:45:01.040 --> 00:45:05.680
+Then you bind that one texture, draw, draw, draw, draw.
+
+00:45:05.680 --> 00:45:07.880
+One bind, four draws.
+
+00:45:07.880 --> 00:45:11.240
+Much more efficient use of OpenGL.
+
+00:45:11.240 --> 00:45:14.710
+Here's an example of a texture atlas used in the Quest demo.
+
+00:45:14.710 --> 00:45:17.170
+Here we've got a lot of different
+elements in a single texture.
+
+00:45:17.170 --> 00:45:19.180
+We've got some flags on the upper right.
+
+00:45:19.180 --> 00:45:22.140
+We've got a stone wall in the upper left.
+
+00:45:22.140 --> 00:45:28.860
+We've got stairs, we've got doors, we've
+got statue, all in one texture, one bind,
+
+00:45:28.860 --> 00:45:33.560
+and they can draw a ton of different
+things of their dungeon.
+
+00:45:33.560 --> 00:45:34.870
+Multithreading in OpenGL.
+
+00:45:34.870 --> 00:45:41.320
+So because there is a fair amount of CPU overhead that
+OpenGL incurs, there are reasons to multithread it,
+
+00:45:41.320 --> 00:45:46.200
+so that you can amortize the CPU
+costs across multiple cores.
+
+00:45:46.200 --> 00:45:51.220
+This makes sense on iOS 4 devices as well,
+even though they only have a single core.
+
+00:45:51.220 --> 00:45:53.180
+CPU intensive calls can block.
+
+00:45:53.180 --> 00:46:00.610
+And that means that while they're blocking, while
+you're in your main loop doing some OpenGL processing,
+
+00:46:00.610 --> 00:46:06.960
+you can't handle UI events, you can't
+handle audio, you can't do your app logic.
+
+00:46:06.960 --> 00:46:13.290
+Additionally, if you're doing a lot of stuff on the main
+thread, there is this is watchdog process that looks
+
+00:46:13.290 --> 00:46:16.440
+at your app and determines whether
+you're in some infinite loop,
+
+00:46:16.440 --> 00:46:19.510
+whether you're behaving badly, and it may kill your app.
+
+00:46:19.510 --> 00:46:26.240
+So it may mistake you for doing something like
+in an infinite loop or a block and some sort
+
+00:46:26.240 --> 00:46:28.560
+of deadlock and just kill your application.
+
+00:46:28.560 --> 00:46:36.780
+So you really want, you could put some of this processing
+on anther thread and the watchdog won't do this to you.
+
+00:46:36.780 --> 00:46:40.950
+So here is the simplest multithreading
+technique I'll describe.
+
+00:46:40.950 --> 00:46:47.940
+And basically you load a second, maybe third
+thread, both with, or one or two OpenGL contexts.
+
+00:46:47.940 --> 00:46:50.480
+And you can use these threads to load data.
+
+00:46:50.480 --> 00:46:51.700
+Load textures.
+
+00:46:51.700 --> 00:46:52.660
+Load vertex data.
+
+00:46:52.660 --> 00:46:53.780
+Compile shaders.
+
+00:46:53.780 --> 00:46:56.210
+A lot of CPU heavy lifting.
+
+00:46:56.210 --> 00:47:00.050
+Important things to know is once you're done with
+all that loading you want to kill your other threads.
+
+00:47:00.050 --> 00:47:04.400
+You only want to have one thread
+running with an OpenGL context.
+
+00:47:04.400 --> 00:47:08.330
+OK? Because the other thread, two OpenGL
+contexts is running at the same time.
+
+00:47:08.330 --> 00:47:12.830
+There is some CPU over head that might be
+incurred, because there's some locking.
+
+00:47:12.830 --> 00:47:18.480
+And so two threads can block one another;
+two OpenGL threads can block one other.
+
+00:47:18.480 --> 00:47:22.660
+So just have one OpenGL thread running at a time.
+
+00:47:22.660 --> 00:47:28.820
+Another more advanced technique is
+to use a producer consumer paradigm.
+
+00:47:28.820 --> 00:47:32.990
+So in this case the main thread
+produces data, it can produce, you know,
+
+00:47:32.990 --> 00:47:36.810
+the animation frame, which your characters are in.
+
+00:47:36.810 --> 00:47:43.440
+To position on the screen or position in the world,
+you can compute the visibility of your objects.
+
+00:47:43.440 --> 00:47:45.700
+Use that frustum culling technique.
+
+00:47:45.700 --> 00:47:53.850
+On this thread you won't have an OpenGL context, you're
+just producing data to render by a second thread.
+
+00:47:53.850 --> 00:47:58.290
+When the producer thread is done you
+send all the render threads to begin.
+
+00:47:58.290 --> 00:48:02.990
+And then the render threads can take all that
+data, consume it, and render with OpenGL.
+
+00:48:02.990 --> 00:48:07.150
+It has the only OpenGL context on it, that render thread.
+
+00:48:07.150 --> 00:48:09.290
+You don't have two OpenGL contexts.
+
+00:48:09.290 --> 00:48:14.890
+The main thread can then process
+audio input and other app logic
+
+00:48:14.890 --> 00:48:18.150
+in parallel while the render thread
+is actually drawing stuff.
+
+00:48:18.150 --> 00:48:23.350
+And let's say you still have some CPU
+overhead and it's not well balanced.
+
+00:48:23.350 --> 00:48:29.550
+You can move some stuff, like maybe the
+visibility test to the render thread.
+
+00:48:29.550 --> 00:48:31.230
+Give it a more even distribution.
+
+00:48:31.230 --> 00:48:38.780
+So I've talked a lot about using the
+CPU, or the CPU and the GPU together.
+
+00:48:38.780 --> 00:48:43.540
+You need to also consider using the
+GPU with the display, the other device.
+
+00:48:43.540 --> 00:48:48.740
+That is important to consider when coding your OpenGL.
+
+00:48:48.740 --> 00:48:53.380
+One thing to note is you can only render
+as fast as the display can refresh.
+
+00:48:53.380 --> 00:49:00.950
+It doesn't make sense for you to render at 200 frames
+a second if the user can only see 60 frames a second.
+
+00:49:00.950 --> 00:49:02.960
+OK? It just wastes battery power.
+
+00:49:02.960 --> 00:49:07.550
+You're doing a lot of processing that the
+user will never have any context into.
+
+00:49:07.550 --> 00:49:10.460
+Will never see the result of.
+
+00:49:10.460 --> 00:49:14.690
+On iOS 4 you can use a CADisplayLink API.
+
+00:49:14.690 --> 00:49:23.340
+And we see a lot of apps using this NSTimer
+API to initiate their per-frame rendering.
+
+00:49:23.340 --> 00:49:31.410
+Instead, we use this DisplayLink API, because the NSTime
+is arbitrary when it's fired with respect to the display.
+
+00:49:31.410 --> 00:49:37.820
+What will happen is NSTimer might fire right before
+the refresh, and so there's going to be some latency
+
+00:49:37.820 --> 00:49:40.460
+between the time you draw and then you can see it.
+
+00:49:40.460 --> 00:49:44.460
+Or it might be fired right after display has refreshed.
+
+00:49:44.460 --> 00:49:48.010
+So it's not going to be consistent with respect to display.
+
+00:49:48.010 --> 00:49:51.940
+And in some very pathological cases
+it can reduce your frame rate.
+
+00:49:51.940 --> 00:49:59.230
+On Mac OS X you can use the analogous API CV display link.
+
+00:49:59.230 --> 00:50:05.400
+Now we see a lot of games trying to control their main loop.
+
+00:50:05.400 --> 00:50:09.070
+This is a kind of an outdated way of doing it.
+
+00:50:09.070 --> 00:50:15.270
+Because, again, you don't need to display, or don't
+need to render any faster than the user can see.
+
+00:50:15.270 --> 00:50:23.530
+Looping more than needed wastes power, particularly on
+these MacBooks where people want a fairly long battery life.
+
+00:50:23.530 --> 00:50:29.710
+You could implement some benchmark mode for advanced
+users or developers that runs on the main loop.
+
+00:50:29.710 --> 00:50:36.590
+But under shipping game in a normal loops,
+or for a normal running you may just want
+
+00:50:36.590 --> 00:50:40.080
+to use CVDisplayLink to initiate your rendering.
+
+00:50:40.080 --> 00:50:46.510
+A note about coding for both platforms.
+
+00:50:46.510 --> 00:50:52.760
+So OpenGL ES is a subset of OpenGL on the desktop.
+
+00:50:52.760 --> 00:51:02.620
+So if you code using OpenGL ES 2.0, you can port your code
+that you've invested a lot of time on iOS 4 onto the Mac.
+
+00:51:02.620 --> 00:51:04.520
+And vice versa.
+
+00:51:04.520 --> 00:51:14.430
+OK? So if you've got this Mac application, and if you
+stick to all the calls that OpenGL ES 2.0 provides,
+
+00:51:14.430 --> 00:51:18.290
+you can pretty easily port it to the iPhone OS 4.
+
+00:51:18.290 --> 00:51:20.890
+There are some things to be aware of.
+
+00:51:20.890 --> 00:51:25.780
+Clearly there are more memory and performance
+constraints on the embedded iOS 4 devices.
+
+00:51:25.780 --> 00:51:27.590
+So you need to consider that.
+
+00:51:27.590 --> 00:51:30.070
+There are different compressed formats.
+
+00:51:30.070 --> 00:51:32.310
+You will need to translate for that.
+
+00:51:32.310 --> 00:51:36.770
+And there are for some kind of silly
+reason, slightly different function names.
+
+00:51:36.770 --> 00:51:40.370
+Now the parameters of these functions are exactly the same.
+
+00:51:40.370 --> 00:51:47.240
+On OpenGL ES we have this BindVertexArray
+OES function and it's exact same function
+
+00:51:47.240 --> 00:51:50.920
+as BindVertexArrayAPPLE, it just
+has a slightly different name.
+
+00:51:50.920 --> 00:51:53.500
+So you just need to rename your functions.
+
+00:51:53.500 --> 00:52:01.910
+The sample code that I provided for this session that
+you can find for the session's site, compiles for both
+
+00:52:01.910 --> 00:52:07.140
+and you can kind of use it as a template or
+maybe a starter for creating your application
+
+00:52:07.140 --> 00:52:10.410
+that you might want to port and ship on both platforms.
+
+00:52:10.410 --> 00:52:13.970
+It's this kind of cool little reflection demo.
+
+00:52:13.970 --> 00:52:18.690
+And it works pretty well on most platforms.
+
+00:52:18.690 --> 00:52:23.900
+So in summary, there is a fair amount of
+CPU overhead that OpenGL needs to incur,
+
+00:52:23.900 --> 00:52:28.960
+and you can minimize this to efficiently access the GPU.
+
+00:52:28.960 --> 00:52:33.410
+Validation is where a lot of this CPU overhead occurs.
+
+00:52:33.410 --> 00:52:37.330
+You can use OpenGL objects to cache this validation
+
+00:52:37.330 --> 00:52:42.060
+and minimize state changes and draw
+calls to reduce the validation.
+
+00:52:42.060 --> 00:52:49.450
+For more information you can contact our Graphics
+and Game Technologies Evangelist, Allan Schaffer.
+
+00:52:49.450 --> 00:52:54.380
+As well there's a ton of documentation
+on OpenGL at the OpenGL Dev Center.
+
+00:52:54.380 --> 00:52:59.690
+And there are a lot of engineers from Apple at
+these Apple Developer Forums, so you can get help
+
+00:52:59.690 --> 00:53:04.770
+and ask questions throughout the
+year at this devforums.apple.com.
+
+00:53:04.770 --> 00:53:14.460
+Also, I've posted a bunch of code snippets
+and the sample code at this link down here.
+
+00:53:14.460 --> 00:53:16.950
+So you can check that out.
+
+00:53:16.950 --> 00:53:25.060
+There's a Q&A on the different variables that you shouldn't
+use in your GLSL program and some other information.
+
+00:53:25.060 --> 00:53:31.390
+This is just the first of six OpenGL
+sessions at this year's WWDC.
+
+00:53:31.390 --> 00:53:37.750
+And there's some great information for both
+Mac and iPhone developers, or iOS 4 developers.
+
+00:53:37.750 --> 00:53:42.840
+The first is OpenGL ES an overview on, for the iPhone.
+
+00:53:42.840 --> 00:53:46.190
+And that's mainly geared for the iOS 4 developers.
+
+00:53:46.190 --> 00:53:49.820
+And the second is OpenGL ES Shading and Advanced Rendering.
+
+00:53:49.820 --> 00:53:51.200
+And this is a pretty cool one.
+
+00:53:51.200 --> 00:53:53.530
+My colleagues have come up with some great demos.
+
+00:53:53.530 --> 00:53:59.620
+And even if you're a Mac developer, a lot of
+these demos are easily portable to the Mac.
+
+00:53:59.620 --> 00:54:04.030
+So they're going to be talking about some shadows,
+some reflections, some really cool techniques
+
+00:54:04.030 --> 00:54:07.620
+that you should probably check out
+even if you're a Mac developer.
+
+00:54:07.620 --> 00:54:11.260
+There's also an OpenGL ES Tuning and Optimization session.
+
+00:54:11.260 --> 00:54:18.820
+And this is going to be great for developers
+coding for iOS, but also some of the techniques
+
+00:54:18.820 --> 00:54:21.970
+that they mention you'll be able
+to use and leverage on the Mac.
+
+00:54:21.970 --> 00:54:27.940
+They're going to be describing a tool that's
+available on iOS 4 the OpenGL Analyzer.
+
+00:54:27.940 --> 00:54:32.090
+And even though it works only on iOS 4,
+if you're a Mac developer you can use some
+
+00:54:32.090 --> 00:54:34.710
+of the same techniques to profile your applications.
+
+00:54:34.710 --> 00:54:37.640
+They're also going to be talking
+about some of the GPU bottlenecks.
+
+00:54:37.640 --> 00:54:43.830
+Now I talked a lot about CPU bottlenecks, but there is a
+whole class of bottlenecks on the graphics processing unit
+
+00:54:43.830 --> 00:54:51.590
+that you should be aware of and potentially could run
+into after you've optimized the CPU portion of your app.
+
+00:54:51.590 --> 00:54:57.270
+And then tomorrow morning at 9 o'clock there's OpenGL
+for Mac OS X and my college Matt Collins will be talking
+
+00:54:57.270 --> 00:55:03.820
+about a number of the newly available features
+on Mac OS X instancing, texture arrays.
+
+00:55:03.820 --> 00:55:07.920
+He's also got some really cool demos
+that you might want to take a look at.
+
+00:55:07.920 --> 00:55:11.570
+And then finally there's this Taking
+Advantage of Multiple GPUs session,
+
+00:55:11.570 --> 00:55:16.550
+and they're going to be talking
+about OpenCL the other GPU API.
+
+00:55:16.550 --> 00:55:23.680
+And it's used in conjunction with OpenGL
+and leveraging multiple GPUs on the Mac Pro
+
+00:55:23.680 --> 00:55:31.630
+to do some really cool processing with OpenCL and really
+great rendering with OpenGL on two different devices.
+
+00:55:31.630 --> 00:55:33.820
+So thanks a lot for coming.
+
+00:55:33.820 --> 00:55:34.740
+I really appreciate it.
+
+00:55:34.740 --> 00:55:40.010
+And I'm hoping you guys will be able to take these
+techniques and really efficiently use OpenGL.
+
+00:55:40.010 --> 00:55:51.290
+[ Applause ]
+

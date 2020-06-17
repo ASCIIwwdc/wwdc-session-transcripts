@@ -1,0 +1,1917 @@
+WEBVTT
+
+00:00:06.380 --> 00:00:07.530
+>> Chris Moore: Good morning.
+
+00:00:07.530 --> 00:00:09.100
+My name is Chris.
+
+00:00:09.100 --> 00:00:14.960
+So Motion has been a huge topic in iPhone OS since day one.
+
+00:00:14.960 --> 00:00:16.130
+We love it.
+
+00:00:16.130 --> 00:00:20.510
+You guys love it and most importantly customers love it.
+
+00:00:20.510 --> 00:00:28.150
+Now, as Steve hinted out on Monday, we have some great new
+Motion sensing capabilities that we're bringing to the table
+
+00:00:28.150 --> 00:00:34.180
+in iPhone 4 and iOS 4 and will
+talk about those in this session.
+
+00:00:34.180 --> 00:00:36.940
+Will tell you what those features are.
+
+00:00:36.940 --> 00:00:39.900
+How you can access them in your code.
+
+00:00:39.900 --> 00:00:46.120
+Then, we're really deep dive into some of the features
+and give you a good understanding of what they are.
+
+00:00:46.120 --> 00:00:48.420
+Finally, we'll write some code.
+
+00:00:48.420 --> 00:00:54.240
+But before we get to any of that, let's talk about an idea.
+
+00:00:54.240 --> 00:00:59.780
+This is an idea that one of my coworkers
+proposed a few months ago and I like it.
+
+00:00:59.780 --> 00:01:06.560
+He said, wouldn't it be neat if we could write
+the game on iPhone where, this is a boxing game,
+
+00:01:06.560 --> 00:01:15.410
+where in order to punch, you rotate the phone left and right
+and the game would be smart enough so that if you did sort
+
+00:01:15.410 --> 00:01:20.380
+of a level rotation, the character would give a level punch.
+
+00:01:20.380 --> 00:01:25.150
+And if you did a more upward rotation,
+it would do an upper cut.
+
+00:01:25.150 --> 00:01:31.400
+Furthermore, wouldn't it be neat if we
+could have the user translate the phone left
+
+00:01:31.400 --> 00:01:34.450
+and right or perhaps backward to dodge.
+
+00:01:34.450 --> 00:01:38.610
+I think this would be a really
+neat app to see in the app store.
+
+00:01:38.610 --> 00:01:46.830
+And with the in mind, let's talk about where
+we are today with Motion sensing in iPhone OS.
+
+00:01:46.830 --> 00:01:56.560
+So as you're all aware, every iPhone OS device that we've
+ever shipped has an accelerometer and this measures the sum
+
+00:01:56.560 --> 00:02:06.220
+of gravity plus whatever acceleration the user is giving the
+device and we call that second component user acceleration.
+
+00:02:06.220 --> 00:02:13.480
+Now, these two things are useful for
+measuring different physical actions.
+
+00:02:13.480 --> 00:02:16.800
+So you can use gravity to measure rotations.
+
+00:02:16.800 --> 00:02:23.720
+When the user rotates the phone left and right or
+forward and backwards that will show up as a change
+
+00:02:23.720 --> 00:02:27.550
+in the direction of gravity with respect to the device.
+
+00:02:27.550 --> 00:02:35.280
+Similarly, we can use user acceleration
+to measure shakes or translational motion.
+
+00:02:35.280 --> 00:02:44.600
+Unfortunately, in order to try to disambiguate
+gravity from user acceleration, we need to filter.
+
+00:02:44.600 --> 00:02:51.730
+We need to use a low-pass filter to isolate
+gravity or rotational motion or a high-pass filter
+
+00:02:51.730 --> 00:02:56.450
+to isolate user acceleration or translational motion.
+
+00:02:56.450 --> 00:03:01.450
+And unfortunately, that filtering
+introduces some side effects.
+
+00:03:01.450 --> 00:03:08.290
+So the more heavily we low-pass filter, for
+instance, the more user acceleration we're able
+
+00:03:08.290 --> 00:03:12.110
+to remove and so the more stable our signal is.
+
+00:03:12.110 --> 00:03:15.670
+However, the more latency we introduce.
+
+00:03:15.670 --> 00:03:23.950
+Now, one other disadvantage of using the accelerometer
+is that it cannot detect rotations around gravity.
+
+00:03:23.950 --> 00:03:31.500
+So to help make that a little more clear, let's
+imagine that we have an iPhone that's flat on the table
+
+00:03:31.500 --> 00:03:35.920
+so that gravity in this case is going into the screen.
+
+00:03:35.920 --> 00:03:39.920
+And we spin that while keeping it flat on the table.
+
+00:03:39.920 --> 00:03:47.810
+That would be a rotation around gravity and that
+would not be picked up by the accelerometer.
+
+00:03:47.810 --> 00:03:52.450
+So with that in mind let's go back to this boxing idea.
+
+00:03:52.450 --> 00:03:56.540
+Can we do this with only the accelerometer?
+
+00:03:56.540 --> 00:03:59.120
+So what would we need to do this?
+
+00:03:59.120 --> 00:04:03.140
+Well, we'd really want to be able
+to measure rotation around gravity.
+
+00:04:03.140 --> 00:04:09.910
+That's because that sort of the natural most
+intuitive user motion to trigger up a punch.
+
+00:04:09.910 --> 00:04:14.560
+Unfortunately, we can't really do
+that with just the accelerometer.
+
+00:04:14.560 --> 00:04:22.870
+We also want this to be able to accurately measure
+rotation when the user is rotating the device very fast.
+
+00:04:22.870 --> 00:04:27.580
+Fast rotations are kind of the
+most natural action for punching.
+
+00:04:27.580 --> 00:04:33.440
+And unfortunately, this is a place where
+the accelerometer has particular trouble.
+
+00:04:33.440 --> 00:04:40.010
+Because the faster the user rotates the device,
+the harder it is for them to hold it steady.
+
+00:04:40.010 --> 00:04:46.960
+And so the more user acceleration, we tend to
+have bleeding into that accelerometer data.
+
+00:04:46.960 --> 00:04:52.130
+Now, as I mentioned, before we can
+combat that by using a low-pass filter.
+
+00:04:52.130 --> 00:04:59.300
+But unfortunately, the more heavily we
+low-pass filter the more latency we introduce
+
+00:04:59.300 --> 00:05:05.460
+and fast rotations are exactly when
+that latency is most noticeable.
+
+00:05:05.460 --> 00:05:12.180
+Furthermore, we'd want this to accurately
+be able to measure rotation in the phase
+
+00:05:12.180 --> 00:05:16.920
+of high translation or user acceleration and vice versa.
+
+00:05:16.920 --> 00:05:24.940
+So you could imagine the user dodging and punching at the
+same time and we don't want to be confused with the other.
+
+00:05:24.940 --> 00:05:33.600
+So unfortunately the accelerometer is not a particularly
+good choice for implementing a game like this.
+
+00:05:33.600 --> 00:05:41.510
+Now, starting in iPhone 3GS and now iPad
+and iPhone 4 we introduced a magnetometer.
+
+00:05:41.510 --> 00:05:44.900
+And this sensor has been incredibly useful.
+
+00:05:44.900 --> 00:05:50.370
+We use it as a digital compass and that data is
+available through the core location framework.
+
+00:05:50.370 --> 00:05:57.000
+Many augmented reality apps were
+basically made possible by this sensor.
+
+00:05:57.000 --> 00:06:02.520
+And it helps us deal with that first bullet
+point that I mentioned on the last slide.
+
+00:06:02.520 --> 00:06:06.610
+It can actually detect rotations about gravity.
+
+00:06:06.610 --> 00:06:12.610
+Unfortunately, it's not particularly
+responsive and not particularly well suited
+
+00:06:12.610 --> 00:06:16.630
+for high speed applications such as games.
+
+00:06:16.630 --> 00:06:23.770
+The sensor itself is very noisy and it's in
+an environment that's very noise magnetically.
+
+00:06:23.770 --> 00:06:31.860
+iPhone OS and iOS devices are just jam-packed with
+electronics that have an effect on this sensor.
+
+00:06:31.860 --> 00:06:35.700
+So it doesn't really help us for that game.
+
+00:06:35.700 --> 00:06:42.710
+So that's where we are today with
+motion sensing in iOS, in iPhone OS.
+
+00:06:42.710 --> 00:06:48.960
+Let's talk about what we're introducing
+in iPhone 4, a gyroscope.
+
+00:06:48.960 --> 00:06:57.490
+Now, this measures very accurately the rate at
+which the device is rotating about all three axes.
+
+00:06:57.490 --> 00:07:05.600
+And by itself that raw gyroscope data can be
+incredibly, incredibly useful and we provide
+
+00:07:05.600 --> 00:07:09.380
+that to you through a new framework in iOS.
+
+00:07:09.380 --> 00:07:12.630
+However, we went a step further.
+
+00:07:12.630 --> 00:07:21.980
+Because that gyro data is much, much more useful when
+we fuse it with accelerometer data using algorithms
+
+00:07:21.980 --> 00:07:26.000
+that we have developed and provide to you in iOS 4.
+
+00:07:26.000 --> 00:07:31.250
+And we call the output of those algorithms device motion.
+
+00:07:31.250 --> 00:07:34.350
+So what does device motion include?
+
+00:07:34.350 --> 00:07:44.850
+Well, it includes the full 3-Dimensional Attitude of the
+device and you also can-- might call this orientation.
+
+00:07:44.850 --> 00:07:53.920
+Now, from this full 3D attitude, we can extract an estimate
+of the direction of gravity with respect to the device.
+
+00:07:53.920 --> 00:08:01.210
+That's much, much less noisy and much
+cleaner with respect to user acceleration
+
+00:08:01.210 --> 00:08:06.470
+than any low-pass filter could give
+us on the raw accelerometer data.
+
+00:08:06.470 --> 00:08:12.690
+It also includes an estimate of user
+acceleration without using a high-pass filter.
+
+00:08:12.690 --> 00:08:18.170
+And this estimate is much less susceptible
+to influence by rotational motion
+
+00:08:18.170 --> 00:08:23.550
+than any high-pass filtered accelerometer
+data would give you.
+
+00:08:23.550 --> 00:08:29.150
+It also included the instantaneous
+rotation rate of the device.
+
+00:08:29.150 --> 00:08:33.680
+Now, I mentioned that the gyro
+itself measures the rotation rate.
+
+00:08:33.680 --> 00:08:38.320
+But the rotation rate that you get from
+device motion is slightly different
+
+00:08:38.320 --> 00:08:41.910
+from that and I'll talk about that later on.
+
+00:08:41.910 --> 00:08:51.970
+So, I mentioned that the estimate of gravity that we can
+extract from device motions attitude output is much better
+
+00:08:51.970 --> 00:08:56.290
+for measuring gravity than the accelerometer data is.
+
+00:08:56.290 --> 00:09:01.520
+And it doesn't need any low-pass filter to help.
+
+00:09:01.520 --> 00:09:04.250
+So let's look at why that is.
+
+00:09:04.250 --> 00:09:12.050
+Now, there are really two reasons that you need to low-pass
+filter the raw accelerometer data to extract gravity.
+
+00:09:12.050 --> 00:09:16.980
+One is to deal with noise from the
+accelerometer itself and then the other
+
+00:09:16.980 --> 00:09:21.420
+as I mentioned before is to filter
+out that user acceleration.
+
+00:09:21.420 --> 00:09:24.680
+So let's look at these two components in turn.
+
+00:09:24.680 --> 00:09:32.970
+So if we look at the component of gravity
+along an axis that's perpendicular to gravity,
+
+00:09:32.970 --> 00:09:39.410
+so let's say we have a phone that's sitting flat on
+the table and we look at gravity along maybe the Y-axis
+
+00:09:39.410 --> 00:09:42.660
+of the phone that's parallel to the table itself.
+
+00:09:42.660 --> 00:09:46.460
+Ideally, that would be all zeros.
+
+00:09:46.460 --> 00:09:52.500
+Let's look at what the raw accelerometer
+data on an iPhone 3GS would look like.
+
+00:09:52.500 --> 00:09:56.820
+This is raw data straight from a
+phone, it didn't' do anything to it.
+
+00:09:56.820 --> 00:10:01.210
+Now, one thing that might jump out
+at you is the data is quantized.
+
+00:10:01.210 --> 00:10:04.250
+It's really restricted to two values here.
+
+00:10:04.250 --> 00:10:12.040
+And the reason is that the accelerometer in the iPhone
+3GS and earlier products is relatively low resolution.
+
+00:10:12.040 --> 00:10:18.830
+It has a resolution of 8 bits and we're seeing
+that quantization in the noisy data here.
+
+00:10:18.830 --> 00:10:23.220
+Now, if you've ever played around
+with the accelerometer on an iPad,
+
+00:10:23.220 --> 00:10:29.240
+you might have noticed that the data looks a little
+better than in earlier products and that's true.
+
+00:10:29.240 --> 00:10:34.630
+The accelerometer in the iPad is upgraded
+and one of the main ways that it's better is
+
+00:10:34.630 --> 00:10:38.150
+that it has a 12-bit resolution instead on an 8-bit one.
+
+00:10:38.150 --> 00:10:44.720
+And I'm happy to say that the iPhone 4 has the
+same upgraded accelerometer that's in the iPad.
+
+00:10:44.720 --> 00:10:48.740
+So what does the noise look like
+from this upgraded accelerometer?
+
+00:10:48.740 --> 00:10:50.220
+Well, it's a lot better.
+
+00:10:50.220 --> 00:10:53.700
+But you can still see it even on the scale.
+
+00:10:53.700 --> 00:11:02.270
+Let's look at device motions gravity output along
+that same axis, very, very clean, very low noise.
+
+00:11:02.270 --> 00:11:05.440
+No filtering needed because of that.
+
+00:11:05.440 --> 00:11:08.590
+Let's look at sensitivity to user acceleration now.
+
+00:11:08.590 --> 00:11:13.840
+Again, this is the second reason that we
+need to filter the data to extract gravity.
+
+00:11:13.840 --> 00:11:20.900
+So if we look at this, at the component of gravity
+along an axis that's perpendicular to gravity,
+
+00:11:20.900 --> 00:11:25.210
+as we shake the device back and forth along that axis.
+
+00:11:25.210 --> 00:11:26.380
+So we're not rotating.
+
+00:11:26.380 --> 00:11:28.510
+It's a pure translation.
+
+00:11:28.510 --> 00:11:33.230
+Again, ideally, that component would be all zero.
+
+00:11:33.230 --> 00:11:36.450
+What do we see on the accelerometer data?
+
+00:11:36.450 --> 00:11:38.210
+Well, it looks like this.
+
+00:11:38.210 --> 00:11:43.800
+As expected that user acceleration shows
+up directly in the accelerometer data.
+
+00:11:43.800 --> 00:11:45.890
+That's what we need to filter out.
+
+00:11:45.890 --> 00:11:53.350
+Now, I recorded this data directly from an iPhone 4
+and while I was recording that raw accelerometer data,
+
+00:11:53.350 --> 00:11:59.230
+I also recorded the device motion
+gravity estimate along that same axis.
+
+00:11:59.230 --> 00:12:04.110
+So it's important to note that the
+motion the device was seeing is the same.
+
+00:12:04.110 --> 00:12:10.650
+So the device motion gravity date
+looks like that, much, much cleaner.
+
+00:12:10.650 --> 00:12:14.320
+No filtering needed to remove that user acceleration.
+
+00:12:14.320 --> 00:12:19.430
+So with that in mind, let's go back to our boxing idea.
+
+00:12:19.430 --> 00:12:22.580
+Can we do this now?
+
+00:12:22.580 --> 00:12:28.380
+Well, recall that we need to be able to
+measure rotation about gravity accurately.
+
+00:12:28.380 --> 00:12:31.400
+We have that covered with the gyro.
+
+00:12:31.400 --> 00:12:35.720
+We need this to be accurate for
+fast rotations and now we can do
+
+00:12:35.720 --> 00:12:42.350
+that because we can accurately separate
+rotational motion from translational motion.
+
+00:12:42.350 --> 00:12:46.920
+Furthermore, we need to accurately be
+able to measure rotation in the phase
+
+00:12:46.920 --> 00:12:49.660
+of high user acceleration and vice versa.
+
+00:12:49.660 --> 00:12:56.570
+And again, because we can cleanly separate
+rotation from translation, we can do that.
+
+00:12:56.570 --> 00:13:01.280
+So I for one can't wait to see
+something like this in the app store.
+
+00:13:01.280 --> 00:13:03.460
+So [background applause] thanks.
+
+00:13:06.600 --> 00:13:08.140
+Thanks. So what else can we do?
+
+00:13:08.140 --> 00:13:11.660
+Well, I mentioned the boxing game and that's pretty neat.
+
+00:13:11.660 --> 00:13:18.140
+We also see this being very useful for things
+like flying games where you can very smoothly
+
+00:13:18.140 --> 00:13:24.040
+and accurately point the nose of
+the aircraft in three dimensions.
+
+00:13:24.040 --> 00:13:33.360
+Many driving and racing games on the iPhone currently use an
+estimate of gravity that they extract from the accelerometer
+
+00:13:33.360 --> 00:13:36.210
+in order to allow the user to steer left and write.
+
+00:13:36.210 --> 00:13:38.860
+So a tilt left and right would be steer.
+
+00:13:38.860 --> 00:13:44.050
+In some cases a tilt forward and
+backward would accelerate or brake.
+
+00:13:44.050 --> 00:13:50.140
+Now, let's say we add another degree of freedom to
+this rotation and we take advantage of this rotation
+
+00:13:50.140 --> 00:13:53.310
+around gravity to, for instance aim a turret.
+
+00:13:53.310 --> 00:13:56.860
+So you can add a whole new capability to your game.
+
+00:13:56.860 --> 00:14:02.410
+Or let's say that you have a game that,
+in which the users driving in some sort
+
+00:14:02.410 --> 00:14:06.400
+of open cockpit car like a go-cart for instance.
+
+00:14:06.400 --> 00:14:08.400
+And it's kind of pesky.
+
+00:14:08.400 --> 00:14:14.040
+You have other drivers occasionally coming up right
+next to the user and trying to run them off the road.
+
+00:14:14.040 --> 00:14:20.210
+Wouldn't it be cool if you can allow the user to
+shake the device left or right to punch left or right
+
+00:14:20.210 --> 00:14:24.950
+and really get those pesky drivers off their tail?
+
+00:14:24.950 --> 00:14:29.900
+So our tree games or shooting games in
+general can really benefit from this.
+
+00:14:29.900 --> 00:14:36.420
+The most natural rotation to aim left and
+right is again a rotation around gravity
+
+00:14:36.420 --> 00:14:40.190
+and we can very accurately measure that now.
+
+00:14:40.190 --> 00:14:44.780
+Simulation games such as skateboarding
+games can really benefit.
+
+00:14:44.780 --> 00:14:51.050
+It really expands the space of gestures
+that you can accurately recognize
+
+00:14:51.050 --> 00:14:55.140
+and use to trigger things like skateboarding tricks.
+
+00:14:55.140 --> 00:14:57.290
+So we're really excited about this.
+
+00:14:57.290 --> 00:15:02.780
+And to demonstrate some of the new capabilities,
+I like to invite my friend Patrick to the stage.
+
+00:15:02.780 --> 00:15:04.100
+Patrick?
+
+00:15:04.100 --> 00:15:05.070
+>> Patrick Piemonte: Hi everyone.
+
+00:15:05.070 --> 00:15:06.000
+My name is Patrick.
+
+00:15:06.000 --> 00:15:09.130
+And before we go, exploring some of
+the points Chris just talked about.
+
+00:15:09.130 --> 00:15:13.460
+I'd like to remind you that if you to the
+conference website and then go to this talk,
+
+00:15:13.460 --> 00:15:16.720
+you can find the same demo associated with this talk.
+
+00:15:16.720 --> 00:15:20.960
+So I recommend you to check it out.
+
+00:15:20.960 --> 00:15:29.340
+So here we have an iPhone 4 and I'll unlock
+it and we have our Core Motion Teapot app
+
+00:15:29.340 --> 00:15:33.060
+and this is the same App you can
+download from the conference page
+
+00:15:33.060 --> 00:15:35.640
+and you can see were in an accelerometer mode.
+
+00:15:35.640 --> 00:15:39.570
+So at first I'd like to point out that if
+we could look at our Euler angles of pitch.
+
+00:15:39.570 --> 00:15:48.820
+So if I tilt the device up, you can see the Teapot response
+and we can do our roll and you can see the Teapot response
+
+00:15:48.820 --> 00:15:53.860
+to roll but you'll notice that there isn't yaw.
+
+00:15:54.890 --> 00:15:58.510
+So what we're really measuring right now is two components.
+
+00:15:58.510 --> 00:16:02.950
+We're measuring both gravity and
+as Chris said user acceleration.
+
+00:16:02.950 --> 00:16:07.990
+So as I touch the device, you can see that
+the Teapot does a little bit of a wiggle.
+
+00:16:07.990 --> 00:16:11.240
+So that's the user acceleration Chris described.
+
+00:16:11.240 --> 00:16:17.860
+And you can see it if I move the device laterally, you
+can see how the Teapot still has that little wiggle.
+
+00:16:17.860 --> 00:16:20.860
+Now there's ways to mitigate this with filtering.
+
+00:16:20.860 --> 00:16:27.690
+So we have a gravity filter built-in
+here and I can turn that up
+
+00:16:27.690 --> 00:16:31.980
+and you'll notice that we reduced that user acceleration.
+
+00:16:31.980 --> 00:16:36.750
+But the tradeoff is now we have a higher latency.
+
+00:16:36.750 --> 00:16:43.140
+So you can see the Teapot response a little bit more slowly.
+
+00:16:43.140 --> 00:16:50.450
+So user acceleration is good because it has it's-- some of
+its applications so that what makes shake gestures possible,
+
+00:16:50.450 --> 00:16:54.780
+pedometers and applications of that nature.
+
+00:16:54.780 --> 00:16:59.630
+But if you want precise game control,
+you need to isolate the gravity component
+
+00:16:59.630 --> 00:17:03.690
+and focus on that and remove that user acceleration.
+
+00:17:03.690 --> 00:17:08.410
+So just a kind of talk about this in a little
+more detail, we have a translation mode
+
+00:17:08.410 --> 00:17:17.050
+and this translation mode will translate the Teapot a
+distance that's proportional to that user acceleration.
+
+00:17:17.050 --> 00:17:23.230
+So what that means is we'll redraw the Teapot
+a distance away from the center depending
+
+00:17:23.230 --> 00:17:27.090
+on how much user acceleration it's experiencing.
+
+00:17:27.090 --> 00:17:34.400
+So as you can see it, kind of moves around
+the screen like a rubber band effect.
+
+00:17:34.400 --> 00:17:43.340
+And if I roll the device you could see how
+much the Teapot is moving a distant there.
+
+00:17:43.340 --> 00:17:48.590
+So now I'll turn off translation mode and now
+we'll go into our device motion algorithms.
+
+00:17:48.590 --> 00:17:55.140
+So now this is the fusion between the raw gyro
+and accelerometer data with Apple's algorithms.
+
+00:17:55.140 --> 00:18:02.340
+And as you could see immediately, the Teapot is very
+responsive and we have our Euler angles of pitch
+
+00:18:02.340 --> 00:18:06.570
+and we have roll and now we also have yaw.
+
+00:18:08.510 --> 00:18:14.690
+[ Applause ]
+
+00:18:14.690 --> 00:18:18.880
+So, we'll revisit those points I just
+talked about with the accelerometer.
+
+00:18:18.880 --> 00:18:23.950
+So, as you can see if I do lateral
+movement, the Teapot is very steady.
+
+00:18:23.950 --> 00:18:29.510
+As you remember in-- this is accelerometer
+and now device motion.
+
+00:18:29.510 --> 00:18:34.650
+There's a drastic difference.
+
+00:18:34.650 --> 00:18:38.360
+Now, lastly we can go into translation mode.
+
+00:18:38.360 --> 00:18:43.460
+Now, before as you could see I was rolling the device
+and when I roll the device here you could see
+
+00:18:43.460 --> 00:18:49.160
+that the Teapot stayed in the center of the screen.
+
+00:18:49.160 --> 00:18:58.590
+And if I switch back into accelerometer mode,
+remember how much the sensor was moving?
+
+00:18:58.590 --> 00:19:04.460
+So that can give you an idea now using the device motion
+algorithms how much control you have over the motion
+
+00:19:04.460 --> 00:19:11.080
+of the device and how much you can isolate that
+motion and separate out the user acceleration.
+
+00:19:11.080 --> 00:19:12.780
+So now I'd like to hand in back over to Chris.
+
+00:19:12.780 --> 00:19:14.510
+>> Chris Moore: Thank you, Patrick.
+
+00:19:14.510 --> 00:19:21.310
+[ Applause ]
+
+00:19:21.310 --> 00:19:27.060
+Alright, so now that you guys know, we've had
+an overview of what these new features are.
+
+00:19:27.060 --> 00:19:32.950
+Let's talk about how you can access them in your
+applications and you'll do that using a new framework
+
+00:19:32.950 --> 00:19:39.000
+that were introducing in iOS 4 called Core
+Motion and it's very, very easy to use.
+
+00:19:39.000 --> 00:19:41.450
+So what can you get from Core Motion?
+
+00:19:41.450 --> 00:19:44.610
+Well, you can get the raw accelerometer data.
+
+00:19:44.610 --> 00:19:48.060
+Now, this is exactly the same data
+that you can currently get
+
+00:19:48.060 --> 00:19:53.950
+from the UIAccelerometer API just
+with a different interface.
+
+00:19:53.950 --> 00:19:58.790
+You can also get the raw gyro data
+that I talked about earlier,
+
+00:19:58.790 --> 00:20:03.210
+as well as this great sensor fused device motion data.
+
+00:20:03.210 --> 00:20:07.970
+So, let's talk about availability.
+
+00:20:07.970 --> 00:20:12.030
+All three types of data are supported on iPhone 4.
+
+00:20:12.030 --> 00:20:17.250
+But unfortunately, older platforms do
+not have the gyroscope that's necessary
+
+00:20:17.250 --> 00:20:20.920
+to get obviously the raw gyro data and device motion.
+
+00:20:20.920 --> 00:20:24.940
+So only the raw accelerometer data
+will be available on older hardware.
+
+00:20:24.940 --> 00:20:32.800
+So what are the main objects in Core Motion?
+
+00:20:32.800 --> 00:20:39.290
+Well, there's CMMotionManager which will
+be your main interface into Core Motion.
+
+00:20:39.290 --> 00:20:43.080
+It's how you will start and stop
+various types of data as well
+
+00:20:43.080 --> 00:20:46.420
+as tell us how often you want to receive different data.
+
+00:20:46.420 --> 00:20:53.810
+You can also query for what data is available
+on the platform that your app is running on.
+
+00:20:53.810 --> 00:20:59.520
+The raw accelerometer data is stored
+in instances of CMAccelerometer data.
+
+00:20:59.520 --> 00:21:08.500
+The raw gyro data is stored in instances in instances of
+CMGyro data, and device motion is stored in CMDeviceMotion.
+
+00:21:08.500 --> 00:21:14.020
+Now, there's one other component with the CMDeviceMotion
+that we'll spend some time talking about later.
+
+00:21:14.020 --> 00:21:17.580
+So I wanted to mention it now and that CMAttitude.
+
+00:21:17.580 --> 00:21:23.120
+So, excuse me, there is no simulator
+support for Core Motion.
+
+00:21:23.120 --> 00:21:26.510
+Mac just don't have the necessary sensors to support this.
+
+00:21:26.510 --> 00:21:28.380
+So it's device side only.
+
+00:21:28.380 --> 00:21:34.370
+So there are two main method s that
+you can receive data from Core Motion.
+
+00:21:34.370 --> 00:21:39.200
+You can have Core Motion push data
+to you and this uses blocks.
+
+00:21:39.200 --> 00:21:44.460
+So when you use this, you'll need to
+provide an NSOperationQueue and a block
+
+00:21:44.460 --> 00:21:48.470
+that will be called once per sample of data.
+
+00:21:48.470 --> 00:21:54.510
+You can also pull data from Core Motion and we
+expect most games will actually use this approach.
+
+00:21:54.510 --> 00:22:00.430
+Here, you periodically asked CMMotionManager
+for the latest sample of data.
+
+00:22:00.430 --> 00:22:03.780
+Now, this is often done when your view is updated.
+
+00:22:03.780 --> 00:22:07.620
+For instance, in a CA display link callback.
+
+00:22:07.620 --> 00:22:10.920
+And there are some tradeoffs to these two approaches.
+
+00:22:10.920 --> 00:22:12.920
+So let's talk about those.
+
+00:22:12.920 --> 00:22:17.090
+Push has the advantage that you
+will never miss a sample of data.
+
+00:22:17.090 --> 00:22:19.060
+You have a queue backing you up.
+
+00:22:19.060 --> 00:22:26.360
+So if we send you a hundred samples of data in one
+second, you will get all hundred of those samples.
+
+00:22:26.360 --> 00:22:30.570
+Now, there is some increased overhead
+involved in this approach.
+
+00:22:30.570 --> 00:22:39.150
+And in many, many cases if your threads are running a little
+behind so that you have multiple samples of data queued up,
+
+00:22:39.150 --> 00:22:45.090
+really the best course of action is simply
+to cut your losses, ignore the older samples
+
+00:22:45.090 --> 00:22:47.710
+and only focus on that latest sample of data.
+
+00:22:47.710 --> 00:22:50.510
+We can't really do that with this approach.
+
+00:22:50.510 --> 00:22:55.290
+So, we would recommend this approach
+mostly for data collection apps
+
+00:22:55.290 --> 00:23:01.070
+or if your app is using some algorithm
+that's very, very sensitive to drop samples.
+
+00:23:01.070 --> 00:23:07.570
+Now, I should mention that every sample of data that you
+get from Core Motion has a time tag associated with it.
+
+00:23:07.570 --> 00:23:12.610
+So you can always determine how many samples
+you've missed if you do use the pull approach.
+
+00:23:12.610 --> 00:23:15.590
+Now, this generally is more efficient.
+
+00:23:15.590 --> 00:23:22.570
+There is usually less code required especially
+if you already have some periodic event coming
+
+00:23:22.570 --> 00:23:30.120
+in like a CA display link callback that determines
+when you render a frame and when you want data.
+
+00:23:30.120 --> 00:23:36.140
+Now, the disadvantage is that you may need an
+additional timer to tell you when to pull data
+
+00:23:36.140 --> 00:23:42.280
+if you don't already have one of these
+periodic CA display link type events coming in.
+
+00:23:42.280 --> 00:23:47.840
+Despite that, this is what we would
+recommend for most applications in games.
+
+00:23:47.840 --> 00:23:53.910
+So, let's talk about threading very briefly.
+
+00:23:53.910 --> 00:24:01.600
+Now, Core Motion creates its own thread and it
+does this to handle data from the sensors as well
+
+00:24:01.600 --> 00:24:07.540
+as run those device motion algorithms
+that fused the accelerometer in gyro data.
+
+00:24:07.540 --> 00:24:10.080
+So this has some ramifications for you.
+
+00:24:10.080 --> 00:24:17.250
+That means that if you have Core Motion push data to
+you, the only code that will be periodically executed
+
+00:24:17.250 --> 00:24:22.430
+on your thread is the code in the block that you send us.
+
+00:24:22.430 --> 00:24:27.480
+If you're pulling data, Core Motion
+will never interrupt your threads.
+
+00:24:27.480 --> 00:24:30.720
+So how do you use Core Motion?
+
+00:24:30.720 --> 00:24:31.940
+Very simple.
+
+00:24:31.940 --> 00:24:37.240
+There are three steps, setup, retrieving data, and clean-up.
+
+00:24:37.240 --> 00:24:43.080
+Now, a good place to set things up is for
+instance in startAnimation, if you have a game.
+
+00:24:43.080 --> 00:24:46.960
+So here we create a CMMotionManager instance.
+
+00:24:46.960 --> 00:24:49.440
+All we do is allocate and initialize one.
+
+00:24:49.440 --> 00:24:50.190
+No arguments.
+
+00:24:50.190 --> 00:24:51.740
+It's very simple.
+
+00:24:51.740 --> 00:24:56.470
+Next, we need to determine whether the
+data that we're interested in is available.
+
+00:24:56.470 --> 00:25:00.770
+And in this example, we're going to
+be interested in device motion data.
+
+00:25:00.770 --> 00:25:07.920
+So we have a property in CMMotionManager called
+isDeviceMotionAvailable that you want to check.
+
+00:25:07.920 --> 00:25:17.210
+And as always, if that data is not supported on the
+platform the user is using you want to fail gracefully
+
+00:25:17.210 --> 00:25:22.660
+or provide some other way for the
+user to interact with you application.
+
+00:25:22.660 --> 00:25:28.300
+Next, we set the desired update interval
+of the data and we do that in this case
+
+00:25:28.300 --> 00:25:35.960
+by setting the deviceMotionUpdateInterval property
+and we set this to the desired interval in seconds.
+
+00:25:35.960 --> 00:25:41.530
+So here, let's say were interested
+in 60 Hz data, so we set it to 1/60.
+
+00:25:41.530 --> 00:25:48.200
+Now, I should mention that we're going to be pulling data
+in this case but even though we're doing that we still want
+
+00:25:48.200 --> 00:25:56.180
+to set this desired update interval that will tell Core
+Motion how often it needs to get data from the sensors.
+
+00:25:56.180 --> 00:25:58.060
+Next, we start updates.
+
+00:25:58.060 --> 00:26:03.660
+So were interested in pulling data so all
+we do is call startDeviceMotionUpdates.
+
+00:26:03.660 --> 00:26:05.700
+No arguments necessary.
+
+00:26:05.700 --> 00:26:11.330
+If we were interested in having Core
+Motion push data to us using blocks,
+
+00:26:11.330 --> 00:26:14.940
+then we would call
+startDeviceMotionUpdatesToQueue:withHandler to queue
+
+00:26:14.940 --> 00:26:23.290
+with handler and give that NSOperationQueue and the
+block that we wanted to handle each sample of data.
+
+00:26:23.290 --> 00:26:25.780
+The next step is to retrieve data.
+
+00:26:25.780 --> 00:26:32.950
+Now, if we were using blocks, our block will just be
+executed whenever a new sample of data is available.
+
+00:26:32.950 --> 00:26:38.510
+Here we're pulling data so all we need
+to do is read the appropriate property
+
+00:26:38.510 --> 00:26:42.060
+from our motion manager whenever we're interested in data.
+
+00:26:42.060 --> 00:26:44.410
+Here we're doing it when our view is updated.
+
+00:26:44.410 --> 00:26:50.230
+So that property for device motion
+data is just called device motion.
+
+00:26:50.230 --> 00:26:58.120
+Clean-up. So I should mention that you always want
+to stop sensor data as soon as you're done with it.
+
+00:26:58.120 --> 00:27:03.790
+That will allow us to turn off the necessary
+sensor hardware and in some cases algorithms
+
+00:27:03.790 --> 00:27:07.780
+that are processing it and ultimately
+save the users battery.
+
+00:27:07.780 --> 00:27:10.740
+So, here we started device motion data.
+
+00:27:10.740 --> 00:27:17.770
+So we simply call stopDeviceMotionUpdates and then
+we go ahead and release our motionManager instance.
+
+00:27:17.770 --> 00:27:19.340
+Very, very simple.
+
+00:27:19.340 --> 00:27:28.480
+So to summarize this section, there are two methods
+that we can use to receive data, push and pull.
+
+00:27:28.480 --> 00:27:30.150
+Push uses blocks.
+
+00:27:30.150 --> 00:27:38.270
+With pull, all you do is periodically look at the
+desired property of the CMMotionManager, very simple.
+
+00:27:38.270 --> 00:27:44.240
+Next, all processing by Core Motion
+is done on its own thread.
+
+00:27:44.240 --> 00:27:51.330
+Finally, there are three steps to using Core Motion,
+setup, retrieving data, and cleanup, very simple.
+
+00:27:51.330 --> 00:27:58.550
+So, now that you have an idea of how
+to use the API let's really deep dive
+
+00:27:58.550 --> 00:28:03.270
+into what this new device motion data contains.
+
+00:28:03.270 --> 00:28:11.890
+So as I mentioned before, device motion data is stored in
+instances of CMDeviceMotion and that has a few properties.
+
+00:28:11.890 --> 00:28:14.560
+There's a property called "attitude" which contains
+
+00:28:14.560 --> 00:28:19.620
+that full 3-dimensional attitude data
+that's going to be so incredibly useful.
+
+00:28:19.620 --> 00:28:27.690
+It also contains an estimate of gravity with respect o
+the current-- to the device's current reference frame.
+
+00:28:27.690 --> 00:28:35.180
+Now, I mentioned earlier that we can actually
+extract this estimate from the attitude data directly
+
+00:28:35.180 --> 00:28:39.100
+and I'll still show you how to do
+that later on to illustrate a point.
+
+00:28:39.100 --> 00:28:46.280
+But in reality, you actually won't need to do that
+because we extracted for you in CMDeviceMotion
+
+00:28:46.280 --> 00:28:53.620
+and we do that because many of you have applications
+that currently low-pass filter the accelerometer data
+
+00:28:53.620 --> 00:28:59.670
+to estimate the direction of gravity and we want to
+make it as easy as possible for you to take advantage
+
+00:28:59.670 --> 00:29:04.360
+of this new sensor fusion of accelerometer
+in gyro data that we provide.
+
+00:29:04.360 --> 00:29:09.640
+So all you have to do is start using device motion
+and look at that gravity property and you can get rid
+
+00:29:09.640 --> 00:29:13.100
+of that low-pass filter that you're currently using.
+
+00:29:13.100 --> 00:29:17.700
+We also provided and estimate of
+user acceleration with CMDeviceMotion
+
+00:29:17.700 --> 00:29:24.680
+without using a high-pass filter that's
+much better isolated from rotational motion.
+
+00:29:24.680 --> 00:29:28.660
+And then the instantaneous rotation rate of the device.
+
+00:29:28.660 --> 00:29:34.860
+So let's look at those middle two properties first.
+
+00:29:34.860 --> 00:29:38.770
+Called the middle two are gravity and user acceleration.
+
+00:29:38.770 --> 00:29:45.790
+And these are both stored in instances of
+very simple struct called "CMAcceleration."
+
+00:29:45.790 --> 00:29:54.830
+Three components X, Y, and Z giving the acceleration
+along each of those axis in units of G's.
+
+00:29:54.830 --> 00:30:02.840
+And the coordinate frame that we're using in Core Motion
+is exactly the same as the one that is currently used
+
+00:30:02.840 --> 00:30:10.450
+by the UIAccelerometer API for the accelerometer data,
+as well as core location for the raw magnetometer data.
+
+00:30:10.450 --> 00:30:19.330
+Namely, the Z-axis is positive coming out of the screen of
+the device, the Y-axis is positive running towards the top
+
+00:30:19.330 --> 00:30:28.990
+of the device, and the X-axis is positive running out of the
+right side of the device or the Micro-SIM tray on iPhone 4.
+
+00:30:30.150 --> 00:30:34.830
+Now, rotation rate-- sorry, one more thing.
+
+00:30:34.830 --> 00:30:41.600
+So I mentioned that you can get rid of your low-pass
+filter to isolate gravity using the raw accelerometer data.
+
+00:30:41.600 --> 00:30:46.720
+Now, if you use device motions gravity output instead.
+
+00:30:46.720 --> 00:30:53.990
+But you don't want to completely forget what you know
+about low-pass filtering because the user acceleration data
+
+00:30:53.990 --> 00:30:59.470
+that you get from device motion will
+contain noise from the accelerometer.
+
+00:30:59.470 --> 00:31:03.920
+So you probably want to low-pass filter
+that to smooth it out a little bit.
+
+00:31:03.920 --> 00:31:08.360
+So here, we're showing a very, very
+simple nonadaptive low-pass filter.
+
+00:31:08.360 --> 00:31:10.540
+You can get as fancy as you want.
+
+00:31:10.540 --> 00:31:14.050
+And we encourage you to play around
+with different filtering parameters
+
+00:31:14.050 --> 00:31:18.200
+and really determine what's best for your application.
+
+00:31:21.410 --> 00:31:24.490
+Now, let's look at rotation rate.
+
+00:31:24.490 --> 00:31:35.440
+So this property is an instance of CMRotationRate which is
+again a very, very simple struct giving the rotation rate
+
+00:31:35.440 --> 00:31:42.230
+and units of radians per second around
+the X, Y, and Z-axis of the device.
+
+00:31:42.230 --> 00:31:49.680
+Now, if you remember back to physics class, you probably
+studied the right-hand rule and that's what we'll use
+
+00:31:49.680 --> 00:31:54.920
+to determine the direction of positive
+rotation rate around an axis.
+
+00:31:54.920 --> 00:32:01.000
+So to review, if you were to take your hands and
+wrap it around an axis so that your thumb points
+
+00:32:01.000 --> 00:32:08.140
+in a positive direction of the axis, then the direction
+that your fingers curl will give the direction
+
+00:32:08.140 --> 00:32:13.400
+of positive rotation rate and that
+shown by the blue arrow on the slide.
+
+00:32:13.400 --> 00:32:22.880
+Now, I mentioned earlier that CMDeviceMotion's
+rotationRate property is different
+
+00:32:22.880 --> 00:32:28.180
+from the raw gyro data that you get from CMGyro data.
+
+00:32:28.180 --> 00:32:30.330
+How does it differ?
+
+00:32:30.330 --> 00:32:33.290
+It differs in bias.
+
+00:32:33.290 --> 00:32:37.400
+So the raw gyro data has a bias associated with it.
+
+00:32:37.400 --> 00:32:42.190
+Now what that means is if the device
+is not rotating, so let's say,
+
+00:32:42.190 --> 00:32:48.060
+it's sitting flat on a table, then
+the gyro will not read zero.
+
+00:32:48.060 --> 00:32:57.310
+It will read some nonzero value that actually differs
+from device to device and even within a given device,
+
+00:32:57.310 --> 00:33:03.900
+it changes with a lot of things that you really have no
+control over, things such as the temperature of the gyro.
+
+00:33:03.900 --> 00:33:10.360
+Now, one of the main jobs of these device
+motion algorithms that we've implemented is
+
+00:33:10.360 --> 00:33:15.300
+to actively track and remove bias from the gyro data.
+
+00:33:15.300 --> 00:33:23.980
+And we provide that bias corrected gyro data to
+you through CMDeviceMotion's rotationRate property.
+
+00:33:23.980 --> 00:33:31.330
+Now, let's talk about-- let's talk about
+my favorite property of CMDeviceMotion
+
+00:33:31.330 --> 00:33:34.470
+and that's that full 3-Dimensional attitude.
+
+00:33:34.470 --> 00:33:38.000
+Now, you might also call this the orientation of the device.
+
+00:33:38.000 --> 00:33:42.040
+But fundamentally what it is, is it's a rotation.
+
+00:33:42.040 --> 00:33:46.550
+It's a rotation from a fixed reference
+frame that Core Motion chooses,
+
+00:33:46.550 --> 00:33:50.030
+and I'll show you exactly what that is on the next slide.
+
+00:33:50.030 --> 00:33:55.340
+But it's a rotation from that reference
+frame to the device's current frame.
+
+00:33:55.340 --> 00:34:01.340
+And as with any rotation, there are a number
+of ways that you can express it mathematically.
+
+00:34:01.340 --> 00:34:08.790
+You can use a rotation matrix; you can use a Quaternion;
+or you can use Euler angles, pitch, roll, and yaw.
+
+00:34:08.790 --> 00:34:13.350
+And we provide all three of those
+representations to you through CMAttitude.
+
+00:34:13.350 --> 00:34:17.710
+Now, let's talk about this reference frame.
+
+00:34:17.710 --> 00:34:24.030
+So it's chosen when your application
+first calls startDeviceMotionUpdates.
+
+00:34:24.030 --> 00:34:29.900
+And it's chosen in such a way that
+the Z-axis is always vertical.
+
+00:34:29.900 --> 00:34:39.750
+So that means that if you were to express gravity in this
+reference frame, it would be equal to the vector 0, 0, -1.
+
+00:34:39.750 --> 00:34:44.640
+Now, the X and Y-axes are both orthogonal to gravity.
+
+00:34:44.640 --> 00:34:46.470
+They're in the horizontal plane.
+
+00:34:46.470 --> 00:34:49.130
+And of course they're orthogonal to each other.
+
+00:34:49.130 --> 00:34:57.550
+But it is not the case for instance that X always
+aligned with North of Y is always aligned with North.
+
+00:34:57.550 --> 00:35:02.160
+So they're rotated in arbitrary
+amount with respect to North.
+
+00:35:02.160 --> 00:35:07.060
+So all three reference frames that you see up there
+now, North, East and Up, X1, Y1, Z1 and X2, Y2,
+
+00:35:07.060 --> 00:35:17.150
+and Z2 are equally valid reference
+frames for Core Motion to choose.
+
+00:35:17.150 --> 00:35:21.530
+So let's go through an example to really hammer this home.
+
+00:35:21.530 --> 00:35:24.620
+I mentioned earlier that you can extract
+
+00:35:24.620 --> 00:35:29.730
+from that 3-Dimensional attitude an
+estimate of gravity in the device's frame.
+
+00:35:29.730 --> 00:35:31.640
+This is how you do that.
+
+00:35:31.640 --> 00:35:39.460
+So let's say we have an instance of device motion and we
+extract a rotation matrix representation of its attitude.
+
+00:35:39.460 --> 00:35:48.060
+Now, recall that that attitude is the rotation from that
+fixed reference frame to the device's current frame.
+
+00:35:48.060 --> 00:35:56.910
+Now recall the gravity when expressed in that fixed
+reference frame is always equal to the vector 0, 0, -1.
+
+00:35:56.910 --> 00:36:05.190
+So, if we have a function that multiplies a 3x3 matrix
+by a three-element vector and returns the result,
+
+00:36:05.190 --> 00:36:12.030
+we call that the result will be exactly
+equal to device motion's gravity property.
+
+00:36:12.030 --> 00:36:21.430
+Or mathematically deviceMotion.gravity is equal
+to that rotation matrix times vector, 0, 0, -1.
+
+00:36:22.730 --> 00:36:32.650
+So many applications that are currently on the app store
+that use the accelerometer data to estimate gravity want
+
+00:36:32.650 --> 00:36:37.260
+to measure rotation not from the
+reference frame for instance,
+
+00:36:37.260 --> 00:36:42.180
+that Core Motion chooses or gravity
+is always along the - Z-axis.
+
+00:36:42.180 --> 00:36:49.140
+But they want to measure rotations from some more
+comfortable resting orientation for the user.
+
+00:36:49.140 --> 00:36:54.250
+And we provide a function to make
+that really easy in CMAttitude
+
+00:36:54.250 --> 00:36:58.680
+and that function is called multiplyByInverseOfAttitude.
+
+00:36:58.680 --> 00:37:00.300
+So how does it work?
+
+00:37:00.300 --> 00:37:02.640
+Well, let's look an example.
+
+00:37:02.640 --> 00:37:08.930
+Let's say that you're writing a game and when
+you render your first frame of animation,
+
+00:37:08.930 --> 00:37:14.010
+you want to grab the device's orientation
+and use that as you reference frame.
+
+00:37:14.010 --> 00:37:18.870
+That's the reference resting orientation
+that you want to give the user.
+
+00:37:18.870 --> 00:37:27.590
+So all you have to do then is retain the-- in
+instance of CMAttitude for that orientation.
+
+00:37:27.590 --> 00:37:31.390
+So here, we'll do that and will call it referenceAttitude.
+
+00:37:31.390 --> 00:37:37.970
+Then, on subsequent frames, all you have to do
+is grab the current attitude from Core Motion
+
+00:37:37.970 --> 00:37:44.120
+and that will give the rotation from Core Motions
+fixed reference frame to the device's frame
+
+00:37:44.120 --> 00:37:48.290
+and then you can use this multiplyByInverseOfAttitude
+function
+
+00:37:48.290 --> 00:37:52.770
+to change the reference frame to
+variable reference attitude.
+
+00:37:52.770 --> 00:37:57.100
+So after calling that, variable
+attitude will contain the rotation
+
+00:37:57.100 --> 00:38:00.880
+from reference attitude to the device's current frame.
+
+00:38:00.880 --> 00:38:05.770
+And to demonstrate that, I'd like to
+invite Patrick back up to the stage.
+
+00:38:05.770 --> 00:38:06.900
+Patrick.
+
+00:38:06.900 --> 00:38:10.230
+[ Applause ]
+
+00:38:10.230 --> 00:38:17.430
+>> Patrick Piemonte: In device motion, not using
+accelerometer and just device motion and you notice
+
+00:38:17.430 --> 00:38:25.510
+that we are basically rotating the Teapot right now by
+the inverse of the attitude coming from Core Motion.
+
+00:38:25.510 --> 00:38:32.280
+So with the spout aligned here along
+the X-axis, the rotation is identity.
+
+00:38:32.280 --> 00:38:37.170
+So that means that the device's frame is
+aligned with the frame of Core Motion.
+
+00:38:37.170 --> 00:38:43.910
+So if your user will probably-- if your user is playing the
+game in a different orientation and you'd like to change
+
+00:38:43.910 --> 00:38:50.820
+that reference frame for future updates in your
+app, you can cache a sample as Chris described
+
+00:38:50.820 --> 00:38:59.370
+and then all future samples you can use that function
+multiplyByInverseOfAttitude with that cached attitude.
+
+00:38:59.370 --> 00:39:01.880
+And from that point forward, you'll have a new reference.
+
+00:39:01.880 --> 00:39:07.600
+So we do that here in this test application when
+you hit those reset reference attitude button.
+
+00:39:07.600 --> 00:39:10.640
+So you see how the spout lined along the X-axis again.
+
+00:39:10.640 --> 00:39:15.020
+So now the Teapot will rotate from that orientation.
+
+00:39:16.370 --> 00:39:21.090
+So now, we're going to take deep dive into the code
+
+00:39:21.090 --> 00:39:27.030
+and look at the same Core Motion Teapot
+application that we've been showing you.
+
+00:39:27.030 --> 00:39:32.470
+So again, this is available on the
+session website associated with our talk.
+
+00:39:32.470 --> 00:39:34.870
+So we have the Teapot project open here.
+
+00:39:34.870 --> 00:39:42.690
+And the first thing you'd like to do is actually
+add the Core Motion framework to your project.
+
+00:39:42.690 --> 00:39:47.030
+So now, we have the project added
+and the project is pretty small.
+
+00:39:47.030 --> 00:39:54.540
+We have our app delegate and we have our primary view and
+then we have an abstraction for our accelerometer filtering.
+
+00:39:54.540 --> 00:40:02.260
+Now, we're going to integrate the
+Core Motion into the view itself.
+
+00:40:02.260 --> 00:40:13.550
+So here will just drop in our header and I will
+switch over to our implementation of the view.
+
+00:40:15.310 --> 00:40:20.440
+And we need to first allocate our Core Motion manager.
+
+00:40:20.440 --> 00:40:23.850
+So we do that in our start animation.
+
+00:40:24.890 --> 00:40:28.650
+So we'll allocate our motion manger.
+
+00:40:31.610 --> 00:40:36.450
+And once we have our motion manger
+allocated, now we can configure it.
+
+00:40:36.450 --> 00:40:40.530
+So we would like to set up our--
+basically, our sensor data intervals.
+
+00:40:40.530 --> 00:40:45.970
+So you could do that pretty easily
+with-- by setting these two properties.
+
+00:40:45.970 --> 00:40:48.910
+For accelerometer, we have accelerometer update interval.
+
+00:40:48.910 --> 00:40:52.360
+And for device motion, we have
+device motion update interval.
+
+00:40:52.360 --> 00:40:57.510
+And in this particular case, we're
+setting it to a 100 hertz for each.
+
+00:40:57.510 --> 00:41:02.450
+[ Pause ]
+
+00:41:02.450 --> 00:41:09.130
+So now that we have our motion
+manager configured, our App will--
+
+00:41:09.130 --> 00:41:15.700
+so we could start updating the specific sensor
+based on the mode our application is in.
+
+00:41:15.700 --> 00:41:19.490
+So you simply call startAccelerometerUpdates.
+
+00:41:19.490 --> 00:41:23.080
+And for motion updates, you would
+just call startDeviceMotionUpdates.
+
+00:41:23.080 --> 00:41:29.970
+Now, since all iOS devices have shift to the
+accelerometer, there is a property that check
+
+00:41:29.970 --> 00:41:34.850
+if the accelerometers available but will
+need to check if device motion is available.
+
+00:41:34.850 --> 00:41:42.100
+And in this particular application we will enable
+the Device Motion button on a Teapot app based
+
+00:41:42.100 --> 00:41:45.350
+on the fact if device motion is available or not.
+
+00:41:45.350 --> 00:41:53.120
+So, on iPhone 4 this will return yes, the device motion
+is available property and that's everything to set up.
+
+00:41:53.120 --> 00:41:58.890
+So, now we have our apps setup and we need to begin drawing.
+
+00:41:58.890 --> 00:42:05.350
+So if we go to our drawing method, if you attended
+the game designed sessions on Tuesday morning,
+
+00:42:05.350 --> 00:42:07.860
+they talked about your draw views you should read
+
+00:42:07.860 --> 00:42:14.740
+in you accelerometer input before doing
+a lot of your drawing in the screen.
+
+00:42:14.740 --> 00:42:16.260
+And we do the same here.
+
+00:42:16.260 --> 00:42:24.290
+So we will actually have our-- I will take in our
+user input first which is the device motion data.
+
+00:42:24.290 --> 00:42:26.510
+So for accelerometer data--
+
+00:42:26.510 --> 00:42:34.430
+[ Pause ]
+
+00:42:34.430 --> 00:42:36.760
+-- we have our accelerometer data properties.
+
+00:42:36.760 --> 00:42:39.030
+So there're two styles as Chris mentioned.
+
+00:42:39.030 --> 00:42:43.130
+We have our block-based mechanism
+and then we have-- which is push.
+
+00:42:43.130 --> 00:42:46.890
+In this particular case, the Teapot
+app uses the pull method.
+
+00:42:46.890 --> 00:42:52.980
+So what we are doing is we're checking the property every
+time we draw the Teapot on the screen and rendering it
+
+00:42:52.980 --> 00:43:00.200
+with the latest data that Core
+Motion has seen from the sensors.
+
+00:43:00.200 --> 00:43:09.190
+And of course, the core in the device motion
+operation, device motion mode, we can do the same.
+
+00:43:09.190 --> 00:43:13.760
+So again, we're checking our device
+motion property of the motion manager.
+
+00:43:13.760 --> 00:43:20.600
+And then in that device motion property, we're grabbing
+the attitude and that's what we used to rotate the Teapot.
+
+00:43:20.600 --> 00:43:26.090
+Now, we had shown this in our second
+demo the multiplyByInverseOfAttitude.
+
+00:43:26.090 --> 00:43:34.460
+So if you've cached that reference attitude,
+this is where it actually gets used.
+
+00:43:34.460 --> 00:43:36.880
+And that's everything for servicing the data.
+
+00:43:36.880 --> 00:43:40.510
+Now, just to wrap up when we call stopAnimation.
+
+00:43:40.510 --> 00:43:50.370
+[ Pause ]
+
+00:43:50.370 --> 00:43:53.140
+We will stop the accelerometer updates.
+
+00:43:53.140 --> 00:43:57.160
+Stop our device motion updates and
+then we'll perform our clean up.
+
+00:43:57.160 --> 00:43:59.270
+So that's how the Teapot app works.
+
+00:43:59.270 --> 00:44:00.010
+Thank you.
+
+00:44:00.010 --> 00:44:00.330
+[ Applause ]
+
+00:44:00.330 --> 00:44:02.320
+>> Chris Moore: Thanks, man.
+
+00:44:02.320 --> 00:44:06.600
+[ Applause ]
+
+00:44:06.600 --> 00:44:11.020
+So recall that the new information
+that you can get on iPhone 4
+
+00:44:11.020 --> 00:44:16.860
+through Core Motion is the full
+3-Dimensional attitude of the device, a much,
+
+00:44:16.860 --> 00:44:23.840
+much improved estimate of user acceleration
+that's not influence by rotational motion
+
+00:44:23.840 --> 00:44:31.810
+and does not require a high-pass filter, as well
+as the instantaneous rotation rate of the device.
+
+00:44:31.810 --> 00:44:37.850
+So what do we do with this new
+sensor under the hood in iPhone 4?
+
+00:44:37.850 --> 00:44:44.830
+Well, if you went to the Core Location talk yesterday,
+you probably heard about us using it for GPS aiding
+
+00:44:44.830 --> 00:44:51.380
+and we do this if you specify that you
+want navigation accuracy in Core Location.
+
+00:44:51.380 --> 00:44:57.170
+We don't do it by default because it uses a
+little extra power and it's predominantly useful
+
+00:44:57.170 --> 00:45:04.870
+when the device is mounted in the car and you are
+in areas where the GPS quality is relatively low.
+
+00:45:04.870 --> 00:45:10.170
+So if you're driving around downtown San
+Francisco, that's a perfect time to use this.
+
+00:45:10.170 --> 00:45:18.470
+And the gyro will greatly improve position and
+especially Core's information that you get from GPS.
+
+00:45:18.470 --> 00:45:24.580
+This will be a huge help to map matching
+applications that use both position and course
+
+00:45:24.580 --> 00:45:27.460
+to figure out which road to snap you two.
+
+00:45:27.460 --> 00:45:30.370
+We also used for compensating under the hood.
+
+00:45:30.370 --> 00:45:36.520
+So if we detect an abrupt change in magnetic
+interference by comparing the compass
+
+00:45:36.520 --> 00:45:42.820
+and gyro data then we can coast using the
+gyro data until that interference goes away.
+
+00:45:42.820 --> 00:45:46.350
+Let's talk about what's more interesting now.
+
+00:45:46.350 --> 00:45:48.370
+What can you do with this?
+
+00:45:48.370 --> 00:45:53.200
+Well, we see gaming as being obviously
+a huge application of it.
+
+00:45:53.200 --> 00:45:56.730
+And we've talked about some things
+that games could use it for.
+
+00:45:56.730 --> 00:46:00.990
+But it can also be a huge help to
+augment in reality applications.
+
+00:46:00.990 --> 00:46:08.680
+After you get that initial compass fixed, you can switch
+over to using gyro and get much, much more responsiveness.
+
+00:46:08.680 --> 00:46:14.150
+3D visualization and mapping apps were
+really be possible now and much, much more.
+
+00:46:14.150 --> 00:46:20.630
+We have been absolutely blown away by the amazing
+things that you guys have done with the accelerometer
+
+00:46:20.630 --> 00:46:27.100
+and the magnetometer and we can't wait to see what you
+can do with this new sensor and this new algorithms.
+
+00:46:27.100 --> 00:46:32.520
+For other sessions, the game design
+sessions are being repeated tomorrow morning.
+
+00:46:32.520 --> 00:46:39.120
+Unfortunately, the other three related sessions have
+already happened but you can check out the videos online.
+
+00:46:39.120 --> 00:46:47.200
+So if you would like to learn more, you can contact
+Allan Schaffer, he's our Graphics Evangelist as well
+
+00:46:47.200 --> 00:46:52.010
+as the documentation and forums that we have
+available on our Apple Developer website.
+

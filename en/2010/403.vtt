@@ -1,0 +1,2225 @@
+WEBVTT
+
+00:00:06.370 --> 00:00:11.400
+>> Welcome to this year's HTTP Live Streaming Session.
+
+00:00:11.400 --> 00:00:17.920
+My name is Roger Pantos, and I work on our
+streaming client and also I am one of the people
+
+00:00:17.920 --> 00:00:21.640
+who defined the protocol and continues to do that.
+
+00:00:21.640 --> 00:00:34.120
+So it was exactly one year ago that I stood up here at WWDC
+and introduced this new thing called HTTP Live Streaming.
+
+00:00:34.120 --> 00:00:36.440
+And how are we doing?
+
+00:00:36.440 --> 00:00:44.670
+Well, apparently a lot of people have been
+waiting for a simple, standards-based way
+
+00:00:44.670 --> 00:00:50.210
+to cost effectively broadcast live
+video to wireless devices.
+
+00:00:50.210 --> 00:00:53.290
+People are jumping on this.
+
+00:00:53.290 --> 00:01:02.480
+We started with our launch partners, Major
+League Baseball, CNN, Akamai, Inlet, Invivio.
+
+00:01:02.480 --> 00:01:15.500
+And since then we have seen everyone from top-tier networks
+like ABC, Sky, to start-up companies use this technology
+
+00:01:15.500 --> 00:01:21.210
+to produce incredible applications, incredible.
+
+00:01:21.210 --> 00:01:25.100
+We worked with some of the most
+innovative companies in media.
+
+00:01:25.100 --> 00:01:32.230
+Folks like Netflix and they have helped
+us focus on the most important aspects
+
+00:01:32.230 --> 00:01:37.760
+of delivering their content, your content to mobile devices.
+
+00:01:37.760 --> 00:01:48.010
+Over the past year we have refined our protocol and our
+implementation, the protocol, our implementation of it.
+
+00:01:48.010 --> 00:01:59.070
+And our goal has been to give you the tools that
+you need to take your application from incredible
+
+00:01:59.070 --> 00:02:09.010
+to mind blowing App Store chart topping
+oh my God I am living in Star Trek!
+
+00:02:09.010 --> 00:02:10.730
+[ Laughter ]
+
+00:02:10.730 --> 00:02:12.450
+[ Applause ]
+
+00:02:12.450 --> 00:02:13.880
+That's the goal right?
+
+00:02:13.880 --> 00:02:18.160
+We want to help you guys build some cool applications.
+
+00:02:18.160 --> 00:02:27.740
+And so today what're going to do is give you a quick
+overview of how the technology works and walk you
+
+00:02:27.740 --> 00:02:34.240
+through the new things that we've added to it in iOS 4.0.
+
+00:02:34.240 --> 00:02:41.880
+And to do that what I would like to do is introduce our
+media technology evangelist for HTTP Live Streaming.
+
+00:02:41.880 --> 00:02:45.360
+His name is Eryk Vershen.
+
+00:02:45.360 --> 00:02:45.960
+Eryk.
+
+00:02:45.960 --> 00:02:51.460
+[ Applause ]
+
+00:02:51.460 --> 00:02:51.950
+>> Thanks Roger.
+
+00:02:51.950 --> 00:02:55.410
+Good morning everybody!
+
+00:02:55.410 --> 00:03:03.390
+So it's been a busy year and I want to talk,
+my talk is going to cover four main things.
+
+00:03:03.390 --> 00:03:09.660
+First of all we are going to have a technology
+walk-through for those of you who may not be that familiar
+
+00:03:09.660 --> 00:03:15.400
+with the technology or having been looking at the details
+recently, then we are going to talk about the new features
+
+00:03:15.400 --> 00:03:18.820
+and functionality that we've added over the past year.
+
+00:03:18.820 --> 00:03:20.090
+Some of that was added early in the year.
+
+00:03:20.090 --> 00:03:22.640
+Some of that's been added very recently.
+
+00:03:22.640 --> 00:03:27.160
+And I'll have Roger back up for a demo and
+we'll talk about the tools that we provide
+
+00:03:27.160 --> 00:03:30.800
+so that you can create your own HTTP Live Streams.
+
+00:03:30.800 --> 00:03:34.020
+And then lastly, I will talk about some tips and tricks.
+
+00:03:34.020 --> 00:03:35.630
+So let's get started.
+
+00:03:35.630 --> 00:03:41.240
+Now, before we get started with the technology walk-through
+I want you to think about how we do streaming with HTTP.
+
+00:03:41.240 --> 00:03:44.340
+I mean, HTTP doesn't do streaming, right?
+
+00:03:44.340 --> 00:03:47.530
+It just delivers discreet files.
+
+00:03:47.530 --> 00:03:55.490
+So essentially what were doing is we're turning your
+long movie or your live content into discreet files.
+
+00:03:55.490 --> 00:04:02.320
+Now, you've probably seen this slide last year or
+some version of it, workflow or architecture now.
+
+00:04:02.320 --> 00:04:09.210
+Whenever we're doing-- converting video, what we are
+going to do-- we have to initially have some video.
+
+00:04:09.210 --> 00:04:12.200
+Now, there is two disparate things here.
+
+00:04:12.200 --> 00:04:17.840
+I might have live material or I might
+have some video on demand material.
+
+00:04:17.840 --> 00:04:20.970
+And the workflow is slightly different between those two.
+
+00:04:20.970 --> 00:04:26.390
+So we're going to start out with an audio/video
+source that might be in the case of live
+
+00:04:26.390 --> 00:04:34.320
+that might be an STI connection that's coming in
+to my desktop machine, or in the case of video
+
+00:04:34.320 --> 00:04:38.880
+on demand I have already got a
+movie file around on my file system.
+
+00:04:38.880 --> 00:04:43.410
+Now the first thing we have to do
+is run it through a media encoder.
+
+00:04:43.410 --> 00:04:49.530
+That means turning it into H.264 and
+AAC so we can play it on an iOS device
+
+00:04:49.530 --> 00:04:55.460
+and it also means wrapping it in an MPEG-2 Transport Stream.
+
+00:04:55.460 --> 00:04:59.930
+Now once we wrapped it in an MPEG-2 Transport
+Stream we are going to pass it into our segmenter.
+
+00:04:59.930 --> 00:05:08.690
+And what the segmenter is doing is it's chopping that
+movie into discreet chunks of roughly equal length.
+
+00:05:08.690 --> 00:05:12.650
+Now the segmenter is also going to create at the
+same time a playlist that lists those segments,
+
+00:05:12.650 --> 00:05:15.700
+and it's going to put those files
+somewhere that the web server can see them.
+
+00:05:15.700 --> 00:05:18.680
+Now, there is nothing special about
+the web server in this context.
+
+00:05:18.680 --> 00:05:21.110
+It is an ordinary web server.
+
+00:05:21.110 --> 00:05:27.170
+The web server would make it available in the
+cloud and so you can download it on your devices.
+
+00:05:27.170 --> 00:05:30.490
+Now remember I talked to you about,
+we've got these two different worlds,
+
+00:05:30.490 --> 00:05:35.260
+either I've got a live stream or I've got video on demand.
+
+00:05:35.260 --> 00:05:41.310
+In the case of live streaming that first part is going
+to happen at the same time as I am serving it out.
+
+00:05:41.310 --> 00:05:43.230
+I am going to be continually getting new content.
+
+00:05:43.230 --> 00:05:46.770
+I am going to have to create new
+segments and serve those out.
+
+00:05:46.770 --> 00:05:54.850
+But in the case of video on demand, I'll have done that
+initial phase once and I'll be serving it out repeatedly.
+
+00:05:54.850 --> 00:06:00.670
+Now, the center of this is segments and playlist.
+
+00:06:00.670 --> 00:06:06.390
+So, I'm going to be creating segments, here let's imagine
+I've got several segments that are 10 seconds long,
+
+00:06:06.390 --> 00:06:12.820
+and you'll see that 10-second number a lot because that's
+the number we tend to recommend for the length of a segment.
+
+00:06:12.820 --> 00:06:14.890
+Now, segments by themselves aren't any good.
+
+00:06:14.890 --> 00:06:20.120
+I need to have a playlist and that
+playlist has to point at the segments.
+
+00:06:20.120 --> 00:06:29.180
+And the playlist is really the centerpiece of
+how the client finds out about the material.
+
+00:06:29.180 --> 00:06:30.530
+So the playlist does several things.
+
+00:06:30.530 --> 00:06:39.760
+First of all, it lists the segments in playback order and if
+I am doing a live stream this defines the playback window.
+
+00:06:39.760 --> 00:06:46.680
+That is, in a live stream I'm not necessarily showing you
+everything because in fact the stream might exist 24/7.
+
+00:06:46.680 --> 00:06:49.750
+I can't have all that content around all the time.
+
+00:06:49.750 --> 00:06:54.300
+So I am going to give you a window
+into the content that rolls along.
+
+00:06:54.300 --> 00:07:00.370
+Now, you are going to want to protect your content
+in some cases and so we can encrypt the segments,
+
+00:07:00.370 --> 00:07:05.410
+but in order for the client to decrypt them
+it has to know how to-- what key to use.
+
+00:07:05.410 --> 00:07:11.140
+So we have to have in the playlist the
+key associated with this encryption.
+
+00:07:11.140 --> 00:07:15.810
+And an important feature of HTTP live streaming
+is that I can adapt to different bit rates.
+
+00:07:15.810 --> 00:07:19.990
+So as my network characteristics change I can go ahead
+
+00:07:19.990 --> 00:07:25.930
+and the client can fetch a version
+that's suitable for that bit rate.
+
+00:07:25.930 --> 00:07:31.360
+And so the playlist has to be able to
+define multiple variations of the content.
+
+00:07:31.360 --> 00:07:36.230
+Now first, let's look at what's a fairly straight
+forward playlist, a video on demand playlist.
+
+00:07:36.230 --> 00:07:43.320
+Now, when you look at this the main thing
+to notice is it's just a list of URLs.
+
+00:07:43.320 --> 00:07:44.610
+Those are URLs of segments.
+
+00:07:44.610 --> 00:07:52.570
+Now, initially they can be absolute URLs but generally
+speaking you're going to want to make them relative URLs.
+
+00:07:52.570 --> 00:07:55.720
+That's more portable, it's just going to work better.
+
+00:07:55.720 --> 00:08:00.310
+Now the other lines in the file, you know, some or all got
+a hash mark in front of them and that makes them comments.
+
+00:08:00.310 --> 00:08:06.870
+But if those comments start with a word that we recognize
+they become tags that actually affect what is going on.
+
+00:08:06.870 --> 00:08:13.030
+Now the first tag the EXTM3U tells the
+client what the format of the file is
+
+00:08:13.030 --> 00:08:20.840
+and at the moment we only support the one format so
+that is always going to be the first tag in your file.
+
+00:08:20.840 --> 00:08:29.710
+The second tag, TARGETDURATION indicates the maximum
+duration of any segment in seconds, 10 seconds here.
+
+00:08:29.710 --> 00:08:32.500
+And you'll notice that there is this extra INF tag in front
+
+00:08:32.500 --> 00:08:36.600
+of each segment indicating the
+duration in seconds of that segment.
+
+00:08:36.600 --> 00:08:42.860
+In this case they are all 10 segments, 10
+second segments, but they could be shorter.
+
+00:08:42.860 --> 00:08:45.980
+The next tag to notice is the MEDIA-SEQUENCE tag.
+
+00:08:45.980 --> 00:08:50.080
+This indicates the sequence numbers associated
+with the segments that will become more important
+
+00:08:50.080 --> 00:08:51.910
+when I show you a live playlist later on.
+
+00:08:51.910 --> 00:08:57.100
+Only thing I want you to notice now is that
+sequence number does not have anything to do
+
+00:08:57.100 --> 00:09:01.840
+with the filenames associated with the segments.
+
+00:09:01.840 --> 00:09:05.340
+The last tag I want you to notice is the ENDLIST tag.
+
+00:09:05.340 --> 00:09:10.020
+Now, the ENDLIST tag indicates to the
+client that this playlist is complete.
+
+00:09:10.020 --> 00:09:11.750
+It is never going to change.
+
+00:09:11.750 --> 00:09:16.610
+So the client is going to fetch this
+playlist and it knows-- it never changes.
+
+00:09:16.610 --> 00:09:18.600
+It is complete.
+
+00:09:18.600 --> 00:09:22.830
+Now, if I am doing live I can't
+give you a complete playlist.
+
+00:09:22.830 --> 00:09:28.590
+So here is an example of a live
+playlist and it looks a lot like my video
+
+00:09:28.590 --> 00:09:34.480
+on demand playlist except there is no ENDLIST tag
+and when there is no ENDLIST tag the client knows
+
+00:09:34.480 --> 00:09:37.220
+that he has to re-fetch this periodically.
+
+00:09:37.220 --> 00:09:38.610
+Well, how often?
+
+00:09:38.610 --> 00:09:40.720
+TARGETDURATION is going to indicate that.
+
+00:09:40.720 --> 00:09:47.410
+Although if I have, one of my segments is
+shorter that is going to vary that a little bit.
+
+00:09:47.410 --> 00:09:55.090
+And let us say that I've highlighted the sequence
+number here because the client knowing he has
+
+00:09:55.090 --> 00:10:01.050
+to re-fetch thisalso implies that the server
+has promised that he is going to update it.
+
+00:10:01.050 --> 00:10:03.710
+So let's imagine that I pulled the next time.
+
+00:10:03.710 --> 00:10:10.820
+Now it is up to it, it knows my sequence has changed and
+the set of files that are in the playlist have changed.
+
+00:10:10.820 --> 00:10:11.870
+Let's do it again.
+
+00:10:11.870 --> 00:10:16.440
+OK, so now my sequence number is 3
+and the list of files have changed.
+
+00:10:16.440 --> 00:10:22.530
+And what we're giving you is a rolling list of the content.
+
+00:10:22.530 --> 00:10:26.830
+Now, the sequence number has to
+stay consistent between one version
+
+00:10:26.830 --> 00:10:29.750
+of the playlist that I download and the next version.
+
+00:10:29.750 --> 00:10:33.740
+So every time I get that playlist, if
+I am dropping a file off the front,
+
+00:10:33.740 --> 00:10:37.510
+I've got to bump that sequence number to keep it consistent.
+
+00:10:37.510 --> 00:10:42.410
+Now, we can keep doing this as long as
+we want and naturally I am not limited
+
+00:10:42.410 --> 00:10:48.740
+to having only 5 or 6 segments in the playlist.
+
+00:10:48.740 --> 00:10:52.740
+I could have 10, I could have 100, I could have 500.
+
+00:10:52.740 --> 00:10:57.130
+When I have that on the live playlist the client's
+is going to come in and the client is going to start
+
+00:10:57.130 --> 00:10:58.990
+by default, near the end of that playlist.
+
+00:10:58.990 --> 00:11:05.930
+But the client can seek around and so what I am giving
+you is a window into what's happening as it goes along.
+
+00:11:05.930 --> 00:11:10.210
+Now there is a third kind of basic playlist
+which is what we call an Event Playlist.
+
+00:11:10.210 --> 00:11:15.610
+Now the difference with an Event Playlist, it looks a
+lot like, to start out it looks like a Live Playlist.
+
+00:11:15.610 --> 00:11:19.540
+It does not have an ENDLIST tag which means
+the client knows he's got to fetch it again.
+
+00:11:19.540 --> 00:11:24.950
+This time when the client fetches it we're
+just going to add a segment on to the end.
+
+00:11:24.950 --> 00:11:26.880
+We're not going to get rid of the segments on the front.
+
+00:11:26.880 --> 00:11:28.910
+We are going to keep on adding segments.
+
+00:11:28.910 --> 00:11:34.620
+We can do this again as long as we
+want until at some point it is over.
+
+00:11:34.620 --> 00:11:36.090
+Now why would I do with an Event Playlist?
+
+00:11:36.090 --> 00:11:44.550
+Well, for an event, for a sporting event, for a rock concert
+something like that I'd want to deliver it while it was live
+
+00:11:44.550 --> 00:11:47.660
+but I'd want it to complete at the end, alright.
+
+00:11:47.660 --> 00:11:53.430
+So once the client sees that ENDLIST the client knows that
+this playlist is done, I do not have to fetch it anymore.
+
+00:11:53.430 --> 00:11:59.370
+Now, if I am delivering an event like
+that I really want to protect my content
+
+00:11:59.370 --> 00:12:03.910
+so I'm going to want to turn on encryption..
+
+00:12:03.910 --> 00:12:08.820
+So here's a playlist that has some encryption
+and what we've added is this key tag.
+
+00:12:08.820 --> 00:12:11.350
+Now, the key tag indicates the
+method of encryption were using.
+
+00:12:11.350 --> 00:12:18.000
+At the moment we only support AES 128 although you can, if
+you have a portion of your content that is not encryption,
+
+00:12:18.000 --> 00:12:24.520
+you can switch out of encryption by
+specifying the encryption method as being none.
+
+00:12:24.520 --> 00:12:27.830
+Now the other point to notice here is the URI.
+
+00:12:27.830 --> 00:12:34.290
+The URI indicates where the client should go to fetch
+the key that he needs in order to decrypt the segment.
+
+00:12:34.290 --> 00:12:42.440
+Now, this key is going to apply to all subsequent
+segments until a point where I specify another key.
+
+00:12:42.440 --> 00:12:49.280
+At this point, the client's going to go and fetch that key
+and that going to apply to subsequent segments going on.
+
+00:12:49.280 --> 00:12:55.620
+Now, at this point we've only been
+talking about one kind of, you know,
+
+00:12:55.620 --> 00:13:00.290
+one example of a playlist, it's only got one data rate.
+
+00:13:00.290 --> 00:13:02.490
+We want to be able to handle variants.
+
+00:13:02.490 --> 00:13:06.180
+We want to be able to handle multiple
+data rates at the same time.
+
+00:13:06.180 --> 00:13:06.950
+So what's a variant?
+
+00:13:06.950 --> 00:13:10.830
+A variant is a version of the stream
+at a particular bit rate.
+
+00:13:10.830 --> 00:13:16.500
+Now, each variant is in a separate playlist
+and what we call the Variant Playlist
+
+00:13:16.500 --> 00:13:21.260
+or the Master Variant Playlist describes
+all of the variants that I have available.
+
+00:13:21.260 --> 00:13:26.810
+Now the client is going to be given that variant
+playlist and the client is going to switch based
+
+00:13:26.810 --> 00:13:32.990
+on the measured bit rate-- on the bit rate that is actually
+seeing over the network which variant he should play
+
+00:13:32.990 --> 00:13:39.170
+and the client's player has been
+tuned to minimize stalling playback.
+
+00:13:39.170 --> 00:13:41.510
+We want to give the user a good experience.
+
+00:13:41.510 --> 00:13:46.800
+We don't want him to have the video
+drop out if we can help it.
+
+00:13:46.800 --> 00:13:49.310
+Now, I've got a nice picture here of a variant playlist.
+
+00:13:49.310 --> 00:13:56.330
+Let us imagine that I have a playlist at some
+kind of a medium resolution and bit rate,
+
+00:13:56.330 --> 00:14:03.580
+and let's make two more variants available, one
+at a lower bit rate and one at a higher bit rate.
+
+00:14:03.580 --> 00:14:09.020
+Now, what I do is I create a variant playlist
+that points at the individual playlist.
+
+00:14:09.020 --> 00:14:11.570
+I hand that to the client and the client can play it.
+
+00:14:11.570 --> 00:14:17.140
+Unless I put the audio here and
+the audio hasn't changed size.
+
+00:14:17.140 --> 00:14:23.990
+The reason I am doing that is you want your audio to be
+identical between all the streams and I mean identical,
+
+00:14:23.990 --> 00:14:28.880
+not just the same bit rate and sample
+rate but actually the very same audio.
+
+00:14:28.880 --> 00:14:34.750
+And the reason you want to do that is if you don't do that
+you can get pops and clicks when you switch between streams.
+
+00:14:34.750 --> 00:14:40.530
+It is a bad user experience and you'd
+rather, the best way to go about this is
+
+00:14:40.530 --> 00:14:44.490
+to make the audio completely consistent
+between the variants.
+
+00:14:44.490 --> 00:14:47.280
+Now, here is an example of what
+a variant playlist looks like.
+
+00:14:47.280 --> 00:14:50.110
+It looks a lot like another playlist.
+
+00:14:50.110 --> 00:14:56.260
+It is just a list of URLs, but in this
+case those URLs are to other playlists.
+
+00:14:56.260 --> 00:15:00.350
+And instead of being preceded by that
+extra INF tag that we saw with one
+
+00:15:00.350 --> 00:15:04.540
+of the segments it is preceded by the STREAM-INF tag.
+
+00:15:04.540 --> 00:15:10.850
+The STREAM-INF tag ties the individual variants
+together and in particular specifies the bandwidth
+
+00:15:10.850 --> 00:15:16.640
+that is the maximum data rate that
+this version of the stream can take.
+
+00:15:16.640 --> 00:15:21.100
+I want to call out two of these variants in particular.
+
+00:15:21.100 --> 00:15:23.640
+The first one, because the first one is the default,
+
+00:15:23.640 --> 00:15:31.030
+when the client picks up the variant playlist
+it's going to start out with the first stream.
+
+00:15:31.030 --> 00:15:39.240
+The other one I want to call out is the last
+one, that's a 64 kilobit stream, audio only.
+
+00:15:39.240 --> 00:15:47.230
+You want to have a low data rate stream for
+fallback if you happen to be on cellular.
+
+00:15:47.230 --> 00:15:50.170
+You want to have something that the client
+can go down to that you're basically going
+
+00:15:50.170 --> 00:15:55.570
+to be able to serve no matter what happens.
+
+00:15:55.570 --> 00:15:58.050
+Oh yes, one last thing I wanted to
+point out about variant playlists.
+
+00:15:58.050 --> 00:16:01.870
+The variant playlist, even though it does
+not have an ENDLIST tag, is not reread.
+
+00:16:01.870 --> 00:16:05.420
+Once you've read the variant-- the client
+has read the variant playlist, it assumes
+
+00:16:05.420 --> 00:16:08.290
+that the set of variations isn't changing.
+
+00:16:08.290 --> 00:16:15.000
+Now, if the individual variations are Live or Event
+Playlist, as soon as it sees an ENDLIST tag on one
+
+00:16:15.000 --> 00:16:19.150
+of the individual variants, as soon as
+it hits that point, that ends the stream.
+
+00:16:19.150 --> 00:16:26.790
+It's not the case that you could say, oh well, I
+just do not want to serve that bit rate anymore.
+
+00:16:26.790 --> 00:16:34.570
+I'll put an ENDLIST on it, it is like, no, these
+streams are all supposed to be the same content.
+
+00:16:36.040 --> 00:16:44.410
+Now, in terms of playback you can play back using Safari
+either on the web or mobile Safari and the best way to do
+
+00:16:44.410 --> 00:16:57.310
+that these days is with the HTML5 video element but
+in-- that's the wrong version it's supposed to say iOS.
+
+00:16:57.310 --> 00:17:04.300
+In iOS there are several possibilities,
+UIWebView which gives you something like HTML5
+
+00:17:04.300 --> 00:17:11.980
+but also MPMoviePlayerController which has existed
+for a while and now in iOS 4 AVPlayerItem with is part
+
+00:17:11.980 --> 00:17:18.420
+of AV Foundation, allows you to play back HTTP live streams.
+
+00:17:18.420 --> 00:17:21.840
+Now, let's start talking about new features.
+
+00:17:21.840 --> 00:17:26.100
+I've got four main new features that I want to talk about.
+
+00:17:26.100 --> 00:17:28.130
+The first is Stream Discontinuities.
+
+00:17:28.130 --> 00:17:30.450
+Streams aren't continuous.
+
+00:17:30.450 --> 00:17:33.200
+That is, they aren't always the same.
+
+00:17:33.200 --> 00:17:37.960
+I might be wanting to deliver something
+where I am delivering a set
+
+00:17:37.960 --> 00:17:43.770
+of different short movies, TV shows, or whatever.
+
+00:17:43.770 --> 00:17:48.360
+And I'm going to be stitching those together
+into my stream that I am actually delivering
+
+00:17:48.360 --> 00:17:50.930
+and those might be encoded at different times.
+
+00:17:50.930 --> 00:17:52.930
+There might be variations in between them.
+
+00:17:52.930 --> 00:17:55.790
+So we've got to handle those discontinuities.
+
+00:17:55.790 --> 00:18:02.410
+We also want to provide metadata that
+goes along with the streams and we want
+
+00:18:02.410 --> 00:18:07.000
+that metadata to be associated with particular times.
+
+00:18:07.000 --> 00:18:12.590
+The third thing is custom protocols.
+
+00:18:12.590 --> 00:18:22.990
+I will go into more detail when I talk a little bit later
+but basically this allows you to have a greater degree
+
+00:18:22.990 --> 00:18:28.860
+of control over how your keys are delivered to the client.
+
+00:18:28.860 --> 00:18:35.090
+I'll talk about performance improvements and then I
+have a few odds and ends I'll talk about after that.
+
+00:18:35.090 --> 00:18:37.340
+OK, discontinuity.
+
+00:18:37.340 --> 00:18:40.700
+So let's say I have a whole bunch of
+movies that I am delivering and I really
+
+00:18:40.700 --> 00:18:43.890
+like to put some kind of bumper at the front of the movie.
+
+00:18:43.890 --> 00:18:48.310
+Some sort of idents or some sort of branding
+that indicates these are coming from my site.
+
+00:18:48.310 --> 00:18:52.640
+Now, how am I going to do that?
+
+00:18:52.640 --> 00:18:54.640
+Cause I won't have just three movies.
+
+00:18:54.640 --> 00:18:58.050
+I may have hundreds or thousands of movies.
+
+00:18:58.050 --> 00:19:07.040
+Well, I could take that bumper and I could merge it into the
+movie but then if I decided to change the bumper I am going
+
+00:19:07.040 --> 00:19:10.600
+to have to re-encode all those things
+in order to make it work right.
+
+00:19:10.600 --> 00:19:15.750
+And further, I've used that space: if I've got
+a thousand movies, I've got a thousand copies
+
+00:19:15.750 --> 00:19:17.540
+of that bumper that I stuck on my server.
+
+00:19:17.540 --> 00:19:19.740
+What was the point of that?
+
+00:19:19.740 --> 00:19:22.000
+So it is a brittle solution.
+
+00:19:22.000 --> 00:19:26.630
+Now, you could say, well what if we
+just delivered the bumper as one movie.
+
+00:19:26.630 --> 00:19:28.440
+You know, we'll play one movie and then play the next movie.
+
+00:19:28.440 --> 00:19:36.030
+And you think that might work but there is a problem
+with that, and that is that the client when you switch
+
+00:19:36.030 --> 00:19:44.620
+to a new movie forgets about what's going on, what it was
+getting in terms of data rate, because it doesn't know
+
+00:19:44.620 --> 00:19:47.920
+that essentially we're going to be
+getting this from the same place.
+
+00:19:47.920 --> 00:19:52.290
+And so what will happen as I start playing my bumper I'll
+have a low data rate which will start out because we want
+
+00:19:52.290 --> 00:19:55.590
+to start out conservatively and make sure
+the clients' likely to be able to read it.
+
+00:19:55.590 --> 00:19:58.510
+And then it is going to go up and then when I
+hit the end of the bumper I am going to go back
+
+00:19:58.510 --> 00:20:01.540
+to my movie and I have to start ramping up.
+
+00:20:01.540 --> 00:20:03.610
+So I am going to get this break in quality.
+
+00:20:03.610 --> 00:20:10.390
+Now, further if I'm deciding to do these things in the
+middle, if it's TV shows and I am doing a station ident
+
+00:20:10.390 --> 00:20:15.030
+in between shows, then again I am getting
+these drops in quality as I go along.
+
+00:20:15.030 --> 00:20:18.920
+So we really want a different solution.
+
+00:20:18.920 --> 00:20:22.220
+Because our streams can change we can have timecode breaks.
+
+00:20:22.220 --> 00:20:24.830
+We can change the encoding parameters.
+
+00:20:24.830 --> 00:20:29.190
+So the solution is to let the client
+know that there is a change coming up.
+
+00:20:29.190 --> 00:20:32.510
+We do that with a discontinuity tag.
+
+00:20:32.510 --> 00:20:37.550
+So here is an example of a stream
+that has a discontinuity tag in it.
+
+00:20:37.550 --> 00:20:40.090
+And I think that, well that is perfectly fine.
+
+00:20:40.090 --> 00:20:41.430
+OK we're done.
+
+00:20:41.430 --> 00:20:44.800
+Well, what if we want to encrypt it?
+
+00:20:44.800 --> 00:20:46.720
+There we go.
+
+00:20:46.720 --> 00:20:51.940
+So if I am encrypting, OK it still looks
+straightforward, what's the problem with this?
+
+00:20:51.940 --> 00:20:57.110
+The problem is the default Initialization
+Vector for encryption is the sequence number,
+
+00:20:57.110 --> 00:21:00.460
+and you're going, I know you're going What?
+
+00:21:00.460 --> 00:21:04.690
+What's an Initialization Vector and why do I care?
+
+00:21:04.690 --> 00:21:06.570
+OK, what is encryption trying to do?
+
+00:21:06.570 --> 00:21:12.770
+Encryption is trying to make your data,
+which is definitely not random, look random.
+
+00:21:12.770 --> 00:21:18.830
+And the problem is at the beginning of a
+segment it's hard to make it look random.
+
+00:21:18.830 --> 00:21:21.680
+It's just not that easy.
+
+00:21:21.680 --> 00:21:29.640
+And what Initialization Vector does in essence is
+make the beginning of the segment look more random.
+
+00:21:29.640 --> 00:21:36.730
+Now, ideally an Initialization Vector should be a
+random sequence of bits that changes often enough.
+
+00:21:36.730 --> 00:21:40.810
+So, OK our default Initialization Vector
+for encryption is the sequence number.
+
+00:21:40.810 --> 00:21:42.390
+So what are our sequence numbers?
+
+00:21:42.390 --> 00:21:47.300
+0,1,2,3. OK, so where's the problem here?
+
+00:21:47.300 --> 00:21:51.300
+Well, the first problems is, I've got this bumper, right?
+
+00:21:51.300 --> 00:21:52.740
+And what if I decide to change the bumper?
+
+00:21:52.740 --> 00:21:55.090
+Right now it's 18 seconds.
+
+00:21:55.090 --> 00:21:57.970
+What if I decided in the future to make that 22 seconds?
+
+00:21:57.970 --> 00:22:00.550
+Then it's going to take three segments, right?
+
+00:22:00.550 --> 00:22:04.330
+So the sequence number for the movie
+is going to start out at 3 instead of 2
+
+00:22:04.330 --> 00:22:07.910
+and now I'd have to re-encrypt all my movies.
+
+00:22:07.910 --> 00:22:09.930
+Well, that's not good.
+
+00:22:09.930 --> 00:22:13.970
+The other problem is these aren't really
+outstanding Initialization Vectors.
+
+00:22:13.970 --> 00:22:16.740
+They've got lots of zeros in them.
+
+00:22:16.740 --> 00:22:23.870
+The solution is to add an attribute
+to the key that allows us
+
+00:22:23.870 --> 00:22:29.430
+to specify an Initialization Vector
+which is a 128 bit number.
+
+00:22:29.430 --> 00:22:34.970
+And that Initialization Vector is going
+to apply to all the subsequent segments
+
+00:22:34.970 --> 00:22:38.370
+until I specify another Initialization Vector.
+
+00:22:38.370 --> 00:22:41.590
+Now those of you who were looking closely might have noticed
+
+00:22:41.590 --> 00:22:45.870
+that there was a new tag in these
+playlists, the VERSION tag.
+
+00:22:45.870 --> 00:22:52.340
+And the VERSION tag, we have to add the VERSION:2
+because the Initialization Vector is not compatible
+
+00:22:52.340 --> 00:22:57.810
+with the previous version, the old client wouldn't
+be able to understand Initialization Vector.
+
+00:22:57.810 --> 00:23:02.410
+So we have added the VERSION tag and that is required.
+
+00:23:02.410 --> 00:23:09.090
+Now, you can put the VERSION tag, you can put a
+VERSION tag with version number 1 into your playlist
+
+00:23:09.090 --> 00:23:14.060
+and that will be fine with an old
+client because old clients,
+
+00:23:14.060 --> 00:23:17.970
+if they don't recognize the tag it just becomes a comment.
+
+00:23:17.970 --> 00:23:22.000
+There is one other point I wanted to make
+about Initialization Vectors and that's
+
+00:23:22.000 --> 00:23:26.700
+that you can continue to specify the Initialization Vector.
+
+00:23:26.700 --> 00:23:31.560
+You can re-specify it with the same
+encryption key that you already have.
+
+00:23:31.560 --> 00:23:41.060
+So in this case, I've specified a new Initialization Vector
+starting with a third segment and another one with a fourth.
+
+00:23:41.060 --> 00:23:43.970
+Now notice that it's the same encryption key.
+
+00:23:43.970 --> 00:23:46.320
+Now, we're not going to re-fetch that encryption key.
+
+00:23:46.320 --> 00:23:52.130
+If we look at the URI and see it's a URI that we
+already know about, we are not going to re-fetch it.
+
+00:23:52.130 --> 00:23:58.670
+And that also holds true across, across multiple variants.
+
+00:23:58.670 --> 00:24:06.620
+If I have a playlist and I am using the same encryption
+key on the variant when I switch to a different variant,
+
+00:24:06.620 --> 00:24:10.060
+if I've already seen the key I don't have to re-fetch it.
+
+00:24:10.060 --> 00:24:11.640
+Now, Timed Metadata.
+
+00:24:11.640 --> 00:24:16.440
+So if you were at the, the graphics
+and media state of the union yesterday,
+
+00:24:16.440 --> 00:24:17.940
+they would have talked about synchronized metadata.
+
+00:24:17.940 --> 00:24:21.450
+Well we're talking about the same
+thing when we say Timed Metadata.
+
+00:24:21.450 --> 00:24:27.610
+The reason I'm saying Timed Metadata is
+that's what, what we call it in the code.
+
+00:24:27.610 --> 00:24:29.270
+And what's Timed Metadata?
+
+00:24:29.270 --> 00:24:33.330
+So it is metadata so it is data
+about the video and it's timed.
+
+00:24:33.330 --> 00:24:37.380
+It occurs at a specific movie time.
+
+00:24:37.380 --> 00:24:42.660
+We want to communicate this info about a specific
+moment in time and we want to communicate it
+
+00:24:42.660 --> 00:24:48.180
+to our particular player, our dedicated player app.
+
+00:24:48.180 --> 00:24:55.560
+This is not totally generic in the sense
+that I can just send arbitrary metadata
+
+00:24:55.560 --> 00:24:59.000
+and an arbitrary client will be able to understand it.
+
+00:24:59.000 --> 00:25:02.040
+I can say well, why do we have to add this into the movie?
+
+00:25:02.040 --> 00:25:03.720
+We could do it as an independent channel.
+
+00:25:03.720 --> 00:25:04.490
+I can do that already.
+
+00:25:04.490 --> 00:25:09.120
+It is like, well you could but it's kinda
+hard to synchronize if I am getting this
+
+00:25:09.120 --> 00:25:19.700
+through another TCP connection or something, it becomes
+harder to rewind, to seek, to replay that stuff properly
+
+00:25:19.700 --> 00:25:24.640
+because now I've got to seek in
+these two independent channels.
+
+00:25:24.640 --> 00:25:34.020
+So we add a time stamped information stream
+into the movie and I'll give you an example.
+
+00:25:34.020 --> 00:25:38.450
+So, here we've got our movie playing and
+some metadata is coming along with it.
+
+00:25:38.450 --> 00:25:43.380
+Now, it doesn't have to be text like we're seeing here.
+
+00:25:43.380 --> 00:25:54.520
+It could be just a number like 92 miles
+per hours or it could be a picture.
+
+00:25:54.520 --> 00:26:03.460
+And we already use this to time stamp an audio only stream.
+
+00:26:03.460 --> 00:26:06.670
+We also use it to add pictures to an audio only stream.
+
+00:26:06.670 --> 00:26:11.980
+But now we're making it available
+in iOS 4 to your apps as well.
+
+00:26:11.980 --> 00:26:13.330
+So what can you do with it?
+
+00:26:13.330 --> 00:26:16.980
+Besides text, you can use images to overlay.
+
+00:26:16.980 --> 00:26:23.030
+Maybe I've got a bug, you know, a station
+ident bug that I want to put over my stream
+
+00:26:23.030 --> 00:26:26.490
+and I don't want to actually encode it into the movie.
+
+00:26:26.490 --> 00:26:30.240
+Maybe I've got text to display like we saw.
+
+00:26:30.240 --> 00:26:34.320
+I could even use this to do subtitling
+although it's not ideal for that.
+
+00:26:34.320 --> 00:26:42.560
+I can use it to mark points in the movie, things
+of interest, chapters, or other things I could mark
+
+00:26:42.560 --> 00:26:46.780
+where I am doing insertions, where
+my bumper or where an ad occurs.
+
+00:26:46.780 --> 00:26:51.660
+Or to give you a more complicated example I could
+use this on a sandwich, filming a lecture like this,
+
+00:26:51.660 --> 00:26:54.280
+and I've got a camera on me and
+I've also got the slide deck.
+
+00:26:54.280 --> 00:26:59.120
+Now, I could feed the slide deck as discrete
+pictures and I could add metadata along
+
+00:26:59.120 --> 00:27:04.690
+that said whether I should display the slide by
+itself, the slide with me as a picture in picture,
+
+00:27:04.690 --> 00:27:08.960
+or me as the main screen and the
+slide is a picture in picture.
+
+00:27:08.960 --> 00:27:13.110
+So there's a lot of flexibility here.
+
+00:27:13.110 --> 00:27:18.670
+Now, in order to provide the metadata we're using ID3 tags.
+
+00:27:18.670 --> 00:27:20.240
+Pretty well known standard.
+
+00:27:20.240 --> 00:27:24.560
+And this exists in the movie as
+a separate elementary stream.
+
+00:27:24.560 --> 00:27:28.070
+So in our MPEG to transport stream
+it's a separate elementary stream--
+
+00:27:28.070 --> 00:27:30.270
+except when we are doing an audio only stream.
+
+00:27:30.270 --> 00:27:33.010
+Then its actually piggy-backed into the audio stream.
+
+00:27:33.010 --> 00:27:39.560
+Now, I can add this with one of our tools
+mediafilesegmenter and with mediastreamsegmenter.
+
+00:27:39.560 --> 00:27:43.460
+I'll talk about that more later on.
+
+00:27:43.460 --> 00:27:50.240
+And it's supported starting in iOS 4 in both
+MPMoviePlayerController and in AVPlayerItem.
+
+00:27:50.240 --> 00:27:54.560
+And you find this using the timed metadata property.
+
+00:27:56.520 --> 00:28:01.440
+Now, we also had some things with the encryption keys.
+
+00:28:01.440 --> 00:28:08.970
+Now, it's tricky to get certificates to
+work right, especially on iOS and a number
+
+00:28:08.970 --> 00:28:15.390
+of our clients wanted more secure
+key delivery than just HTTPS.
+
+00:28:15.390 --> 00:28:19.350
+So we decided to add private protocols for keys.
+
+00:28:19.350 --> 00:28:20.770
+Now, how does that work?
+
+00:28:20.770 --> 00:28:22.900
+OK, we're using the custom URL scheme.
+
+00:28:22.900 --> 00:28:26.490
+Some of you may have used this in
+some of your apps for other reasons.
+
+00:28:26.490 --> 00:28:31.330
+It uses the NSURLProtocol class
+and if you're not familiar with it,
+
+00:28:31.330 --> 00:28:36.520
+the URL Loading System Programming
+Guide gives you good explanation.
+
+00:28:36.520 --> 00:28:41.170
+It terms of the way it looks in
+a playlist, it looks like this.
+
+00:28:41.170 --> 00:28:49.490
+There is my key and I've got, I just specify my protocol
+and what happens is the player, this framework when it sees
+
+00:28:49.490 --> 00:28:56.130
+that my protocol, it's OK, I'll go and ask the
+app and your code is responding and say, oh yeah,
+
+00:28:56.130 --> 00:29:00.990
+yeah I know how to handle my protocol and you
+go off and fetch that key however you want.
+
+00:29:00.990 --> 00:29:05.330
+Now, the only gotcha there is because
+you are giving that key to us, right?
+
+00:29:05.330 --> 00:29:11.240
+That key is going to be one of these 128 bit
+imagers as you've got to abide by the rules.
+
+00:29:11.240 --> 00:29:18.130
+You got to give us the same key every time or at least
+that key has to apply to subsequent segments just
+
+00:29:18.130 --> 00:29:23.820
+like it would if it was a file being fetched.
+
+00:29:23.820 --> 00:29:26.970
+Now, we've made a number of performance improvements.
+
+00:29:26.970 --> 00:29:28.960
+In particular, faster stream switching.
+
+00:29:28.960 --> 00:29:35.650
+So when I want to pop up to a higher bit
+rate because my network's gotten better
+
+00:29:35.650 --> 00:29:40.470
+that transition happens much faster
+in iOS 4 than it did previously.
+
+00:29:40.470 --> 00:29:49.750
+We also get faster startup, then the movie starts up
+initially much faster when you have a fast connection.
+
+00:29:49.750 --> 00:29:57.480
+We also added, because some of clients who were
+delivering really long video on demand playlists found
+
+00:29:57.480 --> 00:30:02.660
+that the playlist was taking a little
+bit longer that they liked to download.
+
+00:30:02.660 --> 00:30:05.430
+So what we did was we added support in the client
+
+00:30:05.430 --> 00:30:12.030
+to un-gzip compressed playlists and
+you can turn that on in your server.
+
+00:30:12.030 --> 00:30:18.040
+For example if you're using Apache, you
+just turn on the mod deflate module.
+
+00:30:18.040 --> 00:30:22.460
+[Noise] OK, so now I've got to my odds and ends.
+
+00:30:22.460 --> 00:30:23.950
+Failover is the first one.
+
+00:30:23.950 --> 00:30:30.910
+Now when you're delivering a variant playlist, you're
+not required to just supply one variant at each bit rate.
+
+00:30:30.910 --> 00:30:35.000
+You can supply multiple at each bit rate.
+
+00:30:35.000 --> 00:30:42.190
+So in this case, I've got two variants at a lower
+bit rate and two variants at a higher bit rate.
+
+00:30:42.190 --> 00:30:46.690
+Now the client when he comes in, he's
+just going to pick the first one.
+
+00:30:46.690 --> 00:30:50.850
+So the client's going to be fetching from server 1.
+
+00:30:50.850 --> 00:30:54.510
+Now what happens if server 1 goes
+down, because, let's face it,
+
+00:30:54.510 --> 00:30:59.220
+I mean even the best servers aren't
+a hundred percent up time.
+
+00:30:59.220 --> 00:31:07.160
+So if the client tries to fetch the Playlist
+from server 1 and server 1 doesn't respond,
+
+00:31:07.160 --> 00:31:12.610
+the client's going to failover to server 2.
+
+00:31:12.610 --> 00:31:17.620
+Now you'll notice that in my higher bit rate
+example, I'm actually getting from different servers.
+
+00:31:17.620 --> 00:31:27.950
+There's no requirement that it'd be the same set of
+servers serving the different copies of the same stream.
+
+00:31:27.950 --> 00:31:33.030
+There's no requirement that each bit
+rate have the same number of variations.
+
+00:31:33.030 --> 00:31:37.180
+I could have 3 for the low and 2 for the high.
+
+00:31:37.180 --> 00:31:41.520
+I could even only have 1 for one of the others.
+
+00:31:41.520 --> 00:31:50.610
+Now, one point I want to make is this only fails
+over if the server doesn't supply the file.
+
+00:31:50.610 --> 00:31:53.590
+Now if the server supplies the
+file but something's gone wrong,
+
+00:31:53.590 --> 00:31:58.740
+and the server isn't updating file anymore
+it's not going to failover in that case
+
+00:31:58.740 --> 00:32:03.000
+but hopefully we can fix that at some future date.
+
+00:32:03.000 --> 00:32:07.880
+Now the last thing I want-- new feature I want to
+point out is actually something that's been around.
+
+00:32:07.880 --> 00:32:16.830
+Program Date-Time is a tag that allows you to associate
+a wall clock time, real calendar time like, you know,
+
+00:32:16.830 --> 00:32:23.620
+June 8th, 2010 at 11 o'clock in the morning and
+it associates that with the start of a segment.
+
+00:32:23.620 --> 00:32:32.450
+So it's associating a wall clock time with a point in
+the movie and that association is going to carry forward
+
+00:32:32.450 --> 00:32:36.330
+as you go through subsequent segments in your movie.
+
+00:32:36.330 --> 00:32:40.380
+And in iOS 4, AVPlayerItem let's you seek to dates.
+
+00:32:40.380 --> 00:32:43.170
+And the seeking is very straight forward.
+
+00:32:43.170 --> 00:32:46.180
+It's just an NSDate that you pass.
+
+00:32:46.180 --> 00:32:52.990
+Now one thing I want to point out is if
+you use this and you have a discontinuity,
+
+00:32:52.990 --> 00:32:55.560
+the discontinuity said, well things have changed.
+
+00:32:55.560 --> 00:33:00.550
+Well one of the things that changed is it says I don't know
+that the program date is still valid at a discontinuity.
+
+00:33:00.550 --> 00:33:04.590
+So after each discontinuity, if you
+want that program date association,
+
+00:33:04.590 --> 00:33:08.460
+you're going to have to re-insert one of those tags.
+
+00:33:08.460 --> 00:33:14.180
+Now at this point, I'd like to invite Roger back up
+on stage to give you a demo that ties together some
+
+00:33:14.180 --> 00:33:16.500
+of the things that we've been talking about.
+
+00:33:16.500 --> 00:33:22.220
+[ Applause ]
+
+00:33:22.220 --> 00:33:23.050
+>> Thank you Eryk.
+
+00:33:23.050 --> 00:33:32.310
+Just before I do the demo, one thing I'd like to mention is
+that with regard to seek to date, if you've had experience
+
+00:33:32.310 --> 00:33:35.630
+of HTTP streaming and seeking before, you'll
+know that the seek is a little bit rough
+
+00:33:35.630 --> 00:33:37.800
+and there'll be seek at the beginning of the first segment.
+
+00:33:37.800 --> 00:33:42.190
+One difference with seek to date is its subsecond accuracy.
+
+00:33:42.190 --> 00:33:50.200
+You can seek very, very finely within a-- so
+that's [laughs] some folks here are happy about that.
+
+00:33:50.200 --> 00:33:55.500
+Great, because it's hard to write. So what we have for you
+today for the demo, it's a very simple little application
+
+00:33:55.500 --> 00:34:01.260
+and it is designed to show you how you can use two
+of the features that Eryk talked about just now,
+
+00:34:01.260 --> 00:34:08.370
+the discontinuity tag and Timed Metadata to
+stitch together two different types of content
+
+00:34:08.370 --> 00:34:13.250
+and use that to support kind of
+a custom playback user interface.
+
+00:34:13.250 --> 00:34:20.320
+So let's launch the app here, OK now let's play the movie.
+
+00:34:20.320 --> 00:34:27.550
+So what we've got here is a video that's taken at a
+park and what we've done is drop in some bonus content
+
+00:34:27.550 --> 00:34:34.770
+into the middle of it and so what you can see here, we
+have a custom controller and the bonus content is marked
+
+00:34:34.770 --> 00:34:38.750
+with those different colors, the
+red, the green, and the purple.
+
+00:34:38.750 --> 00:34:43.890
+So what we'll do is start the playback here.
+
+00:34:43.890 --> 00:34:47.030
+So there's my cat.
+
+00:34:47.030 --> 00:34:51.930
+The first thing you'll notice is as the controller
+reaches the first discontinuity, the red area,
+
+00:34:51.930 --> 00:34:55.970
+you'll see a transition take place and so here it comes.
+
+00:34:55.970 --> 00:35:03.660
+And so, here I am there was a discontinuity tag between
+that last segment that had the cat in it and me over here.
+
+00:35:03.660 --> 00:35:10.840
+The next thing you'll notice is we've disabled
+seeking while you're in some of this bonus content.
+
+00:35:10.840 --> 00:35:19.210
+Obviously you could implement any kind of policy you wanted
+but that's kind of a simple one to show as an example.
+
+00:35:19.210 --> 00:35:26.120
+You can still, you know, the play-pause
+still works but seeking is disabled.
+
+00:35:26.120 --> 00:35:31.490
+The next thing we have here is
+some back to back bonus content.
+
+00:35:31.490 --> 00:35:40.770
+And what's happening is that every-- as it plays forward,
+your application is getting a callback which is synchronized
+
+00:35:40.770 --> 00:35:46.780
+to playback and it's-- the callback
+carries a little bit of Timed Metadata.
+
+00:35:46.780 --> 00:35:51.870
+In this case, all it is, is a URL
+to kind of an imaginary ad server.
+
+00:35:51.870 --> 00:35:57.090
+And so the application here is using
+that callback to trigger the enabling
+
+00:35:57.090 --> 00:36:02.760
+and disabling of that playback controller.
+
+00:36:02.760 --> 00:36:10.180
+So we can seek, we hit the bonus content, there's me again.
+
+00:36:10.180 --> 00:36:13.080
+You must listen to me, you cannot seek away from me.
+
+00:36:13.080 --> 00:36:19.010
+But OK, now we're back and so now we
+can run back here and we can seek again.
+
+00:36:19.010 --> 00:36:22.880
+We can seek back in the bonus content and there we go.
+
+00:36:22.880 --> 00:36:25.170
+So, that's it.
+
+00:36:25.170 --> 00:36:27.420
+This sample code is actually available.
+
+00:36:27.420 --> 00:36:29.510
+It's associated with the session.
+
+00:36:29.510 --> 00:36:33.220
+You can find through the WWDC site.
+
+00:36:33.220 --> 00:36:38.330
+So the content is up there on a public
+server, in case you want to download
+
+00:36:38.330 --> 00:36:41.630
+and take a look at how the metadata is embedded into it.
+
+00:36:41.630 --> 00:36:48.030
+And we'll be available in the lab tomorrow if you'd like
+to come by or even maybe for a little bit later today,
+
+00:36:48.030 --> 00:36:51.210
+if you want to come by and ask us
+questions about that sample code.
+
+00:36:51.210 --> 00:36:53.500
+So I'll hand it back to Eryk.
+
+00:36:53.500 --> 00:36:59.890
+[ Applause ]
+
+00:36:59.890 --> 00:37:08.240
+>> OK, so I want to talk some about the
+Tools that we used to create that sample,
+
+00:37:08.240 --> 00:37:13.110
+particularly to create the streams that are in that sample.
+
+00:37:13.110 --> 00:37:22.850
+So we have a set of Tools and I'm happy to announce
+today that we've added a fifth tool into our Tool set
+
+00:37:22.850 --> 00:37:30.010
+and these Tools as always are available at
+connect.apple.com in the downloads iPhone folder.
+
+00:37:30.010 --> 00:37:38.820
+So I'm going to talk about each of these
+Tools, and to create the content for this demo,
+
+00:37:38.820 --> 00:37:44.060
+we used mediafilesegmenter and the id3taggenerator.
+
+00:37:44.060 --> 00:37:49.580
+So first point I want to make about
+mediafilesegmenter is it's really easy to use.
+
+00:37:49.580 --> 00:37:55.810
+I mean, if you want to get started with
+HTTP live streaming, use mediafilesegmenter.
+
+00:37:55.810 --> 00:37:58.660
+I mean honestly, this is how easy it is use.
+
+00:37:58.660 --> 00:38:04.690
+All you need is a movie file that's already H.264
+and AAC and you pass it to mediafilesegmenter.
+
+00:38:04.690 --> 00:38:05.810
+Boom, you're done.
+
+00:38:05.810 --> 00:38:09.840
+You've created a playlist and segments.
+
+00:38:09.840 --> 00:38:16.970
+Because mediafilesegmenter will do the
+transport,MPEG-2 transport stream wrapping for you.
+
+00:38:16.970 --> 00:38:19.660
+And now some people get a little
+scared on mediafilesegmenter
+
+00:38:19.660 --> 00:38:23.720
+because it's got a few options, you know, 20 year or so.
+
+00:38:23.720 --> 00:38:25.720
+Not that many.
+
+00:38:25.720 --> 00:38:28.240
+In fact they break into four categories.
+
+00:38:28.240 --> 00:38:32.570
+So it's really not as complicated as it might look.
+
+00:38:32.570 --> 00:38:38.600
+So there's the main options, really important ones
+like if I want to create just an audio only stream
+
+00:38:38.600 --> 00:38:45.200
+or if I'm generating Variant Playlists in
+particular, what's my target duration going to be.
+
+00:38:45.200 --> 00:38:50.220
+The next set of options is-- those are
+associated with names and locations.
+
+00:38:50.220 --> 00:38:53.910
+This is where I want to put the files on the file system.
+
+00:38:53.910 --> 00:38:56.180
+What URL they're going to be located in?
+
+00:38:56.180 --> 00:38:59.190
+If it's an absolute URL, what's the prefix?
+
+00:38:59.190 --> 00:39:00.660
+Things like that.
+
+00:39:00.660 --> 00:39:05.540
+The third set is encryption tags.
+
+00:39:05.540 --> 00:39:11.410
+These are things that specify how often I
+want to rotate my Initialization Vector.
+
+00:39:11.410 --> 00:39:22.480
+How often I want to rotate my key and also the
+same sorts of names and location things that I have
+
+00:39:22.480 --> 00:39:25.880
+with the segment files I also have for the key files.
+
+00:39:25.880 --> 00:39:27.910
+What's the prefix going to be on the key files?
+
+00:39:27.910 --> 00:39:30.000
+Where am I putting the key files on my file system?
+
+00:39:30.000 --> 00:39:31.310
+That sort of thing.
+
+00:39:31.310 --> 00:39:35.480
+And the fourth set of options are
+those associated with metadata.
+
+00:39:35.480 --> 00:39:40.820
+And I'll talk about those a little bit
+more when I talk about the id3taggenerator.
+
+00:39:40.820 --> 00:39:48.210
+Basically, there's a few odds and ends that aren't important
+but those are the basic options on mediafilesegmenter.
+
+00:39:48.210 --> 00:39:52.870
+Now once I've messed around with
+mediafilesegmenter, I really want to try
+
+00:39:52.870 --> 00:39:56.430
+and find out about how to create Variant Playlists.
+
+00:39:56.430 --> 00:40:03.570
+So if I'm creating a variant playlist, then I want to have
+several variants of my movie at different data rates, right?
+
+00:40:03.570 --> 00:40:08.180
+So in this case, I'm starting out
+with one variation of my movie.
+
+00:40:08.180 --> 00:40:13.750
+I'll make a directory, I'll tell mediafilesegmenter
+to put the files in that subdirectory
+
+00:40:13.750 --> 00:40:21.730
+and by passing the generate variant playlist
+option, I'm telling mediafilesegmenter
+
+00:40:21.730 --> 00:40:25.550
+to create a plist that describes that variant.
+
+00:40:25.550 --> 00:40:27.350
+So it's going to create that on the side.
+
+00:40:27.350 --> 00:40:31.470
+It's going to use the name and in
+fact the location of the movie file.
+
+00:40:31.470 --> 00:40:39.510
+So if that movie file was in some relative directory,
+the plist is going to be created alongside it.
+
+00:40:39.510 --> 00:40:41.210
+Now I have another variation.
+
+00:40:41.210 --> 00:40:43.160
+In this case, I'm just going to have two variations.
+
+00:40:43.160 --> 00:40:45.790
+This one let's say it's my cellular.
+
+00:40:45.790 --> 00:40:51.040
+I'm going to make a subdirectory and call
+mediafilesegmenter again to segment that version
+
+00:40:51.040 --> 00:40:54.110
+and then it's going to again create a plist.
+
+00:40:54.110 --> 00:41:01.090
+Now I can call Variant Playlist Creator and
+what I do is I tell it for each variant,
+
+00:41:01.090 --> 00:41:06.570
+where's the playlist for that and
+what's the plist that describes it?
+
+00:41:06.570 --> 00:41:13.340
+I give those in the order I want them
+to be in my variant and it creates it.
+
+00:41:13.340 --> 00:41:16.700
+So Variant Playlist Creator is great.
+
+00:41:16.700 --> 00:41:21.990
+Once you've gotten started with that, you
+can work your way up to mediastreamsegmenter.
+
+00:41:21.990 --> 00:41:25.030
+Now mediastreamsegmenter is very
+similar to mediafilesegmenter.
+
+00:41:25.030 --> 00:41:27.350
+The big difference is it's not taking it from a file.
+
+00:41:27.350 --> 00:41:34.090
+It's taking it from a pipe or a UDP port and it's
+not expecting to get a movie, it's expecting--
+
+00:41:34.090 --> 00:41:38.470
+or not an H.264 and AAC, it's expecting
+to get a transport stream.
+
+00:41:38.470 --> 00:41:41.250
+That's what it wants as input.
+
+00:41:41.250 --> 00:41:48.610
+And it has even more options than mediafilesegmenter
+but once you understand mediafilesegmenter,
+
+00:41:48.610 --> 00:41:52.270
+you'll understand most of the options because
+you've got that same basic set that you had.
+
+00:41:52.270 --> 00:41:55.180
+With the exception, you don't have
+generate variant playlists anymore.
+
+00:41:55.180 --> 00:41:58.190
+Now you're going to have to create
+your variant playlist on your own
+
+00:41:58.190 --> 00:42:02.810
+and there's some slight differences
+in the way the metadata options work.
+
+00:42:02.810 --> 00:42:06.350
+But the big add-ons are Playlist Structure.
+
+00:42:06.350 --> 00:42:11.300
+OK so, Playlist Structure is-- because with
+mediastreamsegmenter I'm going to be creating Live
+
+00:42:11.300 --> 00:42:14.980
+or Event Playlists, I need to be able to
+tell like, is this is a Live Playlist?
+
+00:42:14.980 --> 00:42:22.720
+This is an Event Playlist and how big is my
+sliding window of content and how soon do I want
+
+00:42:22.720 --> 00:42:30.100
+to start dropping playlists on, you know, do I want to
+wait until I have a whole window of content or, you know,
+
+00:42:30.100 --> 00:42:36.360
+will I start once I have a minute
+or even 30 seconds of content.
+
+00:42:36.360 --> 00:42:41.120
+And also if I'm doing that wall on window, what do
+I want to do with the files after I get rid of them.
+
+00:42:41.120 --> 00:42:48.770
+The last group of options of mediastreamsegmenter
+is what I call Actions.
+
+00:42:48.770 --> 00:42:56.420
+Particular important ones there are because I'm getting my
+data through a UDP port or a pipe, I could get a timeout.
+
+00:42:56.420 --> 00:42:58.210
+I could not get data.
+
+00:42:58.210 --> 00:43:04.290
+What do I want to do when I don't get data?
+
+00:43:04.290 --> 00:43:07.660
+So there, I've created my streams.
+
+00:43:07.660 --> 00:43:13.260
+The next thing I'm really kind of want
+to do is I like to validate my streams.
+
+00:43:13.260 --> 00:43:17.670
+Now if you're using our tools, you don't really need to
+validate them 'cause we already went through a lot of effort
+
+00:43:17.670 --> 00:43:20.530
+to make sure that they do the right thing.
+
+00:43:20.530 --> 00:43:27.390
+But if you're creating your own playlist, you can use
+the Media Stream Validator to validate your playlist.
+
+00:43:27.390 --> 00:43:32.610
+If you use the PARS option, what it does is it
+simply looks at the playlist not at the segments
+
+00:43:32.610 --> 00:43:36.080
+and checks to see whether it's following the rules.
+
+00:43:36.080 --> 00:43:41.840
+If you use a validate option, what it's doing is
+it will actually look at the segments and in fact
+
+00:43:41.840 --> 00:43:48.740
+if it's a variant playlist that you're passing it, it will
+look at all the individual variants and check them as well.
+
+00:43:48.740 --> 00:43:55.120
+The last Tool I want to talk about is the ID3 Tag Generator.
+
+00:43:55.120 --> 00:43:58.180
+This is a new tool that we just added.
+
+00:43:58.180 --> 00:44:05.820
+It creates ID3 files and you use it with the
+mediafilesegmenter with the meta-macro file option.
+
+00:44:05.820 --> 00:44:08.030
+What does a meta-macro file looks like?
+
+00:44:08.030 --> 00:44:13.390
+Well there's a sample and basically you're
+saying at this point in time and seconds,
+
+00:44:13.390 --> 00:44:17.020
+I want you to pull in this content, this file.
+
+00:44:17.020 --> 00:44:25.130
+So it's either an ID3 file that I generated
+with the generator or it can be a picture.
+
+00:44:25.130 --> 00:44:28.750
+Now with mediastreamsegmenter, it's a little bit different.
+
+00:44:28.750 --> 00:44:36.320
+With mediastreamsegmenter-- the mediastreamsegmenter
+is actually listening on a port for metadata
+
+00:44:36.320 --> 00:44:40.350
+and you can tell ID3 Tag Generator to send it to a port.
+
+00:44:40.350 --> 00:44:42.740
+And what it's going to do, it's going
+to send right at that moment in time.
+
+00:44:42.740 --> 00:44:48.670
+So you're actually-- can insert
+the metadata wherever you want.
+
+00:44:48.670 --> 00:44:53.120
+Now some tips and tricks.
+
+00:44:53.120 --> 00:45:00.410
+OK, so for variant playlists, you need to remember that the
+first alternative is the one that's going to play initially,
+
+00:45:00.410 --> 00:45:07.980
+and when you're delivering over both
+cellular and Wi-Fi, it's really a good idea
+
+00:45:07.980 --> 00:45:12.120
+to create two variants of your variant playlists.
+
+00:45:12.120 --> 00:45:15.520
+One that you'll deliver on cellular
+and one that you'll deliver on Wi-Fi
+
+00:45:15.520 --> 00:45:19.200
+and you use the Reachability APIs to decide.
+
+00:45:19.200 --> 00:45:25.610
+The reason why you do that is because it's going
+to play the first variant initially and you want
+
+00:45:25.610 --> 00:45:31.920
+to have it be a good data rate for whatever network
+you're going over, whether it be cellular or Wi-Fi.
+
+00:45:31.920 --> 00:45:38.670
+Now the set of variations that you should have in that
+playlist should be identical between cellular and Wi-Fi,
+
+00:45:38.670 --> 00:45:40.740
+the only difference should be which one is first.
+
+00:45:40.740 --> 00:45:43.690
+The reason you want them identical is
+because you're going to move around.
+
+00:45:43.690 --> 00:45:46.400
+Your client is going to move around networks.
+
+00:45:46.400 --> 00:45:51.030
+I might start of in here on Wi-Fi and go
+outside in the street and now I'm on cellular
+
+00:45:51.030 --> 00:45:53.510
+or vice versa and then I come back in, right.
+
+00:45:53.510 --> 00:45:55.570
+The network's going to be changing all the time.
+
+00:45:55.570 --> 00:46:00.780
+So you want to have the full range of
+possibilities available to the client.
+
+00:46:00.780 --> 00:46:11.330
+Now, if you're delivering these movies via web delivery, you
+can use makerefmovie which is a tool that we make available
+
+00:46:11.330 --> 00:46:20.150
+and that can target cellular or Wi-Fi and it
+can also target desktop versus iPhone and iPad.
+
+00:46:20.150 --> 00:46:22.240
+Now, encoding.
+
+00:46:22.240 --> 00:46:26.080
+File size is very important over mobile, right?
+
+00:46:26.080 --> 00:46:30.850
+And if you look at our recommendations,
+I'll give you a pointer to the tech note
+
+00:46:30.850 --> 00:46:34.840
+that has our recommendations a little later,
+you'll see that we're pretty conservative
+
+00:46:34.840 --> 00:46:38.270
+about what data rates we think you can support.
+
+00:46:38.270 --> 00:46:40.700
+And when you're doing that, don't
+forget the container overhead.
+
+00:46:40.700 --> 00:46:43.690
+The transport stream is going to
+add some overhead into your--
+
+00:46:43.690 --> 00:46:51.180
+on your data rate and also now that you've got metadata,
+the metadata is going to add some overhead as well.
+
+00:46:51.180 --> 00:46:55.570
+And you don't need to encode to the full screen dimensions.
+
+00:46:55.570 --> 00:47:02.700
+You can encode-- we've got a very good video
+scaler on our IOS devices, so you can encode it 2/3
+
+00:47:02.700 --> 00:47:09.560
+or 3/4 of the screen size and still
+get a very, very good experience.
+
+00:47:09.560 --> 00:47:14.800
+Now because you're trying to minimize your data rate,
+you can trade off frames per second versus video quality.
+
+00:47:14.800 --> 00:47:21.030
+You've got this option-do I make the image
+a little worse and keep this frame rate up
+
+00:47:21.030 --> 00:47:25.180
+or do I decrease the frame rate and
+keep the quality of the images up.
+
+00:47:25.180 --> 00:47:28.170
+People have different opinions about
+how they should make that trade off.
+
+00:47:28.170 --> 00:47:34.030
+Now when you're doing this, you want to
+have multiple IDR frames per segment.
+
+00:47:34.030 --> 00:47:39.300
+The more IDR frames you have-- if you have more IDR
+frames per segment, we're going to do a better job
+
+00:47:39.300 --> 00:47:45.230
+of stream switching and I want to reinforce
+the point that the audio needs to be identical
+
+00:47:45.230 --> 00:47:49.210
+across all the variants so that
+you won't get audio artifacts.
+
+00:47:49.210 --> 00:47:52.950
+Now if you're doing your encoding with something
+like QuickTime Player 7, you want to use the movie
+
+00:47:52.950 --> 00:47:58.390
+to MPEG-4 exporter because it gives
+you more control over the encoding.
+
+00:47:58.390 --> 00:48:04.050
+If you're just using export to web, it
+gives you a very restricted set of options.
+
+00:48:04.050 --> 00:48:11.060
+Now the 3 important things I want you to take away
+from this: We're continuing to evolve HTTP streaming.
+
+00:48:11.060 --> 00:48:13.380
+We've changed-- made a bunch of changes over this year.
+
+00:48:13.380 --> 00:48:16.250
+We're anticipating making more changes in the future.
+
+00:48:16.250 --> 00:48:17.220
+So you want to stay current.
+
+00:48:17.220 --> 00:48:21.830
+You want to go and check on connect.apple.com
+if we've updated the tools.
+
+00:48:21.830 --> 00:48:26.430
+We try and announce that on the
+dev forums but sometimes we miss.
+
+00:48:26.430 --> 00:48:30.130
+And you also, give us your feedback.
+
+00:48:30.130 --> 00:48:37.530
+The changes we made in key delivery were the result
+of feedback from people who were trying to use this,
+
+00:48:37.530 --> 00:48:41.430
+trying to do various things with the system.
+
+00:48:41.430 --> 00:48:45.650
+Again, my name is Eryk Verhsen I'm
+the media technologies evangelist.
+
+00:48:45.650 --> 00:48:49.620
+So if you have any questions about HTTP
+live streaming, you can send me e-mail.
+
+00:48:49.620 --> 00:48:59.830
+The big points on the documentation, you can
+just go to iPhone developer site and search
+
+00:48:59.830 --> 00:49:02.900
+for HTTP live streaming and you'll find these.
+
+00:49:02.900 --> 00:49:06.090
+First one is the HTTP Live Streaming Overview.
+
+00:49:06.090 --> 00:49:11.910
+The second one is our best practices for creating
+and deploying HTTP live streaming for the iPhone
+
+00:49:11.910 --> 00:49:20.350
+and iPad which outlines what we recommend in
+terms of data rates, in terms of resolutions.
+
+00:49:20.350 --> 00:49:28.250
+And lastly, I want to mention that we've made
+the specification for HTTP live streaming public.
+
+00:49:28.250 --> 00:49:28.850
+It's available.
+
+00:49:28.850 --> 00:49:30.260
+We do update it.
+
+00:49:30.260 --> 00:49:32.540
+We've been through three versions in the last year.
+
+00:49:32.540 --> 00:49:37.580
+We'll probably go through more.
+
+00:49:37.580 --> 00:49:40.720
+And lastly, the dev forums are a great place to go.
+
+00:49:40.720 --> 00:49:48.420
+The engineers who work on a HTTP live
+streaming do answer questions on the dev forum.
+
+00:49:48.420 --> 00:49:50.630
+That pretty much wraps it up for us today.
+
+00:49:50.630 --> 00:49:53.250
+We're not going to do a stand-up Q&A.
+
+00:49:53.250 --> 00:49:58.350
+If you have questions, you can come up and talk to us for
+the few minutes we have before we have to vacate the room
+
+00:49:58.350 --> 00:50:00.820
+and I invite you to come to the labs tomorrow.
+
+00:50:00.820 --> 00:50:01.080
+Thank you.
+
+00:50:01.080 --> 00:50:12.310
+[ Applause ]
+

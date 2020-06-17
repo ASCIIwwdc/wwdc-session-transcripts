@@ -1,0 +1,1665 @@
+WEBVTT
+
+00:00:06.420 --> 00:00:07.770
+>> Damien Sorresso: Good afternoon.
+
+00:00:07.770 --> 00:00:13.930
+Welcome to Launch-on-Demand here at WWDC 2010.
+
+00:00:13.930 --> 00:00:19.500
+I'm Damien Sorresso, I am responsible for launchd
+and the associated technologies here at Apple.
+
+00:00:19.500 --> 00:00:26.200
+So let's talk a little bit about what Launch-on-Demand is.
+
+00:00:26.200 --> 00:00:30.550
+Launch-on-Demand is Mac OS X's process lifecycle model.
+
+00:00:30.550 --> 00:00:35.670
+So this is how we determine when a process
+should come alive, when it should go away.
+
+00:00:35.670 --> 00:00:37.330
+All these sorts of things.
+
+00:00:37.330 --> 00:00:42.150
+And on our platform we manage this lifecycle with launchd.
+
+00:00:42.150 --> 00:00:48.840
+Launchd is our PID 1 or our init --
+init equivalent from other platforms.
+
+00:00:48.840 --> 00:00:52.600
+And what we have is an ad-hoc boot strapping model.
+
+00:00:52.600 --> 00:00:58.720
+So we don't bring things on line just because
+they might be needed sometime in the future.
+
+00:00:58.720 --> 00:01:02.310
+We wait for them to actually be needed.
+
+00:01:02.310 --> 00:01:06.650
+So what we'll cover today is why Launch-on-Demand is better.
+
+00:01:06.650 --> 00:01:15.200
+We've invested a lot of time across our platform
+making a bunch of our stuff on-demand compliant.
+
+00:01:15.200 --> 00:01:18.460
+So we want to tell you why we've done that.
+
+00:01:18.460 --> 00:01:22.940
+And we also want to tell you how to
+become a good citizen of this ecosystem.
+
+00:01:22.940 --> 00:01:30.610
+So how you can write an on demand daemon from Mac OS X that
+comes on line when it's needed and goes away when it's not.
+
+00:01:30.610 --> 00:01:37.000
+And in the process we're going to tell you how to use
+the GCD or Grand Central Dispatch that was introduced
+
+00:01:37.000 --> 00:01:45.890
+in Snow Leopard to make a very highly efficient daemon
+that uses as few resources as it needs when it's running.
+
+00:01:45.890 --> 00:01:52.810
+And then we'll take this, this basic
+concepts, and apply it to the concrete example
+
+00:01:52.810 --> 00:01:55.580
+of writing a privileged helper tool for a GUI application.
+
+00:01:55.580 --> 00:02:04.080
+So let's have some historical context about
+what it was like before launchd came along.
+
+00:02:04.080 --> 00:02:10.120
+Well, we had a very well-defined
+start-up order and the defining
+
+00:02:10.120 --> 00:02:14.390
+of this order was done by the holy priesthood of RC scripts.
+
+00:02:14.390 --> 00:02:18.120
+So if you wanted to become part of a
+start-up procession you had go to go
+
+00:02:18.120 --> 00:02:21.870
+and beg the holy monk to give you a place in line.
+
+00:02:21.870 --> 00:02:24.610
+And you could never alter that place in line.
+
+00:02:24.610 --> 00:02:26.760
+Completely rigid and inflexible.
+
+00:02:26.760 --> 00:02:34.890
+And what we found is that's just not suited to a modern
+world where resources can just come and go on a whim.
+
+00:02:34.890 --> 00:02:40.860
+Users plug in hard drives, they unplug hard
+drives, they travel to different locations
+
+00:02:40.860 --> 00:02:42.950
+where there's different wireless networks available.
+
+00:02:42.950 --> 00:02:44.430
+Things come and go.
+
+00:02:44.430 --> 00:02:51.850
+And a model where we just have to have all these
+things running all the time isn't sustainable.
+
+00:02:54.910 --> 00:02:58.440
+So let's cover a few things that we really need to unlearn.
+
+00:02:58.440 --> 00:03:04.750
+Adapting to this or adopting this model requires
+that we kind of let go of a few concepts
+
+00:03:04.750 --> 00:03:09.340
+that have been very popular in
+traditional boot strapping models.
+
+00:03:09.340 --> 00:03:12.380
+And the first thing is PID files.
+
+00:03:12.380 --> 00:03:17.920
+PID files are how daemons would say yes, I'm
+running, it's OK to try and contact me.
+
+00:03:17.920 --> 00:03:22.710
+But they're inherently racy, they're subject to
+a time of use versus time of check condition.
+
+00:03:22.710 --> 00:03:30.190
+The second thing is the idea that you have
+to write code in order to become a daemon.
+
+00:03:30.190 --> 00:03:33.030
+With launchd you don't, you just have a plist.
+
+00:03:33.030 --> 00:03:35.920
+There's no real code for you to call to become a daemon.
+
+00:03:35.920 --> 00:03:38.560
+When your process starts, it's a daemon.
+
+00:03:38.560 --> 00:03:40.470
+All your work is done for you.
+
+00:03:40.470 --> 00:03:48.030
+And we want to disabuse ourselves of a
+makefile approach to boot strapping.
+
+00:03:48.030 --> 00:03:52.970
+Since we have this rigid processional
+order in boot strapping in the prior world,
+
+00:03:52.970 --> 00:03:59.590
+a lot of people have really started -- really become
+acquainted and really familiar with the approach
+
+00:03:59.590 --> 00:04:03.960
+that we just need to have this service running
+before this one runs, before this one runs,
+
+00:04:03.960 --> 00:04:07.000
+and that's not how modern operating systems are.
+
+00:04:07.000 --> 00:04:08.980
+They're not makefiles.
+
+00:04:08.980 --> 00:04:17.510
+And finally, we just want to get rid of this
+notion that services are correlated with processes.
+
+00:04:17.510 --> 00:04:25.440
+So the notion that a process has to be running in order
+for a service to be accessible is not what we want here.
+
+00:04:25.440 --> 00:04:29.800
+Because then that means we have to keep
+things running all the time or the client has
+
+00:04:29.800 --> 00:04:33.450
+to have knowledge of the server's life cycle.
+
+00:04:33.450 --> 00:04:37.730
+So we can sum all this up by just
+saying we have to learn to let go.
+
+00:04:37.730 --> 00:04:40.310
+So forget about the server's life cycle.
+
+00:04:40.310 --> 00:04:41.020
+That doesn't matter.
+
+00:04:41.020 --> 00:04:42.310
+You're just the client.
+
+00:04:42.310 --> 00:04:46.360
+We really want a trusted entity in the
+middle that will care about all this stuff
+
+00:04:46.360 --> 00:04:50.410
+for you in a consistent and predictable way.
+
+00:04:50.410 --> 00:04:57.610
+So once we've let go we're left with a plug-in
+model where we can just drop things into a folder
+
+00:04:57.610 --> 00:05:00.870
+and you're a daemon, you're up and running.
+
+00:05:00.870 --> 00:05:03.960
+There's no modifying of scripts necessary.
+
+00:05:03.960 --> 00:05:05.510
+And we have pay-as-you-go computing.
+
+00:05:05.510 --> 00:05:10.700
+If you're not using a certain hardware
+feature that needs to be serviced
+
+00:05:10.700 --> 00:05:13.730
+by a daemon, that daemon doesn't have to be running.
+
+00:05:13.730 --> 00:05:18.620
+And we get rid of a lot of boilerplate
+code in order for you to become a daemon.
+
+00:05:18.620 --> 00:05:27.750
+And finally, we get rid of that holy priesthood
+and it's much easier to opt in system.
+
+00:05:27.750 --> 00:05:31.500
+So what are basic concepts of Launch-on-Demand?
+
+00:05:31.500 --> 00:05:34.170
+On Mac OS X we have two types of on-demand jobs.
+
+00:05:34.170 --> 00:05:41.410
+We have daemons, which are system-wide jobs, and
+agents, which run on behalf of a particular user.
+
+00:05:41.410 --> 00:05:43.370
+Daemons run in a privileged environment.
+
+00:05:43.370 --> 00:05:49.200
+So they run as root unless you've otherwise specified,
+and they run in the root mock boot strap.
+
+00:05:49.200 --> 00:05:51.250
+Agents run in the user environment.
+
+00:05:51.250 --> 00:05:59.330
+And agents are -- it's important to remember that where an
+agent runs is the canonical user environment on Mac OS X.
+
+00:05:59.330 --> 00:06:05.380
+Simply calling set UID to set UID
+down to that user's UID is not sufficient
+
+00:06:05.380 --> 00:06:09.010
+to actually become that user in the truest sense of the word.
+
+00:06:09.010 --> 00:06:11.960
+And both of these types of jobs can advertise services.
+
+00:06:11.960 --> 00:06:19.200
+The only thing that is effected about a service
+-- a service being advertised is the scope.
+
+00:06:19.200 --> 00:06:25.670
+So services advertised in agents are only
+available to people in that user session,
+
+00:06:25.670 --> 00:06:28.800
+but daemon services are available system-wide.
+
+00:06:28.800 --> 00:06:37.620
+Now we're talking about services, traditionally,
+services have been things backed by processes.
+
+00:06:37.620 --> 00:06:43.330
+In a Launch-on-Demand world they are just virtual end
+points, they may or may not be backed by a process.
+
+00:06:43.330 --> 00:06:50.390
+And if they are not currently backed by a process the
+arrival of a request on that service will trigger launchd
+
+00:06:50.390 --> 00:06:56.450
+to kick off the process that's
+responsible for servicing that request.
+
+00:06:56.450 --> 00:07:00.960
+And what this lets us do is get rid
+of an explicit dependency graph.
+
+00:07:00.960 --> 00:07:04.690
+Dependencies just become expressed through IPC.
+
+00:07:04.690 --> 00:07:13.570
+So if I'm dependent on a service advertised by say,
+com.apple.securityd, the fact that I've sent a message
+
+00:07:13.570 --> 00:07:16.640
+to that service says I'm dependent on that service.
+
+00:07:16.640 --> 00:07:19.420
+I don't have to detail that in a file anywhere.
+
+00:07:19.420 --> 00:07:28.810
+So once we adopt this new model of boot
+strapping, we get three really key advantages.
+
+00:07:28.810 --> 00:07:30.550
+The first one is obvious.
+
+00:07:30.550 --> 00:07:32.720
+It's more efficient.
+
+00:07:32.720 --> 00:07:37.830
+We can run a smaller working set
+of services on an idle system
+
+00:07:37.830 --> 00:07:41.390
+because if it's an idle system the
+user's not really using many features.
+
+00:07:41.390 --> 00:07:45.790
+So we don't really need to run daemons
+that are responsible for those features.
+
+00:07:45.790 --> 00:07:50.370
+And features -- daemons come on
+line as those features are needed.
+
+00:07:50.370 --> 00:07:53.940
+So we have pay-as- you-go computing.
+
+00:07:53.940 --> 00:07:57.100
+The second one is that it's more reliable.
+
+00:07:57.100 --> 00:08:03.480
+So if we have a model where things come up
+as needed and then go away when they're not,
+
+00:08:03.480 --> 00:08:08.320
+that means we have daemons which are more or less stateless.
+
+00:08:08.320 --> 00:08:11.780
+And so that means they can recover from crashes.
+
+00:08:11.780 --> 00:08:17.730
+So if I have sent a message to a
+daemon and it crashes trying to --
+
+00:08:17.730 --> 00:08:24.960
+after processing my request, somebody else who sends
+a message to that daemon can just keep sending it,
+
+00:08:24.960 --> 00:08:30.560
+and launchd will keep that daemon alive
+as long as it has requests outstanding.
+
+00:08:30.560 --> 00:08:39.800
+And finally, we get a more flexible system because we
+can have many working sets of daemons that are optimal
+
+00:08:39.800 --> 00:08:44.040
+for different usage patterns we end
+up with a much more flexible system
+
+00:08:44.040 --> 00:08:47.940
+that can adapt to different usage patterns very easily.
+
+00:08:47.940 --> 00:08:56.400
+So before we get into how to write one of these daemons,
+let's talk a little bit about Grand Central Dispatch.
+
+00:08:56.400 --> 00:09:00.520
+Grand Central Dispatch is like launchd but for threads.
+
+00:09:00.520 --> 00:09:05.190
+So it exposes a new synchronization primitive called queues.
+
+00:09:05.190 --> 00:09:08.930
+And we're going to use these queues
+to help write our daemon.
+
+00:09:08.930 --> 00:09:17.010
+Queues are just basically synchronization points
+that guarantee serialized execution of work.
+
+00:09:17.010 --> 00:09:23.920
+And you just submit work to a queue and it gets
+executed in the order that it was submitted.
+
+00:09:23.920 --> 00:09:29.950
+And this makes executing asynchronous work
+really, really easy and really, really fast.
+
+00:09:29.950 --> 00:09:34.420
+Both from a code-writing standpoint
+and from an execution standpoint.
+
+00:09:34.420 --> 00:09:40.200
+So what are we most interested in about queues here?
+
+00:09:40.200 --> 00:09:42.830
+GCD is a great technology for parallelism.
+
+00:09:42.830 --> 00:09:49.550
+But from our perspective as daemon writers,
+we're more interested in the fact that queues act
+
+00:09:49.550 --> 00:09:57.610
+as a run loop primitive, so we don't have to use a higher
+level framework like Core Foundation to get a run loop,
+
+00:09:57.610 --> 00:09:59.970
+and we don't have to code our own run loop.
+
+00:09:59.970 --> 00:10:02.210
+Queues let us do that.
+
+00:10:02.210 --> 00:10:06.260
+How they work is that dispatch exposes sources.
+
+00:10:06.260 --> 00:10:11.160
+And sources are just listeners
+that when a certain event happens,
+
+00:10:11.160 --> 00:10:16.460
+schedule an event handler on a queue that you specify.
+
+00:10:16.460 --> 00:10:22.830
+And sources can monitor for all sorts of events like
+readability or writability of a file descriptor.
+
+00:10:22.830 --> 00:10:33.940
+So you can effect asynchronous IO just by only writing when
+there's space in the kernel buffers for that descriptor.
+
+00:10:33.940 --> 00:10:36.350
+We can also monitor for process events.
+
+00:10:36.350 --> 00:10:41.930
+Like if we're interested when another PID exists or
+when it forks or when it execs we can be told
+
+00:10:41.930 --> 00:10:46.430
+of all these things and invoke an
+event handler when that happens.
+
+00:10:46.430 --> 00:10:51.490
+We can also monitor for signals, and
+this one is particularly important
+
+00:10:51.490 --> 00:10:57.100
+because previously there was no way to
+safely share the receipt of a signal.
+
+00:10:57.100 --> 00:11:00.260
+GCD lets us do that.
+
+00:11:01.450 --> 00:11:04.060
+And finally we have timers.
+
+00:11:04.060 --> 00:11:07.060
+Invoke an event handler block at a specified interval.
+
+00:11:07.060 --> 00:11:18.660
+GCD makes heavy use of Blocks and in a GCD
+world Blocks are how work is quantized.
+
+00:11:18.660 --> 00:11:22.260
+So one Block can be treated as one unit of work.
+
+00:11:22.260 --> 00:11:28.200
+And what Blocks are effectively are
+just inline or anonymous functions.
+
+00:11:28.200 --> 00:11:35.480
+They implicitly capture any stacked state that has been
+referenced by them so that you don't have to capture
+
+00:11:35.480 --> 00:11:39.770
+that state yourself, marshall it into
+a struct that's malloced on the heap,
+
+00:11:39.770 --> 00:11:44.010
+which you then pass as a content pointer to
+some call that might happen down the line,
+
+00:11:44.010 --> 00:11:47.910
+and then that call has to free --
+all this stuff is done for you.
+
+00:11:47.910 --> 00:11:53.430
+So Blocks, what Blocks give you is
+basically an archive for a function call.
+
+00:11:53.430 --> 00:11:58.160
+So let's take a look at what a Block
+actually looks like, syntactically.
+
+00:12:01.410 --> 00:12:08.770
+So we include dispatch/dispatch.h. And we
+have 3 variables declared here, A, B, and C.
+
+00:12:08.770 --> 00:12:15.020
+Now we have this dispatch async here, and
+what that does is copy the block to the heap.
+
+00:12:15.020 --> 00:12:18.610
+Now when I say copy to the heap what do I mean?
+
+00:12:18.610 --> 00:12:23.170
+The code itself in the Block isn't
+actually captured to the heap,
+
+00:12:23.170 --> 00:12:27.970
+but the state that the code is
+referencing is captured to the heap.
+
+00:12:27.970 --> 00:12:35.300
+So when I try and set and if I -- if I capture
+A and B, those are captured as const.
+
+00:12:35.300 --> 00:12:42.940
+So when I try to set A to a different value the compiler
+emits an error saying that it's a read-only variable.
+
+00:12:42.940 --> 00:12:47.780
+But I've declared C with this __block keyword.
+
+00:12:47.780 --> 00:12:56.270
+And what that does, is when the Block captures all
+that state, it captures a reference to C and copies it
+
+00:12:56.270 --> 00:13:01.520
+to the heap so that I can safely modify it,
+even after the Stack Frame has been torn down.
+
+00:13:01.520 --> 00:13:10.710
+So that's the simple crash course in GCD that we're
+going to use and leverage to write our daemon.
+
+00:13:10.710 --> 00:13:16.340
+So let's write a daemon that just sits
+on a socket and listens for messages.
+
+00:13:16.340 --> 00:13:19.090
+It's just going to be called SSD.
+
+00:13:19.090 --> 00:13:27.400
+It's also going to be as close to stateless as possible,
+because remember we want a very easily recoverable daemon.
+
+00:13:27.400 --> 00:13:33.070
+And if needed, in a more complex
+scenario, we can archive state to disc.
+
+00:13:33.070 --> 00:13:36.610
+Because crashes will happen.
+
+00:13:36.610 --> 00:13:41.310
+It might not be in your code, it might be in a
+library that you call, that library might be buggy.
+
+00:13:41.310 --> 00:13:45.190
+Your program could crash and very well may crash.
+
+00:13:45.190 --> 00:13:48.260
+So we should be prepared to deal with that.
+
+00:13:48.260 --> 00:13:55.600
+And how this daemon is going to work is it's going
+to do asynchronous HTTP-style request handling.
+
+00:13:55.600 --> 00:14:00.380
+So for each request that comes in, it gets its
+own connection and that connection is torn down.
+
+00:14:00.380 --> 00:14:05.170
+And then we can handle many of these requests in parallel.
+
+00:14:05.170 --> 00:14:15.540
+So here's the basics of what's going to happen when
+-- when your daemon gets a request and is not yet running.
+
+00:14:15.540 --> 00:14:18.760
+So we have launchd running at all times.
+
+00:14:18.760 --> 00:14:22.250
+And it has a table of services that it's listening on.
+
+00:14:22.250 --> 00:14:30.360
+In this case, we have say SSH which is on 422,
+and our SSD socket, which is on port 1138.
+
+00:14:30.360 --> 00:14:34.850
+So we're going to focus on that one.
+
+00:14:34.850 --> 00:14:37.880
+A client's going to come along, maybe remote, maybe local,
+
+00:14:37.880 --> 00:14:43.890
+and it's going to want to establish a
+connection to port 1138 on our host.
+
+00:14:43.890 --> 00:14:52.840
+So when that happens, a new connection is established,
+and by doing that, we've sent a message to that port.
+
+00:14:52.840 --> 00:15:00.670
+So when that -- when launchd sees that there's a message
+on that socket it's going to fork and then exec SSD.
+
+00:15:00.670 --> 00:15:09.010
+And then SSD is going to check in, grab the socket from
+launchd, dequeue the message and process the request.
+
+00:15:09.010 --> 00:15:12.900
+And when it's done, it's just going to idle exit.
+
+00:15:14.010 --> 00:15:19.730
+So here's the plist we use to get this done.
+
+00:15:19.730 --> 00:15:20.840
+The launchd.
+
+00:15:20.840 --> 00:15:25.710
+plist has a label, a program, and
+this sockets dictionary here.
+
+00:15:25.710 --> 00:15:30.590
+And here's where we specify that
+we're going to listen on port 1138.
+
+00:15:35.800 --> 00:15:40.290
+And when the daemon comes online the
+first thing it's going to do is check in,
+
+00:15:40.290 --> 00:15:43.120
+and here are the APIs it's going to use to do that.
+
+00:15:43.120 --> 00:15:48.890
+It's going to send a check in request to launchd,
+and then it's going to parse the response through
+
+00:15:48.890 --> 00:15:54.020
+and grab a file descriptor out of the
+dictionary of sockets that comes back.
+
+00:15:54.020 --> 00:15:58.460
+Now launchd will give you both IPv4 and v6 sockets.
+
+00:15:58.460 --> 00:16:00.780
+In our case, we just don't care about v6.
+
+00:16:00.780 --> 00:16:04.260
+So we're going to focus on the v4 socket.
+
+00:16:04.260 --> 00:16:08.770
+So at the end, we've got sock F D, and
+that's the socket we're going to listen on.
+
+00:16:08.770 --> 00:16:12.220
+So we're going to use GCD to listen on that socket.
+
+00:16:12.220 --> 00:16:21.080
+A note before we go, before we continue, don't use
+these APIs for anything other than checking in.
+
+00:16:21.080 --> 00:16:27.680
+You may have looked at the header already, and you may be
+thinking there's a bunch of cool stuff I can do it with.
+
+00:16:27.680 --> 00:16:30.180
+We highly discourage you from doing so.
+
+00:16:30.180 --> 00:16:37.290
+Because there will come -- or if you do there will
+come a day of reckoning when it will come bite you.
+
+00:16:37.290 --> 00:16:44.430
+And, as a matter of correctness before we go any
+further, I haven't been checking any return types
+
+00:16:44.430 --> 00:16:47.030
+that I've been getting or making sure that they're not null.
+
+00:16:47.030 --> 00:16:49.030
+But that doesn't mean you shouldn't.
+
+00:16:49.030 --> 00:16:57.730
+So please always check your return codes and the
+types of data structures that you're working with.
+
+00:16:57.730 --> 00:17:01.270
+So a client is going to send a message to the daemon.
+
+00:17:01.270 --> 00:17:03.140
+What is that message going to look like?
+
+00:17:03.140 --> 00:17:05.170
+In our case, it's just going to be really simple.
+
+00:17:05.170 --> 00:17:10.650
+It's going to be prefixed with 4 bytes
+telling us the length of the message.
+
+00:17:10.650 --> 00:17:13.680
+And then there's going to be an
+arbitrary number of bytes following.
+
+00:17:13.680 --> 00:17:17.800
+And the encoding we're going to use for
+that arbitrary number of bytes is a plist.
+
+00:17:17.800 --> 00:17:23.320
+So we're just going to construct a CF
+property list using the CF property list APIs.
+
+00:17:23.320 --> 00:17:27.750
+Serialize it, send it over the wire, then
+the server is going to pick it apart,
+
+00:17:27.750 --> 00:17:32.380
+figure out what our request is, do
+something, then send a reply back.
+
+00:17:32.380 --> 00:17:38.720
+So we're going to use GCD to do accept.
+
+00:17:38.720 --> 00:17:43.380
+The first thing we're going to do is set the non block flag
+
+00:17:43.380 --> 00:17:48.040
+on that file descriptor that we
+got back from the launch APIs.
+
+00:17:48.040 --> 00:17:58.240
+This is because GCD is an asynchronous API and we don't want
+to risk blocking the queue on which this handler is invoked,
+
+00:17:58.240 --> 00:18:02.220
+if say the client cancelled its connection attempt.
+
+00:18:03.550 --> 00:18:06.750
+So we come in here and we call accept.
+
+00:18:06.750 --> 00:18:13.040
+And then we get back and a file descriptor from
+accept that's dedicated to this connection.
+
+00:18:13.040 --> 00:18:17.600
+At that point we again set 0 non block on that descriptor.
+
+00:18:17.600 --> 00:18:20.710
+And then we pass it to a server accept function.
+
+00:18:20.710 --> 00:18:27.590
+And that function just takes the descriptor plus a reference
+to a queue on which we wish to do further operations.
+
+00:18:27.590 --> 00:18:31.710
+In this case, it's one of GCD's global concurrent queues.
+
+00:18:31.710 --> 00:18:40.290
+So any work submitted to this queue is -- can happen
+concurrently and won't have any serialization guarantees.
+
+00:18:40.290 --> 00:18:42.360
+So we'll go into that in just a second.
+
+00:18:42.360 --> 00:18:49.150
+But it's also important to note that GCD requires
+you to set a cancel handler for this source as well.
+
+00:18:49.150 --> 00:18:58.940
+This cancel handler is fired when GCD is done monitoring the
+descriptor, and it's safe to close, which we're doing here.
+
+00:19:02.390 --> 00:19:05.230
+Here's our server accept function.
+
+00:19:05.230 --> 00:19:12.180
+All we do here is basically what we did before,
+and we create a GCD source that tells us
+
+00:19:12.180 --> 00:19:15.830
+when the descriptor has bytes available to read.
+
+00:19:15.830 --> 00:19:20.050
+But we're going to actually -- we're
+going to do something other than accept.
+
+00:19:20.050 --> 00:19:22.890
+We're going to actually read bytes and parse them.
+
+00:19:22.890 --> 00:19:26.920
+And we're going to do that with this server read function.
+
+00:19:26.920 --> 00:19:32.330
+Now remember, there's no guarantee when data comes
+over a socket that it's the complete message.
+
+00:19:32.330 --> 00:19:35.940
+So we have to keep some state around to tell us how much --
+
+00:19:35.940 --> 00:19:39.590
+how many bytes were expected and
+how many bytes we current have.
+
+00:19:39.590 --> 00:19:43.260
+And once you have all of our bytes
+through multiple invocations
+
+00:19:43.260 --> 00:19:47.780
+of this handler we're going to actually handle the request.
+
+00:19:47.780 --> 00:19:51.190
+And once that's done we're going to cancel this read source.
+
+00:19:51.190 --> 00:19:56.820
+Because we're done in this connection in HTTP style way.
+
+00:19:58.570 --> 00:20:02.620
+So let's take a look at server read.
+
+00:20:02.620 --> 00:20:11.420
+Once we have all the byte, or once we get bytes
+to read, we're going to keep track of our size.
+
+00:20:11.420 --> 00:20:17.910
+Read the bytes, and then marshal them
+together in a pretty standard way.
+
+00:20:17.910 --> 00:20:22.560
+And once we've marshaled them together,
+we return true from this API.
+
+00:20:22.560 --> 00:20:26.290
+So you need to be aware of buffer overflows in this case.
+
+00:20:26.290 --> 00:20:30.620
+We're not doing much sanity checking
+here for the purposes of brevity.
+
+00:20:30.620 --> 00:20:39.020
+But if you have -- if a request comes in telling you I'm
+only sending you 12 bytes, and it instead sends you 1,000,
+
+00:20:39.020 --> 00:20:42.670
+you need to be prepared to deal with that.
+
+00:20:42.670 --> 00:20:46.110
+Let's take a look at actually handling the request.
+
+00:20:46.110 --> 00:20:52.520
+This is just a simple example of deserializing
+the plist and doing something interesting with it.
+
+00:20:52.520 --> 00:20:56.480
+So feel free to insert whatever code
+you want between these two Blocks here.
+
+00:20:56.480 --> 00:21:01.430
+But let's just pretend that we did something
+interesting and we put together a reply.
+
+00:21:01.430 --> 00:21:04.620
+And now we need to create data out of it.
+
+00:21:04.620 --> 00:21:10.800
+So we're going to marshal together a
+binary plist, and then give it back.
+
+00:21:10.800 --> 00:21:12.140
+Do all our release stuff.
+
+00:21:12.140 --> 00:21:14.500
+And then we're going to send a reply.
+
+00:21:14.500 --> 00:21:16.720
+And here's how we do that.
+
+00:21:16.720 --> 00:21:27.620
+In server send reply we're going to first take our --
+the bytes of our CF data plist and stuff them in a buffer
+
+00:21:27.620 --> 00:21:31.910
+so we can place the appropriate header information there.
+
+00:21:31.910 --> 00:21:37.300
+There are more efficient ways to do this than
+incurring a copy, but again, this is just slide code.
+
+00:21:37.300 --> 00:21:45.350
+And then we're going to create a dispatch
+source of type -- dispatch source type right.
+
+00:21:45.350 --> 00:21:49.850
+This is like the read source only it
+fires when there's space available
+
+00:21:49.850 --> 00:21:53.290
+in the kernel buffers to write to this socket.
+
+00:21:53.290 --> 00:21:55.680
+We're going to continue here in the same function.
+
+00:21:55.680 --> 00:22:04.660
+We're going to take the source, set an event handler
+on it, and when the event handler fires we call write,
+
+00:22:04.660 --> 00:22:08.660
+and when we've written all of our bytes out to the --
+
+00:22:08.660 --> 00:22:13.570
+out to the remote requester, we're just going cancel
+this source because we don't need it any more.
+
+00:22:13.570 --> 00:22:18.260
+Cancellation implies that this
+event handler will never fire again.
+
+00:22:18.260 --> 00:22:25.600
+And then in our cancel handler here, we're going to
+close the file descriptor that we got back from accept,
+
+00:22:25.600 --> 00:22:29.000
+because this is at this point we're done
+with it, and we don't need it any more.
+
+00:22:29.000 --> 00:22:33.260
+And then we're also going to free the
+large buffer that we've allocated.
+
+00:22:37.990 --> 00:22:43.340
+So that's a really efficient server.
+
+00:22:43.340 --> 00:22:43.860
+It's really cool.
+
+00:22:43.860 --> 00:22:49.190
+We can accept a bunch of requests and we're
+never going to block accepting requests
+
+00:22:49.190 --> 00:22:54.760
+because we do all the request handling
+on GCD's concurrent queue.
+
+00:22:54.760 --> 00:23:00.230
+And since we've got a nonblocking
+descriptor we know that accept won't block.
+
+00:23:00.230 --> 00:23:02.560
+So how can we make this more efficient.
+
+00:23:02.560 --> 00:23:05.070
+Well, we have to exit when we're not needed.
+
+00:23:05.070 --> 00:23:08.100
+And to do that we're going to install an idle exit timer.
+
+00:23:08.100 --> 00:23:15.990
+And the first step to do that is declaring these
+two globals: a timer source and a transaction count.
+
+00:23:15.990 --> 00:23:23.670
+Transaction counts initialize to zero, but the timer source
+is initialized by creating a dispatched timer source.
+
+00:23:23.670 --> 00:23:28.940
+And that timer source is going to
+initially be a 20 second timer.
+
+00:23:28.940 --> 00:23:33.660
+And all it does is call exit if that handler fires.
+
+00:23:33.660 --> 00:23:43.110
+So to get this functionality really working, all
+we have to do is add the following to server read.
+
+00:23:43.110 --> 00:23:47.430
+First thing we're going to do is increment
+the number of transactions we have open.
+
+00:23:47.430 --> 00:23:51.490
+So because we've gotten a request
+we don't want to exit any more,
+
+00:23:51.490 --> 00:23:54.050
+and we don't want to risk exiting
+in the middle of that request.
+
+00:23:54.050 --> 00:23:55.690
+So we do an atomic increment.
+
+00:23:55.690 --> 00:24:00.870
+And then if we've gone away from
+zero we're going to disarm the timer
+
+00:24:00.870 --> 00:24:04.660
+by setting its initial fire date to dispatch time forever.
+
+00:24:04.660 --> 00:24:12.030
+And then when we're done sending the request we're
+going to decrement the counter, and if the counter goes
+
+00:24:12.030 --> 00:24:16.970
+to zero we're going to rearm the timer, because
+we don't have any more outstanding work.
+
+00:24:16.970 --> 00:24:26.800
+And we just do this by setting the new initial
+fire date to 20 seconds from the current date.
+
+00:24:28.250 --> 00:24:30.810
+So how can we make this even more efficient?
+
+00:24:30.810 --> 00:24:34.900
+Well in Snow Leopard we have a
+technology called instant off.
+
+00:24:34.900 --> 00:24:41.220
+What instant off does is it enables
+very fast system shutdown.
+
+00:24:41.220 --> 00:24:46.710
+We made a lot of really great strides in terms of
+shutting the computer off very quickly in Snow Leopard.
+
+00:24:46.710 --> 00:24:48.730
+And we did this with instant off.
+
+00:24:48.730 --> 00:24:54.740
+And how that works is that the system
+has a transaction count for your process.
+
+00:24:54.740 --> 00:25:00.060
+And when the system goes to shut down, it's going
+to look at the transaction counts for every process.
+
+00:25:00.060 --> 00:25:04.480
+And whoever has zero outstanding
+transactions simply gets sig killed.
+
+00:25:04.480 --> 00:25:09.640
+This is so we don't end up invoking SIGTERM
+handlers that could potentially delay exit.
+
+00:25:09.640 --> 00:25:12.620
+We just want the process to go away.
+
+00:25:12.620 --> 00:25:18.820
+And to opt into that all you do is add
+enable transactions to your launchd.plist.
+
+00:25:18.820 --> 00:25:22.030
+And then you've opted into that model.
+
+00:25:22.030 --> 00:25:26.030
+And we're just going to open a new
+transaction upon receiving each request,
+
+00:25:26.030 --> 00:25:29.210
+and then we're going to close a
+transaction when we've sent the reply.
+
+00:25:29.210 --> 00:25:32.950
+And here's what this looks like.
+
+00:25:32.950 --> 00:25:40.100
+When you get a request and open a transaction
+you just call v_proc_transation_begin.
+
+00:25:40.100 --> 00:25:44.440
+And that's going to give you back an
+opaque transaction object that you can use
+
+00:25:44.440 --> 00:25:47.310
+to reference that transaction in the future.
+
+00:25:47.310 --> 00:25:51.390
+And when we sent the reply we just
+call v_proc_transaction_end
+
+00:25:51.390 --> 00:25:55.510
+with that transaction object, and
+that's all we really need to do.
+
+00:25:55.510 --> 00:25:59.490
+Except, there is one more thing that you have to do.
+
+00:25:59.490 --> 00:26:07.380
+I mention that if you get a -- if you get --
+when the system shutdown time comes around
+
+00:26:07.380 --> 00:26:11.120
+and you have zero transactions,
+you're going to get sig kills.
+
+00:26:11.120 --> 00:26:13.580
+But what if you have a nonzero number of transactions?
+
+00:26:13.580 --> 00:26:15.270
+Well then you get SIGTERM.
+
+00:26:15.270 --> 00:26:22.540
+And SIGTERM is your signal to unwind your
+existing transactions and stop accepting new ones.
+
+00:26:22.540 --> 00:26:25.740
+So we want to add a SIGTERM handler.
+
+00:26:25.740 --> 00:26:27.250
+And again, we can do this with GCD.
+
+00:26:27.250 --> 00:26:35.310
+So we're going to create a dispatch source type signal
+source, and all we're going to do in this event handler is
+
+00:26:35.310 --> 00:26:40.320
+when we get SIGTERM set a global called
+G accepting transactions to false.
+
+00:26:40.320 --> 00:26:48.000
+And then we're going to check that
+global in the -- in the accept function.
+
+00:26:48.000 --> 00:26:52.880
+Now before doing this it's important to note that
+we have to ignore the default SIGTERM behavior.
+
+00:26:52.880 --> 00:26:56.600
+Because otherwise GCD can't safely catch the signal.
+
+00:27:00.470 --> 00:27:05.540
+And if we're not accepting new transactions when we
+get an accept request, then we just close the socket
+
+00:27:05.540 --> 00:27:11.400
+that accept gave us back and we say sorry, no more.
+
+00:27:11.400 --> 00:27:16.670
+So that's how we write a very simple
+daemon that just accepts requests
+
+00:27:16.670 --> 00:27:21.200
+and can just idle exit and is instant off compliant.
+
+00:27:21.200 --> 00:27:27.420
+It's actually really simple, and that's how you can become
+a really good citizen of our Launch-on-Demand model.
+
+00:27:27.420 --> 00:27:35.120
+So let's take this and apply it to a very common situation
+or a relatively common situation among Mac OS X developers.
+
+00:27:35.120 --> 00:27:37.520
+You have -- let's say you were writing a text editor.
+
+00:27:37.520 --> 00:27:43.180
+And in this text editor you wanted people to use
+it to edit certain system files, like say, living
+
+00:27:43.180 --> 00:27:48.520
+in /etc, all of those are protected by root.
+
+00:27:48.520 --> 00:27:53.170
+So a GUI application doesn't have permissions to edit them.
+
+00:27:53.170 --> 00:28:00.250
+So you need someone to run on your behalf
+as root to edit those files for you.
+
+00:28:04.790 --> 00:28:06.300
+But there's another problem.
+
+00:28:06.300 --> 00:28:08.540
+We want to preserve drag and drop install.
+
+00:28:08.540 --> 00:28:12.120
+We have a fundamental boot strapping issue here.
+
+00:28:12.120 --> 00:28:15.860
+You need to be able to -- in order to run
+your code as root you need to first put it
+
+00:28:15.860 --> 00:28:18.050
+in the right places for it to run as root.
+
+00:28:18.050 --> 00:28:20.860
+And to do that, you need code running as root.
+
+00:28:20.860 --> 00:28:25.010
+So traditionally, the way to do
+this has been to use an installer.
+
+00:28:25.010 --> 00:28:32.200
+And the installer would prompt the user for privilege
+escalation and lay the right bits down in the right places,
+
+00:28:32.200 --> 00:28:37.710
+and you'd have your daemon there waiting
+and ready for when you needed it.
+
+00:28:37.710 --> 00:28:42.500
+But we like users being able to
+take applications and drag them
+
+00:28:42.500 --> 00:28:47.080
+over to the /applications directory,
+and that's their install.
+
+00:28:47.080 --> 00:28:49.320
+We really like that behavior.
+
+00:28:49.320 --> 00:28:53.610
+So we need a way to preserve the drag and drop install
+
+00:28:53.610 --> 00:28:57.870
+and allow for these privilege helper
+tools to be embedded in the application.
+
+00:28:57.870 --> 00:29:00.620
+We also want to avoid set UID tricks.
+
+00:29:00.620 --> 00:29:06.820
+And this was the old way of doing this, where you
+embed a set UID helper, call in evil authorization API
+
+00:29:06.820 --> 00:29:11.550
+to elevate your privileges, and then
+basically bless yourself with root.
+
+00:29:11.550 --> 00:29:16.380
+And of course we want this to be an on demand daemon.
+
+00:29:16.380 --> 00:29:18.620
+This is a perfect use case for a daemon.
+
+00:29:18.620 --> 00:29:23.260
+A trusted, privileged entity running on
+your behalf to do privileged operations,
+
+00:29:23.260 --> 00:29:26.520
+a very select set of privileged operations.
+
+00:29:26.520 --> 00:29:34.340
+And we also want to take it one step
+further by establishing a secure handshake.
+
+00:29:34.340 --> 00:29:38.860
+You don't want to inadvertently end
+up installing a privileged helper
+
+00:29:38.860 --> 00:29:43.710
+that you didn't -- is not who you thought it was.
+
+00:29:43.710 --> 00:29:49.330
+So how we're going to do this is with the new
+service management framework in Snow Leopard.
+
+00:29:49.330 --> 00:29:53.070
+It provides API to establish these secure handshakes.
+
+00:29:53.070 --> 00:29:59.900
+And how this handshake works is we take the
+app and its tool and we tie them together.
+
+00:29:59.900 --> 00:30:01.770
+So how do we tie them together?
+
+00:30:01.770 --> 00:30:08.570
+We leverage code signing to tie the tools
+identity to that of the application.
+
+00:30:08.570 --> 00:30:10.060
+And also vice versa.
+
+00:30:10.060 --> 00:30:13.080
+The application says this is what my tool looks like.
+
+00:30:13.080 --> 00:30:18.330
+And these identities, because they're
+specified through code signing, are verifiable.
+
+00:30:18.330 --> 00:30:23.620
+So on the application side, here's what you're going to do.
+
+00:30:23.620 --> 00:30:26.690
+You're going to add the following to your info.plist.
+
+00:30:26.690 --> 00:30:34.530
+There's an SM privileged executables dictionary and each
+key is an identifier for your privileged executable.
+
+00:30:34.530 --> 00:30:37.850
+And it's -- the value it's keyed to is a string.
+
+00:30:37.850 --> 00:30:41.040
+The string is a code signing requirement.
+
+00:30:41.040 --> 00:30:47.530
+And that has its own little language that's
+documented in our developer documentation.
+
+00:30:47.530 --> 00:30:52.480
+But what we're specifying here is
+that the identifier of the helper tool
+
+00:30:52.480 --> 00:30:59.250
+or its info.plist CF bundle identifier
+is com.apple.wwdc.helpertool.
+
+00:30:59.250 --> 00:31:07.440
+And the certificate which signed it has a
+subject, a common name of WWDC Developer.
+
+00:31:07.440 --> 00:31:13.880
+So when you've gotten a code signing identity from a
+certificate authority, they're going to check your identity
+
+00:31:13.880 --> 00:31:19.380
+and make sure you are who you are, and
+they're not going to issue two certificates
+
+00:31:19.380 --> 00:31:22.830
+with WWDC Developer as the subject common name.
+
+00:31:22.830 --> 00:31:25.840
+So this is a reliable check.
+
+00:31:25.840 --> 00:31:32.100
+Similarly, on the tool side we're going to
+specify who the application owning us is.
+
+00:31:32.100 --> 00:31:39.260
+So we have -- so we're going to say the
+app must be com.apple.wwdc.smapplication.
+
+00:31:39.260 --> 00:31:47.130
+And the certificate which signed it must be --
+must have the common name of WWDC Developer again.
+
+00:31:47.130 --> 00:31:52.740
+There are additional criteria you can add through this
+code signing identity or code signing requirements language
+
+00:31:52.740 --> 00:31:57.090
+to be even more strict about who you're willing to accept
+
+00:31:57.090 --> 00:32:02.370
+and say what certificate root it must
+be, and whether the root must be trusted.
+
+00:32:02.370 --> 00:32:06.360
+And you can explore all of that in our online documentation.
+
+00:32:06.360 --> 00:32:12.110
+So here are the requirements for your helper tool.
+
+00:32:12.110 --> 00:32:15.310
+You also need a launchd.plist because
+this is an on demand daemon.
+
+00:32:15.310 --> 00:32:17.480
+But this plist is going to be a little special.
+
+00:32:17.480 --> 00:32:26.540
+The normally required program or program arguments keys
+aren't needed because the system installs these helper tools
+
+00:32:26.540 --> 00:32:30.300
+for you, we're going to put them in a known location.
+
+00:32:30.300 --> 00:32:33.130
+So we're just going to fill that in for you.
+
+00:32:33.130 --> 00:32:38.890
+And we also need both launchd.plist and the
+info.plist to be part of the tools code signature.
+
+00:32:38.890 --> 00:32:43.120
+And I'm going to show you how we
+guarantee that in just a sec.
+
+00:32:43.120 --> 00:32:49.600
+And the tools themselves must live in contents,
+library, launch services inside your app bundle.
+
+00:32:49.600 --> 00:32:55.880
+And finally, the actual name of your tools
+executable must be the launchd label name
+
+00:32:55.880 --> 00:32:58.110
+that you've given as in your launchd.
+
+00:32:58.110 --> 00:33:06.980
+list. So for our helper tool that we've got now the actual
+executable will be called com.apple.wwdc.helpertool.
+
+00:33:06.980 --> 00:33:15.880
+So here's how we guarantee that our plists
+are actually part of the tools code signature.
+
+00:33:15.880 --> 00:33:18.330
+Because remember, tools are single file binaries.
+
+00:33:18.330 --> 00:33:22.860
+So we need to embed those plists
+in the actual binary itself.
+
+00:33:22.860 --> 00:33:29.040
+And then when we sign it, any alteration
+of those bits breaks the code signature.
+
+00:33:29.040 --> 00:33:30.850
+So here's how we do that.
+
+00:33:30.850 --> 00:33:34.460
+We tell the linker to create special sections.
+
+00:33:34.460 --> 00:33:38.340
+So you get to this sheet through your Xcode build settings,
+
+00:33:38.340 --> 00:33:42.530
+and then you find the Other Linker
+Flags build setting for your tool.
+
+00:33:42.530 --> 00:33:49.660
+And you specify sectcreate and then
+__TEXT, followed by __info_plist.
+
+00:33:49.660 --> 00:33:54.630
+And what this tells the linker to do is
+in the text section of this binary --
+
+00:33:54.630 --> 00:34:00.920
+sorry, the text segment of this binary
+create a new section called __info_plist,
+
+00:34:00.920 --> 00:34:04.100
+and then fill it with the contents of this file.
+
+00:34:04.100 --> 00:34:07.710
+In this case, WWDCHelper-info.plist.
+
+00:34:07.710 --> 00:34:11.040
+We're just going do the same for our launchd.plist.
+
+00:34:11.040 --> 00:34:16.440
+Launchd, only we're going to call
+that new section __launchd_plist.
+
+00:34:16.440 --> 00:34:23.130
+So then we've got a tool that's all
+ready to go and securely signed.
+
+00:34:26.370 --> 00:34:30.720
+And then there's one more magic API call you have to make.
+
+00:34:30.720 --> 00:34:36.200
+So you obtain a right from the
+user using authorization calls
+
+00:34:36.200 --> 00:34:39.380
+into our security framework and the authorization level.
+
+00:34:39.380 --> 00:34:44.040
+And that's going to be the
+kSMWriteBlessPrivilegedHelperToolWrite.
+
+00:34:44.040 --> 00:34:52.390
+And what this does is say hey, operating system, I want
+to install this tool as a root owned job, as a daemon.
+
+00:34:52.390 --> 00:35:02.050
+And once you've got that authorization reference you call
+SMJobBless, and you pass a domain that says I want this
+
+00:35:02.050 --> 00:35:09.220
+to reside in the privileged system domain followed by
+an argument specifying the name of the tool you have.
+
+00:35:09.220 --> 00:35:12.560
+We support having multiple helper tools in an application.
+
+00:35:12.560 --> 00:35:13.890
+Normally, there's just one.
+
+00:35:13.890 --> 00:35:15.880
+But we still make you specify it.
+
+00:35:15.880 --> 00:35:20.310
+Then you pass the authRef and
+an optional error parameter.
+
+00:35:20.310 --> 00:35:25.870
+And once you check that the result is
+true then you can issue the request.
+
+00:35:25.870 --> 00:35:30.880
+Now you don't actually have to keep any state
+around to say, well, have I installed the helper tool
+
+00:35:30.880 --> 00:35:33.660
+or not because you can just do this every time.
+
+00:35:33.660 --> 00:35:40.060
+If the helper is already there we'll just return
+true to you and we also have automatic versioning.
+
+00:35:40.060 --> 00:35:42.860
+So if you're installing a new version of your helper tool,
+
+00:35:42.860 --> 00:35:47.580
+we'll automatically remove the old
+one and put the new one in its place.
+
+00:35:47.580 --> 00:35:54.960
+So that's how you can elevate your
+privileges easily on Mac OS X
+
+00:35:54.960 --> 00:35:59.310
+with the service management framework and Launch-on-Demand.
+
+00:35:59.310 --> 00:36:02.190
+So wrapping up, what have we covered?
+
+00:36:02.190 --> 00:36:10.660
+We covered the basics of Launch-on-Demand, why it's
+better, why Apple uses it, why we put so much effort
+
+00:36:10.660 --> 00:36:15.810
+into retooling our system to be fully on demand.
+
+00:36:15.810 --> 00:36:21.200
+And we covered why Launch-on-Demand is better, as I said.
+
+00:36:21.200 --> 00:36:26.150
+And we also used GCD to write a
+really efficient helper tool.
+
+00:36:26.150 --> 00:36:32.090
+It's not -- as important that the tool is
+running efficiently when it is running,
+
+00:36:32.090 --> 00:36:34.900
+as it not running when it doesn't need to be.
+
+00:36:34.900 --> 00:36:39.200
+Those two things are equally important to us.
+
+00:36:39.200 --> 00:36:47.020
+And finally, we applied those lessons to boot strapping, a
+privileged helper tool, and installing it so that a GUI app
+
+00:36:47.020 --> 00:36:52.420
+on Mac OS X could elevate its privileges.
+
+00:36:52.420 --> 00:36:57.980
+So we have some related sessions.
+
+00:36:57.980 --> 00:37:02.150
+There was a GCD session yesterday, and it's being
+repeated tomorrow if you -- and it was pretty packed.
+
+00:37:02.150 --> 00:37:08.090
+So if you couldn't make it I encourage you to go
+to it and learn more about the details of GCD.
+
+00:37:08.090 --> 00:37:17.650
+And there's also a more iPhone
+app centered GCD session tomorrow at 10:15.
+
+00:37:17.650 --> 00:37:21.030
+And then we have some sessions from last
+year that you might be interested in.
+
+00:37:21.030 --> 00:37:27.360
+If you have access to them on iTunes, check out Designing
+for launchd, which was last year's launchd session,
+
+00:37:27.360 --> 00:37:32.530
+that was a more high level overview
+of the Launch-on-Demand architecture.
+
+00:37:32.530 --> 00:37:37.800
+Then we also had Managing User Privileges and
+Operations with Author Observations Services.
+
+00:37:37.800 --> 00:37:40.570
+If you're new to the authorization APIs.
+
+00:37:40.570 --> 00:37:44.010
+And finally, Assigning your Application
+an Identity with Code Signing.
+
+00:37:44.010 --> 00:37:50.890
+And this will cover how you can make a reliable code
+signing identity and the foundations of code signing.
+
+00:37:50.890 --> 00:37:55.110
+For more information in general, you have our contacts here,
+
+00:37:55.110 --> 00:37:59.220
+we encourage you to go to the Dev forums
+too, and ask your questions there.
+
+00:37:59.220 --> 00:38:00.840
+We regularly check them.
+
+00:38:00.840 --> 00:38:04.450
+And we have a couple of websites and mailing lists.
+
+00:38:04.450 --> 00:38:09.520
+Both launchd and GCD are open source on
+Mac OS Forge and if you have questions,
+
+00:38:09.520 --> 00:38:11.780
+you can join the mailing lists for each of those.
+
+00:38:11.780 --> 00:38:16.180
+And we have man pages for documentation
+on both launchd and GCD.
+
+00:38:16.180 --> 00:38:20.000
+And there's header doc in the service
+management frameworks header.
+
+00:38:21.170 --> 00:38:28.750
+And finally, the SSD example that we went
+through during this presentation is available
+
+00:38:28.750 --> 00:38:32.810
+as sample code on the WWDC sample site.
+
+00:38:32.810 --> 00:38:35.740
+Also there's a service management example showing how to set
+
+00:38:35.740 --> 00:38:39.370
+up your project properly to install
+a privileged helper tool.
+
+00:38:39.370 --> 00:38:41.770
+And then there's better authorization sample,
+
+00:38:41.770 --> 00:38:47.860
+which is our Leopard compatible way
+of installing privileged helper tools.
+

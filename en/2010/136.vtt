@@ -1,0 +1,2910 @@
+WEBVTT
+
+00:00:07.040 --> 00:00:07.710
+>> Ed Voas: Well, good afternoon.
+
+00:00:07.710 --> 00:00:13.180
+And welcome to Session 136, Calendar
+Integration With EventKit.
+
+00:00:13.180 --> 00:00:17.870
+I'm Ed Voas, and I work on Calendar for iOS.
+
+00:00:17.870 --> 00:00:23.700
+So, in this session, you're going to learn about EventKit,
+what it is, and how you can use it in your applications.
+
+00:00:23.700 --> 00:00:26.220
+So, first, what is it?
+
+00:00:26.220 --> 00:00:33.380
+Well, first and foremost, it's a high level API and allows
+you to get access to the calendar data on the device.
+
+00:00:33.380 --> 00:00:37.040
+It's split into two parts, mostly as
+a function of the way we built our OS.
+
+00:00:37.040 --> 00:00:39.260
+But we have a non-UI side and a UI side.
+
+00:00:39.260 --> 00:00:45.030
+So, in EventKit, we have all of the APIs that allow you
+to get at the calendar data itself, you know, calendars,
+
+00:00:45.030 --> 00:00:52.530
+events, etc. And, in the UI side, we offer a couple of view
+controllers which you can use to display and edit events.
+
+00:00:52.530 --> 00:00:54.470
+It's not a low-level syncing API, though.
+
+00:00:54.470 --> 00:00:56.180
+It's very high level.
+
+00:00:56.180 --> 00:01:02.970
+But for anything that you modify in one of our, you know,
+calendars, if you happen to modify an event that's in, like,
+
+00:01:02.970 --> 00:01:06.400
+an Exchange calendar or CalDAV calendar,
+syncing will just happen automatically.
+
+00:01:06.400 --> 00:01:09.100
+You don't need to think about it at all.
+
+00:01:09.100 --> 00:01:12.710
+One thing I want to call up is
+that, you know, it isn't your data.
+
+00:01:12.710 --> 00:01:14.620
+It's really the user's data.
+
+00:01:14.620 --> 00:01:18.920
+So if you're going to modify the calendar
+in some way, make it painfully obvious
+
+00:01:18.920 --> 00:01:22.280
+to the user that that's what you're doing.
+
+00:01:22.280 --> 00:01:26.070
+So I want to show a brief picture
+of the way this is put together.
+
+00:01:26.070 --> 00:01:30.910
+So, ultimately, we have a calendar database; and that
+lives off in a protected area of the file system.
+
+00:01:30.910 --> 00:01:33.230
+So it's sandboxed off from your application.
+
+00:01:33.230 --> 00:01:35.800
+So how do we talk to it?
+
+00:01:35.800 --> 00:01:40.700
+Well, through EventKit, what we do is we
+actually talk to a daemon called iCalX SD.
+
+00:01:40.700 --> 00:01:43.350
+And that's the thing that actually talks to the database.
+
+00:01:43.350 --> 00:01:49.100
+iCalX SD and the sync daemons are pretty much the only
+things that are allowed to talk to the database directly.
+
+00:01:49.100 --> 00:01:53.530
+So let's start delving into some APIs.
+
+00:01:53.530 --> 00:01:59.830
+So here's just an object diagram showing
+all the major players that we have here.
+
+00:01:59.830 --> 00:02:03.070
+EKRecurrenceDayOfWeek on the bottom
+there, I'm not going to talk about.
+
+00:02:03.070 --> 00:02:05.850
+But I'm just showing it here because
+it's one of our classes.
+
+00:02:05.850 --> 00:02:08.980
+So the first one I want to talk about is EKEventStore.
+
+00:02:08.980 --> 00:02:11.450
+This is basically where it all starts.
+
+00:02:11.450 --> 00:02:13.240
+It's your connection to the database.
+
+00:02:13.240 --> 00:02:17.530
+When you instantiate one of these objects,
+you are effectively opening the database.
+
+00:02:17.530 --> 00:02:24.240
+And, just like the slide a couple slides
+ago, because we're talking to a daemon,
+
+00:02:24.240 --> 00:02:27.460
+it will actually spin the daemon up on demand, if necessary.
+
+00:02:27.460 --> 00:02:29.450
+Most of the time, it's probably running.
+
+00:02:29.450 --> 00:02:32.840
+But just be aware it's not exactly a lightweight operation.
+
+00:02:32.840 --> 00:02:36.920
+So, generally, you want to have these
+objects around for as long as you can.
+
+00:02:36.920 --> 00:02:44.560
+The other factor in this is that, when you get objects
+out of this EKEventStore, they're tied to this EventStore.
+
+00:02:44.560 --> 00:02:48.240
+So if you close it, if you release it
+and then you try to open it back up again
+
+00:02:48.240 --> 00:02:51.380
+and save an event, for example, you won't be able to do it.
+
+00:02:51.380 --> 00:02:55.590
+They're tied to the EventStore from which they came.
+
+00:02:55.590 --> 00:02:58.850
+And to get one alloc init and you have an EventStore.
+
+00:02:58.850 --> 00:03:02.930
+Hooray. So now we'll look at Calendar.
+
+00:03:02.930 --> 00:03:05.310
+So, EKCalendar.
+
+00:03:05.310 --> 00:03:12.120
+So, obviously, we support multiple calendar
+types on iOS: Exchange, CalDAV, MobileMe,
+
+00:03:12.120 --> 00:03:16.560
+etc. Again, sync is automatic for these types.
+
+00:03:16.560 --> 00:03:19.840
+We support read-only versus read/write calendars.
+
+00:03:19.840 --> 00:03:22.140
+So most calendars are read/write.
+
+00:03:22.140 --> 00:03:25.730
+You can add events to them and
+change the events that are in them.
+
+00:03:25.730 --> 00:03:30.200
+But we also have read-only calendars; and those
+would be such things as Subscribe calendars
+
+00:03:30.200 --> 00:03:35.310
+or the Birthday calendar, which is a new calendar in iOS 4.
+
+00:03:35.310 --> 00:03:39.020
+One thing that I want to point out is you
+can't create new calendars in this release.
+
+00:03:39.020 --> 00:03:43.590
+It's definitely a limitation, but just be aware of it.
+
+00:03:43.590 --> 00:03:45.600
+We also have the notion of a default calendar.
+
+00:03:45.600 --> 00:03:49.030
+And it usually sets this in settings, as you can see here.
+
+00:03:49.030 --> 00:03:52.020
+If they have more than one calendar, they
+can set which calendar is the default.
+
+00:03:52.020 --> 00:03:55.870
+And when you're in, like, the Calendar
+application and you add a new event,
+
+00:03:55.870 --> 00:03:57.640
+this is the calendar that it's automatically set to.
+
+00:03:57.640 --> 00:04:00.230
+And you have access to this calendar.
+
+00:04:00.230 --> 00:04:03.490
+So, to get a calendar, it's really simple.
+
+00:04:03.490 --> 00:04:07.750
+First off, you just create an instance of
+EKEventStore at some point in your application.
+
+00:04:07.750 --> 00:04:10.370
+Using that EventStore, you just call store.calendars.
+
+00:04:10.370 --> 00:04:13.060
+And now you have an array of calendars.
+
+00:04:13.060 --> 00:04:19.370
+Or, if you want the default calendar that I just
+talked about, you can call defaultCalendarForNewEvents.
+
+00:04:19.370 --> 00:04:23.880
+Once you have your calendar, you can get
+information from it: title, color, type.
+
+00:04:23.880 --> 00:04:28.540
+Type would be something such as Exchange or CalDAV.
+
+00:04:28.540 --> 00:04:34.940
+And, then, if you to want find out if it's read-only,
+you can query the allowsContentModifications property.
+
+00:04:34.940 --> 00:04:37.510
+And if that returns yes, it's writable.
+
+00:04:37.510 --> 00:04:42.420
+[ Pause ]
+
+00:04:42.420 --> 00:04:47.420
+Okay. Now let's start talking about
+EKEvent, which is the core of most of this.
+
+00:04:47.420 --> 00:04:50.420
+An instance of EKEvent represents an occurrence of an event.
+
+00:04:50.420 --> 00:04:55.190
+So if you have an event that repeats
+weekly, each one of those events
+
+00:04:55.190 --> 00:04:58.550
+that would occur is represented by an individual EKEvent.
+
+00:04:58.550 --> 00:05:00.770
+And, from there, you can get and set most of the properties
+
+00:05:00.770 --> 00:05:04.490
+that you're intimately familiar
+with, probably from using the device.
+
+00:05:04.490 --> 00:05:07.560
+So, obviously, you have title, location, start and end date.
+
+00:05:07.560 --> 00:05:09.010
+You can set whether it's an all-day event.
+
+00:05:09.010 --> 00:05:14.470
+You can set how it repeats, alarms, calendar, availability.
+
+00:05:14.470 --> 00:05:15.540
+We also -- obviously, notes.
+
+00:05:15.540 --> 00:05:17.140
+You can't see it because it's scrolled off screen.
+
+00:05:17.140 --> 00:05:18.870
+But we also allow things like status.
+
+00:05:18.870 --> 00:05:20.110
+You can get the status of an event.
+
+00:05:20.110 --> 00:05:24.770
+You can find out if it's canceled.
+
+00:05:24.770 --> 00:05:27.290
+So creating events is dead simple.
+
+00:05:27.290 --> 00:05:31.390
+Obviously, we start with our EventStore again.
+
+00:05:31.390 --> 00:05:33.860
+We just call EKEvent eventWithEventStore.
+
+00:05:33.860 --> 00:05:35.520
+So now we've created a new event.
+
+00:05:35.520 --> 00:05:37.660
+It's bound to that EventStore.
+
+00:05:37.660 --> 00:05:39.500
+And then we set some data.
+
+00:05:39.500 --> 00:05:42.030
+So title, start date, end date, and calendar.
+
+00:05:42.030 --> 00:05:46.090
+And here I'm setting the calendar to
+be the defaultCalendarForNewEvents.
+
+00:05:46.090 --> 00:05:51.670
+Now, startDate, endDate in Calendar are required.
+
+00:05:51.670 --> 00:05:56.350
+So if you're going to try to save one of
+these events, you must fill these fields in.
+
+00:05:56.350 --> 00:06:01.340
+And, if you don't, it will actually give you an error; and
+it will probably tell you exactly what you didn't fill in.
+
+00:06:01.340 --> 00:06:07.670
+And, to save the event, you call
+EKEventStore saveEvent span error.
+
+00:06:07.670 --> 00:06:11.660
+The span, whenever you're saving a new event,
+really doesn't matter what you pass there.
+
+00:06:11.660 --> 00:06:13.740
+But it does matter when you modify and remove events.
+
+00:06:13.740 --> 00:06:15.830
+And we're going to see how it affects things later on.
+
+00:06:15.830 --> 00:06:25.120
+Every event in the database is-- has a unique identifier.
+
+00:06:25.120 --> 00:06:26.740
+So it's unique across the entire database.
+
+00:06:26.740 --> 00:06:32.620
+It's only valid if the event has
+actually been saved into the EventStore.
+
+00:06:32.620 --> 00:06:34.780
+But they can change.
+
+00:06:34.780 --> 00:06:38.970
+If you happen to move an event
+across calendars, specifically,
+
+00:06:38.970 --> 00:06:42.050
+it's across accounts, but we don't
+expose accounts right now.
+
+00:06:42.050 --> 00:06:48.020
+But if it moves calendars, you might want to refetch the
+ID to make sure that you have the latest ID for that item.
+
+00:06:48.020 --> 00:06:51.270
+Now, of course, it goes into the calendar,
+anybody could have changed that, any other app.
+
+00:06:51.270 --> 00:06:54.420
+So maybe the user saw it in calendar
+and did something with it.
+
+00:06:54.420 --> 00:07:02.170
+In that case, you might not have -- you might not be able
+to find that event anymore, because now it's been changed.
+
+00:07:02.170 --> 00:07:05.060
+And, if that's the case, you might
+want to resort to sort of a backup plan
+
+00:07:05.060 --> 00:07:09.140
+and just save off some identifying information
+about the event and search for it later.
+
+00:07:09.140 --> 00:07:15.240
+And to get the eventIdentifier, it's just .eventIdentifier.
+
+00:07:15.240 --> 00:07:17.980
+We're clever that way.
+
+00:07:17.980 --> 00:07:22.630
+Deleting events, pretty much just as easy as saving events.
+
+00:07:22.630 --> 00:07:24.090
+So we have our EventStore.
+
+00:07:24.090 --> 00:07:27.880
+And, then, here we're actually going to look the
+event up by its identifier that we just talked about.
+
+00:07:27.880 --> 00:07:32.930
+So EKEventStore eventWithIdentifier,
+pass the identifier, get an event.
+
+00:07:32.930 --> 00:07:34.440
+Fair trade.
+
+00:07:34.440 --> 00:07:38.510
+And then you just call removeEvent span error.
+
+00:07:38.510 --> 00:07:42.440
+And, again, the span is meaningful
+mostly for repeating events.
+
+00:07:42.440 --> 00:07:46.040
+But, for single events, you can just kind of pass anything.
+
+00:07:46.040 --> 00:07:52.260
+This event is usually the most common thing to pass.
+
+00:07:52.260 --> 00:07:55.680
+Okay. Every event can have an alarm.
+
+00:07:55.680 --> 00:08:01.550
+The alarms are generally relative to the start
+date, and you specify them in negative seconds.
+
+00:08:01.550 --> 00:08:04.980
+They always display the standard calendar alert right now.
+
+00:08:04.980 --> 00:08:06.600
+So enjoy it.
+
+00:08:06.600 --> 00:08:13.930
+One thing to note is that different calendars can have
+different limits to the number of alarms that they can have.
+
+00:08:13.930 --> 00:08:18.570
+For example, a CalDAV calendar can
+have pretty much infinite alarms.
+
+00:08:18.570 --> 00:08:21.780
+And an Exchange calendar, we only have one alarm.
+
+00:08:21.780 --> 00:08:26.830
+And our UI enforces this, but we don't currently
+have a way to expose that through our API right now.
+
+00:08:26.830 --> 00:08:31.380
+So it's best to assume that there's just one
+that you can set, at least for the duration.
+
+00:08:31.380 --> 00:08:37.070
+Sometimes there's confusion between
+alarms and UILocalNotifications.
+
+00:08:37.070 --> 00:08:41.730
+Like when EventKit was first kind of
+introduced to developers, people thought, Oh,
+
+00:08:41.730 --> 00:08:46.160
+I can use that to put up an alert and, you
+know, then I can call my application later.
+
+00:08:46.160 --> 00:08:48.000
+And that's not what it's used for.
+
+00:08:48.000 --> 00:08:51.830
+I mean, if you're going to -- if you're
+going to make an alarm, you're going to --
+
+00:08:51.830 --> 00:08:53.240
+first off, you're going to have to make an event.
+
+00:08:53.240 --> 00:08:54.710
+That event's going to be in the calendar.
+
+00:08:54.710 --> 00:08:56.020
+You're just going to see that.
+
+00:08:56.020 --> 00:08:57.520
+They could delete that.
+
+00:08:57.520 --> 00:09:02.500
+And, then, when you press the Action button
+on that alert that comes up, it's going to go
+
+00:09:02.500 --> 00:09:06.000
+and show you the event, which is probably not what you want.
+
+00:09:06.000 --> 00:09:09.220
+If you want something more general, you
+should be using UILocalNotifications.
+
+00:09:09.220 --> 00:09:12.190
+And they don't involve the calendar, and
+the Action button will just call your app.
+
+00:09:12.190 --> 00:09:18.450
+So, if it doesn't belong in the calendar,
+you shouldn't be using EventKit for it.
+
+00:09:18.450 --> 00:09:20.440
+To add an alarm, it's pretty simple.
+
+00:09:20.440 --> 00:09:24.400
+To create one, you just say EKAlarm alarmWithRelativeOffset.
+
+00:09:24.400 --> 00:09:29.930
+-900 in this case means 15 minutes
+before the start of the meeting.
+
+00:09:29.930 --> 00:09:31.880
+Call EKEvent addAlarm.
+
+00:09:31.880 --> 00:09:37.110
+And, then, again, our favorite saveEvent span error.
+
+00:09:40.730 --> 00:09:42.640
+Okay. Now we're going to touch on participants.
+
+00:09:42.640 --> 00:09:48.430
+A participant is basically either the
+organizer or an invitee of an event.
+
+00:09:48.430 --> 00:09:50.890
+With these objects, you can check
+to see what their status is.
+
+00:09:50.890 --> 00:09:53.910
+You can see whether they've accepted the
+meeting, whether they've declined it,
+
+00:09:53.910 --> 00:09:56.370
+or maybe they've just marked it tentative.
+
+00:09:56.370 --> 00:10:00.120
+But not all servers tell us the
+information, so you might get unknown.
+
+00:10:00.120 --> 00:10:06.180
+So, if you have an event that's on Exchange 2003
+or 2007, you won't be able to get that data.
+
+00:10:06.180 --> 00:10:09.520
+If it's 2010 or later or if it's
+on CalDAV, you will get that data.
+
+00:10:09.520 --> 00:10:13.770
+So just be aware that sometimes
+you might not always get the data.
+
+00:10:13.770 --> 00:10:16.150
+Once you have the participant, you
+can get an Address Book record.
+
+00:10:16.150 --> 00:10:19.050
+And we do that by email lookup.
+
+00:10:19.050 --> 00:10:21.100
+So it's kind of a loose coupling.
+
+00:10:21.100 --> 00:10:22.300
+It's not really very tight.
+
+00:10:22.300 --> 00:10:25.740
+So it does a pretty decent job, though.
+
+00:10:25.740 --> 00:10:28.870
+And they're read-only in this release.
+
+00:10:28.870 --> 00:10:35.080
+So you can't modify a participant nor
+can you set participants on an event.
+
+00:10:35.080 --> 00:10:38.040
+And the implication there is it
+means to, at least programmatically,
+
+00:10:38.040 --> 00:10:41.830
+you can't create invites in this 1.0 release of the API.
+
+00:10:41.830 --> 00:10:42.770
+You can through the UI.
+
+00:10:42.770 --> 00:10:45.420
+If you use our UI, it does support invite creation.
+
+00:10:45.420 --> 00:10:50.190
+But, right now, we don't have the APIs available to you.
+
+00:10:50.190 --> 00:10:54.700
+And to get at these things, it's just
+event.organizer, event.attendees.
+
+00:10:54.700 --> 00:10:56.890
+Simple. All right.
+
+00:10:56.890 --> 00:11:02.190
+So now we've kind of covered the basic
+-- the basic concept of everything.
+
+00:11:02.190 --> 00:11:06.250
+So, you know, now you want to see what can we do with
+the APIs that we've already seen in a real application.
+
+00:11:06.250 --> 00:11:07.840
+And with me to help do that is Glen Steele.
+
+00:11:07.840 --> 00:11:08.510
+Glen.
+
+00:11:08.510 --> 00:11:13.250
+[ Applause ]
+
+00:11:13.250 --> 00:11:14.130
+>> Glen Steele: Thanks, Ed.
+
+00:11:14.130 --> 00:11:18.750
+So, so far you've seen most of the basic APIs that
+are available to you as developers in EventKit.
+
+00:11:18.750 --> 00:11:21.110
+But, of course, we want to flesh
+those out in some examples for you.
+
+00:11:21.110 --> 00:11:23.320
+So we're going to show you a demo.
+
+00:11:23.320 --> 00:11:28.010
+And, for the purpose of this demo, I'd like you
+to imagine for a moment that you're a loan shark.
+
+00:11:28.010 --> 00:11:31.720
+And, for the parents among you,
+there's no imagination necessary.
+
+00:11:31.720 --> 00:11:35.110
+But, for our purposes, just think
+of yourself as a loan shark.
+
+00:11:35.110 --> 00:11:39.790
+And you're no fool, so you want to keep track of these
+loans that you hand out to people pretty closely.
+
+00:11:39.790 --> 00:11:42.880
+So the good news is that there's an
+app for that, and we can help you.
+
+00:11:42.880 --> 00:11:43.930
+And it's called Sharkster.
+
+00:11:43.930 --> 00:11:46.050
+So I'm going to show it to you now.
+
+00:11:46.050 --> 00:11:47.230
+Okay. So I'll just launch it.
+
+00:11:47.230 --> 00:11:49.980
+And this is a table-driven application.
+
+00:11:49.980 --> 00:11:54.060
+And it's created using -- it's backed by Core Data.
+
+00:11:54.060 --> 00:11:55.640
+And it's pretty simple.
+
+00:11:55.640 --> 00:12:00.500
+We can just tap on any one of our loans
+here to see the details of the loan.
+
+00:12:00.500 --> 00:12:02.590
+We get the contact of the person, the amount.
+
+00:12:02.590 --> 00:12:05.980
+And we can drill down a little bit
+further and see the payment schedule
+
+00:12:05.980 --> 00:12:11.200
+and how much each payment it is --
+each payment is and when it's due.
+
+00:12:11.200 --> 00:12:15.190
+So we can back out here and hit the plus
+button if we want to create a new one.
+
+00:12:15.190 --> 00:12:17.630
+And we can choose a contact if we want.
+
+00:12:17.630 --> 00:12:22.160
+And then choose the amount and, you know,
+some -- whatever interest rate we want.
+
+00:12:22.160 --> 00:12:27.920
+And then we can pick the payment schedule, you know,
+whether it's daily, weekly, monthly, what have you.
+
+00:12:27.920 --> 00:12:28.950
+And then save that.
+
+00:12:28.950 --> 00:12:35.140
+And, then, to delete, it's just a simple, you know, swipe --
+whoops -- swipe to delete paradigm or edit or what have you.
+
+00:12:35.140 --> 00:12:38.020
+So that's the basics of the app.
+
+00:12:38.020 --> 00:12:42.510
+And so now I'd just like to show you a little
+bit about the Xcode project that makes this up.
+
+00:12:42.510 --> 00:12:47.090
+[ Pause ]
+
+00:12:47.090 --> 00:12:48.300
+Okay. So here we are in Xcode.
+
+00:12:48.300 --> 00:12:50.460
+And I'll just show you a few things.
+
+00:12:50.460 --> 00:12:53.920
+The first thing is, in the resources
+here, let's take a look at the data model.
+
+00:12:53.920 --> 00:12:57.640
+As I said, this is a Core Data driven application.
+
+00:12:57.640 --> 00:12:59.800
+So we just take a look.
+
+00:12:59.800 --> 00:13:04.590
+What I want you to see here is just basically
+we're dealing with loans and payments.
+
+00:13:04.590 --> 00:13:11.790
+And we have NSManagedObject subclasses that
+deal with these and we pass these around.
+
+00:13:11.790 --> 00:13:14.620
+So the loans have a one-to-many
+relationship with the payments.
+
+00:13:14.620 --> 00:13:18.370
+And so, if you see, these are what we're moving around.
+
+00:13:18.370 --> 00:13:24.670
+And, then, in our supporting classes folder here,
+this is just basically what makes up the structure
+
+00:13:24.670 --> 00:13:32.470
+of the application, the table views and the
+cells and etc. And, then, in EventKit stuff,
+
+00:13:32.470 --> 00:13:34.480
+we have this thing called a Loan Event Scheduler.
+
+00:13:34.480 --> 00:13:40.240
+And so this represents the funnel point for
+us for all our interactions with EventKit.
+
+00:13:40.240 --> 00:13:43.810
+And this kind of thing may or may not
+make sense for you in your application.
+
+00:13:43.810 --> 00:13:49.700
+But, for us, it's a nice way to just sort of coalesce
+all our EventKit interactions into one place.
+
+00:13:49.700 --> 00:13:50.850
+All right.
+
+00:13:50.850 --> 00:13:54.750
+So what are we going to do with EventKit
+to make our app a little bit better?
+
+00:13:54.750 --> 00:14:01.550
+Well, the obvious thing is, in our payments, we'd like to
+be able to schedule each one of those into the calendar.
+
+00:14:01.550 --> 00:14:06.640
+And so the place to do that is when the user taps Save,
+that's when we go and create those payment objects.
+
+00:14:06.640 --> 00:14:09.200
+And we'd like to actually put those
+into the calendar as they do that.
+
+00:14:09.200 --> 00:14:17.320
+So saving happens in our Loan View
+Controller in the aptly named save method.
+
+00:14:17.320 --> 00:14:19.190
+And this thing is pretty simple right now.
+
+00:14:19.190 --> 00:14:23.400
+All it does is call this generate payments helper method.
+
+00:14:23.400 --> 00:14:30.790
+And that thing goes out and creates the individual Core Data
+payment objects and calculates the date on which each one
+
+00:14:30.790 --> 00:14:38.240
+of those is going to land and then -- and puts those into
+the database and relates them back to our loan object.
+
+00:14:38.240 --> 00:14:43.140
+And, then, once we finish doing that, we just
+call the delegate, which basically has the effect
+
+00:14:43.140 --> 00:14:46.310
+of dismissing us and calling a save on the database.
+
+00:14:46.310 --> 00:14:46.590
+All right.
+
+00:14:46.590 --> 00:14:49.730
+So how are we going to modify this thing to add scheduling?
+
+00:14:49.730 --> 00:14:53.660
+Well, let's go ahead and implement a new save method.
+
+00:14:53.660 --> 00:14:57.570
+And this is it here, and I just
+left the old one up for comparison.
+
+00:14:57.570 --> 00:15:00.240
+So we're still going to generate those payments.
+
+00:15:00.240 --> 00:15:03.950
+But, before we do that, we're going to
+create one of our loan event schedulers.
+
+00:15:03.950 --> 00:15:09.810
+Once we do that, we'll call schedule all events
+for payments and pass in the ordered payments.
+
+00:15:09.810 --> 00:15:16.480
+And the job of this thing is to go in and basically create
+all the EKEvents for each one of those individual payments.
+
+00:15:16.480 --> 00:15:21.820
+Then it's just a matter of releasing -- releasing
+that and then we still call the delegate.
+
+00:15:21.820 --> 00:15:26.390
+So I'm going to delete that old method and save this.
+
+00:15:26.390 --> 00:15:30.880
+And, then, now we're going to go ahead and
+delete this new method in our event scheduler.
+
+00:15:30.880 --> 00:15:31.990
+All right.
+
+00:15:31.990 --> 00:15:34.680
+So let's declare that.
+
+00:15:34.680 --> 00:15:38.420
+And I'm going to create an instance
+variable called EventStore.
+
+00:15:38.420 --> 00:15:40.270
+So this is our EKEventStore.
+
+00:15:40.270 --> 00:15:44.740
+And as Ed mentioned, this represents
+our connection to the calendar database.
+
+00:15:44.740 --> 00:15:50.840
+So now that we've done that, let's
+go and initialize this thing.
+
+00:15:50.840 --> 00:15:57.220
+And, then, don't forget to release it.
+
+00:15:57.220 --> 00:16:00.950
+And now we've got all our setup out
+of the way, we can actually go ahead
+
+00:16:00.950 --> 00:16:02.620
+and implement this new method that we have.
+
+00:16:02.620 --> 00:16:05.590
+So, as I said, it's called schedule all events for payments.
+
+00:16:05.590 --> 00:16:07.770
+It takes an array of payments.
+
+00:16:07.770 --> 00:16:11.510
+And what we're going to do is just
+iterate through each one of those.
+
+00:16:11.510 --> 00:16:14.560
+And, as we do that, we're going to create a new EKEvent.
+
+00:16:14.560 --> 00:16:19.180
+So we do that with EKEvent, eventWithEventStore.
+
+00:16:19.180 --> 00:16:23.280
+And then we set the properties on that new event.
+
+00:16:23.280 --> 00:16:28.350
+Now, as Ed mentioned, the required ones are
+the calendar, the start date, and the end date.
+
+00:16:28.350 --> 00:16:30.510
+So we make sure we set those.
+
+00:16:30.510 --> 00:16:35.610
+And we're just going to use the default calendar for
+new events, which is that property on the EventStore.
+
+00:16:35.610 --> 00:16:39.390
+And that's the default calendar
+that the user sets in Settings
+
+00:16:39.390 --> 00:16:43.180
+or is just provided automatically
+if they only have one calendar.
+
+00:16:43.180 --> 00:16:46.360
+So, once we've done that, we can set the title.
+
+00:16:46.360 --> 00:16:50.530
+And we've just got a helper method
+that returns the string for the title
+
+00:16:50.530 --> 00:16:55.180
+and includes basically the contact
+name and the amount for that payment.
+
+00:16:55.180 --> 00:16:57.620
+And that's it for setting those properties.
+
+00:16:57.620 --> 00:17:02.570
+But what we'd also like to do is set an alarm so
+that, you know, when we wake up in the morning,
+
+00:17:02.570 --> 00:17:08.150
+we get all the alarms for the people who owe us money and
+we can, you know, send a muscle to go and extract them.
+
+00:17:08.150 --> 00:17:12.300
+And we're going to do that with just a relative
+offset of 0; because we want those to fire,
+
+00:17:12.300 --> 00:17:16.850
+you know, right away first thing in the morning.
+
+00:17:16.850 --> 00:17:22.630
+Okay. So now that we've set our new alarm,
+we can call saveEvent and providing a span --
+
+00:17:22.630 --> 00:17:28.030
+and, as Ed said, we'll go into those a little
+more later -- and a pointer to an error.
+
+00:17:28.030 --> 00:17:31.610
+And we check the return Boolean.
+
+00:17:31.610 --> 00:17:38.280
+And if it didn't save and there's an error, in our case,
+we're just going to print out that error description.
+
+00:17:38.280 --> 00:17:40.420
+You may need to do more in your app.
+
+00:17:40.420 --> 00:17:44.300
+And, then, the last thing we need to
+do is save aside that eventIdentifier.
+
+00:17:44.300 --> 00:17:47.630
+So now that we've created our new
+event, we want to reference that later.
+
+00:17:47.630 --> 00:17:54.280
+So we're going to take the eventIdentifier that
+we created and put that into our payment object.
+
+00:17:54.280 --> 00:17:54.890
+Okay, great.
+
+00:17:54.890 --> 00:17:57.770
+So now we're creating new EKEvents.
+
+00:17:57.770 --> 00:17:59.410
+We're storing them in the calendar.
+
+00:17:59.410 --> 00:18:02.520
+But there's one thing we're missing
+and that's deletion, right?
+
+00:18:02.520 --> 00:18:05.700
+So deletion happens on that root view controller.
+
+00:18:05.700 --> 00:18:13.720
+And, specifically, it happens here in the commit
+editing style for row and index path method.
+
+00:18:13.720 --> 00:18:18.950
+So this project was created from, you know, one
+of our Xcode templates, and it's already populated
+
+00:18:18.950 --> 00:18:25.310
+with basically everything that's needed
+to remove those loans from our database.
+
+00:18:25.310 --> 00:18:28.730
+But we want to add just one more thing
+here and that's to delete all the payments
+
+00:18:28.730 --> 00:18:31.730
+that are associated with that loan in the calendar.
+
+00:18:31.730 --> 00:18:35.360
+So, to do that, we're going to
+create a new loan event scheduler
+
+00:18:35.360 --> 00:18:41.170
+and then call a new method called delete all events
+for payments and pass in those ordered payments.
+
+00:18:41.170 --> 00:18:41.480
+All right.
+
+00:18:41.480 --> 00:18:42.800
+So we're done here.
+
+00:18:42.800 --> 00:18:46.120
+Let's go and declare that new method.
+
+00:18:47.500 --> 00:18:52.660
+And let's implement it.
+
+00:18:52.660 --> 00:18:54.670
+Okay. So, again, this is pretty simple.
+
+00:18:54.670 --> 00:18:58.510
+We're going to iterate in a four loop
+through each one of those payments,
+
+00:18:58.510 --> 00:19:03.360
+get our pointer to the EKEvent using
+EventStore, eventWithIdentifier.
+
+00:19:03.360 --> 00:19:07.360
+Remember we saved this aside when
+we created our event before.
+
+00:19:07.360 --> 00:19:11.550
+And then it's just a matter of
+calling EventStore removeEvent,
+
+00:19:11.550 --> 00:19:15.680
+and we're just using that EKSpanThisEvent
+span for the moment.
+
+00:19:15.680 --> 00:19:23.180
+And same thing, pass in an error, check the result,
+and print out or log any issues that might come up.
+
+00:19:23.180 --> 00:19:23.650
+Okay, great.
+
+00:19:23.650 --> 00:19:25.810
+So it looks like we're done.
+
+00:19:25.810 --> 00:19:26.280
+And, phew.
+
+00:19:26.280 --> 00:19:26.940
+It builds.
+
+00:19:26.940 --> 00:19:28.140
+That's good.
+
+00:19:28.140 --> 00:19:31.820
+And we're going to build that and
+send it over to the device.
+
+00:19:31.820 --> 00:19:37.720
+So what we'd expect to happen now is, when we create a
+new event, we should see that pop up in our loan table.
+
+00:19:37.720 --> 00:19:43.420
+Should be able to look at that and then flip over to
+the calendar and those new events should show up for us.
+
+00:19:43.420 --> 00:19:46.240
+Let's see if it works.
+
+00:19:46.240 --> 00:19:49.910
+So let's create one for Claire.
+
+00:19:49.910 --> 00:19:56.080
+We'll do 5,000 and some exorbitant interest rate.
+
+00:19:56.080 --> 00:19:57.600
+[ Laughter ]
+
+00:19:57.600 --> 00:19:58.530
+I know. Ouch, right?
+
+00:19:58.530 --> 00:20:09.800
+We're just going to choose a loan length of three days,
+and we'll just do the three payments, 2,000 apiece.
+
+00:20:09.800 --> 00:20:10.680
+So we saved it.
+
+00:20:10.680 --> 00:20:13.350
+Here's our new loan.
+
+00:20:13.350 --> 00:20:15.020
+And pops up here.
+
+00:20:15.020 --> 00:20:16.670
+We can see the loan payment schedule.
+
+00:20:16.670 --> 00:20:18.550
+Looks like it's going to show up tomorrow.
+
+00:20:18.550 --> 00:20:21.830
+But, of course, the real question
+is: Did it show up in the calendar?
+
+00:20:21.830 --> 00:20:24.560
+So let's flip over the calendar and, hey, presto.
+
+00:20:24.560 --> 00:20:25.820
+There it is.
+
+00:20:25.820 --> 00:20:31.040
+So our payment shows up there and it looks good to go.
+
+00:20:31.040 --> 00:20:35.280
+And we can see on each payment we created that alert,
+
+00:20:35.280 --> 00:20:39.370
+and it shows that we're going to get
+an alert on the day of the event.
+
+00:20:39.370 --> 00:20:40.720
+Okay. Good stuff.
+
+00:20:40.720 --> 00:20:42.510
+So now --
+
+00:20:42.510 --> 00:20:46.480
+[ Applause ]
+
+00:20:46.480 --> 00:20:49.130
+-- Now we're going to try and delete
+that, and let's see if this works.
+
+00:20:49.130 --> 00:20:52.580
+So we'll delete that and flip back to the calendar.
+
+00:20:52.580 --> 00:20:57.890
+And after that snapshot loads, we see
+those events have now disappeared.
+
+00:20:57.890 --> 00:21:00.350
+Okay, great.
+
+00:21:01.720 --> 00:21:05.650
+So that's adding and deleting simple events using EventKit.
+
+00:21:05.650 --> 00:21:11.370
+And, to do that, to insert an event, we just
+create a new EKEvent using EKEventStore.
+
+00:21:11.370 --> 00:21:17.600
+Set the properties on those events on the
+event and then we save using EKEvent saveEvent.
+
+00:21:17.600 --> 00:21:19.850
+Now, to delete, it's pretty simple too.
+
+00:21:19.850 --> 00:21:25.830
+We can fetch the event using the eventIdentifier that we
+saved aside and then just remove using EKEvent removeEvent.
+
+00:21:25.830 --> 00:21:27.420
+So that the adding and removing.
+
+00:21:27.420 --> 00:21:28.510
+Back to you, Ed.
+
+00:21:28.510 --> 00:21:32.040
+[ Applause ]
+
+00:21:32.040 --> 00:21:34.870
+>> Ed Voas: Thanks, Glen.
+
+00:21:34.870 --> 00:21:36.850
+Okay. Now we've seen easy events.
+
+00:21:36.850 --> 00:21:37.740
+Let's get a little harder.
+
+00:21:37.740 --> 00:21:40.370
+We're going to talk about recurrence rules.
+
+00:21:40.370 --> 00:21:43.690
+So recurrence rules ultimately
+tell you how an event repeats.
+
+00:21:43.690 --> 00:21:47.790
+And, you know, our UI, as you can see here,
+does really simple rules every day, every week,
+
+00:21:47.790 --> 00:21:53.400
+etc. But the API will allow you to do far more
+complex things, such as the examples here.
+
+00:21:53.400 --> 00:21:57.410
+So we're going to just do a simple one.
+
+00:21:57.410 --> 00:22:00.100
+We actually have two init functions on recurrence rule.
+
+00:22:00.100 --> 00:22:03.000
+We have a simple one and then we
+have, like, the mind-blowing one.
+
+00:22:03.000 --> 00:22:05.850
+So we're going to go with the simple one for right now.
+
+00:22:05.850 --> 00:22:08.150
+So let's -- we want to create a
+weekly meeting that never ends.
+
+00:22:08.150 --> 00:22:09.370
+[ Laughter ]
+
+00:22:09.370 --> 00:22:16.240
+So we use EKRecurrenceRule initWithRecurrenceFrequency
+internal end.
+
+00:22:16.240 --> 00:22:20.820
+So, in this case, we're going to pass a recurrence
+frequency of weekly and an interval of 1.
+
+00:22:20.820 --> 00:22:21.420
+So that's every week.
+
+00:22:21.420 --> 00:22:25.630
+If we passed an interval of 2, that's every
+other week, etc., etc. And the end is nil.
+
+00:22:25.630 --> 00:22:28.790
+So no end in sight for this meeting, sorry to say.
+
+00:22:28.790 --> 00:22:36.770
+And we just set our recurrence rule; and,
+again, our favorite, saveEvent, span and error.
+
+00:22:36.770 --> 00:22:40.590
+But, you know, sometimes you want this meeting to end maybe.
+
+00:22:40.590 --> 00:22:42.090
+So there's two ways to do that.
+
+00:22:42.090 --> 00:22:47.490
+The first is by creating -- well, in every case,
+you always create an EKRecurrenceEnd object.
+
+00:22:47.490 --> 00:22:50.500
+But the two ways that you can do
+that is the first one is by dates.
+
+00:22:50.500 --> 00:22:55.270
+You can call EKRecurrenceEnd, recurrenceEndWithEndDate,
+pass the date.
+
+00:22:55.270 --> 00:22:58.840
+And, then, the second variance is a number of times.
+
+00:22:58.840 --> 00:23:02.550
+So you can say EKRecurrenceEnd
+recurrenceEndWithOccurrenceCount.
+
+00:23:02.550 --> 00:23:08.440
+So, in this case, I want the meeting
+to happen five times and that's it.
+
+00:23:08.440 --> 00:23:11.290
+And just like last time, call the same init method.
+
+00:23:11.290 --> 00:23:16.100
+But this time we're passing the end
+object in for the end parameter.
+
+00:23:16.100 --> 00:23:17.910
+Fancy that way.
+
+00:23:17.910 --> 00:23:25.860
+And then we just set the rule and save the event.
+
+00:23:25.860 --> 00:23:29.140
+Okay. So we've kind of discussed how to get events in.
+
+00:23:29.140 --> 00:23:30.050
+How do we get events out?
+
+00:23:30.050 --> 00:23:33.880
+Well, we've already seen one way, and that's by ID.
+
+00:23:33.880 --> 00:23:36.700
+So I mentioned every event has an identifier.
+
+00:23:36.700 --> 00:23:41.220
+And you can use that by calling EKEventStore
+eventWithIdentifier and get the event back.
+
+00:23:41.220 --> 00:23:43.720
+That will give you the very first occurrence of that event.
+
+00:23:43.720 --> 00:23:48.350
+So, if it was a repeating event, it will be
+the very first, you know, occurrence of that.
+
+00:23:48.350 --> 00:23:51.120
+So, if it was somebody's birthday,
+it's actually the day of their birth,
+
+00:23:51.120 --> 00:23:53.900
+not the anniversary of their birth many years later.
+
+00:23:53.900 --> 00:24:00.050
+But what you're probably going to use more
+often than not is search for your predicate,
+
+00:24:00.050 --> 00:24:02.460
+especially if you want to show, you
+know, something across a date range.
+
+00:24:02.460 --> 00:24:06.890
+So this -- we offer one predicate right now,
+predicateForEventsWithStartDate, endDate, and calendars.
+
+00:24:06.890 --> 00:24:11.930
+So you can search across a date range
+and across a number of calendars.
+
+00:24:11.930 --> 00:24:14.520
+And because it's the only predicate we have right now,
+
+00:24:14.520 --> 00:24:19.500
+if you want to do a more fine-grained search,
+you will have to postfilter that list.
+
+00:24:19.500 --> 00:24:23.460
+So an example here is to just create one.
+
+00:24:23.460 --> 00:24:27.670
+You go EKEventStore predicateForEventsWithStartDate,
+endDate, and calendars.
+
+00:24:27.670 --> 00:24:29.570
+And I'm just, you know, whatever
+the start date and end date are.
+
+00:24:29.570 --> 00:24:31.030
+And then I'm passing store.calendars.
+
+00:24:31.030 --> 00:24:34.760
+So I want to search across all calendars.
+
+00:24:34.760 --> 00:24:36.650
+You then call eventsMatchingPredicate.
+
+00:24:36.650 --> 00:24:41.890
+That will go out, find the appropriate
+events, and return them as an array.
+
+00:24:41.890 --> 00:24:44.520
+But that array has no guaranteed order.
+
+00:24:44.520 --> 00:24:46.960
+So now you probably want to sort it.
+
+00:24:46.960 --> 00:24:52.350
+Well, we have a convenience method for that
+on EKEvent called compareStartDateWithEvent.
+
+00:24:52.350 --> 00:24:55.260
+So all you need to do is just make
+a mutable copy of the array
+
+00:24:55.260 --> 00:24:58.890
+and then just call sortUsingSelector
+passing compareStartDateWithEvent.
+
+00:24:58.890 --> 00:25:01.320
+And now everything's in start order -- in start date order,
+
+00:25:01.320 --> 00:25:07.570
+which is probably the most common
+way that you'd want to sort them.
+
+00:25:07.570 --> 00:25:11.260
+Now, eventsWithPredicate is synchronous.
+
+00:25:11.260 --> 00:25:16.580
+It will block your app for as long as it takes to operate,
+and it could take almost no time or it could take a lot
+
+00:25:16.580 --> 00:25:20.640
+of time, depending on what you're
+searching for and how big your database is.
+
+00:25:20.640 --> 00:25:24.020
+So more often than not, you're going
+to want to do this asynchronously.
+
+00:25:24.020 --> 00:25:26.470
+And we don't offer any specific asynchronous function.
+
+00:25:26.470 --> 00:25:33.440
+Instead, you know, we say, if you want asynchronous
+behavior, you know, use an asynchronous mechanism
+
+00:25:33.440 --> 00:25:37.930
+such as NSOperation or my favorite, dispatch_async.
+
+00:25:37.930 --> 00:25:40.030
+So, if you're familiar with Grand Central Dispatch --
+
+00:25:40.030 --> 00:25:46.370
+I think there was a session on it yesterday
+-- dispatch_async is my new best friend.
+
+00:25:46.370 --> 00:25:50.710
+So when you're doing -- I'm just going to
+show you an example of using dispatch_async.
+
+00:25:50.710 --> 00:25:56.950
+So, whenever you want to start some
+sort of task or whatever in Dispatch,
+
+00:25:56.950 --> 00:26:00.090
+all you need to do is get your
+hands on a queue to run it on.
+
+00:26:00.090 --> 00:26:03.730
+So the first thing I'm going to do is
+what's called dispatch_get_global_queue.
+
+00:26:03.730 --> 00:26:06.870
+I'm using the standard priority queue.
+
+00:26:06.870 --> 00:26:09.420
+Then I call dispatch_async, passing the queue.
+
+00:26:09.420 --> 00:26:13.410
+So you want to send a block of code over to this queue.
+
+00:26:13.410 --> 00:26:14.220
+And what does it do?
+
+00:26:14.220 --> 00:26:15.750
+Exactly what you already saw.
+
+00:26:15.750 --> 00:26:19.710
+We're just going to call EventStore eventsMatchingPredicate.
+
+00:26:19.710 --> 00:26:24.430
+Now, someplace over in the system
+there's this thread that has this array.
+
+00:26:24.430 --> 00:26:26.700
+Now, how do we get them back to the main thread?
+
+00:26:26.700 --> 00:26:28.430
+Dispatch_async.
+
+00:26:28.430 --> 00:26:30.530
+And here we just pass get_main_queue instead.
+
+00:26:30.530 --> 00:26:32.210
+So we want to throw it back to the main thread.
+
+00:26:32.210 --> 00:26:36.700
+And we're going to call a method on
+our object called setEvents:array.
+
+00:26:36.700 --> 00:26:39.780
+It's very simple.
+
+00:26:39.780 --> 00:26:44.530
+I mean, the last three lines could actually be replaced
+with something like perform selector on main thread.
+
+00:26:44.530 --> 00:26:47.670
+But dispatch_async is far more flexible,
+because it doesn't restrict you to the number
+
+00:26:47.670 --> 00:26:50.510
+of parameters that you can pass to that selector.
+
+00:26:50.510 --> 00:26:55.050
+[ Pause ]
+
+00:26:55.050 --> 00:26:56.470
+Okay. Modifying events.
+
+00:26:56.470 --> 00:27:02.180
+I mean, modifying events is basically you get an event; you
+set the properties; you save it; and, well, you're done.
+
+00:27:02.180 --> 00:27:04.390
+Okay. And that's fine for simple events.
+
+00:27:04.390 --> 00:27:09.710
+But repeating events get a little complicated.
+
+00:27:09.710 --> 00:27:13.470
+When you -- this is where we talked
+about the span parameter.
+
+00:27:13.470 --> 00:27:16.810
+When you modify a repeating event, the
+span parameter then really matters.
+
+00:27:16.810 --> 00:27:20.900
+And you -- and we offer two of them:
+SpanThisEvent, SpanFutureEvents.
+
+00:27:20.900 --> 00:27:25.550
+And they correspond to the two buttons that you
+see there on that standard alert sheet that we put
+
+00:27:25.550 --> 00:27:30.350
+up whenever you do modify a repeating
+event in the Calendar application.
+
+00:27:30.350 --> 00:27:31.480
+They behave very differently.
+
+00:27:31.480 --> 00:27:35.390
+And we're going to see an example of how they behave.
+
+00:27:35.390 --> 00:27:36.440
+They're very valid.
+
+00:27:36.440 --> 00:27:38.770
+I mean, both are equally valid
+whenever you change something.
+
+00:27:38.770 --> 00:27:45.030
+However, if you change the recurrence information on an
+event, then only the EKSpanFutureEvents span is valid
+
+00:27:45.030 --> 00:27:50.090
+because SpanThisEvent actually doesn't
+make any sense in that context.
+
+00:27:50.090 --> 00:27:52.890
+So let's take the case of simple detachment.
+
+00:27:52.890 --> 00:27:59.650
+So if I -- if I save an event and I say SpanThisEvent,
+that creates what's called a detached event.
+
+00:27:59.650 --> 00:28:04.590
+So let's say I want to take the event on August 5th
+and move it from 11 a.m. to 2 p.m. So I do that.
+
+00:28:04.590 --> 00:28:07.350
+So what happens is we actually
+go out and create a new event,
+
+00:28:07.350 --> 00:28:11.970
+but we tie it to the original series;
+and it's considered part of the series.
+
+00:28:11.970 --> 00:28:15.370
+It's effectively a child of the original series.
+
+00:28:15.370 --> 00:28:19.690
+So now if I go back to July 1st
+and I say DeleteFutureEvents,
+
+00:28:19.690 --> 00:28:22.360
+that event will actually go away, as well.
+
+00:28:22.360 --> 00:28:28.000
+In contrast, if you pass EKSpanFutureEvents
+and I say, from August 5th on,
+
+00:28:28.000 --> 00:28:33.010
+meeting's at 2 p.m. What happens
+is we actually get a new event.
+
+00:28:33.010 --> 00:28:36.140
+It's a completely separate entity
+and has no relation to the original.
+
+00:28:36.140 --> 00:28:42.680
+So now if I go back to July 1st and say DeleteFuture,
+only the events up through July 29th will get deleted.
+
+00:28:42.680 --> 00:28:47.680
+Everything from August 5th will stay.
+
+00:28:47.680 --> 00:28:53.890
+If I delete passing EKSpanThisEvent,
+all we do is set an exception date.
+
+00:28:53.890 --> 00:28:55.550
+So August 5th, we're not having that meeting.
+
+00:28:55.550 --> 00:28:56.570
+Forget it.
+
+00:28:56.570 --> 00:29:03.480
+And now we just set an exception date and now we
+know not to generate a recurrence on that date.
+
+00:29:03.480 --> 00:29:05.470
+DeleteFuture, it's very similar.
+
+00:29:05.470 --> 00:29:09.980
+So everything, you know, after
+July 29th, we don't want; gone.
+
+00:29:09.980 --> 00:29:13.750
+And so we just modify the recurrence
+rules to end on that date.
+
+00:29:13.750 --> 00:29:19.020
+So it's kind of important to kind of get a feel
+for, like, what happens when you modify events.
+
+00:29:19.020 --> 00:29:23.820
+Because it does change things in
+certain ways, especially since, like,
+
+00:29:23.820 --> 00:29:29.090
+the deletion behavior is a little
+different, it's important to know.
+
+00:29:29.090 --> 00:29:30.600
+Okay. So we've talked about recurrences.
+
+00:29:30.600 --> 00:29:33.890
+So let's see if we can actually take advantage
+of recurrences in our demo application.
+
+00:29:33.890 --> 00:29:34.560
+Glen.
+
+00:29:34.560 --> 00:29:37.970
+>> Glen Steele: So, so far we've been creating and
+deleting simple events in our Sharkster application.
+
+00:29:37.970 --> 00:29:41.820
+It would be great if we could leverage some
+of this recurrence stuff since, you know,
+
+00:29:41.820 --> 00:29:45.450
+loan payments typically happen,
+you know, on a repeating basis.
+
+00:29:45.450 --> 00:29:49.410
+So this is where you want to think kind of
+carefully about how you architect your application.
+
+00:29:49.410 --> 00:29:54.950
+And whether using recurrences makes sense
+or whether it's better to use simple events,
+
+00:29:54.950 --> 00:30:01.080
+it's important to remember that, for single events, you
+get an eventIdentifier for each one of those, right?
+
+00:30:01.080 --> 00:30:06.580
+So it's easy to reference those later if you need
+to because you have an eventIdentifier that points
+
+00:30:06.580 --> 00:30:10.290
+to that specific occurrence; whereas, with recurrences,
+
+00:30:10.290 --> 00:30:14.340
+each recurrence of the original event
+inherits the same eventIdentifier.
+
+00:30:14.340 --> 00:30:18.420
+So if you want to locate that later, it's a
+little bit more difficult because you may have
+
+00:30:18.420 --> 00:30:22.100
+to perform a search using the eventIdentifier
+around the specific date.
+
+00:30:22.100 --> 00:30:24.640
+And you've got to know where that
+occurrence is going to land.
+
+00:30:24.640 --> 00:30:26.780
+So it's something you really want to think about,
+
+00:30:26.780 --> 00:30:31.430
+whether using recurrences makes sense
+or using single events makes sense.
+
+00:30:31.430 --> 00:30:33.080
+We're going to try and use recurrences now, though.
+
+00:30:33.080 --> 00:30:36.270
+So I'll switch back to the Xcode project.
+
+00:30:36.270 --> 00:30:40.530
+And the first thing we're going
+to do is update our save method.
+
+00:30:40.530 --> 00:30:44.700
+So here's the old one, and I'm
+just going to start a new one here.
+
+00:30:44.700 --> 00:30:50.600
+So, in the prior version, we created our loan event
+scheduler and then we called generate payments
+
+00:30:50.600 --> 00:30:54.870
+and then we went and scheduled the
+events based on those payments.
+
+00:30:54.870 --> 00:30:59.050
+Well, we're going to change our thinking a little
+bit, because we actually want EventKit to do the work
+
+00:30:59.050 --> 00:31:03.280
+of scheduling the dates for us so that we don't have to.
+
+00:31:03.280 --> 00:31:08.460
+In generate payments, we were using NSCalendar to go
+and figure out what dates each event needed to fall on.
+
+00:31:08.460 --> 00:31:10.540
+Well, now we're going to have EventKit do the work for us.
+
+00:31:10.540 --> 00:31:15.430
+So, instead of generating the payments
+first and then calling schedule events,
+
+00:31:15.430 --> 00:31:20.170
+we're going to call a new method called schedule
+payment events using recurrence for loan.
+
+00:31:20.170 --> 00:31:25.750
+And we're going to expect that that returns
+to us an array of scheduled EKEvents.
+
+00:31:25.750 --> 00:31:35.480
+And once we have that in hand, we can go ahead and
+generate our payments based on each one of those.
+
+00:31:35.480 --> 00:31:39.320
+So the next thing we do is call generate
+payments for events and pass in that array.
+
+00:31:39.320 --> 00:31:43.810
+And once we've done that, we have
+to deal with a special case.
+
+00:31:43.810 --> 00:31:47.720
+And it's the case of that last loan
+payment being slightly different.
+
+00:31:47.720 --> 00:31:54.280
+So if the loan amount doesn't divide evenly into
+the number of payments, we may be in a situation
+
+00:31:54.280 --> 00:31:58.750
+where the very last payment is a slightly
+different amount, right, to make up the difference.
+
+00:31:58.750 --> 00:32:02.530
+And so we have a convenience method
+on our loan object that tells us
+
+00:32:02.530 --> 00:32:05.500
+if that last payment is going to
+be slightly different amount.
+
+00:32:05.500 --> 00:32:12.880
+And, based on that, if that turns out to be true, we're
+going to call a method called update event with payment.
+
+00:32:12.880 --> 00:32:14.040
+And this is very simple.
+
+00:32:14.040 --> 00:32:16.310
+All it does is take in one of our EKEvents.
+
+00:32:16.310 --> 00:32:21.310
+And it takes in a payment object, and it
+basically puts in the new properties based on --
+
+00:32:21.310 --> 00:32:24.670
+or the new amount based on that payment, right?
+
+00:32:24.670 --> 00:32:27.550
+So it's essentially just going
+to update the title of that event
+
+00:32:27.550 --> 00:32:30.690
+to reflect that, hey, this one's got a different amount.
+
+00:32:30.690 --> 00:32:37.490
+Well, let's get rid of that old save
+method and go ahead and implement these.
+
+00:32:37.490 --> 00:32:42.580
+So first we need to declare the scheduled
+payment events using recurrence for loan.
+
+00:32:42.580 --> 00:32:44.230
+That's a bit of a tongue twister.
+
+00:32:44.230 --> 00:32:47.510
+And then update event with payment.
+
+00:32:47.510 --> 00:32:55.140
+[ Pause ]
+
+00:32:55.140 --> 00:32:59.420
+Okay. So, as I said before, we're expecting
+scheduled payment events using recurrence
+
+00:32:59.420 --> 00:33:01.830
+for loan to return an NSArray.
+
+00:33:01.830 --> 00:33:04.920
+So we're just going to declare that.
+
+00:33:04.920 --> 00:33:08.260
+Whoops. Okay.
+
+00:33:08.260 --> 00:33:15.030
+And once we do that, we're going to create our
+first EKEvent using EKEvent, event with store.
+
+00:33:15.030 --> 00:33:21.560
+Set the properties, just as we did before;
+set up that alarm, just as we did before.
+
+00:33:21.560 --> 00:33:23.770
+And here's where it starts to diverge a little bit.
+
+00:33:23.770 --> 00:33:26.190
+We're going to create a recurrence rule.
+
+00:33:26.190 --> 00:33:30.090
+And the way we do that is using EKRecurrenceRule.
+
+00:33:30.090 --> 00:33:34.750
+And EventKit defines recurrences using two parameters.
+
+00:33:34.750 --> 00:33:37.600
+It takes a frequency and an interval.
+
+00:33:37.600 --> 00:33:41.740
+And so, for instance if you had a
+payment that was due on a biweekly basis,
+
+00:33:41.740 --> 00:33:45.000
+you'd have a frequency of weekly and an interval of two.
+
+00:33:45.000 --> 00:33:48.040
+But we don't present the UI to the user in that way, right?
+
+00:33:48.040 --> 00:33:52.900
+They can just choose, well, I want it every three days
+or I want it every week or biweekly or what have you.
+
+00:33:52.900 --> 00:33:59.720
+So we just need some helper functions to translate our
+concept of that in the UI to what EventKit expects.
+
+00:33:59.720 --> 00:34:05.730
+So, to do that, we've got these two helper methods,
+EventKit frequency for loan and EventKit interval for loan.
+
+00:34:05.730 --> 00:34:12.590
+And I'll just show you really quickly, if the
+user chooses a biweekly frequency for their loan,
+
+00:34:12.590 --> 00:34:18.700
+we return a frequency of weekly and an interval of two.
+
+00:34:18.700 --> 00:34:21.590
+And so these are just basically translation functions here.
+
+00:34:21.590 --> 00:34:23.570
+All right.
+
+00:34:23.570 --> 00:34:28.410
+So we've actually done all we need
+to do to create a recurrence rule.
+
+00:34:28.410 --> 00:34:31.240
+But there's one thing that we need
+to define, and that's the end.
+
+00:34:31.240 --> 00:34:34.110
+And we could have done that right
+here in this last parameter.
+
+00:34:34.110 --> 00:34:36.230
+But I just broke it out just for clarity.
+
+00:34:36.230 --> 00:34:39.220
+So all we do is create an EKRecurrenceEnd.
+
+00:34:39.220 --> 00:34:46.620
+And our loan objects are able to calculate
+what the end date is, so we just pass that in.
+
+00:34:46.620 --> 00:34:50.180
+Once we've done that, we set that on the recurrence rule.
+
+00:34:50.180 --> 00:34:54.280
+And then we've got a complete recurrence
+rule that we can set on the EKEvent.
+
+00:34:54.280 --> 00:34:57.110
+Okay. So we're done setting up our EKEvent.
+
+00:34:57.110 --> 00:35:01.270
+And the next thing we need to do is just save it.
+
+00:35:01.270 --> 00:35:07.760
+So, just as before, we're going to save
+our event using EventStore saveEvent.
+
+00:35:07.760 --> 00:35:09.200
+Check for any errors.
+
+00:35:09.200 --> 00:35:17.800
+And assuming that all goes well, now we just need
+to -- let's just lay that out a little nicer --
+
+00:35:17.800 --> 00:35:22.440
+we're not quite done yet, because we've
+got to return that array of events, right?
+
+00:35:22.440 --> 00:35:29.220
+So we've now scheduled this in the calendar, but we --
+our caller is expecting an array of scheduled events back.
+
+00:35:29.220 --> 00:35:30.230
+And so how do we do that?
+
+00:35:30.230 --> 00:35:31.870
+Well, we've got to find them.
+
+00:35:31.870 --> 00:35:35.440
+So, to do that, we create an NSPredicate.
+
+00:35:35.440 --> 00:35:40.920
+And, as Ed mentioned, EventStore
+has a prebaked predicate for us.
+
+00:35:40.920 --> 00:35:47.790
+So we just call predicate for events with start date, and
+we provide the start date of the loan and the end date
+
+00:35:47.790 --> 00:35:51.180
+of the loan and the calendar that we want to search.
+
+00:35:51.180 --> 00:35:57.400
+So once we call EventStore eventsMatchingPredicate,
+basically, what we're going to get is every event
+
+00:35:57.400 --> 00:36:01.440
+between the start date of the loan and the end
+date of the loan, which is not what we want.
+
+00:36:01.440 --> 00:36:02.310
+So what do we need to do?
+
+00:36:02.310 --> 00:36:04.490
+We need to postfilter this array.
+
+00:36:04.490 --> 00:36:09.850
+So we created a mutable copy of it immediately
+so we can just filter that in place.
+
+00:36:09.850 --> 00:36:13.710
+And, to do that, we create another predicate.
+
+00:36:13.710 --> 00:36:20.050
+And we're going to search based on the eventIdentifier
+that we got given when we created that first event.
+
+00:36:20.050 --> 00:36:24.390
+So, remember, each recurrence of the event
+has the same eventIdentifier as the first one.
+
+00:36:24.390 --> 00:36:30.340
+So if we can say, hey, our recurrence lands on this date and
+it's got this identifier, we'll get the one that we want.
+
+00:36:30.340 --> 00:36:33.120
+That gives us an unsorted list.
+
+00:36:33.120 --> 00:36:39.900
+So now we need to call sortUsingSelector, and we have
+that prebaked selector called compareStartDateWithEvent.
+
+00:36:39.900 --> 00:36:43.430
+And that will give us an ordered
+list of our scheduled payments,
+
+00:36:43.430 --> 00:36:47.190
+which we can then use to generate
+our payment objects in our database.
+
+00:36:47.190 --> 00:36:55.680
+Okay. So we're finished with that method, and now we
+just have to implement this update event with payment.
+
+00:36:55.680 --> 00:36:56.790
+So this is very simple.
+
+00:36:56.790 --> 00:36:59.510
+I just pasted the whole thing in right away.
+
+00:36:59.510 --> 00:37:05.190
+Essentially, we're taking an EKEvent; we're taking in a
+payment; we're figuring out what the new title needs to be;
+
+00:37:05.190 --> 00:37:07.950
+and we're setting the properties on the event.
+
+00:37:07.950 --> 00:37:12.890
+Once that's done, we just call EventStore
+saveEvent and check for success.
+
+00:37:12.890 --> 00:37:18.910
+And now that we've detached this from our series, we're
+going to get a slightly different eventIdentifier.
+
+00:37:18.910 --> 00:37:22.690
+So we're going to save that aside,
+too, in our payment object.
+
+00:37:22.690 --> 00:37:24.880
+Okay. So this looks all good.
+
+00:37:24.880 --> 00:37:31.940
+So we're creating events with recurrences; we're
+handling the case of that different last payment amount.
+
+00:37:31.940 --> 00:37:35.250
+But there's one thing left, and we've
+got to handle deletion correctly.
+
+00:37:35.250 --> 00:37:38.010
+So we need to update our delete method a little bit.
+
+00:37:38.010 --> 00:37:42.430
+I'll leave the old one up there and paste in the new one.
+
+00:37:42.430 --> 00:37:44.890
+And this looks just a little bit different now.
+
+00:37:44.890 --> 00:37:50.930
+So, previously, we were iterating through each one
+of our payment objects, grabbing the eventIdentifier
+
+00:37:50.930 --> 00:37:54.970
+and then removing each one of those
+EKEvents based on that eventIdentifier.
+
+00:37:54.970 --> 00:37:56.420
+We don't need to do that anymore, right?
+
+00:37:56.420 --> 00:37:59.570
+We've got a single event that's
+recurring, maybe another event --
+
+00:37:59.570 --> 00:38:03.040
+that's that last one -- so we just
+need to take care of those.
+
+00:38:03.040 --> 00:38:09.360
+So, to do that, we're going to call
+value for key on the payments array.
+
+00:38:09.360 --> 00:38:15.150
+So this has the effect of calling the event
+ID method on every object in that array,
+
+00:38:15.150 --> 00:38:18.800
+and that will give us an array of all the event IDs, right?
+
+00:38:18.800 --> 00:38:24.060
+But the problem there is that we basically got
+a list of the same event identifiers, right?
+
+00:38:24.060 --> 00:38:26.350
+So we need to unique those.
+
+00:38:26.350 --> 00:38:29.080
+And an easy way to do that is to make a set with the array,
+
+00:38:29.080 --> 00:38:33.960
+and that will have the effect of
+uniquing all the event identifiers.
+
+00:38:33.960 --> 00:38:39.850
+Now, once we have that, we can loop through those
+event identifiers, get the EKEvent using event
+
+00:38:39.850 --> 00:38:43.650
+with eventIdentifier, and then call remove.
+
+00:38:43.650 --> 00:38:50.810
+This time, we're using the EKSpanFutureEvents parameter
+for the span argument so that we blow away all
+
+00:38:50.810 --> 00:38:53.270
+of the recurrences for future events, right?
+
+00:38:53.270 --> 00:38:58.640
+Now, it's worth noting here, actually,
+there's a little caveat to this.
+
+00:38:58.640 --> 00:39:03.440
+And because, when we created this recurrence we used --
+
+00:39:03.440 --> 00:39:08.600
+when we updated that last event, we
+used the EKSpanThisEvent parameter.
+
+00:39:08.600 --> 00:39:13.830
+When we detached that from our series,
+it still remained a child of that series;
+
+00:39:13.830 --> 00:39:16.740
+because we didn't use the EKSpanFutureEvent parameter.
+
+00:39:16.740 --> 00:39:22.980
+So, actually, the first time through this loop,
+we are effectively deleting the entire thing.
+
+00:39:22.980 --> 00:39:28.930
+So it's just worth noting that I'm leaving
+the loop in place because, you know,
+
+00:39:28.930 --> 00:39:36.140
+in case we did decide to detach using EKSpanFutureEvents or
+something, we want to just take care of blowing it all away.
+
+00:39:36.140 --> 00:39:36.880
+All right.
+
+00:39:36.880 --> 00:39:42.160
+So let's delete this old version, save this, builds.
+
+00:39:42.160 --> 00:39:45.270
+And let's build and send that over to the device.
+
+00:39:45.270 --> 00:39:49.120
+Okay. So now what we should expect to
+happen is we can create new events.
+
+00:39:49.120 --> 00:39:50.980
+We should see them pop up in the calendar.
+
+00:39:50.980 --> 00:39:55.700
+And, if we examine each one of those, we'll be able
+to see that they're actually a recurring event.
+
+00:39:55.700 --> 00:39:58.410
+And, then, hopefully, when we delete
+them, they'll get taken away too.
+
+00:39:58.410 --> 00:40:01.920
+So I'll create a new loan here.
+
+00:40:03.230 --> 00:40:03.900
+All right.
+
+00:40:03.900 --> 00:40:06.040
+Let's choose Claire.
+
+00:40:06.040 --> 00:40:11.810
+And I'll just choose some random amount.
+
+00:40:11.810 --> 00:40:18.730
+And hopefully this will give us a payment schedule that
+will give us a slightly different last payment, right?
+
+00:40:18.730 --> 00:40:20.620
+Because we just want to test that functionality.
+
+00:40:20.620 --> 00:40:24.970
+So this gives us two payments of 440.13 and one of 440.12.
+
+00:40:24.970 --> 00:40:28.220
+So that will go through that code
+that updates that last payment for us.
+
+00:40:28.220 --> 00:40:31.100
+And, then, let's hit Save.
+
+00:40:31.100 --> 00:40:32.220
+All right.
+
+00:40:32.220 --> 00:40:33.090
+Take a look.
+
+00:40:33.090 --> 00:40:35.620
+And everything looks good here.
+
+00:40:35.620 --> 00:40:40.930
+Let's jump over to the calendar and see if they show up.
+
+00:40:40.930 --> 00:40:42.520
+And, indeed, they do.
+
+00:40:42.520 --> 00:40:46.700
+And if I hit the Edit button here, I'll
+actually see that there's a repeat rule
+
+00:40:46.700 --> 00:40:49.060
+which shows us that the recurrence worked.
+
+00:40:49.060 --> 00:40:54.200
+And let's look at that very last payment.
+
+00:40:54.200 --> 00:40:55.210
+And we can see, yes.
+
+00:40:55.210 --> 00:40:56.690
+That is a slightly different amount.
+
+00:40:56.690 --> 00:40:58.690
+So that worked too.
+
+00:40:58.690 --> 00:41:04.080
+Now, let's jump back to Sharkster and try and delete this.
+
+00:41:04.080 --> 00:41:07.360
+So we hit Delete, move back to the calendar.
+
+00:41:07.360 --> 00:41:08.160
+And, hey, look at that.
+
+00:41:08.160 --> 00:41:09.510
+They all disappeared.
+
+00:41:09.510 --> 00:41:16.050
+[ Applause ]
+
+00:41:16.050 --> 00:41:20.330
+Okay. So that's creating and deleting
+events using recurrences in EventKit.
+
+00:41:20.330 --> 00:41:25.100
+And so, to do that, you create the initial
+event, set the properties on that event,
+
+00:41:25.100 --> 00:41:29.000
+set the recurrence rule, and then
+save using EKEvent saveEvent.
+
+00:41:29.000 --> 00:41:34.450
+And, then, to delete, you want to get the event
+using the eventIdentifier or a search predicate
+
+00:41:34.450 --> 00:41:38.460
+so you can do searching, and remove
+using EKEvent removeEvent.
+
+00:41:38.460 --> 00:41:42.900
+But you've got to use that EKSpanFutureEvents
+argument to blow the whole series away.
+
+00:41:42.900 --> 00:41:44.270
+All right, that's it.
+
+00:41:44.270 --> 00:41:45.510
+Thank, Ed.
+
+00:41:45.510 --> 00:41:51.040
+[ Applause ]
+
+00:41:51.040 --> 00:41:52.890
+>> Ed Voas: Thanks, Glen.
+
+00:41:52.890 --> 00:41:57.170
+So right now we've been operating in a vacuum
+as if you're the only person on, you know,
+
+00:41:57.170 --> 00:41:59.670
+on the device who's modifying the calendar database.
+
+00:41:59.670 --> 00:42:01.010
+And you're not.
+
+00:42:01.010 --> 00:42:04.880
+So, when other people modify the
+database, you need to be told.
+
+00:42:04.880 --> 00:42:06.120
+And you need to react.
+
+00:42:06.120 --> 00:42:11.300
+And we do that by sending you a notification
+called EKEventStoreChangedNotification.
+
+00:42:11.300 --> 00:42:14.930
+Again, we're very original with our naming.
+
+00:42:14.930 --> 00:42:16.580
+It can happen at any time.
+
+00:42:16.580 --> 00:42:21.230
+And even though, like, calendar
+might be suspended, sync is not.
+
+00:42:21.230 --> 00:42:23.930
+So if something happens and sync
+decides that it needs to bring something
+
+00:42:23.930 --> 00:42:26.140
+down into the database, you need to be informed.
+
+00:42:26.140 --> 00:42:27.870
+You need to react to that.
+
+00:42:27.870 --> 00:42:29.080
+They're very coarse-grained, though.
+
+00:42:29.080 --> 00:42:32.910
+It barely tells you that something
+happened but you have no idea what.
+
+00:42:32.910 --> 00:42:34.650
+Welcome to my world.
+
+00:42:34.650 --> 00:42:36.680
+And they're coalesced.
+
+00:42:36.680 --> 00:42:42.710
+So if you happen to be suspended and stuff changes out
+behind your back, when you resume, you'll get the event.
+
+00:42:42.710 --> 00:42:48.830
+So when you receive it, what you should do is effectively
+treat your EKEvent and EKCalendar things as invalid.
+
+00:42:48.830 --> 00:42:51.580
+So all the food in the fridge is
+bad; throw it out and go shopping.
+
+00:42:51.580 --> 00:42:53.810
+So that's what you want to do.
+
+00:42:53.810 --> 00:42:58.160
+So -- but we also have a method called
+EKEvent refresh which you can use.
+
+00:42:58.160 --> 00:43:01.280
+It returns a Boolean and tells you
+whether the event is still valid or not.
+
+00:43:01.280 --> 00:43:06.110
+And, after the database is changed, if that
+event had happened to have its data updated,
+
+00:43:06.110 --> 00:43:12.460
+it will repopulate the properties of that event with
+the latest values, unless you've modified something.
+
+00:43:12.460 --> 00:43:15.850
+So, if you've modified title and
+location, those will stay intact.
+
+00:43:15.850 --> 00:43:18.530
+But everything that you haven't modified will get reloaded.
+
+00:43:18.530 --> 00:43:19.670
+But it's kind of a pricey call.
+
+00:43:19.670 --> 00:43:21.780
+And you don't want to call it on
+hundreds or thousands of event.
+
+00:43:21.780 --> 00:43:23.150
+It's just not worth it.
+
+00:43:23.150 --> 00:43:27.160
+So the rule of thumb that we use is,
+generally, if you are actively viewing
+
+00:43:27.160 --> 00:43:30.010
+or editing an event, you call EKEvent refresh.
+
+00:43:30.010 --> 00:43:34.280
+And if you're not, just refetch your events.
+
+00:43:34.280 --> 00:43:36.730
+Okay. So that's all of the non-UI side of things.
+
+00:43:36.730 --> 00:43:40.680
+So let's look at the two view controllers
+that we provide for you.
+
+00:43:40.680 --> 00:43:41.740
+The first is Detail View.
+
+00:43:41.740 --> 00:43:44.120
+You've seen it before.
+
+00:43:44.120 --> 00:43:47.550
+EKEventViewControllers, how it's exposed to you.
+
+00:43:47.550 --> 00:43:49.470
+It's the same view you've ever seen.
+
+00:43:49.470 --> 00:43:54.220
+It does everything that you've seen it do in Calendar.
+
+00:43:54.220 --> 00:43:56.070
+So you can respond to invites, the whole thing.
+
+00:43:56.070 --> 00:43:59.160
+It can allow editing, optionally.
+
+00:43:59.160 --> 00:44:01.460
+You have the Edit button up here.
+
+00:44:01.460 --> 00:44:04.780
+And it listens to those notifications
+we just talked about for you.
+
+00:44:04.780 --> 00:44:08.280
+So, if the event changes, it will just refresh itself.
+
+00:44:08.280 --> 00:44:12.220
+If the event is deleted, it will pop
+itself off of the navigation stack.
+
+00:44:12.220 --> 00:44:15.990
+To put one up, really easy.
+
+00:44:15.990 --> 00:44:24.770
+Just alloc and init, set the event, tell it whether you want
+editing or not, and then call pushViewController animated.
+
+00:44:24.770 --> 00:44:29.010
+And now you have Detail View.
+
+00:44:29.010 --> 00:44:31.580
+Likewise, we supply you with the standard editor.
+
+00:44:31.580 --> 00:44:34.460
+And this, again, the exact same editor
+that we use in the Calendar application.
+
+00:44:34.460 --> 00:44:38.910
+It's exposed through EKEventEditViewController.
+
+00:44:38.910 --> 00:44:42.430
+So you can edit existing events or it
+can use this to create brand new events.
+
+00:44:42.430 --> 00:44:48.330
+To do that, you could just not pass us an event and we will
+make one, or you can pass in a partially constructed event.
+
+00:44:48.330 --> 00:44:49.880
+So consider the case of data detectors.
+
+00:44:49.880 --> 00:44:55.190
+So you tap on a date in Mail, and it has some certain
+fields that it wants to prepopulate the event with.
+
+00:44:55.190 --> 00:45:01.190
+It just fills that in and just invokes
+this view controller with that information.
+
+00:45:01.190 --> 00:45:04.590
+If you don't pass us anything, we
+will fill in defaults as needed.
+
+00:45:04.590 --> 00:45:10.670
+So we'll fill in a default date, start and end
+time; and we'll also always use the default calendar
+
+00:45:10.670 --> 00:45:14.530
+for new events that we keep talking about.
+
+00:45:14.530 --> 00:45:15.690
+It also relies on a delegate.
+
+00:45:15.690 --> 00:45:20.910
+It will tell you when the user has canceled or
+saved the event or whether the event was deleted.
+
+00:45:20.910 --> 00:45:24.830
+And deleted can come from two sources:
+either the user actually deleted it,
+
+00:45:24.830 --> 00:45:29.720
+or we picked up one of those notifications we talked
+about, determined that the event had been deleted,
+
+00:45:29.720 --> 00:45:33.750
+and we want to tell you it's gone now, please close me.
+
+00:45:33.750 --> 00:45:36.530
+We also allow you to override the
+default calendar that we'll use.
+
+00:45:36.530 --> 00:45:42.530
+So you might just supply a calendar before you,
+you know, pass it into this view controller.
+
+00:45:42.530 --> 00:45:47.370
+But let's say you did that and now sync
+came along and decided, You know what?
+
+00:45:47.370 --> 00:45:50.250
+You went and deleted that calendar on
+a different device, and it's gone now.
+
+00:45:50.250 --> 00:45:50.760
+So what do you do?
+
+00:45:50.760 --> 00:45:53.950
+Well, we'll call the delegate and say,
+well, we need a new default calendar.
+
+00:45:53.950 --> 00:45:55.240
+What should we use?
+
+00:45:55.240 --> 00:45:59.240
+And if you don't fill -- if you don't actually override
+this method, we'll just use default calendar for new events.
+
+00:45:59.240 --> 00:46:02.430
+But it's there if you want to hook it in.
+
+00:46:02.430 --> 00:46:04.920
+Explain the editors, it's just as easy.
+
+00:46:04.920 --> 00:46:08.750
+Create it and just set the event
+in the EventStore this time.
+
+00:46:08.750 --> 00:46:13.370
+And then you set edit view delegate to
+whatever is appropriate for your application.
+
+00:46:13.370 --> 00:46:18.980
+And then it's packaged as a UI navigation
+controller, and it's meant to be presented modally.
+
+00:46:18.980 --> 00:46:23.640
+So you want to call presentModalViewController animated.
+
+00:46:23.640 --> 00:46:28.450
+And, likewise, when you want to dismiss
+it, you just dismiss modal view controller.
+
+00:46:28.450 --> 00:46:35.070
+Okay. Let's just see a quick sample of
+actually using Detail View in our application.
+
+00:46:35.070 --> 00:46:36.510
+Glen.
+
+00:46:36.510 --> 00:46:40.040
+[ Pause ]
+
+00:46:40.040 --> 00:46:40.270
+>> Glen Steele: Okay.
+
+00:46:40.270 --> 00:46:44.840
+So, really quickly, we're just going to add
+the EKEventViewController to our application.
+
+00:46:44.840 --> 00:46:48.200
+And so we want to do this in the
+list of payments that we have.
+
+00:46:48.200 --> 00:46:53.370
+We'd like to be able to tap on one of those
+and get shown, basically, the Calendar UI.
+
+00:46:53.370 --> 00:46:57.850
+So that view controller is actually
+the payment schedule view controller.
+
+00:46:57.850 --> 00:47:02.110
+And the first thing we want to do is
+just update our configure cell method.
+
+00:47:02.110 --> 00:47:06.140
+We want to make sure that we show
+that little disclosure chevron.
+
+00:47:06.140 --> 00:47:13.540
+So, to do that, we just set the cell accessory type
+to UI table view cell accessory disclosure indicator.
+
+00:47:13.540 --> 00:47:19.850
+And the next thing we need to do is update
+our did select row at index path method.
+
+00:47:19.850 --> 00:47:21.260
+All right.
+
+00:47:22.930 --> 00:47:29.480
+So what we're going to do here is grab our payment object
+that's associated with the payment that we just tapped.
+
+00:47:29.480 --> 00:47:33.950
+And we do that using our core data
+magic and our fetch results controller.
+
+00:47:33.950 --> 00:47:38.080
+And then we need to create a loan event scheduler
+
+00:47:38.080 --> 00:47:43.420
+so that we can actually find the EKEvent
+that's associated would this payment.
+
+00:47:43.420 --> 00:47:47.580
+So we're going to define a new method
+called event recurrence for payment.
+
+00:47:47.580 --> 00:47:50.970
+And that's going to return our EKEvent.
+
+00:47:50.970 --> 00:47:56.450
+Once we've got that, we can create our new event
+view controller and then set the properties
+
+00:47:56.450 --> 00:48:00.230
+on it, the most important one being the event.
+
+00:48:00.230 --> 00:48:02.780
+And set the allows editing property.
+
+00:48:02.780 --> 00:48:04.900
+Now, you know, I had this set as no.
+
+00:48:04.900 --> 00:48:09.620
+But I'm going to set it to yes just so that you
+can see how easy it is to put the Edit button
+
+00:48:09.620 --> 00:48:12.480
+up there and get the edit view controller.
+
+00:48:12.480 --> 00:48:16.310
+And once that's done, it's just a matter of
+pushing it onto our navigation controller.
+
+00:48:16.310 --> 00:48:18.490
+So we're done here.
+
+00:48:18.490 --> 00:48:21.510
+Let's just go and implement this
+event recurrence for payment method.
+
+00:48:21.510 --> 00:48:28.270
+[ Pause ]
+
+00:48:28.270 --> 00:48:30.210
+Okay. So this is very simple.
+
+00:48:30.210 --> 00:48:32.450
+Actually, you've seen this code before.
+
+00:48:32.450 --> 00:48:37.580
+This is the code that we use to search for
+events once we had created the recurring event,
+
+00:48:37.580 --> 00:48:39.430
+and it's pretty much the same thing.
+
+00:48:39.430 --> 00:48:41.870
+All we're doing is creating a search predicate,
+
+00:48:41.870 --> 00:48:48.470
+calling eventsMatchingPredicate using
+a mutable copy to postfilter in place.
+
+00:48:48.470 --> 00:48:54.430
+And, then, we know that we're going
+to get basically one event, right?
+
+00:48:54.430 --> 00:48:59.780
+So we're just going to take the first event and return that.
+
+00:49:01.990 --> 00:49:02.730
+All right.
+
+00:49:02.730 --> 00:49:03.660
+So let's build.
+
+00:49:03.660 --> 00:49:05.350
+Everything went okay.
+
+00:49:05.350 --> 00:49:06.390
+Send that over to the device.
+
+00:49:06.390 --> 00:49:16.090
+And now what we should expect to see is we should be able
+to create a loan and look at our payment schedule controller
+
+00:49:16.090 --> 00:49:20.660
+and tap on any one of those payments and we
+should see EventKitUI for each one of those.
+
+00:49:20.660 --> 00:49:27.090
+So let's go ahead and do that, create
+a new loan for Charlie this time.
+
+00:49:27.090 --> 00:49:31.580
+We'll be a bit more ambitious.
+
+00:49:31.580 --> 00:49:42.190
+And let's do it over a month and do
+payments every -- let's say every three days.
+
+00:49:42.190 --> 00:49:49.590
+Hit Save. And now, if we tap on this and look at the
+payment schedule, it looks like our chevrons showed up.
+
+00:49:49.590 --> 00:49:54.220
+And we should be able to tap on any one of
+these and, hey look, we get the event UI for it.
+
+00:49:54.220 --> 00:50:02.620
+And we can tap on the Edit button and that
+gives us the event UI edit controller.
+
+00:50:02.620 --> 00:50:04.510
+Okay.
+
+00:50:04.510 --> 00:50:09.060
+[ Applause ]
+
+00:50:09.060 --> 00:50:09.220
+All right.
+
+00:50:09.220 --> 00:50:13.830
+So that's using EventKitUI to show
+EventKitUI in your application.
+
+00:50:13.830 --> 00:50:14.940
+And it's pretty easy.
+
+00:50:14.940 --> 00:50:20.200
+You just need to find the event using the eventIdentifier
+or search for it using the predicate methods;
+
+00:50:20.200 --> 00:50:27.390
+create a new EKEventViewController; and then set the
+controller properties, mainly your event property;
+
+00:50:27.390 --> 00:50:31.640
+and push that onto your navigation stack.
+
+00:50:31.640 --> 00:50:33.850
+All right, thanks.
+
+00:50:33.850 --> 00:50:36.500
+>> Ed Voas: Thanks, Glen.
+
+00:50:36.500 --> 00:50:40.070
+Okay. So that's pretty much the bulk of the API.
+
+00:50:40.070 --> 00:50:43.180
+It doesn't really take a lot and you
+can still get a bunch of stuff done.
+
+00:50:43.180 --> 00:50:45.700
+I just want to mention some facts
+about working with the simulator.
+
+00:50:45.700 --> 00:50:51.870
+So, in the simulator, the SDK, we don't
+have the Calendar application there.
+
+00:50:51.870 --> 00:50:54.270
+So it's a little difficult to manufacture events.
+
+00:50:54.270 --> 00:51:00.430
+So one way that you could do that is just write --
+you know, we saw how easy it is to generate events.
+
+00:51:00.430 --> 00:51:04.230
+You can just write some code and
+just populate the database that way.
+
+00:51:04.230 --> 00:51:08.610
+Or you can actually use the birthday calendar
+which I believe does work in the simulator.
+
+00:51:08.610 --> 00:51:14.120
+So you can just add some contacts, give them birthdays,
+and the birthday calendar will just autopopulate.
+
+00:51:14.120 --> 00:51:21.520
+And that would be an example of a read-only
+calendar that you could poke around with.
+
+00:51:21.520 --> 00:51:24.880
+So the bottom line here is we have,
+like, really easy to use,
+
+00:51:24.880 --> 00:51:29.530
+very high-level APIs that allow you
+to get at calendar data on a device.
+
+00:51:29.530 --> 00:51:31.620
+We have a couple of view controllers.
+
+00:51:31.620 --> 00:51:34.700
+They do everything that you can
+do in the Calendar application.
+
+00:51:34.700 --> 00:51:38.920
+And one of the things that we don't demonstrate
+is that they're fully rotatable now in iOS 4.
+
+00:51:38.920 --> 00:51:44.950
+And, obviously, this is just the first release of this API.
+
+00:51:44.950 --> 00:51:48.410
+We want to do more stuff as time progresses.
+
+00:51:48.410 --> 00:51:53.160
+But it's up to you to help us to figure
+out what we should do first, all right?
+
+00:51:53.160 --> 00:51:57.100
+So the best way to do that is to file bugs.
+
+00:51:57.100 --> 00:52:00.820
+Now, many people file a bug and
+say, I need an API that gives me X.
+
+00:52:00.820 --> 00:52:01.820
+It's like, Okay.
+
+00:52:01.820 --> 00:52:03.370
+But what are you really trying to do?
+
+00:52:03.370 --> 00:52:07.460
+So if you could tell us, you know, exactly what you're
+trying to get at, you know, what you're trying to do
+
+00:52:07.460 --> 00:52:13.800
+with the API, we can then see how we
+can best fit that into the public API.
+
+00:52:13.800 --> 00:52:19.740
+And we take all of those requests; and, obviously, the most
+popular features, the most oft-requested things are the ones
+
+00:52:19.740 --> 00:52:25.220
+that we prioritize first rather than last.
+
+00:52:25.220 --> 00:52:31.980
+So tomorrow there's a lab at 9 a.m. -- God help me -- Lab B.
+
+00:52:31.980 --> 00:52:37.160
+Yesterday, there was a talk on GCD.
+
+00:52:37.160 --> 00:52:41.830
+So, if you missed that, you can catch it
+later on in the -- on the web, I guess.
+
+00:52:41.830 --> 00:52:50.130
+There was also a session which I neglected to put here on
+UILocalNotifications which you might also be interested in.
+
+00:52:50.130 --> 00:52:56.850
+If you need to contact someone,
+I pick Mark Malone.
+
+00:52:56.850 --> 00:52:59.440
+So if you have questions on Calendar, you can contact him.
+
+00:52:59.440 --> 00:53:04.350
+We also have documentation on developer.Apple.com.
+
+00:53:04.350 --> 00:53:11.020
+And the -- on the Dev Forums, I'm patrolling that,
+too, and trying to answer questions as best as I can.
+
+00:53:11.020 --> 00:53:13.650
+So you can always use that as a way to talk to us.
+
